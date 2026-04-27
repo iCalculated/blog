@@ -458,6 +458,7 @@
   textTexture.minFilter = THREE.NearestFilter;
   textTexture.magFilter = THREE.NearestFilter;
 
+  const noText = new URLSearchParams(location.search).get('notext') === '1';
   function buildText(scale = 1.0) {
     const dpr = Math.min(devicePixelRatio, 2);
     const cellWp = cellW * scale * dpr;
@@ -471,6 +472,12 @@
     // initialize all to 0 (no override)
     for (let i = 0; i < img.data.length; i += 4) {
       img.data[i+3] = 255;
+    }
+    // ?notext=1 short-circuits all label placement (used for the OG image capture)
+    if (noText) {
+      ctx.putImageData(img, 0, 0);
+      textTexture.needsUpdate = true;
+      return { cellsX, cellsY };
     }
 
     function place(str, cx, cy) {
