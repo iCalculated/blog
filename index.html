@@ -1,58 +1,721 @@
-<!--
-// made with v0 by Vercel.
-// hopefully I'll rewrite it myself!
--->
-
+<!doctype html>
+<html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>shy // oxo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="palettes.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #161616; cursor: crosshair; }
+  /* invisible click targets — JS sets top/left/width/height in buildText() to overlap the bullet rows */
+  .link-zone {
+    position: fixed; top: 50%; left: 50%; transform: translateX(-50%);
+    z-index: 10;
+    display: flex; flex-direction: column; gap: 0;
+    color: transparent;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem; letter-spacing: 0.4em; text-transform: uppercase;
+  }
+  .link-zone a {
+    display: block; flex: 1;
+    color: transparent; text-decoration: none;
+  }
+  .link-zone a:focus-visible { outline: 1px solid #3ddbd9; }
 
-<main class="container mx-auto px-4 py-12 md:px-6 md:py-16 lg:px-8 lg:py-20">
-    <section class="grid gap-8 md:grid-cols-2 lg:gap-12">
-        <div>
-            <div
-                class="rounded-lg border bg-card text-card-foreground shadow-sm p-6 md:p-8 lg:p-10"
-                data-v0-t="card"
-            >
-                <div class="space-y-4">
-                    <h1
-                        class="text-4xl font-bold tracking-tight md:text-4xl lg:text-7xl"
-                    >
-                        shy
-                    </h1>
-                    <p class="text-slate-500 text-2xl dark:text-slate-400">
-                        making tools that augment humans.
-                    </p>
-                    <ul
-                        class="space-y-2 text-2xl text-slate-500 dark:text-slate-400"
-                    >
-                        <li>• elegance is simplicity</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div>
-            <div
-                class="rounded-lg border bg-card text-card-foreground shadow-sm p-6 md:p-8 lg:p-10"
-                data-v0-t="card"
-            >
-                <div class="space-y-4">
-                    <h2
-                        class="text-4xl font-bold tracking-tight md:text-3xl lg:text-5xl"
-                    >
-                        writing
-                    </h2>
-                    <div
-                        class="space-y-2 text-2xl text-slate-500 dark:text-slate-400"
-                    >
-                        <a class="hover:underline" href="test.html">
-                            > claude wrote this post
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-</main>
+  /* live config panel — same as the other ASCII pages */
+  .controls {
+    position: fixed; top: 1.6rem; right: 1rem;
+    z-index: 20; width: 300px; max-width: calc(100vw - 2rem);
+    display: none;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.66rem; letter-spacing: 0.04em;
+    color: rgba(244, 234, 212, 0.85);
+    background: rgba(22, 22, 22, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(190, 149, 255, 0.18);
+    border-radius: 3px;
+    padding: 0.85rem 1rem;
+    pointer-events: auto;
+  }
+  body.show-controls .controls { display: block; }
+  .controls .row { margin-bottom: 0.7rem; }
+  .controls .row:last-child { margin-bottom: 0; }
+  .controls .row label {
+    display: flex; justify-content: space-between;
+    text-transform: uppercase; font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    color: rgba(244, 234, 212, 0.55);
+    margin-bottom: 0.35rem;
+  }
+  .controls .row label .v {
+    color: #be95ff; font-weight: 500;
+    text-transform: none; letter-spacing: 0;
+  }
+  .controls input[type="range"] {
+    width: 100%; margin: 0; height: 12px;
+    -webkit-appearance: none; appearance: none;
+    background: transparent;
+  }
+  .controls input[type="range"]::-webkit-slider-runnable-track {
+    height: 2px; background: rgba(244, 234, 212, 0.22); border-radius: 1px;
+  }
+  .controls input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 10px; height: 10px;
+    background: #be95ff; border: none;
+    border-radius: 50%; margin-top: -4px; cursor: pointer;
+  }
+  .controls input[type="range"]::-moz-range-track {
+    height: 2px; background: rgba(244, 234, 212, 0.22);
+  }
+  .controls input[type="range"]::-moz-range-thumb {
+    width: 10px; height: 10px;
+    background: #be95ff; border: none;
+    border-radius: 50%; cursor: pointer;
+  }
+  .controls .seg-group {
+    display: grid; grid-template-columns: 1fr; gap: 0.2rem;
+    max-height: 26vh; overflow-y: auto; padding-right: 0.1rem;
+  }
+  .controls .seg-group::-webkit-scrollbar { width: 4px; }
+  .controls .seg-group::-webkit-scrollbar-thumb {
+    background: rgba(190, 149, 255, 0.35); border-radius: 2px;
+  }
+  .controls .seg {
+    padding: 0.28rem 0.1rem;
+    font-family: inherit; font-size: 0.54rem;
+    letter-spacing: 0.04em;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+    padding-left: 0.45rem;
+    background: transparent;
+    color: rgba(244, 234, 212, 0.55);
+    border: 1px solid rgba(244, 234, 212, 0.18);
+    border-radius: 2px; cursor: pointer;
+    text-transform: uppercase;
+    transition: background 120ms, color 120ms, border-color 120ms;
+  }
+  .controls .seg:hover { color: rgba(244, 234, 212, 0.85); }
+  .controls .seg.on {
+    background: rgba(190, 149, 255, 0.18);
+    color: #be95ff;
+    border-color: rgba(190, 149, 255, 0.55);
+  }
+  body.light-bg .controls {
+    color: rgba(34, 28, 22, 0.86);
+    background: rgba(245, 242, 230, 0.68);
+    border-color: rgba(34, 28, 22, 0.14);
+  }
+  body.light-bg .controls .row label {
+    color: rgba(34, 28, 22, 0.58);
+  }
+  body.light-bg .controls .row label .v,
+  body.light-bg .controls .seg.on {
+    color: #8a2d59;
+  }
+  body.light-bg .controls input[type="range"]::-webkit-slider-runnable-track {
+    background: rgba(34, 28, 22, 0.24);
+  }
+  body.light-bg .controls input[type="range"]::-webkit-slider-thumb {
+    background: #8a2d59;
+  }
+  body.light-bg .controls input[type="range"]::-moz-range-track {
+    background: rgba(34, 28, 22, 0.24);
+  }
+  body.light-bg .controls input[type="range"]::-moz-range-thumb {
+    background: #8a2d59;
+  }
+  body.light-bg .controls .seg {
+    color: rgba(34, 28, 22, 0.58);
+    border-color: rgba(34, 28, 22, 0.16);
+  }
+  body.light-bg .controls .seg:hover {
+    color: rgba(34, 28, 22, 0.86);
+  }
+  body.light-bg .controls .seg.on {
+    background: rgba(138, 45, 89, 0.12);
+    border-color: rgba(138, 45, 89, 0.38);
+  }
+  body.light-bg .controls .seg-group::-webkit-scrollbar-thumb {
+    background: rgba(138, 45, 89, 0.32);
+  }
+  body.light-bg .link-zone a:focus-visible { outline-color: #8a2d59; }
+</style>
+</head>
+<body>
+<div class="link-zone">
+  <a href="https://github.com/iCalculated">github</a>
+  <a href="mailto:sasha@hydrie.xyz">email</a>
+  <a href="https://shydrie.substack.com/">substack</a>
+</div>
+
+<div class="controls" id="controls">
+  <div class="row">
+    <label>speed <span class="v" id="v-speed">1.00×</span></label>
+    <input type="range" id="speed" min="0.1" max="2.5" step="0.05" value="1.0">
+  </div>
+  <div class="row">
+    <label>gradations <span class="v" id="v-grad">13</span></label>
+    <input type="range" id="grad" min="2" max="13" step="1" value="13">
+  </div>
+  <div class="row">
+    <label>cell <span class="v" id="v-cell">14 × 22</span></label>
+    <input type="range" id="cell" min="0.6" max="2.0" step="0.05" value="1.0">
+  </div>
+  <div class="row">
+    <label>palette</label>
+    <div class="seg-group" id="palette-buttons"></div>
+  </div>
+</div>
+
+<script id="vert" type="x-shader/x-vertex">
+  void main() { gl_Position = vec4(position, 1.0); }
+</script>
+
+<script id="frag" type="x-shader/x-fragment">
+  precision highp float;
+  uniform float uTime;
+  uniform vec2  uResolution;
+  uniform vec2  uMouse;
+  // ring buffer of "drops": each xy = position, z = spawn time
+  #define MAX_DROPS 32
+  uniform vec3  uDrops[MAX_DROPS];
+  uniform sampler2D uAtlas;
+  uniform sampler2D uText;
+  uniform vec2  uTextSize;
+  uniform float uCharCount;
+  uniform float uBrightnessCount;
+  uniform float uGradations;          // ≤ uBrightnessCount; quantizes brightness picks
+  uniform vec2  uCellSize;
+  // palette uniforms — colors come from palettes.js, picked by scheme index in JS
+  uniform vec3  uC1;
+  uniform vec3  uC2;
+  uniform vec3  uC3;
+  uniform vec3  uC4;
+  uniform vec3  uC5;
+  uniform vec3  uBg;
+  uniform vec3  uTearA;     // primary glitch hot color
+  uniform vec3  uTearB;     // chromatic-split partner
+  uniform vec3  uTearBand;  // glitch band tint
+  uniform float uIsOxo;     // 1.0 only when the original oxocarbon scheme is active
+  uniform float uLightBg;   // 1.0 → cream/light bg; suppresses warm cursor block
+
+  float hash(vec2 p) {
+    p = 50.0 * fract(p * 0.3183099 + vec2(0.71, 0.113));
+    return fract(p.x * p.y * (p.x + p.y));
+  }
+  float noise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    f = f*f*(3.0-2.0*f);
+    return mix(
+      mix(hash(i), hash(i+vec2(1,0)), f.x),
+      mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x),
+      f.y);
+  }
+  float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    for (int i = 0; i < 4; i++) { v += a*noise(p); p *= 2.0; a *= 0.5; }
+    return v;
+  }
+  vec3 hueRot(vec3 c, float a) {
+    float U = cos(a), W = sin(a);
+    mat3 m = mat3(
+      0.299 + 0.701*U + 0.168*W, 0.587 - 0.587*U + 0.330*W, 0.114 - 0.114*U - 0.497*W,
+      0.299 - 0.299*U - 0.328*W, 0.587 + 0.413*U + 0.035*W, 0.114 - 0.114*U + 0.292*W,
+      0.299 - 0.300*U + 1.250*W, 0.587 - 0.588*U - 1.050*W, 0.114 + 0.886*U - 0.203*W
+    );
+    return clamp(c * m, 0.0, 1.0);
+  }
+
+  float source(vec2 uvCenter) {
+    vec2 p = (uvCenter - 0.5) * vec2(uResolution.x/uResolution.y, 1.0) * 3.5;
+    float t = uTime * 0.18;
+    float f = fbm(p + vec2(t * 1.3, t * 0.6));
+    f = mix(f, fbm(p * 2.0 + vec2(-t, t * 1.7)), 0.4);
+    vec2 mp = (uMouse - 0.5) * vec2(uResolution.x/uResolution.y, 1.0) * 3.5;
+    float d = distance(p, mp);
+    float spot = exp(-d * 1.4) * 1.4 + exp(-d * 0.55) * 0.22;
+    return f * 0.7 + spot;
+  }
+
+  void main() {
+    vec2 fragPx = gl_FragCoord.xy;
+    vec2 cellPx = floor(fragPx / uCellSize) * uCellSize;
+    vec2 cellCoord = floor(cellPx / uCellSize);
+    vec2 cellCenterUV = (cellPx + uCellSize * 0.5) / uResolution;
+
+    // ---------- TEXT OVERRIDE: char index encoded per cell ----------
+    vec2 textUV = (cellCoord + 0.5) / uTextSize;
+    float encoded = texture2D(uText, textUV).r * 255.0;
+    encoded = floor(encoded + 0.5);
+    float textCharIdx = encoded - 1.0;     // -1 if no override
+    bool isText = textCharIdx >= 0.0;
+
+    // ---------- DROP-BLOOM GLITCH ----------
+    // Each "drop" expands quickly to a small radius, then fades. Stationary
+    // clicks make one drop; dragged clicks lay down many drops along the path.
+    // Cumulative effect is a chain of small, organic blooms.
+    float glitch = 0.0;
+    float glitchSeedSum = 0.0;
+    float aspect = uResolution.x / uResolution.y;
+
+    for (int i = 0; i < MAX_DROPS; i++) {
+      float spawnT = uDrops[i].z;
+      if (spawnT < -0.5) continue;
+      float age = uTime - spawnT;
+      if (age < 0.0 || age > 1.3) continue;
+
+      // grow phase ~0.25s, then hold a moment, then exp fade
+      float grow = clamp(age / 0.25, 0.0, 1.0);
+      float radius = 0.085 * grow;
+      float life;
+      if (age < 0.35) life = 1.0;
+      else            life = exp(-(age - 0.35) * 2.6);
+      if (radius < 0.002) continue;
+
+      float seed = spawnT * 7.13 + float(i) * 0.71;
+
+      vec2 rel = cellCenterUV - uDrops[i].xy;
+      rel.x *= aspect;
+      float d = length(rel);
+      float ang = atan(rel.y, rel.x);
+
+      // tendrils: angle-modulated radius
+      float tendril = noise(vec2(cos(ang * 3.0) * 1.8 + seed,
+                                 sin(ang * 3.0) * 1.8 + age * 1.5)) - 0.5;
+      float orgR = radius * (1.0 + tendril * 0.85);
+
+      // boundary noise
+      float dNoise = (noise(rel * 30.0 + vec2(seed, age * 1.7)) - 0.5) * radius * 0.5;
+      float dEff = d + dNoise;
+
+      float zVal = smoothstep(orgR * 1.1, orgR * 0.2, dEff);
+      float z = zVal * life;
+
+      glitchSeedSum += z * (float(i) * 1.37 + spawnT * 0.7);
+      glitch = max(glitch, z);
+    }
+    glitch = clamp(glitch, 0.0, 1.2);
+
+    // ---------- ROW-TEAR ----------
+    vec2 sampleUV = cellCenterUV;
+    if (glitch > 0.05) {
+      float rowSeed = hash(vec2(
+        floor(cellPx.y / uCellSize.y),
+        floor(uTime * 14.0) + glitchSeedSum
+      ));
+      sampleUV.x += (rowSeed - 0.5) * glitch * 0.18;
+    }
+
+    // ---------- BRIGHTNESS ----------
+    float bAmbient = source(sampleUV);
+    // text cells render at the peak of the ramp (cream/white at the top end of each palette)
+    float b = isText ? 1.0 : bAmbient;
+    b = clamp(b + glitch * 0.4, 0.0, 1.0);
+
+    // ---------- CHARACTER PICK ----------
+    // Background cells choose from the brightness ramp (first N chars).
+    // Text cells use the encoded character directly.
+    float idx;
+    if (isText) {
+      idx = textCharIdx;
+      // occasional flicker scramble inside text for life
+      if (step(0.985, hash(cellPx + floor(uTime * 4.0))) > 0.5) {
+        idx = floor(hash(cellPx + floor(uTime * 25.0)) * uCharCount);
+      }
+    } else {
+      float bForChar = b + (hash(cellPx + floor(uTime * 6.0)) - 0.5) * 0.04;
+      bForChar = clamp(bForChar, 0.0, 0.999);
+      // quantize through uGradations, then map onto the brightness ramp
+      float bSnap = floor(bForChar * uGradations) / max(1.0, uGradations - 1.0);
+      bSnap = clamp(bSnap, 0.0, 0.999);
+      idx = floor(bSnap * uBrightnessCount);
+    }
+    if (glitch > 0.15) {
+      idx = floor(hash(cellPx + floor(uTime * 30.0)) * uCharCount);
+    }
+
+    vec2 inCell = (fragPx - cellPx) / uCellSize;
+    float chOff = glitch * 0.18;
+    vec2 atlasUV_g = vec2((idx + inCell.x) / uCharCount, inCell.y);
+    vec2 atlasUV_r = vec2((idx + inCell.x + chOff) / uCharCount, inCell.y);
+    vec2 atlasUV_b = vec2((idx + inCell.x - chOff) / uCharCount, inCell.y);
+    float maskG = texture2D(uAtlas, atlasUV_g).r;
+    float maskR = texture2D(uAtlas, atlasUV_r).r;
+    float maskB = texture2D(uAtlas, atlasUV_b).r;
+    float charMask = max(max(maskR, maskG), maskB);
+
+    // ---------- AMBIENT (5-stop ramp from palette uniforms) ----------
+    vec3 ambient;
+    if      (b < 0.30) ambient = mix(uC1, uC2, smoothstep(0.0,  0.30, b));
+    else if (b < 0.60) ambient = mix(uC2, uC3, smoothstep(0.30, 0.60, b));
+    else if (b < 0.85) ambient = mix(uC3, uC4, smoothstep(0.60, 0.85, b));
+    else               ambient = mix(uC4, uC5, smoothstep(0.85, 1.0, b));
+
+    // ---------- WARM CURSOR ZONE (oxo's signature; only on the original) ----------
+    vec3 charCol = ambient;
+    float warmMix = 0.0;
+    if (uIsOxo > 0.5) {
+      vec2 mp = (uMouse - 0.5) * vec2(uResolution.x/uResolution.y, 1.0) * 3.5;
+      vec2 cellP = (cellCenterUV - 0.5) * vec2(uResolution.x/uResolution.y, 1.0) * 3.5;
+      float dM = distance(cellP, mp);
+      warmMix = exp(-dM * 1.15);
+      vec3 warmDim    = vec3(0.420, 0.300, 0.080);
+      vec3 warmYellow = vec3(0.945, 0.761, 0.106);
+      vec3 warmHot    = vec3(1.000, 0.952, 0.700);
+      vec3 cCyan      = vec3(0.239, 0.859, 0.851);
+      vec3 warm = (b < 0.40)
+        ? mix(warmDim, warmYellow, smoothstep(0.0, 0.4, b))
+        : mix(warmYellow, warmHot, smoothstep(0.4, 1.0, b));
+      charCol = mix(ambient, warm, warmMix);
+      vec3 glowCol = mix(cCyan, warmHot, warmMix);
+      charCol += pow(b, 2.6) * glowCol * 0.55;
+    }
+
+    // bg darkens warmly only when the warm cursor is also active
+    vec3 bg = (uIsOxo > 0.5)
+      ? mix(uBg, vec3(0.110, 0.090, 0.060), warmMix)
+      : uBg;
+    vec3 col = mix(bg, charCol, charMask);
+
+    if (glitch > 0.25) {
+      float band = step(0.82, hash(vec2(
+        floor(cellPx.y / uCellSize.y),
+        floor(uTime * 18.0) + glitchSeedSum
+      )));
+      col += band * uTearBand * glitch * 0.7;
+    }
+
+    // ---------- DISTORTION COLOR (palette-themed tear) ----------
+    if (glitch > 0.05) {
+      vec3 fx = mix(col, uTearA, 0.7);
+      vec3 split = vec3(maskR, maskG, maskB) * 1.4;
+      vec3 splitCol = vec3(uTearA.r * split.r, charCol.g * split.g, uTearB.b * split.b);
+      fx = mix(fx, splitCol, clamp(glitch * 0.7, 0.0, 0.7));
+      col = mix(col, fx, clamp(glitch * 1.1, 0.0, 1.0));
+    }
+
+    col *= 0.92 + 0.08 * sin(fragPx.y * 1.5);
+    vec2 vu = cellCenterUV - 0.5;
+    col *= 1.0 - dot(vu, vu) * 0.42;
+    col = pow(col, vec3(0.94));
+
+    gl_FragColor = vec4(col, 1.0);
+  }
+</script>
+
+<script>
+  // ---------- ATLAS ----------
+  // first N chars = brightness ramp; rest = letters/symbols for direct text placement.
+  // '.' as base means every cell shows at least a dot (stippled field).
+  const BRIGHTNESS_CHARS = '.·,:;|/+=*#%@';
+  const EXTRA_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%^&*()-_?:/<> ';
+  // dedupe: '@' '%' '#' '*' already in brightness — drop from extras
+  const dedupedExtras = [...EXTRA_CHARS].filter(c => !BRIGHTNESS_CHARS.includes(c)).join('');
+  const ATLAS = BRIGHTNESS_CHARS + dedupedExtras;
+
+  const cellW = 14, cellH = 22;
+  const atlasCanvas = document.createElement('canvas');
+  atlasCanvas.width = cellW * ATLAS.length;
+  atlasCanvas.height = cellH;
+  const actx = atlasCanvas.getContext('2d');
+  actx.fillStyle = '#000';
+  actx.fillRect(0, 0, atlasCanvas.width, atlasCanvas.height);
+
+  const atlasTexture = new THREE.CanvasTexture(atlasCanvas);
+  atlasTexture.minFilter = THREE.LinearFilter;
+  atlasTexture.magFilter = THREE.LinearFilter;
+
+  // Quick lookup: char → atlas index
+  const charIdx = {};
+  for (let i = 0; i < ATLAS.length; i++) charIdx[ATLAS[i]] = i;
+
+  // ---------- TEXT TEXTURE (cell-resolution; encodes per-cell char index) ----------
+  const textCanvas = document.createElement('canvas');
+  const textTexture = new THREE.CanvasTexture(textCanvas);
+  // flipY=true so canvas-top (where we place row 2 = the GITHUB nav) renders at screen-top
+  textTexture.flipY = true;
+  textTexture.minFilter = THREE.NearestFilter;
+  textTexture.magFilter = THREE.NearestFilter;
+
+  function buildText(scale = 1.0) {
+    const dpr = Math.min(devicePixelRatio, 2);
+    const cellWp = cellW * scale * dpr;
+    const cellHp = cellH * scale * dpr;
+    const cellsX = Math.ceil(innerWidth * dpr / cellWp);
+    const cellsY = Math.ceil(innerHeight * dpr / cellHp);
+    textCanvas.width = cellsX;
+    textCanvas.height = cellsY;
+    const ctx = textCanvas.getContext('2d');
+    const img = ctx.createImageData(cellsX, cellsY);
+    // initialize all to 0 (no override)
+    for (let i = 0; i < img.data.length; i += 4) {
+      img.data[i+3] = 255;
+    }
+
+    function place(str, cx, cy) {
+      for (let i = 0; i < str.length; i++) {
+        const ch = str[i];
+        // spaces leave the cell un-overridden so the shader's noise/wisp shows through
+        if (ch === ' ') continue;
+        const idx = charIdx[ch];
+        if (idx === undefined) continue;
+        const x = cx + i, y = cy;
+        if (x < 0 || x >= cellsX || y < 0 || y >= cellsY) continue;
+        // store atlasIdx + 1 in the red channel (0 = no override)
+        const offset = (y * cellsX + x) * 4;
+        img.data[offset] = idx + 1;
+      }
+    }
+    function placeCentered(str, cy) {
+      place(str, Math.floor((cellsX - str.length) / 2), cy);
+    }
+
+    // ---------- LAYOUT ----------
+    const cy = Math.floor(cellsY / 2);
+
+    // hero — two-line identity, both 20 chars so they center-align column-perfect
+    placeCentered('sasha hydrie aka shy', cy);
+    placeCentered('alien neuroscientist', cy + 1);
+
+    // socials — three rows starting two below the identity, prompt-style with > marker, left-aligned at the same column
+    const navItems = ['> github', '> email', '> substack'];
+    const navMaxLen = Math.max(...navItems.map(s => s.length));
+    const navStartX = Math.floor((cellsX - navMaxLen) / 2);
+    const navStartY = cy + 3;
+    navItems.forEach((s, i) => place(s, navStartX, navStartY + i));
+
+    // ---------- LINK-ZONE OVERLAY (positioned to overlap the bullet rows above) ----------
+    const linkZone = document.querySelector('.link-zone');
+    if (linkZone) {
+      const cellWcss = cellW * scale;
+      const cellHcss = cellH * scale;
+      linkZone.style.top    = (navStartY * cellHcss) + 'px';
+      linkZone.style.left   = (navStartX * cellWcss) + 'px';
+      linkZone.style.width  = (navMaxLen * cellWcss) + 'px';
+      linkZone.style.height = (navItems.length * cellHcss) + 'px';
+      linkZone.style.transform = 'none';
+    }
+
+    ctx.putImageData(img, 0, 0);
+    textTexture.needsUpdate = true;
+    return { cellsX, cellsY };
+  }
+
+  document.fonts.ready.then(() => {
+    actx.fillStyle = '#fff';
+    actx.font = '700 17px "IBM Plex Mono", monospace';
+    actx.textBaseline = 'middle';
+    actx.textAlign = 'center';
+    for (let i = 0; i < ATLAS.length; i++) {
+      actx.fillText(ATLAS[i], i * cellW + cellW / 2, cellH / 2 + 1);
+    }
+    atlasTexture.needsUpdate = true;
+    init();
+  });
+
+  function init() {
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+    const renderer = new THREE.WebGLRenderer({ antialias: false });
+    const dpr = Math.min(devicePixelRatio, 2);
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(innerWidth, innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const dims = buildText();
+
+    const MAX_DROPS = 32;
+    const drops = [];
+    for (let i = 0; i < MAX_DROPS; i++) drops.push(new THREE.Vector3(0, 0, -100));
+    let dropWrite = 0;
+    let isHeld = false;
+    let lastDropAt = -1, lastDropX = -1, lastDropY = -1;
+
+    function spawnDrop(px, py, t) {
+      dropWrite = (dropWrite + 1) % MAX_DROPS;
+      drops[dropWrite].set(px, py, t);
+      lastDropAt = t; lastDropX = px; lastDropY = py;
+    }
+
+    const STORE = 'oxo:';
+    let custom = [];
+    try { custom = JSON.parse(localStorage.getItem(STORE + 'custom-palettes') || '[]'); } catch {}
+    const PALETTES = [...window.PALETTES, ...custom];
+    let storedScheme = parseInt(localStorage.getItem(STORE + 'scheme') ?? '0', 10);
+    const params = new URLSearchParams(location.search);
+    document.body.classList.toggle('show-controls', params.get('controls') === '1');
+    const requestedScheme = params.get('p');
+    if (requestedScheme) {
+      const byIndex = Number.parseInt(requestedScheme, 10);
+      const byId = PALETTES.findIndex(p => p.id === requestedScheme);
+      if (byId >= 0) storedScheme = byId;
+      else if (Number.isInteger(byIndex)) storedScheme = byIndex;
+    }
+    if (storedScheme < 0 || storedScheme >= PALETTES.length) storedScheme = 0;
+    const v3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
+
+    const uniforms = {
+      uTime: { value: 0 },
+      uResolution: { value: new THREE.Vector2(innerWidth * dpr, innerHeight * dpr) },
+      uMouse: { value: new THREE.Vector2(0.5, 0.5) },
+      uDrops: { value: drops },
+      uAtlas: { value: atlasTexture },
+      uText: { value: textTexture },
+      uTextSize: { value: new THREE.Vector2(dims.cellsX, dims.cellsY) },
+      uCharCount: { value: ATLAS.length },
+      uBrightnessCount: { value: BRIGHTNESS_CHARS.length },
+      uGradations: { value: BRIGHTNESS_CHARS.length },
+      uCellSize: { value: new THREE.Vector2(cellW * dpr, cellH * dpr) },
+      // palette uniforms — populated by applyPalette()
+      uC1: { value: new THREE.Vector3() },
+      uC2: { value: new THREE.Vector3() },
+      uC3: { value: new THREE.Vector3() },
+      uC4: { value: new THREE.Vector3() },
+      uC5: { value: new THREE.Vector3() },
+      uBg: { value: new THREE.Vector3() },
+      uTearA:    { value: new THREE.Vector3() },
+      uTearB:    { value: new THREE.Vector3() },
+      uTearBand: { value: new THREE.Vector3() },
+      uIsOxo:    { value: 0 },
+      uLightBg:  { value: 0 },
+    };
+    const state = { speed: 1.0, cellScale: 1.0 };
+    const material = new THREE.ShaderMaterial({
+      uniforms,
+      vertexShader: document.getElementById('vert').textContent,
+      fragmentShader: document.getElementById('frag').textContent,
+    });
+    scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material));
+
+    let mx = 0.5, my = 0.5, cx = 0.5, cy = 0.5;
+    const t0 = performance.now();
+    addEventListener('pointermove', e => {
+      mx = e.clientX / innerWidth;
+      my = 1 - e.clientY / innerHeight;
+    });
+    addEventListener('pointerdown', e => {
+      // skip drop spawn if click target is a control panel button/slider
+      if (e.target.closest && e.target.closest('#controls')) return;
+      const px = e.clientX / innerWidth;
+      const py = 1 - e.clientY / innerHeight;
+      spawnDrop(px, py, simT);
+      isHeld = true;
+    });
+    function release() { isHeld = false; }
+    addEventListener('pointerup', release);
+    addEventListener('pointercancel', release);
+    addEventListener('pointerleave', release);
+
+    addEventListener('resize', () => {
+      const dpr2 = Math.min(devicePixelRatio, 2);
+      renderer.setSize(innerWidth, innerHeight);
+      uniforms.uResolution.value.set(innerWidth * dpr2, innerHeight * dpr2);
+      uniforms.uCellSize.value.set(cellW * state.cellScale * dpr2, cellH * state.cellScale * dpr2);
+      const d = buildText(state.cellScale);
+      uniforms.uTextSize.value.set(d.cellsX, d.cellsY);
+    });
+
+    // ---------- live config (persisted in localStorage) ----------
+    function bindSlider(id, valId, fmt, onChange) {
+      const slider = document.getElementById(id);
+      const valEl  = document.getElementById(valId);
+      const key = STORE + id;
+      const stored = localStorage.getItem(key);
+      if (stored !== null) slider.value = stored;
+      function update() {
+        const raw = parseFloat(slider.value);
+        valEl.textContent = fmt(raw);
+        onChange(raw);
+        localStorage.setItem(key, slider.value);
+      }
+      slider.addEventListener('input', update);
+      update();
+    }
+    bindSlider('speed', 'v-speed', v => v.toFixed(2) + '×', v => { state.speed = v; });
+    bindSlider('grad',  'v-grad',  v => v.toFixed(0),       v => { uniforms.uGradations.value = v; });
+    bindSlider('cell',  'v-cell',
+      v => `${Math.round(cellW * v)} × ${Math.round(cellH * v)}`,
+      v => {
+        state.cellScale = v;
+        uniforms.uCellSize.value.set(cellW * v * dpr, cellH * v * dpr);
+        const d = buildText(v);
+        uniforms.uTextSize.value.set(d.cellsX, d.cellsY);
+      }
+    );
+
+    // ---------- palette buttons (built from PALETTES) ----------
+    function applyPalette(idx) {
+      const p = PALETTES[idx];
+      uniforms.uC1.value.fromArray(p.ramp[0]);
+      uniforms.uC2.value.fromArray(p.ramp[1]);
+      uniforms.uC3.value.fromArray(p.ramp[2]);
+      uniforms.uC4.value.fromArray(p.ramp[3]);
+      uniforms.uC5.value.fromArray(p.ramp[4]);
+      uniforms.uBg.value.fromArray(p.bg);
+      uniforms.uTearA.value.fromArray(p.tearA);
+      uniforms.uTearB.value.fromArray(p.tearB);
+      uniforms.uTearBand.value.fromArray(p.tearBand);
+      // warm yellow cursor zone fires for oxo and any oxo-* variant
+      uniforms.uIsOxo.value = (p.id === 'oxo' || p.id.startsWith('oxo-')) ? 1 : 0;
+      uniforms.uLightBg.value = p.lightBg ? 1 : 0;
+      document.body.classList.toggle('light-bg', !!p.lightBg);
+      document.body.style.background = p.lightBg
+        ? `rgb(${p.bg.map(c => Math.round(c * 255)).join(',')})`
+        : '#161616';
+    }
+    const buttonHost = document.getElementById('palette-buttons');
+    PALETTES.forEach((p, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'seg' + (i === storedScheme ? ' on' : '');
+      btn.dataset.scheme = i;
+      btn.textContent = p.id;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#controls .seg').forEach(x => x.classList.remove('on'));
+        btn.classList.add('on');
+        applyPalette(i);
+        localStorage.setItem(STORE + 'scheme', i);
+      });
+      buttonHost.appendChild(btn);
+    });
+    applyPalette(storedScheme);
+
+    // simulated time scaled by speed slider — replaces the linear (now - t0) version below
+    let simT = 0, lastT = performance.now();
+
+    function loop() {
+      const now = performance.now();
+      const dt = (now - lastT) / 1000;
+      lastT = now;
+      simT += dt * state.speed;
+
+      cx += (mx - cx) * 0.10;
+      cy += (my - cy) * 0.10;
+      uniforms.uMouse.value.set(cx, cy);
+
+      // drops are timestamped in simT so they slow/speed with the speed slider too
+      if (isHeld) {
+        const dx = mx - lastDropX, dy = my - lastDropY;
+        const moved = Math.hypot(dx, dy);
+        if (moved > 0.012 || (simT - lastDropAt) > 0.10) {
+          spawnDrop(mx, my, simT);
+        }
+      }
+
+      uniforms.uTime.value = simT;
+      renderer.render(scene, camera);
+      requestAnimationFrame(loop);
+    }
+    loop();
+  }
+</script>
+</body>
+</html>
