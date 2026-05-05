@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>shy // halvorsen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #060c10; }
+  body { font-family: 'Cormorant Garamond', serif; color: #f4ead4; cursor: grab; }
+  body.dragging { cursor: grabbing; }
+  canvas { display: block; position: fixed; inset: 0; z-index: 1; }
+
+  .meta-l, .meta-r {
+    position: fixed; top: 1.6rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.66rem; letter-spacing: 0.28em; text-transform: uppercase;
+    z-index: 10; color: rgba(244, 234, 212, 0.7);
+    pointer-events: none; mix-blend-mode: screen;
+    text-shadow: 0 1px 5px rgba(0,0,0,0.8);
+  }
+  .meta-l { left: 1.8rem; }
+  .meta-r { right: 1.8rem; }
+
+  .name {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-style: italic; font-size: clamp(3.5rem, 7vw, 5.5rem);
+    letter-spacing: -0.01em; color: #f8efd9;
+    z-index: 10; pointer-events: none;
+    text-shadow: 0 0 28px rgba(0, 0, 0, 0.8), 0 0 60px rgba(61, 219, 217, 0.25);
+    mix-blend-mode: screen;
+  }
+  .tag {
+    position: fixed; bottom: 22%; left: 50%;
+    transform: translateX(-50%);
+    font-style: italic; font-size: 1rem;
+    color: rgba(244, 234, 212, 0.7);
+    z-index: 10; pointer-events: none;
+    text-shadow: 0 1px 12px rgba(0,0,0,0.8);
+    mix-blend-mode: screen; letter-spacing: 0.05em;
+  }
+  .links {
+    position: fixed; bottom: 1.6rem; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.66rem; letter-spacing: 0.3em; text-transform: uppercase;
+    color: rgba(244, 234, 212, 0.6);
+    z-index: 10; mix-blend-mode: screen;
+    text-shadow: 0 1px 5px rgba(0,0,0,0.8);
+  }
+  .links a {
+    color: #3ddbd9; text-decoration: none;
+    border-bottom: 1px dotted rgba(61, 219, 217, 0.4);
+    padding-bottom: 2px; margin: 0 0.5em;
+    pointer-events: auto;
+  }
+</style>
+</head>
+<body>
+
+<div class="meta-l">— halvorsen · a=1.4 · 3-fold symmetric</div>
+<div class="meta-r">drag to orbit · interlocked arms</div>
+
+<h1 class="name">shy.</h1>
+<div class="tag">— three arms, one rotation</div>
+
+<div class="links">
+  <a href="https://github.com/iCalculated">github</a> · <a href="mailto:sasha@hydrie.xyz">mail</a>
+</div>
+
+<script>
+  const N = 60000;
+  const ALPHA = 1.4;
+  const DT = 0.006;
+  const SUBSTEPS = 2;
+
+  const scene = new THREE.Scene();
+  scene.fog = new THREE.FogExp2(0x060c10, 0.018);
+  const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 200);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.setSize(innerWidth, innerHeight);
+  renderer.setClearColor(0x060c10, 1);
+  document.body.appendChild(renderer.domElement);
+
+  const positions = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    positions[3*i]   = -3 + (Math.random() - 0.5) * 2;
+    positions[3*i+1] = -3 + (Math.random() - 0.5) * 2;
+    positions[3*i+2] = -3 + (Math.random() - 0.5) * 2;
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+  const material = new THREE.ShaderMaterial({
+    uniforms: { uPixelRatio: { value: renderer.getPixelRatio() } },
+    vertexShader: `
+      varying float vAng;
+      varying float vR;
+      uniform float uPixelRatio;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        // angle within xy-plane — picks out which of the 3 arms the particle is in
+        vAng = atan(position.y, position.x);
+        vR = clamp(length(position) / 12.0, 0.0, 1.0);
+        gl_Position = projectionMatrix * mv;
+        gl_PointSize = uPixelRatio * (1.5 + 22.0 / max(1.0, -mv.z));
+      }
+    `,
+    fragmentShader: `
+      varying float vAng;
+      varying float vR;
+      void main() {
+        vec2 p = gl_PointCoord - 0.5;
+        float r = length(p);
+        if (r > 0.5) discard;
+        float a = pow(1.0 - r * 2.0, 1.6);
+
+        // 3-fold periodic palette by angle, then peak brightness at outer reaches
+        // ramp through purple, cyan, mint as the arms rotate
+        vec3 cDark    = vec3(0.10, 0.10, 0.18);
+        vec3 cPurple  = vec3(0.745, 0.584, 1.000);
+        vec3 cCyan    = vec3(0.239, 0.859, 0.851);
+        vec3 cMint    = vec3(0.62, 0.94, 0.78);
+        vec3 cCream   = vec3(0.96, 0.95, 0.85);
+
+        // 3-fold sym: angle * 3 / TAU mapped to [0,1)
+        float a3 = fract(vAng * 0.4774648 + 0.5);
+        vec3 col;
+        if      (a3 < 0.33) col = mix(cPurple, cCyan, smoothstep(0.0,  0.33, a3));
+        else if (a3 < 0.66) col = mix(cCyan,   cMint, smoothstep(0.33, 0.66, a3));
+        else                col = mix(cMint,   cPurple, smoothstep(0.66, 1.0, a3));
+
+        // dim near origin (where arms cross)
+        col = mix(cDark, col, smoothstep(0.0, 0.3, vR));
+        // hot at outer reaches
+        col = mix(col, cCream, smoothstep(0.7, 1.0, vR) * 0.4);
+
+        gl_FragColor = vec4(col * a, a * 0.5);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+
+  const cloud = new THREE.Points(geometry, material);
+  scene.add(cloud);
+
+  const target = new THREE.Vector3(-2, -2, -2);
+  let yaw = 0.6, pitch = 0.4, radius = 35;
+  let yawTarget = yaw, pitchTarget = pitch, radiusTarget = radius;
+  let dragging = false, lastX = 0, lastY = 0;
+  let lastInteraction = performance.now();
+
+  function place() {
+    camera.position.set(
+      target.x + Math.sin(yaw) * Math.cos(pitch) * radius,
+      target.y + Math.sin(pitch) * radius,
+      target.z + Math.cos(yaw) * Math.cos(pitch) * radius
+    );
+    camera.lookAt(target);
+  }
+  place();
+
+  addEventListener('pointerdown', e => {
+    dragging = true; lastX = e.clientX; lastY = e.clientY;
+    document.body.classList.add('dragging');
+    lastInteraction = performance.now();
+  });
+  addEventListener('pointerup',   () => { dragging = false; document.body.classList.remove('dragging'); });
+  addEventListener('pointerleave',() => { dragging = false; document.body.classList.remove('dragging'); });
+  addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX, dy = e.clientY - lastY;
+    yawTarget   += dx * 0.005;
+    pitchTarget -= dy * 0.005;
+    pitchTarget = Math.max(-1.3, Math.min(1.3, pitchTarget));
+    lastX = e.clientX; lastY = e.clientY;
+    lastInteraction = performance.now();
+  });
+  addEventListener('wheel', e => {
+    radiusTarget *= 1 + e.deltaY * 0.0008;
+    radiusTarget = Math.max(15, Math.min(80, radiusTarget));
+    lastInteraction = performance.now();
+  }, { passive: true });
+  addEventListener('resize', () => {
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(innerWidth, innerHeight);
+  });
+
+  function loop() {
+    const now = performance.now();
+    const idle = (now - lastInteraction) > 2000;
+    if (idle) yawTarget += 0.0012;
+
+    yaw   += (yawTarget   - yaw)   * 0.08;
+    pitch += (pitchTarget - pitch) * 0.08;
+    radius += (radiusTarget - radius) * 0.08;
+    place();
+
+    const arr = positions;
+    for (let s = 0; s < SUBSTEPS; s++) {
+      for (let i = 0; i < N; i++) {
+        const ix = 3*i;
+        const x = arr[ix], y = arr[ix+1], z = arr[ix+2];
+        const dx = -ALPHA * x - 4*y - 4*z - y*y;
+        const dy = -ALPHA * y - 4*z - 4*x - z*z;
+        const dz = -ALPHA * z - 4*x - 4*y - x*x;
+        arr[ix]   = x + dx * DT;
+        arr[ix+1] = y + dy * DT;
+        arr[ix+2] = z + dz * DT;
+      }
+    }
+    geometry.attributes.position.needsUpdate = true;
+
+    renderer.render(scene, camera);
+    requestAnimationFrame(loop);
+  }
+  loop();
+</script>
+</body>
+</html>

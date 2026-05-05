@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>shy // aizawa-globe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #161616; }
+  body { font-family: 'Cormorant Garamond', serif; color: #f4ead4; cursor: grab; }
+  body.dragging { cursor: grabbing; }
+  canvas { display: block; position: fixed; inset: 0; z-index: 1; }
+
+  .meta-l, .meta-r {
+    position: fixed; top: 1.6rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.66rem; letter-spacing: 0.28em; text-transform: uppercase;
+    z-index: 10; color: rgba(244, 234, 212, 0.7);
+    pointer-events: none; mix-blend-mode: screen;
+    text-shadow: 0 1px 5px rgba(0,0,0,0.8);
+  }
+  .meta-l { left: 1.8rem; }
+  .meta-r { right: 1.8rem; }
+
+  .name {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-style: italic; font-size: clamp(3.5rem, 7vw, 5.5rem);
+    letter-spacing: -0.01em; color: #f8efd9;
+    z-index: 10; pointer-events: none;
+    text-shadow: 0 0 28px rgba(0, 0, 0, 0.8), 0 0 60px rgba(255, 126, 182, 0.25);
+    mix-blend-mode: screen;
+  }
+  .tag {
+    position: fixed; bottom: 22%; left: 50%;
+    transform: translateX(-50%);
+    font-style: italic; font-size: 1rem;
+    color: rgba(244, 234, 212, 0.7);
+    z-index: 10; pointer-events: none;
+    text-shadow: 0 1px 12px rgba(0,0,0,0.8);
+    mix-blend-mode: screen; letter-spacing: 0.05em;
+  }
+  .links {
+    position: fixed; bottom: 1.6rem; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.66rem; letter-spacing: 0.3em; text-transform: uppercase;
+    color: rgba(244, 234, 212, 0.6);
+    z-index: 10; mix-blend-mode: screen;
+    text-shadow: 0 1px 5px rgba(0,0,0,0.8);
+  }
+  .links a {
+    color: #ff7eb6; text-decoration: none;
+    border-bottom: 1px dotted rgba(255, 126, 182, 0.4);
+    padding-bottom: 2px; margin: 0 0.5em;
+    pointer-events: auto;
+  }
+
+  .controls {
+    position: fixed; top: 4rem; right: 1.6rem;
+    z-index: 20; width: 220px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.66rem; letter-spacing: 0.04em;
+    color: rgba(244, 234, 212, 0.85);
+    background: rgba(22, 22, 22, 0.55);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(190, 149, 255, 0.18);
+    border-radius: 3px;
+    padding: 0.85rem 1rem;
+    pointer-events: auto;
+  }
+  .controls .row { margin-bottom: 0.7rem; }
+  .controls .row:last-child { margin-bottom: 0; }
+  .controls .row label {
+    display: flex; justify-content: space-between;
+    text-transform: uppercase; font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    color: rgba(244, 234, 212, 0.55);
+    margin-bottom: 0.35rem;
+  }
+  .controls .row label .v {
+    color: #be95ff; font-weight: 500;
+    text-transform: none; letter-spacing: 0;
+  }
+  .controls input[type="range"] {
+    width: 100%; margin: 0; height: 12px;
+    -webkit-appearance: none; appearance: none;
+    background: transparent;
+  }
+  .controls input[type="range"]::-webkit-slider-runnable-track {
+    height: 2px; background: rgba(244, 234, 212, 0.22); border-radius: 1px;
+  }
+  .controls input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 10px; height: 10px;
+    background: #be95ff; border: none;
+    border-radius: 50%; margin-top: -4px; cursor: pointer;
+  }
+  .controls input[type="range"]::-moz-range-track {
+    height: 2px; background: rgba(244, 234, 212, 0.22);
+  }
+  .controls input[type="range"]::-moz-range-thumb {
+    width: 10px; height: 10px;
+    background: #be95ff; border: none;
+    border-radius: 50%; cursor: pointer;
+  }
+  .controls .seg-group {
+    display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0.2rem;
+  }
+  .controls .seg {
+    padding: 0.28rem 0.1rem;
+    font-family: inherit; font-size: 0.58rem;
+    letter-spacing: 0.08em;
+    background: transparent;
+    color: rgba(244, 234, 212, 0.55);
+    border: 1px solid rgba(244, 234, 212, 0.18);
+    border-radius: 2px; cursor: pointer;
+    text-transform: uppercase;
+    transition: background 120ms, color 120ms, border-color 120ms;
+  }
+  .controls .seg:hover { color: rgba(244, 234, 212, 0.85); }
+  .controls .seg.on {
+    background: rgba(190, 149, 255, 0.18);
+    color: #be95ff;
+    border-color: rgba(190, 149, 255, 0.55);
+  }
+  .controls .toggle {
+    width: 100%; padding: 0.32rem;
+    font-family: inherit; font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    background: transparent;
+    color: rgba(244, 234, 212, 0.6);
+    border: 1px solid rgba(244, 234, 212, 0.18);
+    border-radius: 2px; cursor: pointer;
+    text-transform: uppercase;
+  }
+  .controls .toggle.on {
+    background: rgba(190, 149, 255, 0.18);
+    color: #be95ff;
+    border-color: rgba(190, 149, 255, 0.55);
+  }
+
+  body.light-bg .meta-l,
+  body.light-bg .meta-r,
+  body.light-bg .tag,
+  body.light-bg .links {
+    color: rgba(70, 38, 8, 0.78);
+    mix-blend-mode: normal;
+    text-shadow: 0 1px 6px rgba(255, 240, 200, 0.6);
+  }
+  body.light-bg .name {
+    color: #4a2810; mix-blend-mode: normal;
+    text-shadow: 0 0 36px rgba(255, 220, 150, 0.5),
+                 0 0 80px rgba(220, 140, 50, 0.25);
+  }
+  body.light-bg .links a {
+    color: #6e3a10;
+    border-bottom-color: rgba(110, 58, 16, 0.4);
+  }
+</style>
+</head>
+<body>
+
+<div class="meta-l">— aizawa · with floating words</div>
+<div class="meta-r">drag to orbit · words anchored in space</div>
+
+<div class="tag">— a flow with names around it</div>
+
+<div class="links">
+  <a href="https://github.com/iCalculated">github</a> · <a href="mailto:sasha@hydrie.xyz">mail</a>
+</div>
+
+<div class="controls" id="controls">
+  <div class="row">
+    <label>speed <span class="v" id="v-speed">1.00×</span></label>
+    <input type="range" id="speed" min="0.1" max="2.0" step="0.05" value="1.0">
+  </div>
+  <div class="row">
+    <label>gradations <span class="v" id="v-grad">13</span></label>
+    <input type="range" id="grad" min="2" max="13" step="1" value="13">
+  </div>
+  <div class="row">
+    <label>cell <span class="v" id="v-cell">14 × 22</span></label>
+    <input type="range" id="cell" min="0.6" max="2.0" step="0.05" value="1.0">
+  </div>
+  <div class="row">
+    <label>density <span class="v" id="v-bri">4.5</span></label>
+    <input type="range" id="bri" min="1.5" max="9" step="0.1" value="4.5">
+  </div>
+  <div class="row">
+    <label>ascii <span class="v" id="v-ascii">on</span></label>
+    <button class="toggle on" id="ascii-toggle">on</button>
+  </div>
+  <div class="row">
+    <label>glitch words <span class="v" id="v-glitch">off</span></label>
+    <button class="toggle" id="glitch-toggle">off</button>
+  </div>
+  <div class="row">
+    <label>palette</label>
+    <div class="seg-group">
+      <button class="seg on" data-scheme="0">oxo</button>
+      <button class="seg" data-scheme="1">dusk</button>
+      <button class="seg" data-scheme="2">aurora</button>
+      <button class="seg" data-scheme="3">ember</button>
+      <button class="seg" data-scheme="4">vapor</button>
+      <button class="seg" data-scheme="5">orokin</button>
+      <button class="seg" data-scheme="6">gilt</button>
+      <button class="seg" data-scheme="7">daybrk</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ============================================================
+  // aizawa attractor + word sprites at fixed 3D points → ASCII filter
+  // particles render as soft additive blobs (brightness field). word sprites
+  // are billboarded to face the camera; their text gets rendered into the
+  // same RT alongside the particles, then the ASCII pass quantizes everything
+  // into cells. with ASCII off, the source render shows directly so the words
+  // are readable; with ASCII on, the words are visible as denser glyph regions
+  // hovering around the attractor.
+  // ============================================================
+
+  const N = 50000;
+  const A = 0.95, B = 0.7, C = 0.6, D = 3.5, E = 0.25, F = 0.1;
+  const DT = 0.006;
+  const SUBSTEPS = 2;
+
+  const CELL_W = 14, CELL_H = 22;
+  // '.' is the base char (sparsest visible glyph) — every cell shows at least a dot,
+  // giving a stippled field feel. dropping the leading space means no fully blank cells.
+  const CHARS = '.·,:;|/+=*#%@';
+
+  const dpr = Math.min(devicePixelRatio, 2);
+  let W = innerWidth, H = innerHeight;
+
+  const renderer = new THREE.WebGLRenderer({ antialias: false });
+  renderer.setPixelRatio(dpr);
+  renderer.setSize(W, H);
+  renderer.setClearColor(0x161616, 1);
+  document.body.appendChild(renderer.domElement);
+
+  // ---------- Pass 1: aizawa particle cloud (ASCII source) ----------
+  // ---------- Pass 3: sceneWords renders crisp text overlay on top ----------
+  const sceneA = new THREE.Scene();
+  const sceneWords = new THREE.Scene();
+  const cameraA = new THREE.PerspectiveCamera(45, W/H, 0.01, 200);
+
+  const positions = new Float32Array(N * 3);
+  for (let i = 0; i < N; i++) {
+    positions[3*i]   = (Math.random() - 0.5) * 0.4;
+    positions[3*i+1] = (Math.random() - 0.5) * 0.4;
+    positions[3*i+2] = (Math.random() - 0.5) * 0.4;
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+  const particleMat = new THREE.ShaderMaterial({
+    uniforms: { uPixelRatio: { value: dpr } },
+    vertexShader: `
+      uniform float uPixelRatio;
+      void main() {
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mv;
+        gl_PointSize = uPixelRatio * (3.0 + 7.0 / max(0.5, -mv.z));
+      }
+    `,
+    fragmentShader: `
+      void main() {
+        vec2 p = gl_PointCoord - 0.5;
+        float r = length(p);
+        if (r > 0.5) discard;
+        float a = pow(1.0 - r * 2.0, 2.0);
+        gl_FragColor = vec4(vec3(a), a);
+      }
+    `,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
+  const cloud = new THREE.Points(geometry, particleMat);
+  sceneA.add(cloud);
+
+  // ---- word sprites placed in 3D around the attractor ----
+  // aizawa lives roughly inside x,y ∈ [-1.5, 1.5], z ∈ [-1.0, 2.0]; place words
+  // on a shell of radius ~2.0 centered at (0, 0, 0.5) so they hover outside the body
+  const WORDS = [
+    { lat:  60, lon:    0, text: 'first light',     url: '#' },
+    { lat:  35, lon:   60, text: 'soft soft',       url: '#' },
+    { lat:  10, lon:  120, text: 'small hours',     url: '#' },
+    { lat: -15, lon:  170, text: 'almost',          url: '#' },
+    { lat: -45, lon:  230, text: 'kept',            url: '#' },
+    { lat: -25, lon:  290, text: 'underroot',       url: '#' },
+    { lat:  20, lon:  340, text: 'patience',        url: '#' },
+    { lat:  72, lon:   95, text: 'open palm',       url: 'mailto:sasha@hydrie.xyz' },
+    { lat: -70, lon:   45, text: 'still tender',    url: '#' },
+    { lat:  -5, lon:    0, text: 'remember',        url: 'https://github.com/iCalculated' },
+    { lat:  50, lon:  175, text: 'after',           url: '#' },
+    { lat: -55, lon:  130, text: 'the long way',    url: '#' },
+    { lat:  25, lon:  220, text: 'rooting',         url: '#' },
+    { lat: -35, lon:  -30, text: 'between things',  url: '#' },
+    { lat:  40, lon:  270, text: 'let it be',       url: '#' },
+    { lat:   0, lon:   85, text: 'again',           url: '#' },
+  ];
+
+  // each word has a single overlay sprite + two pre-baked textures (normal, glitch).
+  // textures are repainted on scheme change so the text/halo colors invert between
+  // dark schemes (white text + dark halo) and orokin (dark bronze text + cream halo).
+  // glitch variant adds a subtle chromatic-aberration split.
+  function paintWord(canvas, text, { glitch, lightBg }) {
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = '600 52px "IBM Plex Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+
+    if (lightBg) {
+      // halo is light (parchment) so dark text reads cleanly without muddy blobs
+      ctx.strokeStyle = 'rgba(248, 240, 218, 0.95)';
+      ctx.lineWidth = 8;
+      ctx.strokeText(text, 256, 56);
+      if (glitch) {
+        // chromatic ghosts in muted earth tones (brighter colors would clash with cream)
+        ctx.fillStyle = 'rgba(160, 50, 50, 0.55)';
+        ctx.fillText(text, 256 - 3, 56);
+        ctx.fillStyle = 'rgba(50, 80, 130, 0.55)';
+        ctx.fillText(text, 256 + 3, 56);
+      }
+      // dark text on top
+      ctx.fillStyle = '#1a0d04';
+      ctx.fillText(text, 256, 56);
+    } else {
+      // dark halo for contrast on dark schemes
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+      ctx.lineWidth = 7;
+      ctx.strokeText(text, 256, 56);
+      if (glitch) {
+        ctx.fillStyle = 'rgba(255, 80, 120, 0.65)';
+        ctx.fillText(text, 256 - 3, 56);
+        ctx.fillStyle = 'rgba(80, 180, 255, 0.65)';
+        ctx.fillText(text, 256 + 3, 56);
+      }
+      // white text on top
+      ctx.fillStyle = '#fff';
+      ctx.fillText(text, 256, 56);
+    }
+  }
+
+  function makeOverlaySprite(map) {
+    const mat = new THREE.SpriteMaterial({
+      map,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      blending: THREE.NormalBlending,
+      color: new THREE.Color(0.65, 0.65, 0.65),
+    });
+    const s = new THREE.Sprite(mat);
+    s.scale.set(0.95, 0.20, 1);
+    return s;
+  }
+
+  WORDS.forEach(w => {
+    const r = 2.0;
+    const phi = (90 - w.lat) * Math.PI / 180;
+    const theta = w.lon * Math.PI / 180;
+    const x = r * Math.sin(phi) * Math.cos(theta);
+    const y = r * Math.cos(phi);
+    const z = r * Math.sin(phi) * Math.sin(theta) + 0.5;
+    // two canvases per word so we can re-paint on scheme change
+    w.canvasNormal = document.createElement('canvas');
+    w.canvasGlitch = document.createElement('canvas');
+    w.canvasNormal.width = w.canvasGlitch.width = 512;
+    w.canvasNormal.height = w.canvasGlitch.height = 112;
+    w.textures = {
+      normal: new THREE.CanvasTexture(w.canvasNormal),
+      glitch: new THREE.CanvasTexture(w.canvasGlitch),
+    };
+    for (const t of [w.textures.normal, w.textures.glitch]) {
+      t.minFilter = THREE.LinearFilter;
+      t.magFilter = THREE.LinearFilter;
+      t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+    }
+    w.sprite = makeOverlaySprite(w.textures.normal);
+    w.sprite.position.set(x, y, z);
+    sceneWords.add(w.sprite);
+  });
+
+  function repaintAllWords() {
+    const lightBg = asciiUniforms.uScheme.value === 5;
+    WORDS.forEach(w => {
+      paintWord(w.canvasNormal, w.text, { glitch: false, lightBg });
+      paintWord(w.canvasGlitch, w.text, { glitch: true,  lightBg });
+      w.textures.normal.needsUpdate = true;
+      w.textures.glitch.needsUpdate = true;
+    });
+  }
+  // initial paint deferred to applyScheme(storedScheme) below — by then asciiUniforms exists
+
+  // ---------- offscreen render target ----------
+  const rt = new THREE.WebGLRenderTarget(W * dpr, H * dpr, {
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.LinearFilter,
+    format: THREE.RGBAFormat,
+    type: THREE.UnsignedByteType,
+  });
+
+  // ---------- atlas (2× native) ----------
+  const ATLAS_W = CELL_W * 2, ATLAS_H = CELL_H * 2;
+  const atlasCanvas = document.createElement('canvas');
+  atlasCanvas.width = ATLAS_W * CHARS.length;
+  atlasCanvas.height = ATLAS_H;
+  const actx = atlasCanvas.getContext('2d');
+  const atlasTex = new THREE.CanvasTexture(atlasCanvas);
+  atlasTex.minFilter = THREE.LinearFilter;
+  atlasTex.magFilter = THREE.LinearFilter;
+  function paintAtlas() {
+    actx.fillStyle = '#000';
+    actx.fillRect(0, 0, atlasCanvas.width, atlasCanvas.height);
+    actx.fillStyle = '#fff';
+    actx.font = '600 34px "IBM Plex Mono", monospace';
+    actx.textAlign = 'center';
+    actx.textBaseline = 'middle';
+    for (let i = 0; i < CHARS.length; i++) {
+      actx.fillText(CHARS[i], i * ATLAS_W + ATLAS_W/2, ATLAS_H/2 + 2);
+    }
+    atlasTex.needsUpdate = true;
+  }
+  paintAtlas();
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(paintAtlas);
+
+  // ---------- Pass 2: ASCII fullscreen ----------
+  const sceneB = new THREE.Scene();
+  const cameraB = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+  const asciiUniforms = {
+    uSrc:         { value: rt.texture },
+    uAtlas:       { value: atlasTex },
+    uResolution:  { value: new THREE.Vector2(W * dpr, H * dpr) },
+    uCellSize:    { value: new THREE.Vector2(CELL_W * dpr, CELL_H * dpr) },
+    uCharCount:   { value: CHARS.length },
+    uTime:        { value: 0 },
+    uGradations:  { value: CHARS.length },
+    uBriGain:     { value: 4.5 },
+    uScheme:      { value: 0 },
+    uAsciiOn:     { value: 1.0 },
+  };
+
+  const asciiMat = new THREE.ShaderMaterial({
+    uniforms: asciiUniforms,
+    vertexShader: `void main() { gl_Position = vec4(position, 1.0); }`,
+    fragmentShader: `
+      precision highp float;
+      uniform sampler2D uSrc;
+      uniform sampler2D uAtlas;
+      uniform vec2  uResolution;
+      uniform vec2  uCellSize;
+      uniform float uCharCount;
+      uniform float uTime;
+      uniform float uGradations;
+      uniform float uBriGain;
+      uniform int   uScheme;
+      uniform float uAsciiOn;
+
+      void main() {
+        vec2 fragPx = gl_FragCoord.xy;
+        vec2 cellPx = floor(fragPx / uCellSize) * uCellSize;
+        vec2 cellCenterUV = (cellPx + uCellSize * 0.5) / uResolution;
+        vec2 fragUV = fragPx / uResolution;
+
+        // cell-quantized brightness (drives glyph + palette in ASCII mode)
+        vec2 dx = vec2(uCellSize.x * 0.25, 0.0) / uResolution;
+        vec2 dy = vec2(0.0, uCellSize.y * 0.25) / uResolution;
+        float bSrc = 0.0;
+        bSrc += texture2D(uSrc, cellCenterUV).r;
+        bSrc += texture2D(uSrc, cellCenterUV + dx).r;
+        bSrc += texture2D(uSrc, cellCenterUV - dx).r;
+        bSrc += texture2D(uSrc, cellCenterUV + dy).r;
+        bSrc += texture2D(uSrc, cellCenterUV - dy).r;
+        bSrc /= 5.0;
+        float bb = clamp(bSrc * uBriGain, 0.0, 1.0);
+
+        // per-pixel brightness (drives palette in non-ASCII mode so colors are smooth)
+        float bRaw = clamp(texture2D(uSrc, fragUV).r * uBriGain, 0.0, 1.0);
+
+        // brightness used for palette color (cell-quantized in ASCII, per-pixel otherwise)
+        float b = (uAsciiOn > 0.5) ? bb : bRaw;
+
+        // glyph pick from ASCII brightness
+        float bSnap = floor(bb * uGradations) / max(1.0, uGradations - 1.0);
+        bSnap = clamp(bSnap, 0.0, 1.0);
+        float idx = floor(bSnap * (uCharCount - 0.001));
+
+        vec2 inCell = (fragPx - cellPx) / uCellSize;
+        vec2 atlasUV = vec2((idx + inCell.x) / uCharCount, inCell.y);
+        float charMask = texture2D(uAtlas, atlasUV).r;
+
+        vec3 col;
+        vec3 bg = vec3(0.087, 0.087, 0.087);
+        vec3 cBright = vec3(0.96, 0.95, 0.85);
+        if (uScheme == 0) {
+          vec3 c1 = vec3(0.087, 0.087, 0.10);
+          vec3 c2 = vec3(0.745, 0.584, 1.000);
+          vec3 c3 = vec3(1.000, 0.494, 0.714);
+          vec3 c4 = vec3(0.239, 0.859, 0.851);
+          if      (b < 0.30) col = mix(c1, c2, smoothstep(0.0,  0.30, b));
+          else if (b < 0.60) col = mix(c2, c3, smoothstep(0.30, 0.60, b));
+          else if (b < 0.85) col = mix(c3, c4, smoothstep(0.60, 0.85, b));
+          else                col = mix(c4, cBright, smoothstep(0.85, 1.0, b));
+        } else if (uScheme == 1) {
+          vec3 c1 = vec3(0.06, 0.04, 0.18);
+          vec3 c2 = vec3(0.42, 0.20, 0.62);
+          vec3 c3 = vec3(0.95, 0.42, 0.55);
+          vec3 c4 = vec3(0.96, 0.65, 0.30);
+          vec3 c5 = vec3(0.99, 0.93, 0.75);
+          if      (b < 0.30) col = mix(c1, c2, smoothstep(0.0,  0.30, b));
+          else if (b < 0.60) col = mix(c2, c3, smoothstep(0.30, 0.60, b));
+          else if (b < 0.85) col = mix(c3, c4, smoothstep(0.60, 0.85, b));
+          else                col = mix(c4, c5, smoothstep(0.85, 1.0, b));
+        } else if (uScheme == 2) {
+          vec3 c1 = vec3(0.04, 0.06, 0.16);
+          vec3 c2 = vec3(0.10, 0.55, 0.55);
+          vec3 c3 = vec3(0.30, 0.92, 0.50);
+          vec3 c4 = vec3(0.85, 1.00, 0.50);
+          vec3 c5 = vec3(0.98, 0.98, 0.92);
+          if      (b < 0.30) col = mix(c1, c2, smoothstep(0.0,  0.30, b));
+          else if (b < 0.60) col = mix(c2, c3, smoothstep(0.30, 0.60, b));
+          else if (b < 0.85) col = mix(c3, c4, smoothstep(0.60, 0.85, b));
+          else                col = mix(c4, c5, smoothstep(0.85, 1.0, b));
+        } else if (uScheme == 3) {
+          vec3 c1 = vec3(0.10, 0.04, 0.06);
+          vec3 c2 = vec3(0.45, 0.10, 0.35);
+          vec3 c3 = vec3(0.95, 0.30, 0.20);
+          vec3 c4 = vec3(0.99, 0.75, 0.18);
+          vec3 c5 = vec3(1.00, 0.95, 0.65);
+          if      (b < 0.30) col = mix(c1, c2, smoothstep(0.0,  0.30, b));
+          else if (b < 0.60) col = mix(c2, c3, smoothstep(0.30, 0.60, b));
+          else if (b < 0.85) col = mix(c3, c4, smoothstep(0.60, 0.85, b));
+          else                col = mix(c4, c5, smoothstep(0.85, 1.0, b));
+        } else if (uScheme == 4) {
+          vec3 c1 = vec3(0.08, 0.04, 0.20);
+          vec3 c2 = vec3(0.95, 0.30, 0.65);
+          vec3 c3 = vec3(1.00, 0.55, 0.75);
+          vec3 c4 = vec3(0.55, 0.95, 0.95);
+          vec3 c5 = vec3(0.92, 0.99, 0.88);
+          if      (b < 0.30) col = mix(c1, c2, smoothstep(0.0,  0.30, b));
+          else if (b < 0.60) col = mix(c2, c3, smoothstep(0.30, 0.60, b));
+          else if (b < 0.85) col = mix(c3, c4, smoothstep(0.60, 0.85, b));
+          else                col = mix(c4, c5, smoothstep(0.85, 1.0, b));
+        } else if (uScheme == 5) {
+          // orokin — ink-on-paper. low brightness fades into the parchment bg
+          // (almost invisible), high brightness builds up into deep bronze marks.
+          bg = vec3(0.91, 0.89, 0.81);
+          vec3 c1 = vec3(0.86, 0.83, 0.73);  // pale ivory — barely visible against bg
+          vec3 c2 = vec3(0.74, 0.64, 0.40);  // soft brass
+          vec3 c3 = vec3(0.55, 0.42, 0.16);  // tarnished gold
+          vec3 c4 = vec3(0.36, 0.22, 0.06);  // bronze
+          vec3 c5 = vec3(0.20, 0.11, 0.03);  // deep bronze peak
+          if      (b < 0.30) col = mix(c1, c2, smoothstep(0.0,  0.30, b));
+          else if (b < 0.60) col = mix(c2, c3, smoothstep(0.30, 0.60, b));
+          else if (b < 0.85) col = mix(c3, c4, smoothstep(0.60, 0.85, b));
+          else                col = mix(c4, c5, smoothstep(0.85, 1.0, b));
+        } else if (uScheme == 6) {
+          vec3 c1 = vec3(0.04, 0.03, 0.01);
+          vec3 c2 = vec3(0.30, 0.16, 0.04);
+          vec3 c3 = vec3(0.65, 0.40, 0.06);
+          vec3 c4 = vec3(1.00, 0.78, 0.12);
+          vec3 c5 = vec3(1.00, 0.96, 0.55);
+          if      (b < 0.30) col = mix(c1, c2, smoothstep(0.0,  0.30, b));
+          else if (b < 0.60) col = mix(c2, c3, smoothstep(0.30, 0.60, b));
+          else if (b < 0.85) col = mix(c3, c4, smoothstep(0.60, 0.85, b));
+          else                col = mix(c4, c5, smoothstep(0.85, 1.0, b));
+        } else {
+          vec3 c1 = vec3(0.16, 0.07, 0.12);
+          vec3 c2 = vec3(0.55, 0.26, 0.42);
+          vec3 c3 = vec3(0.95, 0.55, 0.45);
+          vec3 c4 = vec3(1.00, 0.80, 0.55);
+          vec3 c5 = vec3(1.00, 0.95, 0.85);
+          if      (b < 0.30) col = mix(c1, c2, smoothstep(0.0,  0.30, b));
+          else if (b < 0.60) col = mix(c2, c3, smoothstep(0.30, 0.60, b));
+          else if (b < 0.85) col = mix(c3, c4, smoothstep(0.60, 0.85, b));
+          else                col = mix(c4, c5, smoothstep(0.85, 1.0, b));
+        }
+
+        // ASCII on: glyph-masked palette over bg.
+        // ASCII off: smooth per-pixel blend of bg → palette using bRaw, so colors
+        // are continuous (not cell-quantized) when the filter is disabled.
+        vec3 final = (uAsciiOn > 0.5)
+          ? mix(bg, col, charMask)
+          : mix(bg, col, bRaw);
+
+        vec2 vu = fragUV - 0.5;
+        final *= 1.0 - dot(vu, vu) * 0.4;
+
+        gl_FragColor = vec4(final, 1.0);
+      }
+    `,
+  });
+  sceneB.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), asciiMat));
+
+  // ---------- camera orbit ----------
+  const orbitTarget = new THREE.Vector3(0, 0, 0.5);
+  let yaw = 0.4, pitch = 0.25, radius = 7;
+  let yawTarget = yaw, pitchTarget = pitch, radiusTarget = radius;
+  let dragging = false, lastX = 0, lastY = 0;
+  let downX = 0, downY = 0;
+  let mouseX = 0, mouseY = 0;
+  let hoveredWord = null;
+  let lastInteraction = performance.now();
+
+  function placeCam() {
+    cameraA.position.set(
+      Math.sin(yaw) * Math.cos(pitch) * radius,
+      Math.sin(pitch) * radius + 0.5,
+      Math.cos(yaw) * Math.cos(pitch) * radius
+    );
+    cameraA.lookAt(orbitTarget);
+  }
+  placeCam();
+
+  addEventListener('pointerdown', e => {
+    if (e.target.closest && e.target.closest('#controls')) return;
+    downX = e.clientX; downY = e.clientY;
+    dragging = true; lastX = e.clientX; lastY = e.clientY;
+    document.body.classList.add('dragging');
+    lastInteraction = performance.now();
+  });
+  addEventListener('pointerup', e => {
+    // small movement → treat as a click; if hovered word has a real URL, open it
+    const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
+    if (moved < 5 && hoveredWord && hoveredWord.url && hoveredWord.url !== '#') {
+      window.open(hoveredWord.url, '_blank', 'noopener,noreferrer');
+    }
+    dragging = false;
+    document.body.classList.remove('dragging');
+  });
+  addEventListener('pointercancel', () => { dragging = false; document.body.classList.remove('dragging'); });
+  addEventListener('pointermove', e => {
+    mouseX = e.clientX;
+    mouseY = e.clientY;
+    if (!dragging) return;
+    // mouse-grab feel: drag the world with the cursor
+    const ddx = e.clientX - lastX, ddy = e.clientY - lastY;
+    yawTarget   -= ddx * 0.005;
+    pitchTarget += ddy * 0.005;
+    pitchTarget = Math.max(-1.3, Math.min(1.3, pitchTarget));
+    lastX = e.clientX; lastY = e.clientY;
+    lastInteraction = performance.now();
+  });
+  addEventListener('wheel', e => {
+    radiusTarget *= 1 + e.deltaY * 0.0008;
+    radiusTarget = Math.max(3, Math.min(18, radiusTarget));
+    lastInteraction = performance.now();
+  }, { passive: true });
+  addEventListener('resize', () => {
+    W = innerWidth; H = innerHeight;
+    renderer.setSize(W, H);
+    rt.setSize(W * dpr, H * dpr);
+    asciiUniforms.uResolution.value.set(W * dpr, H * dpr);
+    cameraA.aspect = W / H;
+    cameraA.updateProjectionMatrix();
+  });
+
+  // ---------- live config (persisted) ----------
+  const STORE = 'aizawa-globe:';
+  const state = { speed: 1.0 };
+
+  function bindSlider(id, valId, fmt, onChange) {
+    const slider = document.getElementById(id);
+    const valEl  = document.getElementById(valId);
+    const key = STORE + id;
+    const stored = localStorage.getItem(key);
+    if (stored !== null) slider.value = stored;
+    function update() {
+      const raw = parseFloat(slider.value);
+      valEl.textContent = fmt(raw);
+      onChange(raw);
+      localStorage.setItem(key, slider.value);
+    }
+    slider.addEventListener('input', update);
+    update();
+  }
+
+  bindSlider('speed', 'v-speed', v => v.toFixed(2) + '×', v => { state.speed = v; });
+  bindSlider('grad',  'v-grad',  v => v.toFixed(0),       v => { asciiUniforms.uGradations.value = v; });
+  bindSlider('cell',  'v-cell',
+    v => `${Math.round(CELL_W * v)} × ${Math.round(CELL_H * v)}`,
+    v => { asciiUniforms.uCellSize.value.set(CELL_W * v * dpr, CELL_H * v * dpr); }
+  );
+  bindSlider('bri',   'v-bri',   v => v.toFixed(1),       v => { asciiUniforms.uBriGain.value = v; });
+
+  // ascii toggle
+  const ASCII_KEY = STORE + 'ascii';
+  const storedAscii = localStorage.getItem(ASCII_KEY);
+  const asciiOn = storedAscii === null ? true : storedAscii === '1';
+  const asciiBtn = document.getElementById('ascii-toggle');
+  const asciiVal = document.getElementById('v-ascii');
+  function applyAscii(on) {
+    asciiUniforms.uAsciiOn.value = on ? 1.0 : 0.0;
+    asciiBtn.classList.toggle('on', on);
+    asciiBtn.textContent = on ? 'on' : 'off';
+    asciiVal.textContent = on ? 'on' : 'off';
+    localStorage.setItem(ASCII_KEY, on ? '1' : '0');
+  }
+  applyAscii(asciiOn);
+  asciiBtn.addEventListener('click', () => applyAscii(asciiUniforms.uAsciiOn.value < 0.5));
+
+  // glitch toggle — swaps each word's overlay texture between clean and chromatic-split
+  const GLITCH_KEY = STORE + 'glitch';
+  const storedGlitch = localStorage.getItem(GLITCH_KEY) === '1';
+  const glitchBtn = document.getElementById('glitch-toggle');
+  const glitchVal = document.getElementById('v-glitch');
+  let glitchOn = false;
+  function applyGlitch(on) {
+    glitchOn = on;
+    WORDS.forEach(w => {
+      w.sprite.material.map = on ? w.textures.glitch : w.textures.normal;
+      w.sprite.material.needsUpdate = true;
+    });
+    glitchBtn.classList.toggle('on', on);
+    glitchBtn.textContent = on ? 'on' : 'off';
+    glitchVal.textContent = on ? 'on' : 'off';
+    localStorage.setItem(GLITCH_KEY, on ? '1' : '0');
+  }
+  applyGlitch(storedGlitch);
+  glitchBtn.addEventListener('click', () => applyGlitch(!glitchOn));
+
+  // palette
+  const SCHEME_KEY = STORE + 'scheme';
+  const storedScheme = parseInt(localStorage.getItem(SCHEME_KEY) ?? '0', 10);
+  function applyScheme(s) {
+    asciiUniforms.uScheme.value = s;
+    document.body.classList.toggle('light-bg', s === 5);
+    repaintAllWords();
+    WORDS.forEach(w => setSpriteState(w, w === hoveredWord));
+  }
+  applyScheme(storedScheme);
+  document.querySelectorAll('#controls .seg').forEach(b => {
+    b.classList.toggle('on', parseInt(b.dataset.scheme) === storedScheme);
+    b.addEventListener('click', () => {
+      document.querySelectorAll('#controls .seg').forEach(x => x.classList.remove('on'));
+      b.classList.add('on');
+      const s = parseInt(b.dataset.scheme);
+      applyScheme(s);
+      localStorage.setItem(SCHEME_KEY, s);
+    });
+  });
+
+  // ---------- sprite color/scale logic (scheme-aware) ----------
+  function spriteColors() {
+    const orokin = asciiUniforms.uScheme.value === 5;
+    return orokin
+      ? { base: [0.22, 0.12, 0.04], hover: [0.05, 0.03, 0.01] }
+      : { base: [0.85, 0.85, 0.85], hover: [1.00, 1.00, 1.00] };
+  }
+  function setSpriteState(w, hovered) {
+    const cs = spriteColors();
+    const c = hovered ? cs.hover : cs.base;
+    w.sprite.material.color.setRGB(c[0], c[1], c[2]);
+    w.sprite.scale.set(hovered ? 1.05 : 0.95, hovered ? 0.22 : 0.20, 1);
+  }
+
+  // ---------- hover detection (project word's 3D pos to screen, find nearest within 70px) ----------
+  const _v = new THREE.Vector3();
+  function updateHover() {
+    let nearest = null;
+    let nearestDist = 70;
+    WORDS.forEach(w => {
+      _v.copy(w.sprite.position).project(cameraA);
+      if (_v.z > 1 || _v.z < -1) return;
+      const sx = (_v.x * 0.5 + 0.5) * W;
+      const sy = (-_v.y * 0.5 + 0.5) * H;
+      const d = Math.hypot(mouseX - sx, mouseY - sy);
+      if (d < nearestDist) { nearest = w; nearestDist = d; }
+    });
+    if (nearest !== hoveredWord) {
+      if (hoveredWord) setSpriteState(hoveredWord, false);
+      if (nearest)     setSpriteState(nearest, true);
+      hoveredWord = nearest;
+      document.body.style.cursor = nearest ? 'pointer' : (dragging ? 'grabbing' : 'grab');
+    }
+  }
+
+  // ---------- loop ----------
+  function loop() {
+    const now = performance.now();
+
+    const idle = (now - lastInteraction) > 2500;
+    if (idle) yawTarget += 0.0008;
+
+    yaw    += (yawTarget    - yaw)    * 0.08;
+    pitch  += (pitchTarget  - pitch)  * 0.08;
+    radius += (radiusTarget - radius) * 0.08;
+    placeCam();
+
+    updateHover();
+
+    asciiUniforms.uTime.value = now / 1000;
+
+    const dtEff = DT * state.speed;
+    const arr = positions;
+    for (let s = 0; s < SUBSTEPS; s++) {
+      for (let i = 0; i < N; i++) {
+        const ix = 3*i;
+        const x = arr[ix], y = arr[ix+1], z = arr[ix+2];
+        const r2 = x*x + y*y;
+        const dx = (z - B) * x - D * y;
+        const dy = D * x + (z - B) * y;
+        const dz = C + A * z - (z*z*z) / 3.0 - r2 * (1.0 + E * z) + F * z * x*x*x;
+        arr[ix]   = x + dx * dtEff;
+        arr[ix+1] = y + dy * dtEff;
+        arr[ix+2] = z + dz * dtEff;
+      }
+    }
+    geometry.attributes.position.needsUpdate = true;
+
+    // pass 1: attractor particles → RT (no word sprites here — they overlay later)
+    renderer.setRenderTarget(rt);
+    renderer.setClearColor(0x000000, 1);
+    renderer.clear();
+    renderer.render(sceneA, cameraA);
+
+    // pass 2: ASCII filter to screen
+    renderer.setRenderTarget(null);
+    renderer.setClearColor(0x161616, 1);
+    renderer.render(sceneB, cameraB);
+
+    // pass 3: crisp word sprites overlay on top — readable in both ASCII and non-ASCII modes
+    renderer.autoClear = false;
+    renderer.render(sceneWords, cameraA);
+    renderer.autoClear = true;
+
+    requestAnimationFrame(loop);
+  }
+  loop();
+</script>
+</body>
+</html>
