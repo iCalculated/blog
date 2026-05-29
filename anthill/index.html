@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Anthill — SF Group House Search</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<style>
+  :root {
+    --bg: #14110f; --panel: #1d1916; --line: #2e2823;
+    --ink: #ece6df; --muted: #9b9085; --accent: #e4572e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+  #app { display: grid; grid-template-columns: 360px 1fr; height: 100%; }
+  #sidebar { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  #map { height: 100%; background: #0c0a09; }
+
+  header { padding: 18px 20px 14px; border-bottom: 1px solid var(--line); }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .3px; }
+  header .sub { margin-top: 4px; font-size: 12px; color: var(--muted); }
+  header .sub a { color: var(--accent); text-decoration: none; }
+  header .sub a:hover { text-decoration: underline; }
+  header .stats { margin-top: 10px; font-size: 12px; color: var(--ink); display: flex; gap: 14px; flex-wrap: wrap; }
+  header .stats b { color: var(--accent); }
+
+  .controls { padding: 12px 20px; border-bottom: 1px solid var(--line); }
+  .controls .grp { margin-bottom: 12px; }
+  .controls .grp:last-child { margin-bottom: 0; }
+  .controls .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted); margin-bottom: 6px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 4px 9px; margin: 0 5px 5px 0; border: 1px solid var(--line); border-radius: 999px; cursor: pointer; user-select: none; background: #211c18; }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .chip.off { opacity: .38; }
+  input[type=search] { width: 100%; padding: 8px 10px; background: #211c18; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font-size: 13px; }
+
+  #list { overflow-y: auto; flex: 1; min-height: 0; }
+  .item { padding: 11px 20px; border-bottom: 1px solid var(--line); cursor: pointer; display: flex; gap: 11px; align-items: center; }
+  .item:hover { background: #241f1b; }
+  .item .thumb { width: 52px; height: 52px; border-radius: 7px; object-fit: cover; flex: none; background: #2a2420; }
+  .item .beds-badge { width: 52px; height: 52px; border-radius: 7px; flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #14110f; font-weight: 700; }
+  .item .beds-badge small { font-size: 8.5px; font-weight: 600; letter-spacing: .5px; opacity: .8; }
+  .item .body { min-width: 0; flex: 1; }
+  .item .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .item .addr { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item .price { font-size: 13px; color: var(--accent); white-space: nowrap; }
+  .item .meta { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .item .new-flag { font-size: 9px; font-weight: 700; letter-spacing: .5px; color: #14110f; background: var(--accent); padding: 1px 5px; border-radius: 4px; margin-left: 6px; }
+  .item.hidden { display: none; }
+
+  /* bedroom-count map markers */
+  .bed-marker { display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #14110f; border-radius: 50%; border: 2px solid rgba(255,255,255,.65); box-shadow: 0 1px 4px rgba(0,0,0,.5); }
+
+  .popup { width: 230px; }
+  .popup img { width: 100%; height: 130px; object-fit: cover; border-radius: 6px; margin-bottom: 6px; background: #eee; }
+  .popup h3 { margin: 0 0 4px; font-size: 14px; }
+  .popup .row { font-size: 12px; margin: 2px 0; color: #333; }
+  .popup .row b { color: #000; }
+  .popup a { color: #c2410c; font-size: 12px; margin-right: 12px; }
+  .leaflet-popup-content { margin: 12px 14px; }
+
+  #err { padding: 14px 20px; font-size: 12px; color: #f3a712; display: none; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <header>
+      <h1>Anthill</h1>
+      <div class="sub">SF group-house search · <a id="sheetLink" href="#" target="_blank" rel="noopener">open sheet ↗</a></div>
+      <div class="stats" id="stats"></div>
+    </header>
+    <div class="controls">
+      <div class="grp">
+        <div class="lbl">Category · marker number = bedrooms</div>
+        <div id="catFilters"></div>
+      </div>
+      <div class="grp">
+        <input type="search" id="searchBox" placeholder="Filter by address / neighborhood…" />
+      </div>
+    </div>
+    <div id="err"></div>
+    <div id="list"></div>
+  </div>
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="config.js"></script>
+<script>
+const CFG = window.ANTHILL_CONFIG;
+const $ = (s) => document.querySelector(s);
+const money = (n) => isFinite(n) ? "$" + Math.round(n).toLocaleString() : "—";
+const beds = (d) => { const b = parseInt(d.Beds, 10); return isFinite(b) ? b : "?"; };
+
+// --- Minimal RFC-4180 CSV parser (handles quoted fields w/ commas + newlines).
+function parseCSV(text) {
+  const rows = []; let row = [], field = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+      else field += c;
+    } else if (c === '"') q = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n") { row.push(field); rows.push(row); row = []; field = ""; }
+    else if (c === "\r") { /* skip */ }
+    else field += c;
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  const header = rows.shift();
+  return rows.filter(r => r.some(c => c !== "")).map(r => Object.fromEntries(header.map((h, i) => [h, r[i] ?? ""])));
+}
+
+const gvizURL = (id, tab) =>
+  `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab)}`;
+const streetView = (lat, lng) =>
+  `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lng}`;
+
+let MAP, MARKERS = {}, DATA = [];
+const active = { cat: new Set(), q: "" };
+
+function initMap() {
+  MAP = L.map("map", { zoomControl: true }).setView(CFG.center, CFG.zoom);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    attribution: '© OpenStreetMap, © CARTO', maxZoom: 20, subdomains: "abcd",
+  }).addTo(MAP);
+}
+
+const markerColor = (d) => CFG.categoryColors[d.Category] || "#888";
+const isNew = (d) => (d["Review Status"] || "").trim().toLowerCase() === "new";
+
+function makeMarker(d) {
+  const b = beds(d);
+  // Size scales gently with bedroom count so big houses read bigger.
+  const n = parseInt(d.Beds, 10);
+  const size = isFinite(n) ? Math.min(40, 24 + (n - 6) * 2.2) : 24;
+  const icon = L.divIcon({
+    className: "", iconSize: [size, size], iconAnchor: [size / 2, size / 2],
+    html: `<div class="bed-marker" style="width:${size}px;height:${size}px;background:${markerColor(d)};${isNew(d) ? 'border-color:#fff;box-shadow:0 0 0 3px ' + CFG.categoryColors[d.Category] + ',0 1px 4px rgba(0,0,0,.5);' : ''}">${b}</div>`,
+  });
+  const m = L.marker([+d.Lat, +d.Lng], { icon });
+  const photo = (d.Photo || "").trim();
+  m.bindPopup(`<div class="popup">
+    ${photo ? `<img src="${photo}" alt="" onerror="this.style.display='none'">` : ""}
+    <h3>${d.Address}${isNew(d) ? ' <span style="color:#e4572e">• new</span>' : ''}</h3>
+    <div class="row">${d.Neighborhood || ""} · ${d.Category}</div>
+    <div class="row"><b>${money(+d["Price ($)"])}</b> · <b>${b} bd</b> / ${d.Baths || "?"} ba · ${(+d.Sqft || 0).toLocaleString()} sqft</div>
+    <div class="row">est rent <b>${money(+d["Est Rent/mo ($)"])}/mo</b> · ${money(+d["Rent/person/mo ($)"])}/person</div>
+    ${d.Notes ? `<div class="row">${d.Notes}</div>` : ""}
+    <div class="row" style="margin-top:6px">
+      ${d.Link ? `<a href="${d.Link}" target="_blank" rel="noopener">listing ↗</a>` : ""}
+      <a href="${streetView(d.Lat, d.Lng)}" target="_blank" rel="noopener">street view ↗</a>
+    </div>
+  </div>`);
+  return m;
+}
+
+function buildChips(values) {
+  const c = $("#catFilters"); c.innerHTML = "";
+  values.forEach(v => {
+    active.cat.add(v);
+    const el = document.createElement("label");
+    el.className = "chip";
+    el.innerHTML = `<span class="dot" style="background:${CFG.categoryColors[v] || "#888"}"></span>${v}`;
+    el.addEventListener("click", () => {
+      if (active.cat.has(v)) { active.cat.delete(v); el.classList.add("off"); }
+      else { active.cat.add(v); el.classList.remove("off"); }
+      render();
+    });
+    c.appendChild(el);
+  });
+}
+
+function visible(d) {
+  if (!active.cat.has(d.Category)) return false;
+  if (active.q) {
+    const hay = `${d.Address} ${d.Neighborhood} ${d.Zip}`.toLowerCase();
+    if (!hay.includes(active.q)) return false;
+  }
+  return true;
+}
+
+function render() {
+  let shown = 0, prices = [], totalBeds = 0;
+  DATA.forEach(d => {
+    const vis = visible(d);
+    if (d.ID in MARKERS) {
+      const m = MARKERS[d.ID];
+      if (vis && d.Lat && d.Lng) { if (!MAP.hasLayer(m)) m.addTo(MAP); }
+      else if (MAP.hasLayer(m)) MAP.removeLayer(m);
+    }
+    const li = document.getElementById("li-" + d.ID);
+    if (li) li.classList.toggle("hidden", !vis);
+    if (vis) {
+      shown++;
+      const p = +d["Price ($)"]; if (isFinite(p) && p) prices.push(p);
+      const b = parseInt(d.Beds, 10); if (isFinite(b)) totalBeds += b;
+    }
+  });
+  const lo = prices.length ? money(Math.min(...prices)) : "—";
+  const hi = prices.length ? money(Math.max(...prices)) : "—";
+  $("#stats").innerHTML = `<span><b>${shown}</b> houses</span><span><b>${totalBeds}</b> beds total</span><span>${lo}–${hi}</span>`;
+}
+
+function buildList() {
+  const list = $("#list"); list.innerHTML = "";
+  DATA.forEach(d => {
+    const li = document.createElement("div");
+    li.className = "item"; li.id = "li-" + d.ID;
+    const photo = (d.Photo || "").trim();
+    const left = photo
+      ? `<img class="thumb" src="${photo}" alt="" onerror="this.outerHTML='<div class=&quot;beds-badge&quot; style=&quot;background:${markerColor(d)}&quot;>${beds(d)}<small>BEDS</small></div>'">`
+      : `<div class="beds-badge" style="background:${markerColor(d)}">${beds(d)}<small>BEDS</small></div>`;
+    li.innerHTML = `${left}
+      <div class="body">
+        <div class="top"><span class="addr">${d.Address}${isNew(d) ? '<span class="new-flag">NEW</span>' : ''}</span><span class="price">${money(+d["Price ($)"])}</span></div>
+        <div class="meta">${d.Neighborhood || ""} · ${d.Category} · ${(+d.Sqft || 0).toLocaleString()} sqft</div>
+      </div>`;
+    li.addEventListener("click", () => {
+      if (d.Lat && d.Lng) { MAP.flyTo([+d.Lat, +d.Lng], 16, { duration: .6 }); MARKERS[d.ID]?.openPopup(); }
+    });
+    list.appendChild(li);
+  });
+}
+
+async function load() {
+  initMap();
+  if (CFG.sheetUrl) $("#sheetLink").href = CFG.sheetUrl;
+  try {
+    const res = await fetch(gvizURL(CFG.sheetId, CFG.sheetTab));
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    DATA = parseCSV(await res.text());
+  } catch (e) {
+    $("#err").style.display = "block";
+    $("#err").textContent = "Could not load sheet: " + e.message + ". Is it shared 'anyone with link: viewer'?";
+    return;
+  }
+  // New/provisional first, then by price desc, so unreviewed finds surface.
+  DATA.sort((a, b) => (isNew(b) - isNew(a)) || ((+b["Price ($)"] || 0) - (+a["Price ($)"] || 0)));
+  DATA.forEach(d => { if (d.Lat && d.Lng) MARKERS[d.ID] = makeMarker(d); });
+  const cats = [...new Set(DATA.map(d => d.Category))].sort();
+  buildChips(cats);
+  $("#searchBox").addEventListener("input", e => { active.q = e.target.value.toLowerCase().trim(); render(); });
+  buildList();
+  DATA.forEach(d => { if (d.ID in MARKERS) MARKERS[d.ID].addTo(MAP); });
+  render();
+}
+
+load();
+</script>
+</body>
+</html>
