@@ -149,7 +149,7 @@ function makeMarker(d) {
     html: `<div class="bed-marker" style="width:${size}px;height:${size}px;background:${markerColor(d)};${ring}">${b}</div>`,
   });
   const m = L.marker([+d.Lat, +d.Lng], { icon });
-  const photo = (d.Photo || "").trim();
+  const photo = `thumbs/${d.ID}.jpg`;  // pre-fetched Street View; 404s fall back gracefully
   m.bindPopup(`<div class="popup">
     ${photo ? `<img src="${photo}" alt="" onerror="this.style.display='none'">` : ""}
     <h3>${d.Address}${isInterested(d) ? ' <span style="color:#b8860b">★</span>' : ''}${isUnreviewed(d) ? ' <span style="color:#e4572e">• new</span>' : ''}</h3>
@@ -217,7 +217,7 @@ function buildList() {
   DATA.forEach(d => {
     const li = document.createElement("div");
     li.className = "item"; li.id = "li-" + d.ID;
-    const photo = (d.Photo || "").trim();
+    const photo = `thumbs/${d.ID}.jpg`;  // pre-fetched Street View; 404s fall back gracefully
     const left = photo
       ? `<img class="thumb" src="${photo}" alt="" onerror="this.outerHTML='<div class=&quot;beds-badge&quot; style=&quot;background:${markerColor(d)}&quot;>${beds(d)}<small>BEDS</small></div>'">`
       : `<div class="beds-badge" style="background:${markerColor(d)}">${beds(d)}<small>BEDS</small></div>`;
