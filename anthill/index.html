@@ -110,6 +110,7 @@
 const CFG = window.ANTHILL_CONFIG;
 const $ = (s) => document.querySelector(s);
 const money = (n) => isFinite(n) ? "$" + Math.round(n).toLocaleString() : "—";
+const moneyOr = (v) => (v === "" || v == null) ? "—" : money(+v);  // blank cell → —, not $0
 const beds = (d) => { const b = parseInt(d.Beds, 10); return isFinite(b) ? b : "?"; };
 
 // --- Minimal RFC-4180 CSV parser (handles quoted fields w/ commas + newlines).
@@ -175,7 +176,7 @@ function makeMarker(d) {
     <h3>${d.Address}${isShortlisted(d) ? ' <span style="color:#b8860b">★</span>' : ''}${isUnreviewed(d) ? ' <span style="color:#e4572e">• new</span>' : ''}</h3>
     <div class="row">${d.Neighborhood || ""} · ${d.Category}</div>
     <div class="row"><b>${money(+d["Price ($)"])}</b> · <b>${b} bd</b> / ${d.Baths || "?"} ba · ${(+d.Sqft || 0).toLocaleString()} sqft</div>
-    <div class="row">est rent <b>${money(+d["Est Rent/mo ($)"])}/mo</b> · ${money(+d["Rent/person/mo ($)"])}/person</div>
+    <div class="row">est rent <b>${money(+d["Est Rent/mo ($)"])}/mo</b> · ${moneyOr(d["Rent/person/mo ($)"])}/person</div>
     ${d.Notes ? `<div class="row">${d.Notes}</div>` : ""}
     <div class="row" style="margin-top:6px">
       ${d.Link ? `<a href="${d.Link}" target="_blank" rel="noopener">listing ↗</a>` : ""}
