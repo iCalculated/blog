@@ -9,6 +9,7 @@ window.ANTHILL_CONFIG = {
   // Public map sheet — "Anthill — SF Group House Search".
   sheetId: "17xEBy-QUxXaH1vem_B_3Nh1KvPp3YwqXrbHliM3PQPs",
   sheetTab: "Listings",
+  shortlistTab: "Shortlist",  // IDs on this tab get the gold-ring/★ highlight
   sheetUrl: "https://docs.google.com/spreadsheets/d/17xEBy-QUxXaH1vem_B_3Nh1KvPp3YwqXrbHliM3PQPs/edit",
 
   // SF center + sensible zoom.

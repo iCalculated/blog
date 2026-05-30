@@ -47,7 +47,7 @@
   .item .meta { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
   .item .new-flag { font-size: 9px; font-weight: 700; letter-spacing: .5px; color: #14110f; background: var(--accent); padding: 1px 5px; border-radius: 4px; margin-left: 6px; }
   .item.hidden { display: none; }
-  .item.interested { border-left: 3px solid #f3c712; background: #221d12; }
+  .item.shortlisted { border-left: 3px solid #f3c712; background: #221d12; }
 
   /* bedroom-count map markers */
   .bed-marker { display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #14110f; border-radius: 50%; border: 2px solid rgba(255,255,255,.65); box-shadow: 0 1px 4px rgba(0,0,0,.5); }
@@ -131,7 +131,8 @@ function initMap() {
 
 const markerColor = (d) => CFG.categoryColors[d.Category] || "#888";
 const bool = (v) => (v || "").trim().toUpperCase() === "TRUE";
-const isInterested = (d) => bool(d.Interested);
+let SHORTLISTED = new Set();  // listing IDs on the Shortlist tab (loaded in load())
+const isShortlisted = (d) => SHORTLISTED.has(d.ID);
 const isUnreviewed = (d) => !bool(d.Reviewed);
 const GOLD = "#f3c712";
 
@@ -140,9 +141,9 @@ function makeMarker(d) {
   // Size scales gently with bedroom count so big houses read bigger.
   const n = parseInt(d.Beds, 10);
   const size = isFinite(n) ? Math.min(40, 24 + (n - 6) * 2.2) : 24;
-  // Interested = gold glow ring (stands out); unreviewed = white ring (needs vetting).
+  // Shortlisted = gold glow ring (stands out); unreviewed = white ring (needs vetting).
   let ring = "";
-  if (isInterested(d)) ring = `border-color:${GOLD};box-shadow:0 0 0 3px ${GOLD},0 1px 6px rgba(0,0,0,.6);`;
+  if (isShortlisted(d)) ring = `border-color:${GOLD};box-shadow:0 0 0 3px ${GOLD},0 1px 6px rgba(0,0,0,.6);`;
   else if (isUnreviewed(d)) ring = `border-color:#fff;`;
   const icon = L.divIcon({
     className: "", iconSize: [size, size], iconAnchor: [size / 2, size / 2],
@@ -152,7 +153,7 @@ function makeMarker(d) {
   const photo = `thumbs/${d.ID}.jpg`;  // pre-fetched Street View; 404s fall back gracefully
   m.bindPopup(`<div class="popup">
     ${photo ? `<img src="${photo}" alt="" onerror="this.style.display='none'">` : ""}
-    <h3>${d.Address}${isInterested(d) ? ' <span style="color:#b8860b">★</span>' : ''}${isUnreviewed(d) ? ' <span style="color:#e4572e">• new</span>' : ''}</h3>
+    <h3>${d.Address}${isShortlisted(d) ? ' <span style="color:#b8860b">★</span>' : ''}${isUnreviewed(d) ? ' <span style="color:#e4572e">• new</span>' : ''}</h3>
     <div class="row">${d.Neighborhood || ""} · ${d.Category}</div>
     <div class="row"><b>${money(+d["Price ($)"])}</b> · <b>${b} bd</b> / ${d.Baths || "?"} ba · ${(+d.Sqft || 0).toLocaleString()} sqft</div>
     <div class="row">est rent <b>${money(+d["Est Rent/mo ($)"])}/mo</b> · ${money(+d["Rent/person/mo ($)"])}/person</div>
@@ -221,10 +222,10 @@ function buildList() {
     const left = photo
       ? `<img class="thumb" src="${photo}" alt="" onerror="this.outerHTML='<div class=&quot;beds-badge&quot; style=&quot;background:${markerColor(d)}&quot;>${beds(d)}<small>BEDS</small></div>'">`
       : `<div class="beds-badge" style="background:${markerColor(d)}">${beds(d)}<small>BEDS</small></div>`;
-    if (isInterested(d)) li.classList.add("interested");
+    if (isShortlisted(d)) li.classList.add("shortlisted");
     li.innerHTML = `${left}
       <div class="body">
-        <div class="top"><span class="addr">${isInterested(d) ? '★ ' : ''}${d.Address}${isUnreviewed(d) ? '<span class="new-flag">NEW</span>' : ''}</span><span class="price">${money(+d["Price ($)"])}</span></div>
+        <div class="top"><span class="addr">${isShortlisted(d) ? '★ ' : ''}${d.Address}${isUnreviewed(d) ? '<span class="new-flag">NEW</span>' : ''}</span><span class="price">${money(+d["Price ($)"])}</span></div>
         <div class="meta">${d.Neighborhood || ""} · ${d.Category} · ${(+d.Sqft || 0).toLocaleString()} sqft</div>
       </div>`;
     li.addEventListener("click", () => {
@@ -246,9 +247,17 @@ async function load() {
     $("#err").textContent = "Could not load sheet: " + e.message + ". Is it shared 'anyone with link: viewer'?";
     return;
   }
-  // Interested first, then unreviewed finds (need vetting), then price desc.
+  // Pull the Shortlist tab and collect its IDs — these get the gold highlight.
+  // A failure here is non-fatal: the map still renders, just without highlights.
+  if (CFG.shortlistTab) {
+    try {
+      const res = await fetch(gvizURL(CFG.sheetId, CFG.shortlistTab));
+      if (res.ok) SHORTLISTED = new Set(parseCSV(await res.text()).map(d => d.ID).filter(Boolean));
+    } catch (e) { /* keep SHORTLISTED empty */ }
+  }
+  // Shortlisted first, then unreviewed finds (need vetting), then price desc.
   DATA.sort((a, b) =>
-    (isInterested(b) - isInterested(a)) ||
+    (isShortlisted(b) - isShortlisted(a)) ||
     (isUnreviewed(b) - isUnreviewed(a)) ||
     ((+b["Price ($)"] || 0) - (+a["Price ($)"] || 0)));
   DATA.forEach(d => { if (d.Lat && d.Lng) MARKERS[d.ID] = makeMarker(d); });
