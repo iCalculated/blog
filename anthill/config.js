@@ -16,11 +16,10 @@ window.ANTHILL_CONFIG = {
   center: [37.7749, -122.4380],
   zoom: 12.4,
 
-  // Marker color per Category (falls back to grey).
+  // Marker color per Category (falls back to grey). Top-level division is just
+  // single-family house vs multi-family building.
   categoryColors: {
-    "8+BR house": "#e4572e",
-    "7BR house": "#f3a712",
+    "Single-family": "#e4572e",
     "Multi-family": "#4c9f70",
-    "6BR house (flex)": "#3f7cac",
   },
 };
