@@ -13,9 +13,11 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
-  #app { display: grid; grid-template-columns: 360px 1fr; height: 100%; }
-  #sidebar { background: var(--panel); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
-  #map { height: 100%; background: #0c0a09; }
+  /* Desktop: header+controls top-left, scrolling list bottom-left, map fills the right column. */
+  #app { display: grid; grid-template-columns: 360px 1fr; grid-template-rows: auto 1fr; height: 100%; }
+  #sidebar { grid-column: 1; grid-row: 1; background: var(--panel); border-right: 1px solid var(--line); min-width: 0; }
+  #list { grid-column: 1; grid-row: 2; overflow-y: auto; min-height: 0; background: var(--panel); border-right: 1px solid var(--line); }
+  #map { grid-column: 2; grid-row: 1 / span 2; height: 100%; background: #0c0a09; }
 
   header { padding: 18px 20px 14px; border-bottom: 1px solid var(--line); }
   header h1 { margin: 0; font-size: 18px; letter-spacing: .3px; }
@@ -34,7 +36,6 @@
   .chip.off { opacity: .38; }
   input[type=search] { width: 100%; padding: 8px 10px; background: #211c18; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); font-size: 13px; }
 
-  #list { overflow-y: auto; flex: 1; min-height: 0; }
   .item { padding: 11px 20px; border-bottom: 1px solid var(--line); cursor: pointer; display: flex; gap: 11px; align-items: center; }
   .item:hover { background: #241f1b; }
   .item .thumb { width: 52px; height: 52px; border-radius: 7px; object-fit: cover; flex: none; background: #2a2420; }
@@ -61,6 +62,17 @@
   .leaflet-popup-content { margin: 12px 14px; }
 
   #err { padding: 14px 20px; font-size: 12px; color: #f3a712; display: none; }
+
+  /* Mobile: single column — header+controls, then the map, then the list at the bottom. */
+  @media (max-width: 760px) {
+    #app { grid-template-columns: 1fr; grid-template-rows: auto 42vh 1fr; }
+    #sidebar { grid-column: 1; grid-row: 1; border-right: none; border-bottom: 1px solid var(--line); }
+    #map { grid-column: 1; grid-row: 2; }
+    #list { grid-column: 1; grid-row: 3; border-right: none; }
+    header { padding: 14px 16px 10px; }
+    .controls { padding: 10px 16px; }
+    .item { padding: 11px 16px; }
+  }
 </style>
 </head>
 <body>
@@ -81,8 +93,8 @@
       </div>
     </div>
     <div id="err"></div>
-    <div id="list"></div>
   </div>
+  <div id="list"></div>
   <div id="map"></div>
 </div>
 
@@ -127,6 +139,8 @@ function initMap() {
   L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
     attribution: '© OpenStreetMap, © CARTO', maxZoom: 20, subdomains: "abcd",
   }).addTo(MAP);
+  // Re-fit tiles when the layout reflows (e.g. phone rotation / desktop⇄mobile).
+  window.addEventListener("resize", () => MAP && MAP.invalidateSize());
 }
 
 const markerColor = (d) => CFG.categoryColors[d.Category] || "#888";
@@ -192,7 +206,7 @@ function visible(d) {
 }
 
 function render() {
-  let shown = 0, prices = [], totalBeds = 0;
+  let shown = 0, short = 0;
   DATA.forEach(d => {
     const vis = visible(d);
     if (d.ID in MARKERS) {
@@ -202,15 +216,10 @@ function render() {
     }
     const li = document.getElementById("li-" + d.ID);
     if (li) li.classList.toggle("hidden", !vis);
-    if (vis) {
-      shown++;
-      const p = +d["Price ($)"]; if (isFinite(p) && p) prices.push(p);
-      const b = parseInt(d.Beds, 10); if (isFinite(b)) totalBeds += b;
-    }
+    if (vis) { shown++; if (isShortlisted(d)) short++; }
   });
-  const lo = prices.length ? money(Math.min(...prices)) : "—";
-  const hi = prices.length ? money(Math.max(...prices)) : "—";
-  $("#stats").innerHTML = `<span><b>${shown}</b> houses</span><span><b>${totalBeds}</b> beds total</span><span>${lo}–${hi}</span>`;
+  $("#stats").innerHTML = `<span><b>${shown}</b> houses</span>` +
+    (short ? `<span><b>${short}</b> shortlisted</span>` : "");
 }
 
 function buildList() {
