@@ -85,359 +85,505 @@
 
 <script>
 /* ============================================================================
-   DATA  — edit here to extend the tree.
-   gen:  0 = Sasha, 1 = parents, 2 = grandparents, 3 = great-grandparents,
-         4+ = apex ancestors (drawn further right / up the line).
-   line: hydrie | azam | zaheer | russian | unknown   (sets the accent color)
-   A "union" is a marriage/partnership with optional children (by person id).
-   Collateral people (siblings/cousins) attach via `sibOf` (shares parents of
-   that person) or are placed by hand with explicit gen + an offshoot wire.
+   DATA — one entry per person, one union per partnership.
+   This is the only part you edit; everything else (generations, columns,
+   fan vs. section placement, sibling stubs, spouses) is derived.
+
+   PEOPLE: id -> {
+     name      display name
+     line      hydrie | azam | zaheer | russian | unknown   (accent color)
+     d         short card detail (dates, places); \n breaks lines
+     r         relationship to the focus person (small caps; display only)
+     bio       fuller hover text
+     unknown   true = identity not yet confirmed (dashed card)
+     ref       true = highlight ring (the focus person)
+   }
+
+   UNIONS: { parents:[id] or [id,id], children:[id,...] }
+     Every parent-child and spouse relationship lives here, exactly once.
+     Parent order = [father, mother] (drawn top, bottom).
+
+   FOCUS: the reference person — the pedigree fan walks UP from here.
+
+   SECTIONS: collateral branches rendered as mini-trees below the fan, one per
+     declared root. Direct-line people reached inside a section render as
+     reference stubs (no recursion — their own descendants stay in the fan).
    ========================================================================== */
 
-  const PEOPLE = {
-    // G0 — present
-    sasha:  {gen:0, line:'hydrie',  name:'Sasha Hydrie',  d:'reference person', ref:true},
-    karina: {gen:0, line:'hydrie',  name:'Karina Hydrie', r:'sister',  sibOf:'sasha'},
-    zubin:  {gen:0, line:'hydrie',  name:'Zubin',         r:'cousin · paternal', collateral:true},
-    masha:  {gen:0, line:'russian', name:'Masha',         r:'cousin · maternal', collateral:true},
+  const FOCUS='sasha';
 
-    // G1 — parents (and their siblings)
-    waris:  {gen:1, line:'hydrie',  name:'Waris Hydrie',  r:'father'},
-    yelena: {gen:1, line:'russian', name:'Yelena A. Yershova', d:'PhD, U. Minnesota', r:'mother'},
-    aamer:  {gen:1, line:'hydrie',  name:'Aamer Hydrie',  d:'Seattle', r:"father's brother", sibOf:'waris', collateral:true},
-    olga:   {gen:1, line:'russian', name:'Olga "Ola"',    r:"mother's sister · Masha's parent", sibOf:'yelena', collateral:true},
+  const PEOPLE={
+    // ---- present generation -------------------------------------------------
+    sasha:  {line:'hydrie', name:'Sasha Hydrie', d:'reference person', ref:true,
+             bio:`Reference person for this tree — son of Waris Hydrie and Yelena Yershova, where the Hydrie, Azam, Zaheer and Russian lines meet.`},
+    karina: {line:'hydrie', name:'Karina Hydrie', r:'sister',
+             bio:`Daughter of Waris and Yelena; Sasha's sister.`},
+    zubin:  {line:'hydrie', name:'Zubin', r:'cousin · paternal',
+             bio:`A Hydrie cousin of Sasha's generation, on the paternal side.`},
+    masha:  {line:'russian', name:'Masha', r:'cousin · maternal',
+             bio:`Sasha's cousin on the maternal (Russian) side; daughter of Olga.`},
 
-    // G2 — grandparents (and Dadi's / collateral siblings)
-    saeed:    {gen:2, line:'hydrie', name:'Saeed Hydrie "Dada"', d:'from Dera Ismail Khan', r:'grandfather'},
-    firdausi: {gen:2, line:'azam',   name:'Firdausi "Dadi"', d:'née Azam · living', r:'grandmother'},
-    anatoly:  {gen:2, line:'russian',name:'Anatoly Yershov', d:'army · b. Dec 11', r:'grandfather'},
-    babushka: {gen:2, line:'russian',name:'Babushka', d:'name ? · poss. Margarita', r:'grandmother', unknown:true},
-    nusayr:   {gen:2, line:'azam',   name:'S. Nusayr Azam', r:"Dadi's sister", sibOf:'firdausi', collateral:true},
-    azam3:    {gen:2, line:'azam',   name:'+ 3 siblings', d:'names ?', r:"Dadi's siblings", sibOf:'firdausi', collateral:true, unknown:true},
+    // ---- parents -------------------------------------------------------------
+    waris:  {line:'hydrie', name:'Waris Hydrie', r:'father',
+             bio:`Son of Saeed and Firdausi; carries the Hydrie line. Brother of Aamer.`},
+    yelena: {line:'russian', name:'Yelena A. Yershova', d:'PhD, U. Minnesota', r:'mother',
+             bio:`Yelena Anatolyevna Yershova, from Russia. PhD, University of Minnesota; senior lecturer at the Carlson School of Management.`},
+    aamer:  {line:'hydrie', name:'Aamer Hydrie', d:'Seattle', r:"father's brother",
+             bio:`Waris's brother; lives in Seattle.`},
+    olga:   {line:'russian', name:'Olga "Ola"', r:"mother's sister",
+             bio:`Yelena's sister; Masha's mother.`},
 
-    // G3 — great-grandparents (eight slots; many unknown)
-    hyd_gf:  {gen:3, line:'hydrie', name:'? Hydrie', d:'Dera Ismail Khan', r:"Saeed's father", unknown:true},
-    hyd_gm:  {gen:3, line:'hydrie', name:'?', d:'Dera Ismail Khan', r:"Saeed's mother", unknown:true},
-    wasif:   {gen:3, line:'azam',   name:'Syed Wasif Azam', d:'d. 18 Mar 2008', r:"Firdausi's father"},
-    nana:    {gen:3, line:'zaheer', name:'Nana', d:'name ? · Zaheer line', r:"Firdausi's mother", unknown:true},
-    yer_gf:  {gen:3, line:'russian',name:'? Yershov', r:"Anatoly's father", unknown:true},
-    yer_gm:  {gen:3, line:'russian',name:'?', r:"Anatoly's mother", unknown:true},
-    bab_gf:  {gen:3, line:'russian',name:'?', r:"Babushka's father", unknown:true},
-    bab_gm:  {gen:3, line:'russian',name:'?', r:"Babushka's mother", unknown:true},
+    // ---- grandparents ---------------------------------------------------------
+    saeed:    {line:'hydrie', name:'Saeed Hydrie "Dada"', d:'from Dera Ismail Khan', r:'grandfather',
+               bio:`"Dada." The Hydrie line, from Dera Ismail Khan in Khyber Pakhtunkhwa — Pathan. Married Firdausi Azam.`},
+    firdausi: {line:'azam', name:'Firdausi "Dadi"', d:'née Azam · b. 28 Jul 1947', r:'grandmother',
+               bio:`"Dadi." Born 28 July 1947. Daughter of Syed Wasif Azam and Manzoor Zehra; granddaughter of Nawab Azam Jung, and great-granddaughter of Sir Wazir Hasan through her mother. One of five siblings — see the Azam section below. The family's primary source for this record.`},
+    anatoly:  {line:'russian', name:'Anatoly Yershov', d:'army · b. Dec 11', r:'grandfather',
+               bio:`Sasha's maternal grandfather; served in the army; birthday 11 December. Living.`},
+    babushka: {line:'russian', name:'Babushka', d:'name ? · poss. Margarita', r:'grandmother', unknown:true,
+               bio:`Sasha's maternal grandmother; first name not yet confirmed (possibly Margarita).`},
 
-    // G4+ — documented apex ancestors (extend up the line)
-    mohammed: {gen:4, line:'azam',  name:'Syed Mohammed Azam', d:'"Nawab Azam Jung"\nVC, Osmania Univ. 1943–45', r:"Wasif's father"},
-    akbar:    {gen:4, line:'azam',  name:'Akbar Azam', r:"Mohammed's son", sibOf:'wasif', collateral:true},
-    // Nana descends from a daughter of Wazir Hasan -> via one of his daughters
-    nanaMother:{gen:4, line:'zaheer', name:'?', d:'Nur Fatima or Nur Zehra', r:"Nana's mother — which? open", unknown:true},
-    wazir:    {gen:5, line:'zaheer', name:'Sir Syed Wazir Hasan', d:'Knight Bachelor 1932\nChief Judge, Chief Court of Oudh', r:'apex · maternal'},
+    // ---- great-grandparents ----------------------------------------------------
+    gak:    {line:'hydrie', name:'Ghulam Asghar Khan Hydrie', d:'"GAK" · Dera Ismail Khan', r:"Saeed's father",
+             bio:`Ghulam Asghar Khan Hydrie, "GAK" — Saeed's father; the Hydrie family of Dera Ismail Khan.`},
+    firoze: {line:'hydrie', name:'Firoze Bano', d:'b. Faizabad', r:"Saeed's mother",
+             bio:`Firoze Bano — Saeed's mother; born in Faizabad.`},
+    wasif:  {line:'azam', name:'Syed Wasif Azam', d:'b. 26 Mar 1921, Hyderabad\nd. 18 Mar 2008', r:"Firdausi's father",
+             bio:`Syed Wasif Azam. Born 26 March 1921 in Hyderabad; son of Nawab Azam Jung. Father of Firdausi, Urfi, Nusayr, Shairbani and Nuwayri. Died intestate, 18 March 2008; the Kokapet court record names four daughters and one son as heirs.`},
+    nana:   {line:'zaheer', name:'Manzoor Zehra "Nana"', d:'b. 14 Aug 1929 · Lucknow', r:"Firdausi's mother",
+             bio:`Manzoor Zehra — "Nana." Firdausi's mother; born in Lucknow, 14 August 1929 (year approximate). A granddaughter of Sir Wazir Hasan.`},
+    yer_gf: {line:'russian', name:'? Yershov', r:"Anatoly's father", unknown:true},
+    yer_gm: {line:'russian', name:'?', r:"Anatoly's mother", unknown:true},
+    bab_gf: {line:'russian', name:'?', r:"Babushka's father", unknown:true},
+    bab_gm: {line:'russian', name:'?', r:"Babushka's mother", unknown:true},
+
+    // ---- apex ancestors ---------------------------------------------------------
+    mohammed: {line:'azam', name:'Syed Mohammed Azam', d:'"Nawab Azam Jung"\nVC, Osmania Univ. 1943–45', r:"Wasif's father",
+               bio:`"Nawab Azam Jung." Vice-Chancellor of Osmania University, 1943–45; earlier Principal of Government City College (credited with its 1920 building). Held the family land at Banjara Hills and Kokapet. Sasha's great-great-grandfather.`},
+    akbar:    {line:'azam', name:'Akbar Azam', r:"Mohammed's son",
+               bio:`Mohammed Azam's son and Wasif's brother; very likely the "Mohd Akbar Azam" on the Banjara Hills land record.`},
+    nanaMother:{line:'zaheer', name:'?', d:'Nur Fatima or Nur Zehra', r:"Nana's mother — which? open", unknown:true,
+               bio:`Nana's mother was one of Sir Wazir Hasan's two daughters — Nur Fatima or Nur Zehra. Which one is still open. (Nur Fatima's known children are Nurul Hasan and Sakani, which points to Nur Zehra — unconfirmed.)`},
+    wazir:    {line:'zaheer', name:'Sir Syed Wazir Hasan', d:'1873–1947 · Knight Bachelor 1932\nChief Judge, Chief Court of Oudh', r:'apex · maternal',
+               bio:`Sir Syed Wazir Hasan. Knight Bachelor (1932); Chief Judge of the Chief Court of Oudh at Lucknow; Secretary and 1936 President of the All-India Muslim League. Sasha's great-great-great-grandfather (maternal).`},
+
+    // ---- Azam: Dadi's siblings and their families --------------------------------
+    urfi:     {line:'azam', name:'Urfi Prasad Avasarla',
+               bio:`Urfi Prasad Avasarla — Firdausi's sister; mother of Seema Avasarla.`},
+    nusayr:   {line:'azam', name:'Nusayr Azam',
+               bio:`Nusayr Azam — Firdausi's sibling; parent of Dr. Arsalan Azam. The Kokapet court record lists four daughters and one son among Wasif's heirs.`},
+    shairbani:{line:'azam', name:'Shairbani Azam Sarkar',
+               bio:`Shairbani Azam Sarkar — Firdausi's sister; two adopted daughters, Ruhita and Ahina.`},
+    nuwayri:  {line:'azam', name:'Nuwayri Marwaha',
+               bio:`Nuwayri Marwaha — Firdausi's sister; mother of Damini and Vivan.`},
+    seema:    {line:'azam', name:'Seema Avasarla', bio:`Seema Avasarla — Urfi's daughter.`},
+    arsalan:  {line:'azam', name:'Dr. Arsalan Azam', bio:`Dr. Arsalan Azam — Nusayr's child.`},
+    ruhita:   {line:'azam', name:'Ruhita', d:'adopted', bio:`Ruhita — Shairbani's daughter (adopted).`},
+    ahina:    {line:'azam', name:'Ahina', d:'adopted', bio:`Ahina — Shairbani's daughter (adopted).`},
+    damini:   {line:'azam', name:'Damini Yarra Marwaha', bio:`Damini Yarra Marwaha — Nuwayri's daughter.`},
+    vivan:    {line:'azam', name:'Vivan Marwaha', bio:`Vivan Marwaha — Nuwayri's child.`},
+
+    // ---- Zaheer: descendants of Sir Wazir Hasan ------------------------------------
+    ali:    {line:'zaheer', name:'Syed Ali Zaheer', d:'1896–1983 · lawyer / minister',
+             bio:`Syed Ali Zaheer (1896–1983) — barrister, Union Law Minister, and India's Ambassador to Iran. Eldest son of Wazir Hasan; father of Sakina, Akram, "Aju" and Hamida.`},
+    hasanZ: {line:'zaheer', name:'Hasan Zaheer', d:'civil servant',
+             bio:`Hasan Zaheer — son of Wazir Hasan; civil-service officer. Two sons (names not yet recorded) and two daughters, Sarwath and Aasia.`},
+    nurf:   {line:'zaheer', name:'Nur Fatima',
+             bio:`Nur Fatima — daughter of Wazir Hasan; mother of Saiyid Nurul Hasan and Sakani.`},
+    husain: {line:'zaheer', name:'Syed Husain Zaheer', d:'1901–1975 · chemist, CSIR',
+             bio:`Syed Husain Zaheer (1901–1975) — chemist and Director-General of the CSIR. Son of Wazir Hasan; father of Selma, Vajjan and Akhil.`},
+    nurz:   {line:'zaheer', name:'Nur Zehra',
+             bio:`Nur Zehra — daughter of Wazir Hasan.`},
+    sajjad: {line:'zaheer', name:'Sajjad Zaheer', d:'1905–1973 · writer',
+             bio:`Sajjad Zaheer (1905–1973) — writer, founder of the Progressive Writers' Movement, co-author of Angarey. Son of Wazir Hasan; father of Akbar "Aks" and Uzra.`},
+    // Ali's four
+    sakina: {line:'zaheer', name:'Sakina Hasan', bio:`Sakina Hasan — daughter of Syed Ali Zaheer.`},
+    akram:  {line:'zaheer', name:'Syed Akram Zaheer', bio:`Syed Akram Zaheer — son of Syed Ali Zaheer.`},
+    aju:    {line:'zaheer', name:'Syed "Aju" Zaheer', d:'full name ?',
+             bio:`Syed "Aju" Zaheer — son of Syed Ali Zaheer. Aju is a family name; his legal name is still to be recorded.`},
+    hamida: {line:'zaheer', name:'Hamida Laljee', bio:`Hamida Laljee — daughter of Syed Ali Zaheer.`},
+    // Hasan's four
+    sarwath:{line:'zaheer', name:'Sarwath Mirchandani',
+             bio:`Sarwath Mirchandani — daughter of Hasan Zaheer; married into a Hindu family from Bombay.`},
+    aasia:  {line:'zaheer', name:'Aasia Siddiqui', d:'⚭ Dr. Siddiqui · BARC',
+             bio:`Aasia Siddiqui — daughter of Hasan Zaheer; married Dr. Siddiqui, who worked at the Bhabha Atomic Research Centre (BARC).`},
+    hasanSons:{line:'zaheer', name:'+ 2 sons', d:'names ?', unknown:true,
+             bio:`Hasan Zaheer's two sons — names not yet recorded.`},
+    // Nur Fatima's two
+    nurul:  {line:'zaheer', name:'Dr. Saiyid Nurul Hasan', d:'historian · education minister',
+             bio:`Dr. Saiyid Nurul Hasan — historian; Education Minister in Indira Gandhi's government. Son of Nur Fatima.`},
+    sakani: {line:'zaheer', name:'Sakani Hasan "Saddan Baji"',
+             bio:`Sakani Hasan, "Saddan Baji" — daughter of Nur Fatima (Sakani Hasan was her name before marriage).`},
+    // Husain's three
+    selma:  {line:'zaheer', name:'Selma Khan', d:'Hyderabad',
+             bio:`Selma Khan — daughter of Syed Husain Zaheer; lives in Hyderabad.`},
+    vajjan: {line:'zaheer', name:'Vajjan Zaheer', d:'Oxford · d. young',
+             bio:`Vajjan Zaheer — son of Syed Husain Zaheer; went to Oxford and died young in a punting accident.`},
+    akhil:  {line:'zaheer', name:'Akhil Zaheer', d:'Kentucky · 2 children',
+             bio:`Akhil Zaheer — son of Syed Husain Zaheer; lives in Kentucky; two children, names not yet recorded.`},
+    // Sajjad's two, plus Aks' wife Sri
+    aks:    {line:'zaheer', name:'Akbar "Aks" Zaheer', d:'professor, U. Minnesota',
+             bio:`Akbar "Aks" Zaheer — professor at the University of Minnesota (Carlson). Son of Sajjad Zaheer; married to Sri.`},
+    sri:    {line:'zaheer', name:'Srilata "Sri" Zaheer', d:'⚭ Aks',
+             bio:`Srilata "Sri" Zaheer — professor and former Dean of the Carlson School of Management; married to Aks.`},
+    uzra:   {line:'zaheer', name:'Uzra Bilgrami',
+             bio:`Uzra Bilgrami — daughter of Sajjad Zaheer; mother of Zain and Naheed.`},
+    // great-grandchildren
+    imran:  {line:'zaheer', name:'Imran Siddiqui', d:'molecular biology',
+             bio:`Imran Siddiqui — son of Aasia; works at the Centre for Molecular Biology.`},
+    imranSibs:{line:'zaheer', name:'+ brother & sister', d:'Boston · Bangalore', unknown:true,
+             bio:`Imran's brother (Boston) and sister (Bangalore) — names not yet recorded.`},
+    zainKhan:{line:'zaheer', name:'Zain Khan', d:'Hyderabad · one son',
+             bio:`Zain Khan — Selma's son; lives in Hyderabad and has a son.`},
+    maryam: {line:'zaheer', name:'Maryam Taylor', d:'2 children · US',
+             bio:`Maryam Taylor — Selma's daughter; two children in the US.`},
+    sage:   {line:'zaheer', name:'Sajjad "Sage" Zaheer', d:'son of Aks & Sri',
+             bio:`Sajjad "Sage" Zaheer — son of Aks and Sri.`},
+    zainBilgrami:{line:'zaheer', name:'Zain Bilgrami', bio:`Zain Bilgrami — Uzra's son.`},
+    naheed: {line:'zaheer', name:'Naheed Bilgrami',
+             bio:`Naheed Bilgrami — Uzra's daughter; kept the Bilgrami name after marriage.`},
+    // great-great-grandchildren
+    reese:  {line:'zaheer', name:'Reese', d:'child of Sage', bio:`Child of Sage.`},
+    hudson: {line:'zaheer', name:'Hudson', d:'child of Sage', bio:`Child of Sage.`},
   };
 
-  // Marriages / partnerships. children: ids whose parents are this couple.
-  const UNIONS = [
-    {a:'waris',   b:'yelena',   children:['sasha','karina']},
-    {a:'saeed',   b:'firdausi', children:['waris']},          // (+ Aamer via sibOf)
-    {a:'anatoly', b:'babushka', children:['yelena']},          // (+ Olga via sibOf)
-    {a:'hyd_gf',  b:'hyd_gm',   children:['saeed']},
-    {a:'wasif',   b:'nana',     children:['firdausi']},
-    {a:'yer_gf',  b:'yer_gm',   children:['anatoly']},
-    {a:'bab_gf',  b:'bab_gm',   children:['babushka']},
-    {a:'mohammed',b:null,       children:['wasif']},           // single documented parent
-    {a:'nanaMother', b:null,    children:['nana']},
-    {a:'wazir',   b:null,       children:['nanaMother']},
-    {a:'olga',    b:null,       children:['masha']},   // cousin, via known parent
-    {a:'aamer',   b:null,       children:['zubin']},   // cousin (Aamer's child)
+  const UNIONS=[
+    // direct line + near family
+    {parents:['waris','yelena'],     children:['sasha','karina']},
+    {parents:['saeed','firdausi'],   children:['waris','aamer']},
+    {parents:['anatoly','babushka'], children:['yelena','olga']},
+    {parents:['gak','firoze'],       children:['saeed']},
+    {parents:['wasif','nana'],       children:['firdausi','urfi','nusayr','shairbani','nuwayri']},
+    {parents:['yer_gf','yer_gm'],    children:['anatoly']},
+    {parents:['bab_gf','bab_gm'],    children:['babushka']},
+    {parents:['mohammed'],           children:['wasif','akbar']},
+    {parents:['nanaMother'],         children:['nana']},
+    {parents:['aamer'],              children:['zubin']},
+    {parents:['olga'],               children:['masha']},
+
+    // Wazir Hasan's six children, in birth order
+    {parents:['wazir'], children:['ali','hasanZ','nurf','husain','nurz','sajjad']},
+    // placeholder: Nana's mother is one of Wazir's two daughters (Nur Fatima or
+    // Nur Zehra) — not a 7th child. Delete this union and re-parent `nana` onto
+    // nurf/nurz once Dadi confirms which.
+    {parents:['wazir'], children:['nanaMother']},
+
+    // Azam: Dadi's siblings' children
+    {parents:['urfi'],      children:['seema']},
+    {parents:['nusayr'],    children:['arsalan']},
+    {parents:['shairbani'], children:['ruhita','ahina']},
+    {parents:['nuwayri'],   children:['damini','vivan']},
+
+    // Zaheer: grandchildren of Wazir Hasan and below
+    {parents:['ali'],     children:['sakina','akram','aju','hamida']},
+    {parents:['hasanZ'],  children:['sarwath','aasia','hasanSons']},
+    {parents:['nurf'],    children:['nurul','sakani']},
+    {parents:['husain'],  children:['selma','vajjan','akhil']},
+    {parents:['sajjad'],  children:['aks','uzra']},
+    {parents:['aasia'],   children:['imran','imranSibs']},
+    {parents:['selma'],   children:['zainKhan','maryam']},
+    {parents:['aks','sri'], children:['sage']},
+    {parents:['uzra'],    children:['zainBilgrami','naheed']},
+    {parents:['sage'],    children:['reese','hudson']},
   ];
 
-  // Zaheer collateral branch (relatives of Wazir Hasan, not direct ancestors).
-  // Rendered as a self-contained mini-tree below the main fan.
-  const ZAHEER = {
-    title:'Zaheer collateral — descendants of Sir Wazir Hasan (relatives, not direct ancestors)',
-    nodes:{
-      z_wazir: {col:0, name:'Sir Syed Wazir Hasan', d:'1873–1947 · Knight Bachelor 1932', line:'zaheer'},
-      z_ali:   {col:1, name:'Syed Ali Zaheer',   d:'1896–1983 · lawyer / minister', line:'zaheer'},
-      z_husain:{col:1, name:'Syed Husain Zaheer',d:'1901–1975 · chemist, CSIR',     line:'zaheer'},
-      z_sajjad:{col:1, name:'Sajjad Zaheer',     d:'1905–1973 · writer',            line:'zaheer'},
-      z_nurf:  {col:1, name:'Nur Fatima', d:'daughter', line:'zaheer'},
-      z_nurz:  {col:1, name:'Nur Zehra',  d:'daughter', line:'zaheer'},
-      z_akbar: {col:2, name:'Akbar "Aks" Zaheer',d:'grandson · professor', line:'zaheer'},
-      z_sri:   {col:2, name:'Srilata "Sri" Zaheer', d:'⚭ Akbar', line:'zaheer'},
-      z_hashima:{col:2, name:'Dr. Hashima Hasan',d:'b.1950 · NASA · Dadi’s cousin', line:'zaheer'},
-      z_sage:  {col:3, name:'Sajjad "Sage" Zaheer', d:'son of Akbar & Sri', line:'zaheer'},
-      z_reese: {col:4, name:'Reese',  d:'child of Sage', line:'zaheer'},
-      z_hudson:{col:4, name:'Hudson', d:'child of Sage', line:'zaheer'},
-    },
-    edges:[
-      ['z_wazir','z_ali'],['z_wazir','z_husain'],['z_wazir','z_sajjad'],
-      ['z_wazir','z_nurf'],['z_wazir','z_nurz'],
-      ['z_wazir','z_akbar'],         // grandson (compressed link)
-      ['z_wazir','z_hashima'],       // great-granddaughter (compressed link)
-      ['z_akbar','z_sage'],['z_sri','z_sage'],
-      ['z_sage','z_reese'],['z_sage','z_hudson'],
-    ]
-  };
-
-  // Extra detail shown on hover (factual notes from the fuller record).
-  const BIO = {
-    sasha:`Reference person for this tree — son of Waris Hydrie and Yelena Yershova, where the Hydrie, Azam, Zaheer and Russian lines meet.`,
-    karina:`Daughter of Waris and Yelena; Sasha's sister.`,
-    zubin:`A Hydrie cousin of Sasha's generation, on the paternal side.`,
-    masha:`Sasha's cousin on the maternal (Russian) side; daughter of Olga.`,
-    waris:`Son of Saeed and Firdausi; carries the Hydrie line. Brother of Aamer.`,
-    yelena:`Yelena Anatolyevna Yershova, from Russia. PhD, University of Minnesota; senior lecturer at the Carlson School of Management.`,
-    aamer:`Waris's brother; lives in Seattle.`,
-    olga:`Yelena's sister; Masha's mother.`,
-    saeed:`"Dada." The Hydrie line, from Dera Ismail Khan in Khyber Pakhtunkhwa — Pathan. Married Firdausi Azam.`,
-    firdausi:`"Dadi." Daughter of Syed Wasif Azam; granddaughter of Nawab Azam Jung, and great-granddaughter of Sir Wazir Hasan through her mother, Nana. The family's primary source for this record.`,
-    anatoly:`Sasha's maternal grandfather; served in the army; birthday 11 December. Living.`,
-    babushka:`Sasha's maternal grandmother; first name not yet confirmed (possibly Margarita).`,
-    nusayr:`S. Nusayr Azam — Firdausi's sister, recorded as a daughter of Wasif in the Kokapet court case.`,
-    azam3:`Wasif left four daughters and one son; three of Firdausi's siblings are not yet named.`,
-    wasif:`Syed Wasif Azam. Son of Nawab Azam Jung; father of Firdausi and Nusayr. Died intestate, 18 March 2008; the Kokapet court record names four daughters and one son as heirs.`,
-    nana:`Firdausi's mother — a granddaughter of Sir Wazir Hasan. Her own name is not yet known.`,
-    hyd_gf:`Saeed's father; the Hydrie family of Dera Ismail Khan. Name not yet known.`,
-    mohammed:`"Nawab Azam Jung." Vice-Chancellor of Osmania University, 1943–45; earlier Principal of Government City College (credited with its 1920 building). Held the family land at Banjara Hills and Kokapet. Sasha's great-great-grandfather.`,
-    akbar:`Mohammed Azam's son and Wasif's brother; very likely the "Mohd Akbar Azam" on the Banjara Hills land record.`,
-    nanaMother:`Nana's mother was one of Sir Wazir Hasan's two daughters — Nur Fatima or Nur Zehra. Which one is still open.`,
-    wazir:`Sir Syed Wazir Hasan. Knight Bachelor (1932); Chief Judge of the Chief Court of Oudh at Lucknow; Secretary and 1936 President of the All-India Muslim League. Sasha's great-great-great-grandfather (maternal).`,
-    z_wazir:`Sir Syed Wazir Hasan. Knight Bachelor (1932); Chief Judge of the Chief Court of Oudh at Lucknow; Secretary and 1936 President of the All-India Muslim League.`,
-    z_ali:`Syed Ali Zaheer (1896–1983) — barrister, Union Law Minister, and India's Ambassador to Iran. Son of Wazir Hasan.`,
-    z_husain:`Syed Husain Zaheer (1901–1975) — chemist and Director-General of the CSIR. Son of Wazir Hasan.`,
-    z_sajjad:`Sajjad Zaheer (1905–1973) — writer, founder of the Progressive Writers' Movement, co-author of Angarey. Son of Wazir Hasan.`,
-    z_nurf:`Nur Fatima — daughter of Wazir Hasan. Her son was the historian and Education Minister Saiyid Nurul Hasan.`,
-    z_nurz:`Nur Zehra — daughter of Wazir Hasan.`,
-    z_akbar:`Akbar "Aks" Zaheer — professor at the University of Minnesota (Carlson). Grandson of Wazir Hasan; Sasha's great-uncle once removed.`,
-    z_sri:`Srilata "Sri" Zaheer — professor and former Dean of the Carlson School of Management; married to Aks.`,
-    z_hashima:`Dr. Hashima Hasan (b. 1950) — NASA astrophysicist and Hubble Optical Telescope Assembly Scientist. Great-granddaughter of Wazir Hasan; Dadi's cousin.`,
-    z_sage:`Sajjad "Sage" Zaheer — son of Aks and Sri.`,
-    z_reese:`Child of Sage.`,
-    z_hudson:`Child of Sage.`,
-  };
+  const SECTIONS=[
+    {root:'wasif', color:'azam',
+     title:'Azam collateral — Dadi and her siblings (children of Syed Wasif Azam)'},
+    {root:'wazir', color:'zaheer',
+     title:'Zaheer collateral — descendants of Sir Wazir Hasan (relatives, not direct ancestors)'},
+  ];
 
   /* ============================================================================
-     LAYOUT ENGINE
+     DERIVED STRUCTURE — nothing below is data
      ========================================================================== */
   const NS='http://www.w3.org/2000/svg';
-  const W=176, H=52;                 // node box size
+  const W=176, H=52;                 // node box size (H = wire-attach offset basis)
   const COL_GAP=84;                  // horizontal gap between generations
   const COL_W=W+COL_GAP;             // pitch
   const PAD_L=4, PAD_T=24;           // top padding leaves room for column headers
   const ROW=70;                      // vertical pitch for a node slot
+  const VGAP=14;                     // minimum vertical gap between cards in a column
   const stage=document.getElementById('stage');
   const svg=document.getElementById('wires');
 
   const COL_NAMES=['Sasha','Parents','Grandparents','Great-grandparents','Apex','Apex'];
 
-  // ---- assign vertical positions ----------------------------------------------
-  // Direct-line spine: place each generation's primary couples evenly, then
-  // recurse parents to bracket around their child. We compute Y for each person.
-  const Y={};      // person id -> center y (px)
-  const maxGen=Math.max(...Object.values(PEOPLE).map(p=>p.gen));
-
-  // Build child->parents map from unions
-  const parentsOf={}; const unionByParent={};
-  UNIONS.forEach(u=>{
-    (u.children||[]).forEach(c=>{ parentsOf[c]=[u.a,u.b].filter(Boolean); });
-    unionByParent[u.a]=u; if(u.b) unionByParent[u.b]=u;
-  });
-
-  // Recursive vertical layout over the ancestor binary-ish tree, anchored at sasha.
-  // We give each ancestor a vertical band whose height halves each generation up.
-  let cursor=0;
-  const SPINE_GAP=ROW;             // base gap unit
-  function placeAncestors(id, top, height){
-    // center this person in [top, top+height]
-    Y[id]=top+height/2;
-    const ps=parentsOf[id];
-    if(!ps||!ps.length) return;
-    if(ps.length===1){
-      placeAncestors(ps[0], top, height);
-    }else{
-      placeAncestors(ps[0], top, height/2);            // father upper half
-      placeAncestors(ps[1], top+height/2, height/2);   // mother lower half
-    }
-  }
-  // total vertical span: 8 great-grandparent slots -> give generous height
-  const SPAN = 8*ROW*1.15;
-  placeAncestors('sasha', PAD_T, SPAN);
-
-  // siblings: stack just below their reference sibling, in same gen column
-  // group siblings by the person they attach to
-  const sibsByAnchor={};
-  Object.entries(PEOPLE).forEach(([id,p])=>{
-    if(p.sibOf){ (sibsByAnchor[p.sibOf]=sibsByAnchor[p.sibOf]||[]).push(id); }
-  });
-  // assign sibling Y as small offshoots below anchor; nudge to avoid the spine math.
-  Object.entries(sibsByAnchor).forEach(([anchor,sibs])=>{
-    let baseY=Y[anchor];
-    sibs.forEach((sid,i)=>{ Y[sid]=baseY + (i+1)* (ROW*0.62); });
-  });
-
-  // place any remaining children that have a single known parent (e.g. cousins)
-  // near that parent, so they don't pile up at the origin.
-  UNIONS.forEach(u=>{ (u.children||[]).forEach(c=>{ if(Y[c]==null && Y[u.a]!=null) Y[c]=Y[u.a]; }); });
-
-  // ---- emit nodes & compute extents ------------------------------------------
-  function colX(gen){ return PAD_L + gen*COL_W; }
-  let maxX=0, maxY=0;
-
-  // column headers
-  for(let g=0; g<=maxGen; g++){
-    const x=colX(g);
-    const h=document.createElement('div');
-    h.className='colhdr'; h.style.left=x+'px'; h.style.top='0px';
-    h.textContent='G'+(-g===0?'0':('-'+g))+' · '+(COL_NAMES[g]||'');
-    stage.appendChild(h);
-  }
-
-  function makeNode(id,p){
-    const x=colX(p.gen), y=(Y[id]??PAD_T)-H/2;
-    const el=document.createElement('div');
-    el.className='node e-'+(p.line||'unknown')
-      + (p.ref?' ref':'') + (p.unknown?' unknown':'') + (p.collateral?' collateral':'');
-    el.style.left=x+'px'; el.style.top=y+'px'; el.style.width=W+'px'; el.style.minHeight=H+'px';
-    let html='<div class="n">'+esc(p.name)+'</div>';
-    if(p.d) html+='<div class="d">'+esc(p.d).replace(/\n/g,'<br>')+'</div>';
-    if(p.r) html+='<div class="r">'+esc(p.r)+'</div>';
-    el.innerHTML=html;
-    const bio=BIO[id];
-    if(bio){ el.setAttribute('data-bio',bio); el.setAttribute('data-nm',p.name); if(p.r) el.setAttribute('data-rl',p.r); el.setAttribute('data-ln',p.line||'rule'); }
-    stage.appendChild(el);
-    maxX=Math.max(maxX, x+W); maxY=Math.max(maxY, y+Math.max(H, el.offsetHeight));
-  }
   function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 
-  Object.entries(PEOPLE).forEach(([id,p])=>makeNode(id,p));
+  // child -> its union / parents
+  const unionOfChild={}, parentsOf={};
+  UNIONS.forEach(u=>u.children.forEach(c=>{ unionOfChild[c]=u; parentsOf[c]=u.parents; }));
 
-  // ---- draw wires (SVG, right-angle) -----------------------------------------
-  // For each union with children: bracket the couple, then elbow to each child.
-  function line(x1,y1,x2,y2,cls){
+  // ancestors of FOCUS = the direct line
+  const ancestors=new Set([FOCUS]);
+  { const stack=[FOCUS];
+    while(stack.length){ const id=stack.pop();
+      (parentsOf[id]||[]).forEach(p=>{ if(!ancestors.has(p)){ ancestors.add(p); stack.push(p); } }); } }
+
+  // generation = distance up from FOCUS; extended down to siblings/cousins
+  const GEN={}; GEN[FOCUS]=0;
+  { let frontier=[FOCUS];
+    while(frontier.length){ const next=[];
+      frontier.forEach(id=>(parentsOf[id]||[]).forEach(p=>{ if(GEN[p]==null){ GEN[p]=GEN[id]+1; next.push(p); } }));
+      frontier=next; } }
+  { let changed=true;
+    while(changed){ changed=false;
+      UNIONS.forEach(u=>{
+        const pg=u.parents.map(p=>GEN[p]).find(g=>g!=null);
+        if(pg==null) return;
+        u.children.forEach(c=>{ if(GEN[c]==null){ GEN[c]=pg-1; changed=true; } }); }); } }
+
+  // section coverage: walk down from each root; stop at direct-line people.
+  // Anyone covered here renders in that section, not in the fan.
+  const inSection=new Set();
+  function sectionWalk(root, visit){
+    // visit(id, col, isStub, viaParent) for each member, in DFS order
+    const seen=new Set();
+    (function walk(id, col, via){
+      if(seen.has(id)) return;
+      seen.add(id);
+      const stub = id!==root && ancestors.has(id);
+      visit(id, col, stub, via);
+      if(stub) return;                                    // don't recurse into the direct line
+      UNIONS.filter(u=>u.parents.includes(id)).forEach(u=>{
+        u.parents.forEach(p=>{                            // married-in co-parent = spouse
+          if(p!==id && !seen.has(p) && !ancestors.has(p)){ seen.add(p); visit(p, col, false, id, true); }
+        });
+        u.children.forEach(c=>walk(c, col+1, id));
+      });
+    })(root, 0, null);
+  }
+  SECTIONS.forEach(s=>sectionWalk(s.root,(id,col,stub)=>{ if(id!==s.root && !stub) inSection.add(id); }));
+
+  // fan membership: ancestors + their siblings/descendants not covered by a section
+  const fan=new Set(ancestors);
+  { let changed=true;
+    while(changed){ changed=false;
+      UNIONS.forEach(u=>{
+        if(!u.parents.some(p=>fan.has(p))) return;
+        u.children.forEach(c=>{ if(!fan.has(c) && !inSection.has(c)){ fan.add(c); changed=true; } }); }); } }
+
+  // fan collaterals anchor to a direct-line sibling, or to their parent (cousins)
+  const anchorOf={};
+  fan.forEach(id=>{
+    if(ancestors.has(id)) return;
+    const u=unionOfChild[id];
+    const sib=u && u.children.find(c=>ancestors.has(c));
+    anchorOf[id]= sib ? {sib} : {par: u.parents.find(p=>fan.has(p))};
+  });
+
+  /* ---- generic helpers: render a card, sweep columns for collisions ---------- */
+  function makeCard(parentEl, id, x, y, opts){
+    const p=PEOPLE[id];
+    const el=document.createElement('div');
+    el.className='node e-'+(p.line||'unknown')
+      +(p.ref||opts.ref?' ref':'')+(p.unknown?' unknown':'')+(opts.collateral?' collateral':'');
+    el.style.left=x+'px'; el.style.top=y+'px'; el.style.width=W+'px'; el.style.minHeight=(opts.minH||H)+'px';
+    const d=opts.d!==undefined?opts.d:p.d;
+    let html='<div class="n">'+esc(p.name)+'</div>';
+    if(d) html+='<div class="d">'+esc(d).replace(/\n/g,'<br>')+'</div>';
+    if(p.r && !opts.noR) html+='<div class="r">'+esc(p.r)+'</div>';
+    el.innerHTML=html;
+    if(p.bio){
+      el.setAttribute('data-bio',p.bio); el.setAttribute('data-nm',p.name);
+      if(p.r) el.setAttribute('data-rl',p.r); el.setAttribute('data-ln',p.line||'rule');
+    }
+    parentEl.appendChild(el);
+    return el;
+  }
+
+  // push cards apart vertically within each column; returns final center Y per id
+  function sweep(cols, els, attach){
+    // cols: id -> column index; els: id -> element; attach = wire attach offset from top
+    const byCol={};
+    Object.keys(cols).forEach(id=>{ (byCol[cols[id]]=byCol[cols[id]]||[]).push(id); });
+    const Y={};
+    Object.values(byCol).forEach(ids=>{
+      ids.sort((a,b)=>els[a].offsetTop-els[b].offsetTop);
+      let minTop=-Infinity;
+      ids.forEach(id=>{
+        let top=els[id].offsetTop;
+        if(top<minTop) { top=minTop; els[id].style.top=top+'px'; }
+        minTop=top+els[id].offsetHeight+VGAP;
+      });
+      ids.forEach(id=>{ Y[id]=els[id].offsetTop+attach; });
+    });
+    return Y;
+  }
+
+  function wire(svgEl,x1,y1,x2,y2,color){
     const l=document.createElementNS(NS,'line');
     l.setAttribute('x1',x1); l.setAttribute('y1',y1);
     l.setAttribute('x2',x2); l.setAttribute('y2',y2);
-    l.setAttribute('stroke', cls||'var(--rule)');
-    l.setAttribute('stroke-width','1.4');
-    svg.appendChild(l);
+    l.setAttribute('stroke',color); l.setAttribute('stroke-width','1.4');
+    svgEl.appendChild(l);
   }
-  function lineColor(line_){return 'var(--'+(line_||'rule')+')';}
-
-  // child sits to the LEFT (lower gen), parents to the RIGHT (higher gen).
-  UNIONS.forEach(u=>{
-    const pa=PEOPLE[u.a], pb=u.b?PEOPLE[u.b]:null;
-    const xPar=colX(pa.gen);                 // left edge of parent column
-    const yA=Y[u.a], yB=pb?Y[u.b]:yA;
-    const col=lineColor(pa.line);
-    // marriage bracket: vertical bar just left of parents joining the couple
-    const bx=xPar-18;
-    const ymin=Math.min(yA,yB), ymax=Math.max(yA,yB), ymid=(yA+yB)/2;
-    if(pb){
-      line(xPar,yA,bx,yA,col);              // father stub
-      line(xPar,yB,bx,yB,col);              // mother stub
-      line(bx,ymin,bx,ymax,col);            // vertical join
-    }else{
-      line(xPar,yA,bx,yA,col);              // single parent stub
-    }
-    // from bracket midpoint, elbow left to each child's right edge
-    (u.children||[]).forEach(c=>{
-      const yc=Y[c]; const xcRight=colX(PEOPLE[c].gen)+W;
-      const mx=(bx+xcRight)/2;              // mid x for the elbow
-      line(bx,ymid,mx,ymid,col);           // out from bracket
-      line(mx,ymid,mx,yc,col);             // vertical to child's row
-      line(mx,yc,xcRight,yc,col);          // into child's right edge
-    });
-  });
-
-  // sibling offshoots: connect each sibling to its anchor with a small elbow
-  Object.entries(sibsByAnchor).forEach(([anchor,sibs])=>{
-    const ga=PEOPLE[anchor].gen;
-    const xRight=colX(ga)+W;
-    const xa=colX(ga); // left edge of anchor
-    sibs.forEach(sid=>{
-      const col=lineColor(PEOPLE[sid].line);
-      // small bracket off the anchor's left edge dropping to the sibling
-      const bx=xa-9;
-      line(xa,Y[anchor],bx,Y[anchor],col);
-      line(bx,Y[anchor],bx,Y[sid],col);
-      line(bx,Y[sid],xa,Y[sid],col);
-    });
-  });
-
-  // size the svg + stage
-  maxX=Math.max(maxX, colX(maxGen)+W)+30;
-  maxY=maxY+30;
-  svg.setAttribute('width',maxX); svg.setAttribute('height',maxY);
-  svg.style.width=maxX+'px'; svg.style.height=maxY+'px';
+  const lineColor=ln=>'var(--'+(ln||'rule')+')';
 
   /* ============================================================================
-     ZAHEER collateral mini-tree — rendered below the main fan, right-to-left (root on the right).
+     PEDIGREE FAN — direct ancestors + near collaterals, present at left
      ========================================================================== */
-  const zWrap=document.createElement('div');
-  zWrap.style.cssText='margin-top:46px; padding-top:18px; border-top:1px solid var(--rule);';
-  const zTitle=document.createElement('div');
-  zTitle.className='colhdr';
-  zTitle.style.cssText='position:static; display:block; margin-bottom:14px;';
-  zTitle.textContent=ZAHEER.title;
-  zWrap.appendChild(zTitle);
+  const maxGen=Math.max(...[...fan].map(id=>GEN[id]));
+  const colX=g=>PAD_L+g*COL_W;
 
-  const zStage=document.createElement('div');
-  zStage.style.cssText='position:relative;';
-  const zSvg=document.createElementNS(NS,'svg');
-  zSvg.style.cssText='position:absolute; top:0; left:0; pointer-events:none;';
-  zStage.appendChild(zSvg);
-  zWrap.appendChild(zStage);
-  document.querySelector('.scroller').appendChild(zWrap);
-
-  // simple column layout for zaheer: assign rows per column in declaration order
-  const zCol={};   // col -> running row index
-  const zPos={};   // id -> {x,y}
-  const ZW=176, ZH=46, ZGAPX=70, ZGAPY=20;
-  const zMaxCol=Math.max(...Object.values(ZAHEER.nodes).map(n=>n.col));
-  Object.entries(ZAHEER.nodes).forEach(([id,n])=>{
-    const c=n.col; const row=(zCol[c]=(zCol[c]??0)); zCol[c]=row+1;
-    const x=4 + (zMaxCol-c)*(ZW+ZGAPX);   // mirror: col 0 (Wazir) on the right, descendants fan left
-    const y=PAD_T + row*(ZH+ZGAPY);
-    zPos[id]={x,y,cx:x,cy:y+ZH/2};
-  });
-  // center each parent vertically against its children (single pass, good enough)
-  ZAHEER.edges.forEach(([p,ch])=>{ /* layout already reasonable */ });
-
-  let zMaxX=0, zMaxY=0;
-  Object.entries(ZAHEER.nodes).forEach(([id,n])=>{
-    const pos=zPos[id];
-    const el=document.createElement('div');
-    el.className='node collateral e-'+(n.line||'unknown')+(n.unknown?' unknown':'');
-    el.style.cssText='left:'+pos.x+'px; top:'+pos.y+'px; width:'+ZW+'px; min-height:'+ZH+'px;';
-    let html='<div class="n">'+esc(n.name)+'</div>';
-    if(n.d) html+='<div class="d">'+esc(n.d).replace(/\n/g,'<br>')+'</div>';
-    el.innerHTML=html;
-    const zb=BIO[id];
-    if(zb){ el.setAttribute('data-bio',zb); el.setAttribute('data-nm',n.name); el.setAttribute('data-ln',n.line||'rule'); }
-    zStage.appendChild(el);
-    zMaxX=Math.max(zMaxX,pos.x+ZW); zMaxY=Math.max(zMaxY,pos.y+Math.max(ZH,el.offsetHeight));
-  });
-  function zline(x1,y1,x2,y2){
-    const l=document.createElementNS(NS,'line');
-    l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',x2);l.setAttribute('y2',y2);
-    l.setAttribute('stroke','var(--zaheer)');l.setAttribute('stroke-width','1.4');
-    zSvg.appendChild(l);
+  // column headers
+  for(let g=0; g<=maxGen; g++){
+    const h=document.createElement('div');
+    h.className='colhdr'; h.style.left=colX(g)+'px'; h.style.top='0px';
+    h.textContent='G'+(g===0?'0':('-'+g))+' · '+(COL_NAMES[g]||'');
+    stage.appendChild(h);
   }
-  ZAHEER.edges.forEach(([p,c])=>{
-    const P=zPos[p], C=zPos[c];
-    const x1=P.x,    y1=P.cy;        // parent LEFT edge (parent now sits on the right)
-    const x2=C.x+ZW, y2=C.cy;        // child RIGHT edge (descendants fan left)
-    const mx=(x1+x2)/2;
-    zline(x1,y1,mx,y1); zline(mx,y1,mx,y2); zline(mx,y2,x2,y2);
+
+  // initial vertical placement: ancestors get halved bands; collaterals hang below anchors
+  const fanY={};
+  const ancPerGen={};
+  ancestors.forEach(id=>{ ancPerGen[GEN[id]]=(ancPerGen[GEN[id]]||0)+1; });
+  const SPAN=Math.max(...Object.values(ancPerGen))*ROW*1.35;
+  (function place(id, top, height){
+    fanY[id]=top+height/2;
+    const ps=(parentsOf[id]||[]).filter(p=>ancestors.has(p));
+    if(!ps.length) return;
+    if(ps.length===1) place(ps[0], top, height);
+    else { place(ps[0], top, height/2); place(ps[1], top+height/2, height/2); }
+  })(FOCUS, PAD_T, SPAN);
+  // collaterals: below their direct-line sibling, or a row below their parent
+  { let changed=true;
+    while(changed){ changed=false;
+      Object.entries(anchorOf).forEach(([id,a])=>{
+        if(fanY[id]!=null) return;
+        const ref=a.sib||a.par;
+        if(fanY[ref]!=null){ fanY[id]=fanY[ref]+ROW; changed=true; }
+      }); } }
+
+  // render fan cards
+  const fanEls={}, fanCols={};
+  fan.forEach(id=>{
+    fanCols[id]=GEN[id];
+    fanEls[id]=makeCard(stage, id, colX(GEN[id]), (fanY[id]??PAD_T)-H/2,
+                        {collateral:!ancestors.has(id)});
   });
-  zMaxX+=30; zMaxY+=20;
-  zSvg.setAttribute('width',zMaxX); zSvg.setAttribute('height',zMaxY);
-  zSvg.style.width=zMaxX+'px'; zSvg.style.height=zMaxY+'px';
-  zStage.style.height=zMaxY+'px';
 
-  // final stage sizing
-  stage.style.width=maxX+'px';
-  stage.style.height=maxY+'px';
+  // resolve collisions, get final wire-attach Y
+  const Yf=sweep(fanCols, fanEls, H/2);
 
-  // ---- hover tooltips: reveal fuller detail ----------------------------------
+  // wires: every union with fan members; marriage bracket right of children
+  UNIONS.forEach(u=>{
+    const kids=u.children.filter(c=>fan.has(c));
+    if(!kids.length) return;
+    const ps=u.parents.filter(p=>fan.has(p));
+    if(!ps.length) return;
+    const col=lineColor(PEOPLE[ps[0]].line);
+    const xPar=colX(GEN[ps[0]]);
+    const bx=xPar-18;
+    const ys=ps.map(p=>Yf[p]);
+    const ymid=ys.reduce((a,b)=>a+b,0)/ys.length;
+    ps.forEach(p=>wire(svg, xPar, Yf[p], bx, Yf[p], col));
+    if(ps.length>1) wire(svg, bx, Math.min(...ys), bx, Math.max(...ys), col);
+    kids.forEach(c=>{
+      const yc=Yf[c], xcRight=colX(GEN[c])+W;
+      const mx=(bx+xcRight)/2;
+      wire(svg, bx, ymid, mx, ymid, col);
+      wire(svg, mx, ymid, mx, yc, col);
+      wire(svg, mx, yc, xcRight, yc, col);
+    });
+  });
+
+  // size the fan stage
+  let maxX=0, maxY=0;
+  Object.values(fanEls).forEach(el=>{
+    maxX=Math.max(maxX, el.offsetLeft+el.offsetWidth);
+    maxY=Math.max(maxY, el.offsetTop+el.offsetHeight);
+  });
+  maxX=Math.max(maxX, colX(maxGen)+W)+30; maxY+=30;
+  svg.setAttribute('width',maxX); svg.setAttribute('height',maxY);
+  svg.style.width=maxX+'px'; svg.style.height=maxY+'px';
+  stage.style.width=maxX+'px'; stage.style.height=maxY+'px';
+
+  /* ============================================================================
+     COLLATERAL SECTIONS — mini-trees below the fan, root on the right.
+     Tidy layout: leaves stack, parents center on their children; spouses sit
+     beside their partner; direct-line people render as reference stubs.
+     ========================================================================== */
+  function renderSection(sec){
+    const wrapEl=document.createElement('div');
+    wrapEl.style.cssText='margin-top:46px; padding-top:18px; border-top:1px solid var(--rule);';
+    const titleEl=document.createElement('div');
+    titleEl.className='colhdr';
+    titleEl.style.cssText='position:static; display:block; margin-bottom:14px;';
+    titleEl.textContent=sec.title;
+    wrapEl.appendChild(titleEl);
+    const st=document.createElement('div');
+    st.style.cssText='position:relative;';
+    const sv=document.createElementNS(NS,'svg');
+    sv.style.cssText='position:absolute; top:0; left:0; pointer-events:none;';
+    st.appendChild(sv);
+    wrapEl.appendChild(st);
+    document.querySelector('.scroller').appendChild(wrapEl);
+
+    // collect members
+    const colOf={}, stubs=new Set(), spouseOf={}, edges=[], kidsOf={};
+    sectionWalk(sec.root,(id,col,stub,via,isSpouse)=>{
+      colOf[id]=col;
+      if(stub) stubs.add(id);
+      if(isSpouse) spouseOf[id]=via;
+      if(via!=null && !isSpouse){ edges.push([via,id]); (kidsOf[via]=kidsOf[via]||[]).push(id); }
+    });
+    // co-parent edges (e.g. both Aks and Sri connect to Sage), spouses ride in partner's row group
+    UNIONS.forEach(u=>{
+      u.parents.forEach(p=>{ if(spouseOf[p]) u.children.forEach(c=>{ if(colOf[c]!=null) edges.push([p,c]); }); });
+    });
+    Object.keys(spouseOf).forEach(s=>{ (kidsOf[spouseOf[s]]=kidsOf[spouseOf[s]]||[]).push(s); });
+
+    // tidy layout
+    const rowOf={}; let nextRow=0;
+    (function layRow(id){
+      const kids=kidsOf[id]||[];
+      if(!kids.length) return rowOf[id]=nextRow++;
+      kids.forEach(layRow);
+      const real=kids.filter(k=>!spouseOf[k]);
+      const a=real.length?real:kids;
+      return rowOf[id]=(rowOf[a[0]]+rowOf[a[a.length-1]])/2;
+    })(sec.root);
+
+    // render cards
+    const maxCol=Math.max(...Object.values(colOf));
+    const ZH=46, ZGAPX=70;
+    const els={};
+    Object.keys(colOf).forEach(id=>{
+      const x=PAD_L+(maxCol-colOf[id])*(W+ZGAPX);
+      const y=6+rowOf[id]*ROW;
+      els[id]=makeCard(st, id, x, y, {
+        collateral:true, minH:ZH, noR:true,
+        ref:stubs.has(id),
+        d:stubs.has(id) ? '↑ direct line, above' : undefined,
+      });
+    });
+
+    // resolve collisions, draw wires
+    const Ys=sweep(colOf, els, ZH/2);
+    const color='var(--'+sec.color+')';
+    edges.forEach(([p,c])=>{
+      const x1=els[p].offsetLeft, y1=Ys[p];          // parent left edge (root on the right)
+      const x2=els[c].offsetLeft+W, y2=Ys[c];        // child right edge
+      const mx=(x1+x2)/2;
+      wire(sv,x1,y1,mx,y1,color); wire(sv,mx,y1,mx,y2,color); wire(sv,mx,y2,x2,y2,color);
+    });
+
+    // size
+    let mX=0,mY=0;
+    Object.values(els).forEach(el=>{
+      mX=Math.max(mX, el.offsetLeft+el.offsetWidth);
+      mY=Math.max(mY, el.offsetTop+el.offsetHeight);
+    });
+    mX+=30; mY+=20;
+    sv.setAttribute('width',mX); sv.setAttribute('height',mY);
+    sv.style.width=mX+'px'; sv.style.height=mY+'px';
+    st.style.height=mY+'px'; st.style.width=mX+'px';
+  }
+  SECTIONS.forEach(renderSection);
+
+  /* ---- hover tooltips: reveal fuller detail ---------------------------------- */
   const tip=document.createElement('div'); tip.id='tip'; document.body.appendChild(tip);
   function moveTip(e){
     const pad=14, w=tip.offsetWidth, h=tip.offsetHeight;
