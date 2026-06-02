@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>first principles</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#161618; --field:#0f0f13;
+  --panel:rgba(22,22,26,0.55); --panel-solid:rgba(20,20,25,0.74);
+  --text:rgba(244,234,212,0.88); --muted:rgba(244,234,212,0.55); --faint:rgba(244,234,212,0.32);
+  --border:rgba(190,149,255,0.18); --hair:rgba(244,234,212,0.10);
+  --violet:#be95ff; --pink:#ff7eb6; --cyan:#3ddbd9; --cream:#f4ead4;
+  --amber:#e8b75e; --red:#f0746a; --green:#42be65;
+  --font:'IBM Plex Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;
+  line-height:1.5;overflow-x:hidden;position:relative;-webkit-font-smoothing:antialiased}
+#field{position:fixed;inset:0;z-index:0;width:100vw;height:100vh}
+.scrim{position:fixed;inset:0;z-index:1;pointer-events:none;background:
+  radial-gradient(130% 100% at 50% 0%, rgba(15,15,19,.30) 0%, rgba(15,15,19,.62) 60%, rgba(15,15,19,.85) 100%),
+  linear-gradient(180deg, rgba(15,15,19,.55) 0%, rgba(15,15,19,.20) 12%, rgba(15,15,19,.20) 88%, rgba(15,15,19,.78) 100%)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 clamp(16px,4vw,30px);position:relative;z-index:2}
+
+header{padding:clamp(48px,10vw,86px) 0 24px}
+.kicker{font-size:10.5px;letter-spacing:.4em;text-transform:uppercase;color:var(--violet);
+  display:flex;align-items:center;gap:11px;flex-wrap:wrap}
+.kicker::before{content:"◖";color:var(--violet);font-size:13px;
+  filter:drop-shadow(0 0 8px var(--violet));animation:pulse 3s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:.45}50%{opacity:1}}
+h1{font-family:var(--font);font-weight:300;font-size:clamp(40px,9vw,92px);line-height:.92;
+  letter-spacing:-.02em;margin:20px 0 16px;color:var(--cream);text-transform:lowercase}
+h1 b{font-weight:600;color:var(--violet);text-shadow:0 0 40px rgba(190,149,255,.35)}
+.sub{max-width:620px;color:var(--muted);font-size:13px;letter-spacing:.01em}
+.sub b{color:var(--text);font-weight:500}
+
+/* table of contents chips */
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:26px}
+.toc a{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+  text-decoration:none;padding:7px 13px;border:1px solid var(--border);border-radius:3px;
+  background:var(--panel);backdrop-filter:blur(8px);transition:all .25s}
+.toc a:hover{color:var(--cream);border-color:rgba(190,149,255,.5);box-shadow:0 0 18px rgba(190,149,255,.12)}
+.toc a .n{color:var(--faint);margin-right:7px}
+
+section{padding:clamp(36px,6vw,58px) 0;border-top:1px solid var(--hair);scroll-margin-top:20px}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:18px;margin-bottom:7px}
+.sec-head h2{font-weight:500;font-size:clamp(20px,3vw,30px);letter-spacing:-.01em;color:var(--cream);text-transform:lowercase}
+.sec-head .idx{font-size:10px;color:var(--faint);letter-spacing:.2em;text-transform:uppercase;white-space:nowrap}
+.sec-note{color:var(--muted);font-size:12.5px;max-width:680px;margin-bottom:26px;letter-spacing:.01em}
+.sec-note b{color:var(--cyan);font-weight:500}
+.sec-note .v{color:var(--violet);font-weight:500}
+.sec-note .r{color:var(--red);font-weight:500}
+
+.panel{background:var(--panel);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:4px;padding:clamp(18px,2.6vw,26px)}
+.cols{display:grid;grid-template-columns:1fr;gap:18px}
+.cols.two{grid-template-columns:1fr;gap:18px}
+@media(min-width:780px){.cols.two{grid-template-columns:1fr 1fr}}
+
+/* controls */
+.controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}
+button.btn{font-family:var(--font);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--cream);background:rgba(190,149,255,.10);border:1px solid var(--border);
+  border-radius:3px;padding:9px 15px;cursor:pointer;transition:all .2s}
+button.btn:hover:not(:disabled){background:rgba(190,149,255,.2);border-color:rgba(190,149,255,.55)}
+button.btn:active:not(:disabled){transform:translateY(1px)}
+button.btn:disabled{opacity:.35;cursor:default}
+button.btn.cy{color:var(--cyan);background:rgba(61,219,217,.08);border-color:rgba(61,219,217,.22)}
+button.btn.cy:hover:not(:disabled){background:rgba(61,219,217,.18);border-color:rgba(61,219,217,.5)}
+button.btn.rd{color:var(--red);background:rgba(240,116,106,.08);border-color:rgba(240,116,106,.22)}
+button.btn.rd:hover:not(:disabled){background:rgba(240,116,106,.18);border-color:rgba(240,116,106,.5)}
+input.fld,select.fld{font-family:var(--font);font-size:12px;color:var(--cream);background:var(--field);
+  border:1px solid var(--border);border-radius:3px;padding:9px 12px;width:130px;outline:none}
+input.fld:focus,select.fld:focus{border-color:rgba(190,149,255,.55)}
+select.fld{cursor:pointer}
+.hint{font-size:10.5px;color:var(--faint);letter-spacing:.06em}
+
+/* status line shared */
+.status{font-size:12px;color:var(--muted);margin-top:16px;min-height:1.4em;letter-spacing:.01em;line-height:1.6}
+.status b{color:var(--cream);font-weight:500}
+.status .hi{color:var(--violet);font-weight:500}
+
+/* metrics row */
+.metrics{display:flex;gap:1px;background:var(--border);border:1px solid var(--border);
+  border-radius:4px;overflow:hidden;margin-top:18px}
+.metrics .m{background:var(--panel-solid);backdrop-filter:blur(8px);padding:14px 18px;flex:1;min-width:0}
+.metrics .m .v{font-size:clamp(22px,3.4vw,32px);font-weight:500;color:var(--cream);
+  line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.metrics .m .v.cy{color:var(--cyan)} .metrics .m .v.rd{color:var(--red)} .metrics .m .v.vi{color:var(--violet)}
+.metrics .m .l{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);margin-top:8px}
+
+/* big-O chart */
+#bigo{display:block;width:100%;height:clamp(240px,34vw,330px)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;padding:8px 4px 0;font-size:10.5px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:7px;cursor:default}
+.swatch{width:15px;height:3px;border-radius:2px}
+.slider{display:flex;align-items:center;gap:14px;margin-top:18px}
+.slider input[type=range]{flex:1;-webkit-appearance:none;height:3px;background:var(--hair);border-radius:3px;outline:none}
+.slider input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;
+  background:var(--violet);cursor:pointer;box-shadow:0 0 12px rgba(190,149,255,.5)}
+.slider input[type=range]::-moz-range-thumb{width:15px;height:15px;border:0;border-radius:50%;background:var(--violet);cursor:pointer}
+.slider .nval{font-size:13px;color:var(--cream);font-variant-numeric:tabular-nums;min-width:64px}
+.slider .nval b{color:var(--violet)}
+
+/* array of cells (binary search) */
+.cells{display:flex;flex-wrap:wrap;gap:6px;margin-top:20px}
+.cell{position:relative;width:clamp(38px,6vw,52px);height:clamp(44px,6.5vw,56px);
+  display:flex;align-items:center;justify-content:center;border-radius:3px;
+  background:rgba(244,234,212,.04);border:1px solid var(--hair);
+  font-size:13px;color:var(--text);font-variant-numeric:tabular-nums;
+  transition:background .3s,border-color .3s,color .3s,transform .3s,box-shadow .3s}
+.cell .ix{position:absolute;top:-16px;left:0;right:0;text-align:center;font-size:8.5px;color:var(--faint);letter-spacing:.04em}
+.cell.range{background:rgba(61,219,217,.07);border-color:rgba(61,219,217,.28)}
+.cell.out{opacity:.22}
+.cell.mid{background:rgba(190,149,255,.18);border-color:var(--violet);color:var(--cream);
+  transform:translateY(-3px);box-shadow:0 0 22px rgba(190,149,255,.3)}
+.cell.found{background:rgba(66,190,101,.2);border-color:var(--green);color:#d6ffe0;
+  box-shadow:0 0 26px rgba(66,190,101,.4)}
+.cell.target-mark{outline:1px dashed rgba(255,126,182,.6);outline-offset:2px}
+.ptrs{display:flex;gap:6px;margin-top:30px;flex-wrap:wrap;font-size:10.5px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase}
+.ptrs span b{color:var(--cyan)} .ptrs span.m b{color:var(--violet)}
+
+/* stack */
+.stack-stage{display:flex;align-items:flex-end;justify-content:center;gap:26px;
+  min-height:300px;margin-top:20px;position:relative}
+.stack-col{display:flex;flex-direction:column-reverse;align-items:center;gap:5px;min-height:280px;
+  justify-content:flex-start;padding:10px;border-bottom:2px solid var(--border);
+  border-left:1px solid var(--hair);border-right:1px solid var(--hair);width:140px;position:relative}
+.stack-col .floor{position:absolute;bottom:-20px;left:50%;transform:translateX(-50%);
+  font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.item{width:108px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:3px;
+  background:rgba(190,149,255,.12);border:1px solid var(--border);color:var(--cream);
+  font-size:13px;font-variant-numeric:tabular-nums;flex-shrink:0;
+  animation:drop .35s cubic-bezier(.2,.8,.3,1)}
+.item.top{border-color:var(--violet);background:rgba(190,149,255,.22);box-shadow:0 0 20px rgba(190,149,255,.25)}
+.item.leaving{animation:lift .3s ease forwards}
+@keyframes drop{from{opacity:0;transform:translateY(-24px)}to{opacity:1;transform:none}}
+@keyframes lift{to{opacity:0;transform:translateY(-24px)}}
+.top-tag{position:absolute;right:-58px;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--violet);white-space:nowrap}
+.empty-note{color:var(--faint);font-size:11px;letter-spacing:.06em;align-self:center;margin:auto 0}
+
+/* queue */
+.queue-stage{display:flex;align-items:center;gap:0;margin-top:24px;overflow:hidden;
+  border:1px solid var(--hair);border-radius:4px;background:rgba(244,234,212,.02);
+  padding:18px 14px;min-height:96px;position:relative}
+.queue-lane{display:flex;gap:8px;align-items:center;flex:1;min-height:48px}
+.qitem{width:54px;height:48px;display:flex;align-items:center;justify-content:center;border-radius:3px;
+  background:rgba(61,219,217,.1);border:1px solid rgba(61,219,217,.28);color:var(--cyan);
+  font-size:13px;font-variant-numeric:tabular-nums;flex-shrink:0;animation:slidein .35s cubic-bezier(.2,.8,.3,1)}
+.qitem.leaving{animation:slideout .3s ease forwards}
+@keyframes slidein{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
+@keyframes slideout{to{opacity:0;transform:translateX(-20px);width:0;margin-left:-8px}}
+.q-ends{display:flex;justify-content:space-between;margin-top:10px;font-size:9.5px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--faint)}
+.q-ends .front b{color:var(--cyan)} .q-ends .back b{color:var(--pink)}
+
+/* hash table */
+.hash-vis{display:grid;grid-template-columns:1fr;gap:18px;margin-top:20px}
+@media(min-width:680px){.hash-vis{grid-template-columns:auto 1fr}}
+.hash-formula{font-size:11.5px;color:var(--muted);background:var(--field);border:1px solid var(--hair);
+  border-radius:3px;padding:14px;line-height:1.9;align-self:start}
+.hash-formula b{color:var(--cyan)} .hash-formula .vi{color:var(--violet)}
+.buckets{display:flex;flex-direction:column;gap:5px}
+.bucket{display:flex;align-items:center;gap:10px;min-height:34px}
+.bucket .bi{width:26px;text-align:right;font-size:11px;color:var(--faint);flex-shrink:0;font-variant-numeric:tabular-nums}
+.bucket .bcells{display:flex;gap:6px;flex-wrap:wrap;flex:1;padding:4px;border-radius:3px;
+  border:1px dashed var(--hair);min-height:32px;transition:background .3s,border-color .3s}
+.bucket.lit .bcells{background:rgba(190,149,255,.07);border-color:rgba(190,149,255,.4)}
+.kchip{display:flex;align-items:center;gap:5px;background:rgba(232,183,94,.12);
+  border:1px solid rgba(232,183,94,.3);border-radius:3px;padding:4px 9px;font-size:11px;color:var(--amber);
+  animation:drop .35s cubic-bezier(.2,.8,.3,1)}
+.kchip .arrow{color:var(--faint)}
+.kchip.collide{background:rgba(240,116,106,.12);border-color:rgba(240,116,106,.35);color:var(--red)}
+
+/* sort bars */
+.sort-stage{display:flex;align-items:flex-end;gap:3px;height:clamp(180px,26vw,240px);
+  margin-top:20px;padding:0 2px}
+.bar{flex:1;background:linear-gradient(180deg,rgba(190,149,255,.5),rgba(190,149,255,.18));
+  border-radius:2px 2px 0 0;transition:height .12s linear}
+.bar.cmp{background:linear-gradient(180deg,var(--cyan),rgba(61,219,217,.25))}
+.bar.swap{background:linear-gradient(180deg,var(--red),rgba(240,116,106,.25))}
+.bar.done{background:linear-gradient(180deg,var(--green),rgba(66,190,101,.25))}
+
+footer{padding:38px 0 80px;color:var(--faint);font-size:10.5px;line-height:1.9;border-top:1px solid var(--hair)}
+footer b{color:var(--muted)}
+.reveal{opacity:0;transform:translateY(18px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+.reveal.in{opacity:1;transform:none}
+code{background:rgba(244,234,212,.06);padding:1px 6px;border-radius:3px;font-size:.92em;color:var(--cream)}
+.big-eq{font-size:13px;color:var(--violet);font-variant-numeric:tabular-nums;letter-spacing:.02em}
+</style>
+</head>
+<body>
+<canvas id="field"></canvas>
+<div class="scrim"></div>
+<div class="wrap">
+
+<header>
+  <div class="kicker">computer science · the load-bearing ideas</div>
+  <h1>first<br><b>principles.</b></h1>
+  <p class="sub">A handful of ideas hold up most of computing. Not syntax, not languages—the <b>shapes data takes</b> and the <b>moves you make on it</b>. The shapes are called <b>data structures</b> (stacks, queues, hash tables); the moves are <b>algorithms</b> (searching, sorting). That's the whole vocabulary. Each demo below is live—poke it, and watch the idea work.</p>
+  <nav class="toc">
+    <a href="#binary"><span class="n">00</span>binary search</a>
+    <a href="#stack"><span class="n">01</span>stacks</a>
+    <a href="#queue"><span class="n">02</span>queues</a>
+    <a href="#hash"><span class="n">03</span>hash tables</a>
+    <a href="#sort"><span class="n">04</span>sorting</a>
+    <a href="#complexity"><span class="n">05</span>complexity</a>
+  </nav>
+</header>
+
+<!-- ===== BINARY SEARCH ===== -->
+<section id="binary">
+  <div class="sec-head"><h2>binary search</h2><div class="idx">00 / divide &amp; conquer</div></div>
+  <p class="sec-note">Think of guessing a number between 1 and 100, told "higher" or "lower" each time. A <b>sorted</b> list lets you find anything the same way—by <b>halving</b>. Guess the middle item; the target is either there, to the left, or to the right, so you throw away half of what's left every guess. The number of guesses you need is just how many times you can halve the list: about <span class="v">30</span> for a billion items. Pick a target and step through it.</p>
+  <div class="panel">
+    <div class="cells" id="bs-cells"></div>
+    <div class="ptrs" id="bs-ptrs">
+      <span>lo <b id="bs-lo">0</b></span>
+      <span class="m">mid <b id="bs-mid">–</b></span>
+      <span>hi <b id="bs-hi">0</b></span>
+    </div>
+    <div class="controls">
+      <span class="hint">target</span>
+      <select class="fld" id="bs-target"></select>
+      <button class="btn" id="bs-step">step</button>
+      <button class="btn cy" id="bs-auto">auto-run</button>
+      <button class="btn rd" id="bs-reset">new array</button>
+    </div>
+    <div class="status" id="bs-status">Pick a target, then <b>step</b> through. Every step halves what's left.</div>
+    <div class="metrics">
+      <div class="m"><div class="v vi" id="bs-steps">0</div><div class="l">steps taken</div></div>
+      <div class="m"><div class="v cy" id="bs-worst">–</div><div class="l">worst case · max halvings</div></div>
+      <div class="m"><div class="v rd" id="bs-linear">–</div><div class="l">one-by-one scan · worst</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== STACK ===== -->
+<section id="stack">
+  <div class="sec-head"><h2>stacks</h2><div class="idx">01 / last in, first out</div></div>
+  <p class="sec-note">A stack is a pile of plates. You add to the top (<b>push</b>) and you take from the top (<b>pop</b>)—never the middle. <span class="v">LIFO</span>, for "last in, first out": the last thing you put in is the first thing back out. It's how <b>undo</b> works, how a browser's <b>back button</b> works, and—under the hood—how a program keeps its place when one task interrupts another.</p>
+  <div class="panel">
+    <div class="stack-stage">
+      <div class="stack-col" id="stack-col">
+        <div class="floor">bottom</div>
+      </div>
+    </div>
+    <div class="controls">
+      <input class="fld" id="stack-in" placeholder="value" maxlength="4">
+      <button class="btn" id="stack-push">push ↑</button>
+      <button class="btn cy" id="stack-pop">pop ↓</button>
+    </div>
+    <div class="status" id="stack-status">Push a few values, then pop. Only the <span class="hi">top</span> is ever reachable.</div>
+  </div>
+</section>
+
+<!-- ===== QUEUE ===== -->
+<section id="queue">
+  <div class="sec-head"><h2>queues</h2><div class="idx">02 / first in, first out</div></div>
+  <p class="sec-note">A queue is the line at a counter. You join at the <b>back</b> (called enqueue) and you're served from the <b>front</b> (dequeue). <span class="v">FIFO</span>, "first in, first out": fairness by arrival order. It's how a printer handles jobs in the order you sent them, and how a help desk serves tickets first-come, first-served.</p>
+  <div class="panel">
+    <div class="queue-stage"><div class="queue-lane" id="queue-lane"></div></div>
+    <div class="q-ends"><span class="front">← <b>front</b> · served here</span><span class="back"><b>back</b> · joins here →</span></div>
+    <div class="controls">
+      <input class="fld" id="queue-in" placeholder="value" maxlength="4">
+      <button class="btn" id="queue-enq">enqueue →</button>
+      <button class="btn cy" id="queue-deq">← dequeue</button>
+    </div>
+    <div class="status" id="queue-status">Enqueue at the back, dequeue from the front. Order is preserved.</div>
+  </div>
+</section>
+
+<!-- ===== HASH TABLE ===== -->
+<section id="hash">
+  <div class="sec-head"><h2>hash tables</h2><div class="idx">03 / instant lookup</div></div>
+  <p class="sec-note">How do you find a value <b>instantly</b>, without searching at all? You calculate exactly where it lives. A <b>hash function</b> turns a key (like a word) into a bucket number, so storing and finding skip searching entirely. Here, every letter has a number; add them up, take the remainder after dividing by 8, and that picks one of 8 buckets. When two keys land in the same bucket (a <span class="r">collision</span>), you simply keep both, side by side. This is the dictionary / map / lookup behind nearly every language.</p>
+  <div class="panel">
+    <div class="hash-vis">
+      <div class="hash-formula" id="hash-formula">
+        <span class="vi">bucket</span>(key):<br>
+        &nbsp;&nbsp;add the letter-codes<br>
+        &nbsp;&nbsp;<b>÷ 8, keep remainder</b><br>
+        <span id="hash-calc" style="color:var(--cream)">→ pick a key</span>
+      </div>
+      <div class="buckets" id="hash-buckets"></div>
+    </div>
+    <div class="controls">
+      <input class="fld" id="hash-in" placeholder="key e.g. cat" maxlength="10">
+      <button class="btn" id="hash-add">insert</button>
+      <button class="btn cy" id="hash-rand">random key</button>
+      <button class="btn rd" id="hash-clear">clear</button>
+    </div>
+    <div class="status" id="hash-status">Insert keys and watch them hash into buckets. Same bucket = collision, chained on.</div>
+  </div>
+</section>
+
+<!-- ===== SORTING ===== -->
+<section id="sort">
+  <div class="sec-head"><h2>sorting</h2><div class="idx">04 / order from chaos</div></div>
+  <p class="sec-note">Putting things in order is the most-studied problem in computing—so much else depends on it (binary search needs a sorted list to begin with!). The naive ways compare everything to everything: simple, but they get <i>dramatically</i> slower as the list grows. The clever ones split the list in half over and over—the same halving trick from binary search—and stay fast. Watch the difference: <span style="color:var(--cyan)">cyan</span> compares, <span style="color:var(--red)">red</span> swaps, <span style="color:var(--green)">green</span> is settled. The last section puts numbers to "slow" and "fast."</p>
+  <div class="panel">
+    <div class="sort-stage" id="sort-stage"></div>
+    <div class="controls">
+      <select class="fld" id="sort-algo" style="width:180px">
+        <option value="bubble">bubble sort · O(n²)</option>
+        <option value="insertion">insertion sort · O(n²)</option>
+        <option value="selection">selection sort · O(n²)</option>
+        <option value="merge">merge sort · O(n log n)</option>
+        <option value="quick">quick sort · O(n log n)</option>
+      </select>
+      <button class="btn" id="sort-go">sort</button>
+      <button class="btn cy" id="sort-shuffle">shuffle</button>
+    </div>
+    <div class="status" id="sort-status">Pick an algorithm and sort. Naive vs. clever is a difference you can see.</div>
+    <div class="metrics">
+      <div class="m"><div class="v cy" id="sort-cmp">0</div><div class="l">comparisons</div></div>
+      <div class="m"><div class="v rd" id="sort-swp">0</div><div class="l">swaps / writes</div></div>
+      <div class="m"><div class="v vi" id="sort-n">28</div><div class="l">elements</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== COMPLEXITY ===== -->
+<section id="complexity">
+  <div class="sec-head"><h2>how things scale</h2><div class="idx">05 / big-o notation</div></div>
+  <p class="sec-note">Now the idea that ties the rest together. Say you double the size of a problem—does the work double too? Quadruple? Barely change? That single question decides what's possible at scale, and <b>big-O</b> is the shorthand for the answer. Read <span class="v">n</span> as "the number of items." <span class="v">O(1)</span> is flat work, no matter the size. <span class="v">O(n)</span> means twice the data, twice the work. <span class="r">O(n²)</span> means twice the data, <i>four</i> times the work—a cliff. <span class="v">O(log n)</span>—binary search's halving—barely stirs. Drag the slider and watch them part ways.</p>
+  <div class="panel">
+    <canvas id="bigo"></canvas>
+    <div class="legend" id="bigo-legend"></div>
+    <div class="slider">
+      <span class="hint">items&nbsp;n</span>
+      <input type="range" id="bigo-n" min="1" max="64" value="32">
+      <span class="nval">n = <b id="bigo-nval">32</b></span>
+    </div>
+    <div class="metrics" id="bigo-metrics"></div>
+  </div>
+</section>
+
+<footer>
+  <b>first principles</b> — six ideas that hold up the rest.<br>
+  Hand-built, no dependencies. Every demo runs in your browser, on your input.<br>
+  Sorted lists, halving searches, plates and lines, computed addresses, order from chaos.
+</footer>
+
+</div>
+
+<script>
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const $=id=>document.getElementById(id);
+
+/* ===================== 00 · BIG-O ===================== */
+(function(){
+  const curves=[
+    {key:'O(1)',     col:'#42be65', f:n=>1},
+    {key:'O(log n)', col:'#3ddbd9', f:n=>Math.log2(n)},
+    {key:'O(n)',     col:'#f4ead4', f:n=>n},
+    {key:'O(n log n)',col:'#e8b75e',f:n=>n*Math.log2(n)},
+    {key:'O(n²)',    col:'#f0746a', f:n=>n*n},
+  ];
+  const cv=$('bigo'), leg=$('bigo-legend'), metr=$('bigo-metrics');
+  let N=32, MAXN=64;
+  curves.forEach(c=>{
+    const s=document.createElement('span');
+    s.innerHTML=`<i class="swatch" style="background:${c.col};box-shadow:0 0 8px ${c.col}88"></i>${c.key}`;
+    leg.appendChild(s);
+  });
+  function draw(){
+    const dpr=Math.min(devicePixelRatio||1,2);
+    const w=cv.clientWidth, h=cv.clientHeight;
+    cv.width=w*dpr; cv.height=h*dpr;
+    const x=cv.getContext('2d'); x.setTransform(dpr,0,0,dpr,0,0); x.clearRect(0,0,w,h);
+    const pl=44, pr=14, pt=14, pb=26;
+    const yMax=MAXN*MAXN; // quadratic at full range dominates
+    // log-ish vertical compression so all curves are visible together
+    const sx=i=> pl + (i/MAXN)*(w-pl-pr);
+    const sy=v=> { const t=Math.log10(1+v)/Math.log10(1+yMax); return (h-pb) - t*(h-pt-pb); };
+    // grid
+    x.strokeStyle='rgba(244,234,212,.06)'; x.lineWidth=1; x.font='9px "IBM Plex Mono"'; x.fillStyle='rgba(244,234,212,.3)';
+    for(let g=0; g<=4; g++){ const yy=pt+g*(h-pt-pb)/4; x.beginPath(); x.moveTo(pl,yy); x.lineTo(w-pr,yy); x.stroke(); }
+    // axes labels
+    x.fillText('ops',6,pt+4); x.fillText('input n →', w-72, h-8);
+    // n marker
+    const mx=sx(N);
+    x.strokeStyle='rgba(190,149,255,.55)'; x.setLineDash([3,4]); x.beginPath(); x.moveTo(mx,pt); x.lineTo(mx,h-pb); x.stroke(); x.setLineDash([]);
+    // curves
+    curves.forEach(c=>{
+      x.strokeStyle=c.col; x.lineWidth=2; x.beginPath();
+      for(let i=1;i<=MAXN;i+=0.5){ const px=sx(i), py=sy(Math.max(0,c.f(i))); if(i===1)x.moveTo(px,py); else x.lineTo(px,py); }
+      x.stroke();
+      // dot at n
+      const dy=sy(Math.max(0,c.f(N)));
+      x.fillStyle=c.col; x.beginPath(); x.arc(mx,dy,3,0,7); x.fill();
+    });
+  }
+  function metrics(){
+    metr.innerHTML='';
+    const fmt=v=> v>=1e6?(v/1e6).toFixed(1)+'M': v>=1000?(v/1000).toFixed(1)+'k': Math.round(v).toString();
+    curves.forEach(c=>{
+      const cls = c.key==='O(n²)'?'rd': c.key==='O(1)'||c.key==='O(log n)'?'cy':'';
+      const m=document.createElement('div'); m.className='m';
+      m.innerHTML=`<div class="v ${cls}">${fmt(c.f(N))}</div><div class="l">${c.key}</div>`;
+      metr.appendChild(m);
+    });
+  }
+  $('bigo-n').addEventListener('input',e=>{ N=+e.target.value; $('bigo-nval').textContent=N; draw(); metrics(); });
+  window.__bigoDraw=()=>{draw();metrics();};
+  addEventListener('resize',draw);
+})();
+
+/* ===================== 01 · BINARY SEARCH ===================== */
+(function(){
+  const cellsEl=$('bs-cells'), sel=$('bs-target');
+  let arr=[], lo=0, hi=0, mid=-1, target=null, steps=0, done=false, found=-1, busy=false;
+  function genArray(){
+    const n=12, set=new Set();
+    // build a sorted array of distinct 2-digit numbers
+    while(set.size<n) set.add(2+Math.floor(Math.random()*97));
+    arr=[...set].sort((a,b)=>a-b);
+  }
+  function render(){
+    cellsEl.innerHTML='';
+    arr.forEach((v,i)=>{
+      const c=document.createElement('div'); c.className='cell';
+      if(done && i===found) c.classList.add('found');
+      else if(!done){
+        if(i<lo||i>hi) c.classList.add(i<lo||i>hi?'out':'');
+        if(i>=lo&&i<=hi) c.classList.add('range');
+        if(i===mid) c.classList.add('mid');
+      }
+      if(v===target) c.classList.add('target-mark');
+      c.innerHTML=`<span class="ix">${i}</span>${v}`;
+      cellsEl.appendChild(c);
+    });
+    $('bs-lo').textContent= done?'–':lo;
+    $('bs-hi').textContent= done?'–':hi;
+    $('bs-mid').textContent= mid<0?'–':mid;
+  }
+  function resetSearch(){
+    lo=0; hi=arr.length-1; mid=-1; steps=0; done=false; found=-1;
+    $('bs-steps').textContent=0;
+    $('bs-worst').textContent=Math.ceil(Math.log2(arr.length));
+    $('bs-linear').textContent=arr.length;
+    render();
+  }
+  function fillTargets(){
+    sel.innerHTML='';
+    arr.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+    // add one guaranteed-miss target
+    const miss=document.createElement('option'); miss.value='999'; miss.textContent='999 (absent)'; sel.appendChild(miss);
+    target=arr[Math.floor(arr.length/2)+1]||arr[0]; sel.value=target;
+  }
+  function newArray(){ genArray(); fillTargets(); resetSearch(); status('New sorted array. Pick a target and <b>step</b>.'); }
+  function status(html){ $('bs-status').innerHTML=html; }
+  function step(){
+    if(done){ return; }
+    if(lo>hi){ done=true; found=-1; render(); status(`<b>${target}</b> is not here. We ran out of list in <span class="hi">${steps}</span> steps.`); return; }
+    mid=(lo+hi)>>1; steps++; $('bs-steps').textContent=steps;
+    const mv=arr[mid];
+    render();
+    if(mv===target){ done=true; found=mid; render(); status(`Found <b>${target}</b> at position <span class="hi">${mid}</span> in <span class="hi">${steps}</span> step${steps>1?'s':''}. Checking one-by-one could've taken ${arr.length}.`); }
+    else if(mv<target){ status(`mid = ${mv} &lt; <b>${target}</b> → discard the left half, search right.`); lo=mid+1; }
+    else { status(`mid = ${mv} &gt; <b>${target}</b> → discard the right half, search left.`); hi=mid-1; }
+  }
+  $('bs-step').addEventListener('click',()=>{ if(!busy) step(); });
+  $('bs-target').addEventListener('change',e=>{ target=+e.target.value; resetSearch(); status(`Target set to <b>${target>900?'999 (not in array)':target}</b>. Step away.`); });
+  $('bs-reset').addEventListener('click',()=>{ if(!busy) newArray(); });
+  $('bs-auto').addEventListener('click',async()=>{
+    if(busy) return; busy=true; resetSearch(); await sleep(250);
+    while(!done){ step(); await sleep(820); }
+    busy=false;
+  });
+  newArray();
+})();
+
+/* ===================== 02 · STACK ===================== */
+(function(){
+  const col=$('stack-col'), input=$('stack-in');
+  let stack=[], auto=10;
+  function status(html){ $('stack-status').innerHTML=html; }
+  function render(){
+    col.querySelectorAll('.item,.empty-note,.top-tag').forEach(e=>e.remove());
+    if(stack.length===0){ const e=document.createElement('div'); e.className='empty-note'; e.textContent='— empty —'; col.appendChild(e); }
+    stack.forEach((v,i)=>{
+      const it=document.createElement('div'); it.className='item'+(i===stack.length-1?' top':'');
+      it.textContent=v; col.appendChild(it);
+      if(i===stack.length-1){ const t=document.createElement('div'); t.className='top-tag'; t.textContent='← top'; it.appendChild(t); }
+    });
+  }
+  function push(){
+    let v=input.value.trim(); if(!v){ v=String(auto++); }
+    if(stack.length>=6){ status('Stack is full enough to see the idea—pop something first.'); return; }
+    stack.push(v); input.value=''; render();
+    status(`Pushed <span class="hi">${v}</span> onto the top. It'll be the first one back out.`);
+  }
+  function pop(){
+    if(stack.length===0){ status('Nothing to pop—the stack is empty.'); return; }
+    const items=col.querySelectorAll('.item'); const topEl=items[items.length-1];
+    const v=stack[stack.length-1];
+    topEl.classList.add('leaving');
+    setTimeout(()=>{ stack.pop(); render(); }, 260);
+    status(`Popped <span class="hi">${v}</span> off the top — last in, first out.`);
+  }
+  $('stack-push').addEventListener('click',push);
+  $('stack-pop').addEventListener('click',pop);
+  input.addEventListener('keydown',e=>{ if(e.key==='Enter') push(); });
+  ['3','7','1'].forEach(v=>stack.push(v)); render();
+})();
+
+/* ===================== 03 · QUEUE ===================== */
+(function(){
+  const lane=$('queue-lane'), input=$('queue-in');
+  let q=[], auto=10;
+  function status(html){ $('queue-status').innerHTML=html; }
+  function render(){
+    lane.querySelectorAll('.qitem:not(.leaving)').forEach(e=>e.remove());
+    q.forEach(v=>{ const it=document.createElement('div'); it.className='qitem'; it.textContent=v; lane.appendChild(it); });
+  }
+  function enq(){
+    let v=input.value.trim(); if(!v) v=String(auto++);
+    if(q.length>=8){ status('Long enough to see it—dequeue from the front first.'); return; }
+    q.push(v); input.value=''; render();
+    status(`Enqueued <span class="hi">${v}</span> at the back. It waits behind everyone already in line.`);
+  }
+  function deq(){
+    if(q.length===0){ status('Queue is empty—no one to serve.'); return; }
+    const v=q[0]; const first=lane.querySelector('.qitem');
+    if(first){ first.classList.add('leaving'); setTimeout(()=>first.remove(),300); }
+    q.shift();
+    setTimeout(render, 10);
+    status(`Dequeued <span class="hi">${v}</span> from the front — first in, first out.`);
+  }
+  $('queue-enq').addEventListener('click',enq);
+  $('queue-deq').addEventListener('click',deq);
+  input.addEventListener('keydown',e=>{ if(e.key==='Enter') enq(); });
+  ['1','2','3'].forEach(v=>q.push(v)); render();
+})();
+
+/* ===================== 04 · HASH TABLE ===================== */
+(function(){
+  const NB=8, bucketsEl=$('hash-buckets');
+  let table=Array.from({length:NB},()=>[]);
+  const samples=['cat','dog','sun','moon','tree','fish','bird','rock','star','wave','leaf','fire','snow','wind'];
+  function hash(k){ let s=0; for(const ch of k) s+=ch.charCodeAt(0); return {sum:s, idx:s%NB}; }
+  function status(html){ $('hash-status').innerHTML=html; }
+  function render(lit=-1){
+    bucketsEl.innerHTML='';
+    for(let b=0;b<NB;b++){
+      const row=document.createElement('div'); row.className='bucket'+(b===lit?' lit':'');
+      row.innerHTML=`<div class="bi">${b}</div>`;
+      const cells=document.createElement('div'); cells.className='bcells';
+      table[b].forEach((k,i)=>{
+        const chip=document.createElement('div'); chip.className='kchip'+(i>0?' collide':'');
+        chip.innerHTML=(i>0?'<span class="arrow">→</span>':'')+k;
+        cells.appendChild(chip);
+      });
+      row.appendChild(cells); bucketsEl.appendChild(row);
+    }
+  }
+  function insert(k){
+    k=k.trim().toLowerCase(); if(!k) return;
+    const {sum,idx}=hash(k);
+    $('hash-calc').innerHTML=`"${k}" → ${sum} ÷ 8, remainder <b style="color:var(--violet)">${idx}</b>`;
+    const collide=table[idx].length>0;
+    if(table[idx].includes(k)){ status(`<span class="hi">${k}</span> is already in bucket ${idx}.`); render(idx); return; }
+    table[idx].push(k); render(idx);
+    if(collide) status(`<span class="hi">${k}</span> hashed to bucket ${idx} — already occupied. <span style="color:var(--red)">Collision</span>, so we chain it on.`);
+    else status(`<span class="hi">${k}</span> hashed to bucket ${idx}. Stored in one step — no searching.`);
+  }
+  $('hash-add').addEventListener('click',()=>{ insert($('hash-in').value); $('hash-in').value=''; });
+  $('hash-in').addEventListener('keydown',e=>{ if(e.key==='Enter'){ insert(e.target.value); e.target.value=''; } });
+  $('hash-rand').addEventListener('click',()=>{ insert(samples[Math.floor(Math.random()*samples.length)]); });
+  $('hash-clear').addEventListener('click',()=>{ table=Array.from({length:NB},()=>[]); $('hash-calc').textContent='→ pick a key'; render(); status('Cleared. Insert keys and watch them hash into buckets.'); });
+  ['cat','dog','sun'].forEach(insert); status('Insert keys and watch them hash into buckets. Same bucket = collision, chained on.');
+})();
+
+/* ===================== 05 · SORTING ===================== */
+(function(){
+  const stage=$('sort-stage'); const N=28;
+  let bars=[], vals=[], busy=false, cmp=0, swp=0;
+  function setMetrics(){ $('sort-cmp').textContent=cmp; $('sort-swp').textContent=swp; $('sort-n').textContent=N; }
+  function build(){
+    stage.innerHTML=''; bars=[];
+    vals.forEach(v=>{ const b=document.createElement('div'); b.className='bar'; b.style.height=(v/100*100)+'%'; stage.appendChild(b); bars.push(b); });
+  }
+  function shuffle(){
+    vals=Array.from({length:N},(_,i)=>Math.round(6+ (i/(N-1))*94));
+    for(let i=vals.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [vals[i],vals[j]]=[vals[j],vals[i]]; }
+    cmp=0; swp=0; setMetrics(); build();
+  }
+  const baseSpeed=()=>Math.max(8, 420/N);
+  function setH(i){ bars[i].style.height=(vals[i])+'%'; }
+  async function mark(i,cls,t){ if(i==null)return; bars[i].classList.add(cls); }
+  function clearMarks(){ bars.forEach(b=>b.classList.remove('cmp','swap')); }
+  async function bubble(){
+    for(let i=0;i<N-1;i++){ for(let j=0;j<N-1-i;j++){
+      cmp++; clearMarks(); bars[j].classList.add('cmp'); bars[j+1].classList.add('cmp'); setMetrics();
+      await sleep(baseSpeed());
+      if(vals[j]>vals[j+1]){ swp++; [vals[j],vals[j+1]]=[vals[j+1],vals[j]]; setH(j); setH(j+1);
+        bars[j].classList.add('swap'); bars[j+1].classList.add('swap'); setMetrics(); await sleep(baseSpeed()); }
+    } bars[N-1-i].classList.add('done'); }
+    bars[0].classList.add('done');
+  }
+  async function insertion(){
+    bars[0].classList.add('done');
+    for(let i=1;i<N;i++){ let j=i; clearMarks();
+      while(j>0){ cmp++; bars[j].classList.add('cmp'); bars[j-1].classList.add('cmp'); setMetrics(); await sleep(baseSpeed());
+        if(vals[j-1]>vals[j]){ swp++; [vals[j-1],vals[j]]=[vals[j],vals[j-1]]; setH(j-1); setH(j); j--; }
+        else break; clearMarks();
+      }
+    }
+    bars.forEach(b=>b.classList.add('done'));
+  }
+  async function selection(){
+    for(let i=0;i<N;i++){ let m=i; clearMarks(); bars[i].classList.add('cmp');
+      for(let j=i+1;j<N;j++){ cmp++; bars[j].classList.add('cmp'); setMetrics(); await sleep(baseSpeed()*0.5);
+        bars[j].classList.remove('cmp'); if(vals[j]<vals[m]) m=j; }
+      if(m!==i){ swp++; [vals[i],vals[m]]=[vals[m],vals[i]]; setH(i); setH(m); setMetrics(); }
+      bars[i].classList.remove('cmp'); bars[i].classList.add('done'); await sleep(baseSpeed());
+    }
+  }
+  async function mergeSort(){
+    async function merge(l,m,r){
+      const left=vals.slice(l,m+1), right=vals.slice(m+1,r+1);
+      let i=0,j=0,k=l;
+      while(i<left.length&&j<right.length){ cmp++; clearMarks(); bars[k].classList.add('cmp'); setMetrics(); await sleep(baseSpeed());
+        if(left[i]<=right[j]){ vals[k]=left[i++]; } else { vals[k]=right[j++]; }
+        swp++; setH(k); bars[k].classList.add('swap'); k++; }
+      while(i<left.length){ vals[k]=left[i++]; setH(k); swp++; k++; await sleep(baseSpeed()*0.4); }
+      while(j<right.length){ vals[k]=right[j++]; setH(k); swp++; k++; await sleep(baseSpeed()*0.4); }
+      setMetrics();
+    }
+    async function rec(l,r){ if(l>=r)return; const m=(l+r)>>1; await rec(l,m); await rec(m+1,r); await merge(l,m,r); }
+    await rec(0,N-1);
+    clearMarks(); bars.forEach(b=>b.classList.add('done'));
+  }
+  async function quickSort(){
+    async function part(lo,hi){
+      const pivot=vals[hi]; let i=lo-1;
+      for(let j=lo;j<hi;j++){ cmp++; clearMarks(); bars[j].classList.add('cmp'); bars[hi].classList.add('swap'); setMetrics(); await sleep(baseSpeed());
+        if(vals[j]<pivot){ i++; if(i!==j){ swp++; [vals[i],vals[j]]=[vals[j],vals[i]]; setH(i); setH(j); } } }
+      swp++; [vals[i+1],vals[hi]]=[vals[hi],vals[i+1]]; setH(i+1); setH(hi); setMetrics(); await sleep(baseSpeed());
+      return i+1;
+    }
+    async function rec(lo,hi){ if(lo>=hi){ if(lo>=0&&lo<N)bars[lo].classList.add('done'); return; } const p=await part(lo,hi); bars[p].classList.add('done'); await rec(lo,p-1); await rec(p+1,hi); }
+    await rec(0,N-1);
+    bars.forEach(b=>b.classList.add('done'));
+  }
+  const algos={bubble,insertion,selection,merge:mergeSort,quick:quickSort};
+  $('sort-go').addEventListener('click',async()=>{
+    if(busy)return; busy=true; $('sort-go').disabled=true; $('sort-shuffle').disabled=true;
+    clearMarks(); bars.forEach(b=>b.classList.remove('done')); cmp=0; swp=0; setMetrics();
+    const name=$('sort-algo').value;
+    $('sort-status').innerHTML=`Running <span class="hi">${$('sort-algo').selectedOptions[0].textContent}</span>…`;
+    await algos[name]();
+    $('sort-status').innerHTML=`Sorted in <span class="hi">${cmp}</span> comparisons and <span class="hi">${swp}</span> writes. A naive sort of 28 items takes ~780 comparisons; a clever one needs ~130. That gap is the whole game—and it widens fast as lists grow.`;
+    busy=false; $('sort-go').disabled=false; $('sort-shuffle').disabled=false;
+  });
+  $('sort-shuffle').addEventListener('click',()=>{ if(!busy) shuffle(); });
+  shuffle();
+})();
+
+/* ===================== ASCII SHADER FIELD ===================== */
+const RAMP=" .·,:;|/+=*#%@";
+const STOPS=[[18,18,24],[78,58,128],[61,150,170],[150,150,138],[200,196,172]];
+const WARP=4.2,SCALE=0.085,PRESENCE=0.6;
+function hsh(x,y){let n=Math.sin(x*127.1+y*311.7)*43758.5453;return n-Math.floor(n);}
+function smt(t){return t*t*(3-2*t);}
+function vn(x,y){let xi=Math.floor(x),yi=Math.floor(y),xf=x-xi,yf=y-yi;
+  let a=hsh(xi,yi),b=hsh(xi+1,yi),c=hsh(xi,yi+1),d=hsh(xi+1,yi+1),u=smt(xf),v=smt(yf);
+  return a+(b-a)*u+(c-a)*v+(a-b-c+d)*u*v;}
+function fbm(x,y){let s=0,a=.5,f=1;for(let i=0;i<5;i++){s+=a*vn(x*f,y*f);f*=2;a*=.5;}return s;}
+function fieldFn(x,y,t){
+  let q1=fbm(x,y+t),q2=fbm(x+5.2,y+1.3-t);
+  let r1=fbm(x+WARP*q1+1.7,y+WARP*q2+9.2),r2=fbm(x+WARP*q1+8.3,y+WARP*q2+2.8);
+  let b=fbm(x+WARP*r1,y+WARP*r2);return Math.max(0,Math.min(1,(b-0.18)*1.72));}
+function framp(b){const seg=[0,.30,.60,.85,1];for(let i=0;i<4;i++){if(b<=seg[i+1]){
+  let t=smt((b-seg[i])/((seg[i+1]-seg[i])||1));
+  return[STOPS[i][0]+(STOPS[i+1][0]-STOPS[i][0])*t,STOPS[i][1]+(STOPS[i+1][1]-STOPS[i][1])*t,STOPS[i][2]+(STOPS[i+1][2]-STOPS[i][2])*t];}}return STOPS[4];}
+const fc=$('field'),fx=fc.getContext('2d');
+let cw,chh,cols,rows,fdpr;
+function sizeField(){fdpr=Math.min(devicePixelRatio||1,2);fc.width=innerWidth*fdpr;fc.height=innerHeight*fdpr;
+  cw=13;chh=16;cols=Math.ceil(innerWidth/cw);rows=Math.ceil(innerHeight/chh);}
+function drawField(t){
+  fx.setTransform(fdpr,0,0,fdpr,0,0);fx.clearRect(0,0,innerWidth,innerHeight);
+  fx.font='12px "IBM Plex Mono"';fx.textBaseline='top';
+  for(let cy=0;cy<rows;cy++)for(let cx=0;cx<cols;cx++){
+    let b=fieldFn(cx*SCALE,cy*SCALE*1.6,t);
+    let idx=Math.min(RAMP.length-1,Math.floor(b*RAMP.length)),ch=RAMP[idx];if(ch===' ')continue;
+    let c=framp(b),al=Math.min(0.9,(0.05+b*b*0.66)*PRESENCE);
+    fx.fillStyle='rgba('+(c[0]|0)+','+(c[1]|0)+','+(c[2]|0)+','+al.toFixed(3)+')';
+    fx.fillText(ch,cx*cw,cy*chh);}
+}
+let ft=0,lastF=0;
+function fieldLoop(ts){ if(ts-lastF>70){ft+=0.006;drawField(ft);lastF=ts;} requestAnimationFrame(fieldLoop); }
+
+/* reveal + kickoff */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('in');}),{threshold:.12});
+window.addEventListener('load',()=>{
+  (async()=>{try{await document.fonts.load('12px "IBM Plex Mono"');await document.fonts.ready;}catch(e){}
+    sizeField();requestAnimationFrame(fieldLoop); if(window.__bigoDraw)__bigoDraw();})();
+  document.querySelectorAll('section').forEach(s=>{s.classList.add('reveal');io.observe(s);});
+});
+let rz;addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(sizeField,160);});
+</script>
+</body>
+</html>
