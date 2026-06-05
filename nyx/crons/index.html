@@ -3,31 +3,112 @@
 h1{color:#a78bfa}table{border-collapse:collapse;width:100%}td{padding:5px 8px;border-bottom:1px solid #1c1c22;vertical-align:top}
 .m{color:#9aa}.d{color:#666}</style>
 <h1>🌑 Nyx · scheduled tasks</h1>
-<p class=d>All of Nyx's crons. Updated 2026-06-05 16:43 UTC.</p>
+<p class=d>All of Nyx's crons. Updated 2026-06-05 16:49 UTC.</p>
 <table><tr><td>schedule</td><td>status</td><td>next run</td><td>prompt</td><td>id</td></tr>
-<tr><td class=m>0 * * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-05T17:00</td><td>Review the last hour of NEW activity for structural improvements (Discord capabilities, observability, proactive automat</td><td class=m style='color:#555;font-size:10px'>task-1780675565026-8othia</td></tr><tr><td class=m>0 0 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T07:00</td><td>This is a test task that will be immediately deleted. If you somehow run, just acknowledge briefly.</td><td class=m style='color:#555;font-size:10px'>task-1780677783138-n4ehoe</td></tr><tr><td class=m>0 12 * * 1 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-08T19:00</td><td>Create a singing lesson event at Songbird Studios for today at 7:30-8:00 PM:
+<tr><td class=m>0 * * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-05T17:00</td><td>Review the last hour of NEW activity for structural improvements (Discord capabilities, observability, proactive automation, infra gaps). CRITICAL anti-spam rules: BEFORE posting anything, scan /workspace/extra/channel/outbox/ AND data/channel/.consumer/processed/ AND recent #rsi history — do NOT re-send, duplicate, or post &#x27;enhancement&#x27; follow-ups to requests already pending or already shipped. Only post a genuinely NEW, non-overlapping improvement. At MOST 1 per run. If nothing genuinely new, post NOTHING — silence is preferred over noise. Keep any post to 2-3 sentences in #rsi.</td><td class=m style='color:#555;font-size:10px'>task-1780675565026-8othia</td></tr><tr><td class=m>0 0 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T07:00</td><td>This is a test task that will be immediately deleted. If you somehow run, just acknowledge briefly.</td><td class=m style='color:#555;font-size:10px'>task-1780677783138-n4ehoe</td></tr><tr><td class=m>0 12 * * 1 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-08T19:00</td><td>Create a singing lesson event at Songbird Studios for today at 7:30-8:00 PM:
 
 gws calendar +insert \
-  --summary &quot;Singin</td><td class=m style='color:#555;font-size:10px'>task-1775538890286-dq130f</td></tr><tr><td class=m>0 17 * * 5 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T00:00</td><td>Weekly recap reminder:
+  --summary &quot;Singing Lesson at Songbird Studios&quot; \
+  --start &quot;$(date &#x27;+%Y-%m-%d&#x27;)T19:30:00-07:00&quot; \
+  --end &quot;$(date &#x27;+%Y-%m-%d&#x27;)T20:00:00-07:00&quot; \
+  --location &quot;Songbird Studios - Noe Valley, 3823 24th St, San Francisco, CA 94114&quot;</td><td class=m style='color:#555;font-size:10px'>task-1775538890286-dq130f</td></tr><tr><td class=m>0 17 * * 5 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T00:00</td><td>Weekly recap reminder:
 
 1. Check /workspace/extra/notes/04 essence/journal/ for entries from this week (Monday-today)
-2.</td><td class=m style='color:#555;font-size:10px'>task-1774499448959-gqkzrx</td></tr><tr><td class=m>0 18 * * 0 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-08T01:00</td><td>Weekly gym scheduling automation:
+2. Read the journal entries and summarize what was accomplished this week
+3. Send a WhatsApp message with:
+   - Reminder to write the weekly recap
+   - Summary of key activities/accomplishments from the journal entries
+   - Format it as a helpful starting point for the recap
+
+Keep the summary concise (3-5 bullet points) highlighting the most significant items.</td><td class=m style='color:#555;font-size:10px'>task-1774499448959-gqkzrx</td></tr><tr><td class=m>0 18 * * 0 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-08T01:00</td><td>Weekly gym scheduling automation:
 
 1. Install gws CLI if not already installed: npm install -g @googleworkspace/cli
-2. S</td><td class=m style='color:#555;font-size:10px'>task-1774499440934-ra4uvs</td></tr><tr><td class=m>0 19 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T02:00</td><td>Evening Sleep Tribunal (interventions for tonight):
+2. Set GWS config directory: export GWS_CONFIG_DIR=/workspace/extra/gws-config
+3. Check free/busy for sashahydrie@gmail.com and shy@anthropic.com for the upcoming week (Monday-Friday)
+4. Find available MWF (Monday/Wednesday/Friday) slots after 3 PM that come after the last meeting of the day
+5. Create 1-hour &quot;Gym&quot; calendar events on sashahydrie@gmail.com calendar:
+   - Schedule on Monday, Wednesday, Friday
+   - Start time: right after last meeting ends (if after 3 PM), otherwise 3 PM
+   - Duration: 1 hour
+   - Add notkhalid8@gmail.com as attendee
+6. Send a WhatsApp message confirming the gym sessions scheduled for the week
 
-Read /workspace/extra/whoop/latest-summary.json and compose ONE sho</td><td class=m style='color:#555;font-size:10px'>task-1780229404528-y4k2ti</td></tr><tr><td class=m>0 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T04:00</td><td>Bedtime reminder:
+Only create events if there are no existing &quot;Gym&quot; events already scheduled for those days.</td><td class=m style='color:#555;font-size:10px'>task-1774499440934-ra4uvs</td></tr><tr><td class=m>0 19 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T02:00</td><td>Evening Sleep Tribunal (interventions for tonight):
+
+Read /workspace/extra/whoop/latest-summary.json and compose ONE short message (2-3 sentences) with evening interventions for tonight&#x27;s bedtime.
+
+Focus on:
+- recommendation.bedtime and recommendation.wake (tonight&#x27;s target)
+- recommendation.carried_debt_min and recommendation.nights_need_met_this_week (the deficit)
+- recommendation.interventions (specific actions to take tonight)
+- top_lever (the highest-impact area: Duration, Consistency, etc.)
+
+Tone: practical, focused on tonight&#x27;s specific actions. Not a roast—actionable advice. Post with send_message (no image needed for evening run).
+
+Example: &quot;You&#x27;re carrying 2+ hours of debt and running 0/7 on need this week. Tonight&#x27;s non-negotiable: bed by 23:06, wake 08:36. Anchor a fixed wake time—it&#x27;s the highest leverage fix for everything downstream.&quot;</td><td class=m style='color:#555;font-size:10px'>task-1780229404528-y4k2ti</td></tr><tr><td class=m>0 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T04:00</td><td>Bedtime reminder:
 
 Send a WhatsApp message reminding Sasha to go to bed. Keep it friendly and brief, like:
 
-&quot;🌙 Bedtime! </td><td class=m style='color:#555;font-size:10px'>task-1774550511286-28s0z7</td></tr><tr><td class=m>0 6 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T13:00</td><td>Daily email triage:
+&quot;🌙 Bedtime! Time to wrap up for the night and get some rest.&quot;
+
+This runs at 9 PM local time every day.</td><td class=m style='color:#555;font-size:10px'>task-1774550511286-28s0z7</td></tr><tr><td class=m>0 6 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T13:00</td><td>Daily email triage:
 
 1. Run: gws gmail +triage
-2. Classify each email as actionable (needs a response, decision, or acti</td><td class=m style='color:#555;font-size:10px'>task-1774926393999-ppcgaj</td></tr><tr><td class=m>0 9 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T16:00</td><td>Daily Anthill property sweep. Find NEW San Francisco listings for the group-house search, append them to the public Anth</td><td class=m style='color:#555;font-size:10px'>task-1780152015994-anthswp</td></tr><tr><td class=m>30 12 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-05T19:30</td><td>Morning Sleep Tribunal (review last night):
+2. Classify each email as actionable (needs a response, decision, or action from Sasha) or non-actionable.
+3. Archive every non-actionable email (remove it from the Inbox) using gws. This always includes newsletters, promos, notifications, Robinhood, and Amazon order confirmations, plus anything else clearly non-actionable. If you are genuinely unsure whether something needs action, LEAVE it in the Inbox — never archive a maybe.
+   - To archive, use the gws Gmail archive/modify command that removes the INBOX label. If unsure of the exact flag, run `gws gmail --help` once to confirm, then archive.
+4. Send Sasha a brief Discord summary:
+   - Actionable: subject + sender + what action is needed
+   - Archived: a short list (sender — subject) of everything you archived, so any misfiles are easy to catch
+   - If nothing is actionable: &quot;No actionable emails today&quot; followed by the archived list
+   Keep it short and scannable.
 
-Read /workspace/extra/whoop/latest-summary.json and compose ONE short verdi</td><td class=m style='color:#555;font-size:10px'>task-1780229398509-2rwl6i</td></tr><tr><td class=m>30 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T04:30</td><td>Bedtime sequence:
+Be quick — read, classify, archive, send. Aim for under 90 seconds.
+</td><td class=m style='color:#555;font-size:10px'>task-1774926393999-ppcgaj</td></tr><tr><td class=m>0 9 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T16:00</td><td>Daily Anthill property sweep. Find NEW San Francisco listings for the group-house search, append them to the public Anthill sheet, and post your findings here.
+
+Candidate criteria — ONLY add listings that qualify on the top-level division (Single-family vs Multi-family):
+- Single-family: a house with roughly 8+ bedrooms (6–7BR acceptable if flexible/convertible for ~8+ people).
+- Multi-family: ONLY if the ENTIRE building is available — every unit deliverable vacant. If ANY unit has sitting tenants, it is NOT a candidate — do not add it. We need the whole building for one group.
+
+Steps:
+1. Web-search for current SF listings meeting the criteria above (single-family 8+BR houses, or whole-building-available multi-family). Prefer Zillow; also try Redfin/Craigslist. Favor recently posted/updated listings.
+2. For each REAL candidate with a working listing URL, build a JSON object with these keys (omit any you cannot determine): Category, Address, Neighborhood, Zip, Beds, Baths, Sqft, &quot;Price ($)&quot;, &quot;Days on Mkt&quot;, Notes, Link. Set Category to exactly &quot;Single-family&quot; or &quot;Multi-family&quot;. For a multi-family, include it ONLY with evidence the whole building is available (listed/delivered vacant, all units) — put that evidence in Notes.
+3. Put them in a JSON array and run it (the script dedups against the sheet, geocodes, computes economics, and APPENDS new rows with Review Status=new; it never overwrites). CAPTURE its stdout:
+   cd /workspace/extra/anthill &amp;&amp; echo &#x27;&lt;JSON_ARRAY&gt;&#x27; | python3 scripts/add_listings.py
+   Then run the idempotent sheet cleanup (keeps Category, per-person, and Pipeline Status consistent across all tabs):
+   cd /workspace/extra/anthill &amp;&amp; python3 scripts/normalize_tabs.py
+   Finally, fetch + deploy Street View thumbnails for any newly added listings (publishes them to the live map; harmless no-op if there are none):
+   cd /workspace/extra/anthill &amp;&amp; ANTHILL_DIR=/workspace/extra/anthill SITE_REPO=/workspace/extra/site BLOG_DEPLOY_KEY=/workspace/extra/deploy/blog_deploy bash scripts/deploy_thumbs.sh
+4. Report findings to this channel, but base the counts STRICTLY on what the script printed to stdout — it prints either &#x27;Added N listings ...&#x27; or &#x27;No new listings (skipped X dupes/blank)&#x27;. Quote that line. Do NOT claim a listing was added if the script skipped it as a duplicate; many candidates will already be in the sheet from prior days. List only the addresses the script actually added (with beds/price/link). If it added 0, say so.
+5. Also write the same summary to /workspace/extra/anthill/_lastrun.txt
+
+Never invent listings — only real ones with a valid link.
+</td><td class=m style='color:#555;font-size:10px'>task-1780152015994-anthswp</td></tr><tr><td class=m>30 12 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-05T19:30</td><td>Morning Sleep Tribunal (review last night):
+
+Read /workspace/extra/whoop/latest-summary.json and compose ONE short verdict (2-4 sentences) judging last night&#x27;s sleep. Post with send_message, passing image_path=&quot;/workspace/extra/whoop/latest-card.png&quot;.
+
+Ground the roast in:
+- night.sleep_score / night.tier and night.need_met_pct
+- night.percentiles_vs_self (damning ones like efficiency_pct, rhr)
+- night.bed_clock / night.wake_clock, night.debt_min, recommendation.nights_need_met_this_week
+- End by naming tonight&#x27;s target: bed by recommendation.bedtime, wake recommendation.wake
+
+Tone: witty, a little mean, affection underneath. Vary the opening each run. Keep it tight.
+
+If source is &quot;official&quot; (not &quot;internal&quot;), append a note that the rich WHOOP token went stale.</td><td class=m style='color:#555;font-size:10px'>task-1780229398509-2rwl6i</td></tr><tr><td class=m>30 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T04:30</td><td>Bedtime sequence:
 
 1. Turn off all lights (Tofu Plug, LR Plug, Lumenator) using Govee
 2. Send Sasha a goodnight message
-</td><td class=m style='color:#555;font-size:10px'>task-1774880472918-tp6bj2</td></tr><tr><td class=m>30 6 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T13:30</td><td>Turn off Lumenator (Fairy Plug) using govee_turn_off(&quot;Lumenator&quot;). This ends the morning wake-up sequence at 6:30 AM. Ke</td><td class=m style='color:#555;font-size:10px'>task-1780578028593-mczyt1</td></tr><tr><td class=m>55 5 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T12:55</td><td>Turn on Tofu Plug at 5:55 AM, then turn on Lumenator at 5:59 AM for the 6:00 AM wake-up. This creates a gradual 5-minute</td><td class=m style='color:#555;font-size:10px'>task-1776833406032-v5xuib</td></tr><tr><td class=m>0 * * * * <span class=d>(cron)</span></td><td style=color:#e0a458>paused</td><td class=m style=color:#777>2026-06-05T17:00</td><td>Review the last hour of activity in the conversation history. Identify 1-3 concrete improvements to how I operated - thi</td><td class=m style='color:#555;font-size:10px'>task-1780668354043-bamd0i</td></tr><tr><td class=m>0 * * * * <span class=d>(cron)</span></td><td style=color:#e0a458>paused</td><td class=m style=color:#777>2026-06-05T17:00</td><td>Review the last hour of activity in the conversation history. Identify 1-3 concrete improvements - focusing on:
-- Discor</td><td class=m style='color:#555;font-size:10px'>task-1780668400424-ryxlap</td></tr></table>
+
+Be quick — under 30 seconds.</td><td class=m style='color:#555;font-size:10px'>task-1774880472918-tp6bj2</td></tr><tr><td class=m>30 6 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T13:30</td><td>Turn off Lumenator (Fairy Plug) using govee_turn_off(&quot;Lumenator&quot;). This ends the morning wake-up sequence at 6:30 AM. Keep execution quick - under 10 seconds.</td><td class=m style='color:#555;font-size:10px'>task-1780578028593-mczyt1</td></tr><tr><td class=m>55 5 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T12:55</td><td>Turn on Tofu Plug at 5:55 AM, then turn on Lumenator at 5:59 AM for the 6:00 AM wake-up. This creates a gradual 5-minute ramp. Use Govee API with the following devices:
+- Tofu Plug: 76:D6:98:17:3C:95:1F:7C
+- Lumenator: 22:D0:98:17:3C:A4:25:1A
+Model: H5080
+
+Keep the execution quick - under 30 seconds total.</td><td class=m style='color:#555;font-size:10px'>task-1776833406032-v5xuib</td></tr><tr><td class=m>0 * * * * <span class=d>(cron)</span></td><td style=color:#e0a458>paused</td><td class=m style=color:#777>2026-06-05T17:00</td><td>Review the last hour of activity in the conversation history. Identify 1-3 concrete improvements to how I operated - things I could have done better, missed opportunities, inefficiencies, or capability gaps. For each improvement, write a brief feature request to Erebus via the channel at /workspace/extra/channel/outbox/ with actionable details about what could be improved and why it matters. Focus on structural improvements, not one-off mistakes.</td><td class=m style='color:#555;font-size:10px'>task-1780668354043-bamd0i</td></tr><tr><td class=m>0 * * * * <span class=d>(cron)</span></td><td style=color:#e0a458>paused</td><td class=m style=color:#777>2026-06-05T17:00</td><td>Review the last hour of activity in the conversation history. Identify 1-3 concrete improvements - focusing on:
+- Discord capabilities I could use (reactions, threads, formatting, etc.)
+- Observability improvements (better logging, status tracking, debugging)
+- Proactive capabilities (monitoring conditions, anticipating needs, triggering actions without being asked)
+- Infrastructure gaps (missing tools, data access, integration points)
+
+For each improvement, write a brief feature request to Erebus via /workspace/extra/channel/outbox/ with actionable details about what could be improved and why it matters. Focus on structural improvements that enable better proactive operation, not one-off mistakes.</td><td class=m style='color:#555;font-size:10px'>task-1780668400424-ryxlap</td></tr></table>
