@@ -1,0 +1,33 @@
+<!doctype html><meta charset=utf-8><title>Nyx · crons</title>
+<style>body{background:#0e0e12;color:#ddd;font:13px/1.6 ui-monospace,monospace;max-width:900px;margin:40px auto;padding:0 20px}
+h1{color:#a78bfa}table{border-collapse:collapse;width:100%}td{padding:5px 8px;border-bottom:1px solid #1c1c22;vertical-align:top}
+.m{color:#9aa}.d{color:#666}</style>
+<h1>🌑 Nyx · scheduled tasks</h1>
+<p class=d>All of Nyx's crons. Updated 2026-06-05 16:35 UTC.</p>
+<table><tr><td>schedule</td><td>status</td><td>next run</td><td>prompt</td><td>id</td></tr>
+<tr><td class=m>0 * * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-05T17:00</td><td>Review the last hour of NEW activity for structural improvements (Discord capabilities, observability, proactive automat</td><td class=m style='color:#555;font-size:10px'>task-1780675565026-8othia</td></tr><tr><td class=m>0 12 * * 1 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-08T19:00</td><td>Create a singing lesson event at Songbird Studios for today at 7:30-8:00 PM:
+
+gws calendar +insert \
+  --summary &quot;Singin</td><td class=m style='color:#555;font-size:10px'>task-1775538890286-dq130f</td></tr><tr><td class=m>0 17 * * 5 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T00:00</td><td>Weekly recap reminder:
+
+1. Check /workspace/extra/notes/04 essence/journal/ for entries from this week (Monday-today)
+2.</td><td class=m style='color:#555;font-size:10px'>task-1774499448959-gqkzrx</td></tr><tr><td class=m>0 18 * * 0 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-08T01:00</td><td>Weekly gym scheduling automation:
+
+1. Install gws CLI if not already installed: npm install -g @googleworkspace/cli
+2. S</td><td class=m style='color:#555;font-size:10px'>task-1774499440934-ra4uvs</td></tr><tr><td class=m>0 19 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T02:00</td><td>Evening Sleep Tribunal (interventions for tonight):
+
+Read /workspace/extra/whoop/latest-summary.json and compose ONE sho</td><td class=m style='color:#555;font-size:10px'>task-1780229404528-y4k2ti</td></tr><tr><td class=m>0 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T04:00</td><td>Bedtime reminder:
+
+Send a WhatsApp message reminding Sasha to go to bed. Keep it friendly and brief, like:
+
+&quot;🌙 Bedtime! </td><td class=m style='color:#555;font-size:10px'>task-1774550511286-28s0z7</td></tr><tr><td class=m>0 6 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T13:00</td><td>Daily email triage:
+
+1. Run: gws gmail +triage
+2. Classify each email as actionable (needs a response, decision, or acti</td><td class=m style='color:#555;font-size:10px'>task-1774926393999-ppcgaj</td></tr><tr><td class=m>0 9 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T16:00</td><td>Daily Anthill property sweep. Find NEW San Francisco listings for the group-house search, append them to the public Anth</td><td class=m style='color:#555;font-size:10px'>task-1780152015994-anthswp</td></tr><tr><td class=m>30 12 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-05T19:30</td><td>Morning Sleep Tribunal (review last night):
+
+Read /workspace/extra/whoop/latest-summary.json and compose ONE short verdi</td><td class=m style='color:#555;font-size:10px'>task-1780229398509-2rwl6i</td></tr><tr><td class=m>30 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T04:30</td><td>Bedtime sequence:
+
+1. Turn off all lights (Tofu Plug, LR Plug, Lumenator) using Govee
+2. Send Sasha a goodnight message
+</td><td class=m style='color:#555;font-size:10px'>task-1774880472918-tp6bj2</td></tr><tr><td class=m>30 6 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T13:30</td><td>Turn off Lumenator (Fairy Plug) using govee_turn_off(&quot;Lumenator&quot;). This ends the morning wake-up sequence at 6:30 AM. Ke</td><td class=m style='color:#555;font-size:10px'>task-1780578028593-mczyt1</td></tr><tr><td class=m>55 5 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-06T12:55</td><td>Turn on Tofu Plug at 5:55 AM, then turn on Lumenator at 5:59 AM for the 6:00 AM wake-up. This creates a gradual 5-minute</td><td class=m style='color:#555;font-size:10px'>task-1776833406032-v5xuib</td></tr><tr><td class=m>0 * * * * <span class=d>(cron)</span></td><td style=color:#e0a458>paused</td><td class=m style=color:#777>2026-06-05T17:00</td><td>Review the last hour of activity in the conversation history. Identify 1-3 concrete improvements to how I operated - thi</td><td class=m style='color:#555;font-size:10px'>task-1780668354043-bamd0i</td></tr><tr><td class=m>0 * * * * <span class=d>(cron)</span></td><td style=color:#e0a458>paused</td><td class=m style=color:#777>2026-06-05T17:00</td><td>Review the last hour of activity in the conversation history. Identify 1-3 concrete improvements - focusing on:
+- Discor</td><td class=m style='color:#555;font-size:10px'>task-1780668400424-ryxlap</td></tr></table>
