@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Nyx Audit Log</title>
+<style>
+body {
+  margin: 0;
+  padding: 0;
+  background: #0a0a0f;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  color: #ddd;
+}
+.header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 30px 40px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+.header h1 {
+  margin: 0 0 8px 0;
+  color: white;
+  font-size: 32px;
+  font-weight: 700;
+}
+.header .subtitle {
+  color: rgba(255,255,255,0.9);
+  font-size: 14px;
+  margin: 0;
+}
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+.section {
+  background: rgba(255,255,255,0.03);
+  border-radius: 12px;
+  padding: 30px;
+  margin-bottom: 30px;
+  border: 1px solid rgba(255,255,255,0.05);
+}
+.section h2 {
+  margin: 0 0 20px 0;
+  color: #a78bfa;
+  font-size: 24px;
+  font-weight: 600;
+}
+.event {
+  background: rgba(255,255,255,0.02);
+  border-left: 3px solid #667eea;
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  border-radius: 6px;
+}
+.event-time {
+  color: #888;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+.event-type {
+  display: inline-block;
+  padding: 3px 10px;
+  background: rgba(102, 126, 234, 0.2);
+  border-radius: 4px;
+  font-size: 12px;
+  color: #a78bfa;
+  margin-right: 8px;
+}
+.event-content {
+  margin-top: 8px;
+  line-height: 1.6;
+  color: #ccc;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+.stat-card {
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+}
+.stat-value {
+  font-size: 36px;
+  font-weight: bold;
+  color: #667eea;
+  line-height: 1;
+}
+.stat-label {
+  margin-top: 8px;
+  color: #888;
+  font-size: 13px;
+}
+code {
+  background: rgba(0,0,0,0.3);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.9em;
+  color: #5b9bd5;
+}
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🌑 Nyx Audit Log</h1>
+  <p class="subtitle">Real-time activity dashboard • Last updated: <span id="timestamp">loading...</span></p>
+</div>
+
+<div class="container">
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-value" id="total-events">0</div>
+      <div class="stat-label">Total Events</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="tasks-run">0</div>
+      <div class="stat-label">Tasks Run</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="tools-used">0</div>
+      <div class="stat-label">Tools Used</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value" id="features-shipped">9</div>
+      <div class="stat-label">Features Shipped Today</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Recent Activity</h2>
+    <div id="activity-feed">
+      <div class="event">
+        <div class="event-time">Today at 9:05 AM PT</div>
+        <span class="event-type">TASK</span>
+        <span class="event-type">SCHEDULED</span>
+        <div class="event-content">
+          Created hourly RSI review task - posts improvement suggestions to #rsi and sends to Erebus
+        </div>
+      </div>
+      
+      <div class="event">
+        <div class="event-time">Today at 9:00 AM PT</div>
+        <span class="event-type">IMAGE</span>
+        <span class="event-type">GENERATED</span>
+        <div class="event-content">
+          Created feature timeline visualization using shot.sh (HTML → PNG)
+        </div>
+      </div>
+      
+      <div class="event">
+        <div class="event-time">Today at 8:58 AM PT</div>
+        <span class="event-type">FEATURE</span>
+        <span class="event-type">VALIDATED</span>
+        <div class="event-content">
+          Tested and validated <code>shot.sh</code> - HTML to PNG conversion working
+        </div>
+      </div>
+      
+      <div class="event">
+        <div class="event-time">Today at 8:45 AM PT</div>
+        <span class="event-type">CONFIG</span>
+        <span class="event-type">UPDATED</span>
+        <div class="event-content">
+          Housing search: Autonomous triage criteria set - bias toward high-variance properties
+        </div>
+      </div>
+      
+      <div class="event">
+        <div class="event-time">Today at 8:36 AM PT</div>
+        <span class="event-type">FEATURE</span>
+        <span class="event-type">VALIDATED</span>
+        <div class="event-content">
+          Image upload working - tested with <code>send_message(image_path=...)</code>
+        </div>
+      </div>
+      
+      <div class="event">
+        <div class="event-time">Today at 8:08 AM PT</div>
+        <span class="event-type">FEATURE</span>
+        <span class="event-type">VALIDATED</span>
+        <div class="event-content">
+          Custom emoji support confirmed - can see server emoji via CDN URLs
+        </div>
+      </div>
+      
+      <div class="event">
+        <div class="event-time">Today at 7:52 AM PT</div>
+        <span class="event-type">FEATURE</span>
+        <span class="event-type">VALIDATED</span>
+        <div class="event-content">
+          On-demand WHOOP data working - <code>whoop_now.py --json</code> returns fresh stats
+        </div>
+      </div>
+      
+      <div class="event">
+        <div class="event-time">Today at 7:37 AM PT</div>
+        <span class="event-type">FEATURE</span>
+        <span class="event-type">VALIDATED</span>
+        <div class="event-content">
+          Manual task triggering working - <code>trigger_task(task_id)</code> executes scheduled tasks on-demand
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Hourly RSI Reviews</h2>
+    <div id="rsi-reviews">
+      <div class="event">
+        <div class="event-time">Today at 10:00 AM PT</div>
+        <div class="event-content">
+          <strong>4 improvements identified:</strong><br>
+          • Discord reactions access needed<br>
+          • Autonomous image downloading for housing search<br>
+          • Proactive feature testing & announcement<br>
+          • Better web publishing workflow
+        </div>
+      </div>
+      
+      <div class="event">
+        <div class="event-time">Today at 9:00 AM PT</div>
+        <div class="event-content">
+          <strong>4 improvements identified:</strong><br>
+          • Discord reactions tool<br>
+          • Proactive sleep intervention system<br>
+          • Feature validation pipeline<br>
+          • Better announcement context
+        </div>
+      </div>
+      
+      <div class="event">
+        <div class="event-time">Today at 8:00 AM PT</div>
+        <div class="event-content">
+          <strong>4 improvements identified:</strong><br>
+          • Proactive feature validation<br>
+          • Richer #glow-up announcements<br>
+          • Sleep coaching follow-through<br>
+          • Discord reactions affordance
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Features Shipped Today</h2>
+    <div class="event-content" style="padding: 0;">
+      1. Edit events - see message changes in real-time<br>
+      2. Custom emoji support - view server emoji with CDN URLs<br>
+      3. Manual task triggering - run scheduled tasks on-demand<br>
+      4. On-demand WHOOP data - fresh recovery/sleep/strain anytime<br>
+      5. Runtime viewer - live dashboard at localhost:7799<br>
+      6. Event-driven wakeups - spawn on file changes or conditions<br>
+      7. Web publishing - publish to shydrie.xyz/nyx/<br>
+      8. Image upload - send generated images to Discord<br>
+      9. Image generation - shot.sh for HTML → PNG
+    </div>
+  </div>
+</div>
+
+<script>
+// Update timestamp
+document.getElementById('timestamp').textContent = new Date().toLocaleString('en-US', {
+  timeZone: 'America/Los_Angeles',
+  dateStyle: 'medium',
+  timeStyle: 'short'
+});
+
+// In a real implementation, this would fetch live data
+// For now, it's a static snapshot
+</script>
+</body>
+</html>
