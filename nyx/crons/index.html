@@ -3,9 +3,9 @@
 h1{color:#a78bfa}table{border-collapse:collapse;width:100%}td{padding:5px 8px;border-bottom:1px solid #1c1c22;vertical-align:top}
 .m{color:#9aa}.d{color:#666}</style>
 <h1>🌑 Nyx · scheduled tasks</h1>
-<p class=d>All of Nyx's crons. Updated 2026-06-10 18:05 UTC.</p>
+<p class=d>All of Nyx's crons. Updated 2026-06-11 09:26 UTC.</p>
 <table><tr><td>schedule</td><td>status</td><td>next run</td><td>prompt</td><td>id</td></tr>
-<tr><td class=m>0 * * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-10T19:00</td><td>Review the last hour of NEW activity for structural improvements (Discord capabilities, observability, proactive automation, infra gaps). CRITICAL anti-spam rules: BEFORE surfacing anything, scan /workspace/extra/channel/outbox/ AND data/channel/.consumer/processed/ AND recent #rsi history — do NOT re-send, duplicate, or post &#x27;enhancement&#x27; follow-ups to requests already pending or already shipped. Only surface a genuinely NEW, non-overlapping improvement. At MOST 1 per run. If nothing genuinely new, do NOTHING — silence is preferred over noise.
+<tr><td class=m>0 * * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-11T10:00</td><td>Review the last hour of NEW activity for structural improvements (Discord capabilities, observability, proactive automation, infra gaps). CRITICAL anti-spam rules: BEFORE surfacing anything, scan /workspace/extra/channel/outbox/ AND data/channel/.consumer/processed/ AND recent #rsi history — do NOT re-send, duplicate, or post &#x27;enhancement&#x27; follow-ups to requests already pending or already shipped. Only surface a genuinely NEW, non-overlapping improvement. At MOST 1 per run. If nothing genuinely new, do NOTHING — silence is preferred over noise.
 
 When you DO have a genuinely new improvement, produce BOTH outputs in this one run:
 1) Humans: post a 2-3 sentence summary to #rsi via send_message(chat_jid=&quot;dc:1512457250499727371&quot;, text=...).
@@ -39,7 +39,7 @@ Keep the summary concise (3-5 bullet points) highlighting the most significant i
    - Add notkhalid8@gmail.com as attendee
 6. Send a WhatsApp message confirming the gym sessions scheduled for the week
 
-Only create events if there are no existing &quot;Gym&quot; events already scheduled for those days.</td><td class=m style='color:#555;font-size:10px'>task-1774499440934-ra4uvs</td></tr><tr><td class=m>0 19 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-11T02:00</td><td>Evening Sleep Tribunal (interventions for tonight):
+Only create events if there are no existing &quot;Gym&quot; events already scheduled for those days.</td><td class=m style='color:#555;font-size:10px'>task-1774499440934-ra4uvs</td></tr><tr><td class=m>0 19 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T02:00</td><td>Evening Sleep Tribunal (interventions for tonight):
 
 Read /workspace/extra/whoop/latest-summary.json and compose ONE short message (2-3 sentences) with evening interventions for tonight&#x27;s bedtime.
 
@@ -49,7 +49,7 @@ Focus on:
 - recommendation.interventions (specific actions to take tonight)
 - top_lever (the highest-impact area: Duration, Consistency, etc.)
 
-Tone: practical, focused on tonight&#x27;s specific actions. Not a roast—actionable advice. Post to #scratch with send_message (no image needed for evening run).</td><td class=m style='color:#555;font-size:10px'>task-1780711914399-72klke</td></tr><tr><td class=m>0 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-11T04:00</td><td>Bedtime reminder:
+Tone: practical, focused on tonight&#x27;s specific actions. Not a roast—actionable advice. Post to #scratch with send_message (no image needed for evening run).</td><td class=m style='color:#555;font-size:10px'>task-1780711914399-72klke</td></tr><tr><td class=m>0 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T04:00</td><td>Bedtime reminder:
 
 Send a message to #general reminding Sasha and Hung to go to bed. Tag both of them so they get notified:
 - Sasha (entropy): &lt;@245061030831587329&gt;
@@ -91,7 +91,7 @@ Steps:
 5. Also write the same summary to /workspace/extra/anthill/_lastrun.txt
 
 Never invent listings — only real ones with a valid link.
-</td><td class=m style='color:#555;font-size:10px'>task-1780152015994-anthswp</td></tr><tr><td class=m>2026-06-11T03:05:09.261Z <span class=d>(once)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-11T03:05</td><td>Remind Sasha to switch Erebus to the long-term token. Post reminder to #rsi.</td><td class=m style='color:#555;font-size:10px'>task-1781114710250-6a5t93</td></tr><tr><td class=m>30 12 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-10T19:30</td><td>Morning Sleep Tribunal (review last night):
+</td><td class=m style='color:#555;font-size:10px'>task-1780152015994-anthswp</td></tr><tr><td class=m>2026-06-11T09:42:52.353Z <span class=d>(once)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-11T09:42</td><td>Turn off Tofu Plug</td><td class=m style='color:#555;font-size:10px'>task-1781170013356-25znmx</td></tr><tr><td class=m>30 12 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-11T19:30</td><td>Morning Sleep Tribunal (review last night):
 
 Read /workspace/extra/whoop/latest-summary.json and compose a witty but stern verdict on last night&#x27;s sleep performance.
 
@@ -104,7 +104,7 @@ Focus on:
 
 Do NOT use generate_image. Use the pre-generated card at /workspace/extra/whoop/latest-card.png (auto-rendered twice daily — clean typography, no AI image gen) and post the verdict together with it via send_message(chat_jid=&quot;dc:1510355350069575863&quot;, image_path=&quot;/workspace/extra/whoop/latest-card.png&quot;, text=...).
 
-Tone: sharp, data-driven roast. Not mean, but not gentle. Make the shame productive.</td><td class=m style='color:#555;font-size:10px'>task-1780711910379-3934pw</td></tr><tr><td class=m>30 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-11T04:30</td><td>Bedtime sequence:
+Tone: sharp, data-driven roast. Not mean, but not gentle. Make the shame productive.</td><td class=m style='color:#555;font-size:10px'>task-1780711910379-3934pw</td></tr><tr><td class=m>30 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T04:30</td><td>Bedtime sequence:
 
 1. Turn off all lights (Tofu Plug, LR Plug, Lumenator) using Govee
 2. Send Sasha a goodnight message
