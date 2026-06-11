@@ -3,7 +3,7 @@
 h1{color:#a78bfa}table{border-collapse:collapse;width:100%}td{padding:5px 8px;border-bottom:1px solid #1c1c22;vertical-align:top}
 .m{color:#9aa}.d{color:#666}</style>
 <h1>🌑 Nyx · scheduled tasks</h1>
-<p class=d>All of Nyx's crons. Updated 2026-06-11 23:29 UTC.</p>
+<p class=d>All of Nyx's crons. Updated 2026-06-11 23:30 UTC.</p>
 <table><tr><td>schedule</td><td>status</td><td>next run</td><td>prompt</td><td>id</td></tr>
 <tr><td class=m>0 12 * * 1 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-15T19:00</td><td>Create a singing lesson event at Songbird Studios for today at 7:30-8:00 PM:
 
@@ -41,9 +41,7 @@ Keep the summary concise (3-5 bullet points) highlighting the most significant i
 
 Only create events if there are no existing &quot;Gym&quot; events already scheduled for those days.</td><td class=m style='color:#555;font-size:10px'>task-1774499440934-ra4uvs</td></tr><tr><td class=m>0 19 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T02:00</td><td>Evening Sleep Tribunal (interventions for tonight):
 
-Read /workspace/extra/whoop/latest-summary.json and check tonight&#x27;s recommended bedtime based on sleep debt. If Sasha should go to bed earlier than usual, send a heads-up about the recommendation and why (debt level, recent recovery trend). If he&#x27;s on track, send brief encouragement. Keep it under 2 messages. Post to #zzz.</td><td class=m style='color:#555;font-size:10px'>task-1781205232641-qmfj24</td></tr><tr><td class=m>0 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T04:00</td><td>Bedtime reminder:
-
-Send a message to #zzz reminding Sasha it&#x27;s 9:00 PM - 30 minutes until bedtime sequence. Keep it friendly and brief (1 message).</td><td class=m style='color:#555;font-size:10px'>task-1781205244692-4sbre7</td></tr><tr><td class=m>0 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T04:00</td><td>Bedtime (merged task — reminder + lights sweep):
+Read /workspace/extra/whoop/latest-summary.json and check tonight&#x27;s recommended bedtime based on sleep debt. If Sasha should go to bed earlier than usual, send a heads-up about the recommendation and why (debt level, recent recovery trend). If he&#x27;s on track, send brief encouragement. Keep it under 2 messages. Post to #zzz.</td><td class=m style='color:#555;font-size:10px'>task-1781205232641-qmfj24</td></tr><tr><td class=m>0 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T04:00</td><td>Bedtime (merged task — reminder + lights sweep):
 
 1. Now (9:00 PM): send ONE friendly, brief message to #zzz (dc:1514701568312873090) reminding Sasha it&#x27;s 9 PM — 30 minutes to bedtime sequence.
 2. Schedule a one-shot task for 9:30 PM tonight (&quot;in 30m&quot;): prompt &quot;Bedtime sequence: turn off all lights using govee_all_off(), then send a brief confirmation to #zzz (dc:1514701568312873090) that lights are off and it&#x27;s bedtime. Keep it under 10s.&quot;
@@ -94,12 +92,7 @@ IMPORTANT: Post the auto-generated card first using send_message(chat_jid=&quot;
 1. Turn off all lights (Tofu Plug, LR Plug, Lumenator, Bookshelf) using govee_all_off()
 2. Send brief confirmation to #zzz that lights are off and it&#x27;s bedtime
 
-Keep it under 10 seconds total execution time.</td><td class=m style='color:#555;font-size:10px'>task-1781205257743-zuzuks</td></tr><tr><td class=m>30 6 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T13:30</td><td>Turn off Lumenator (Fairy Plug) using govee_turn_off(&quot;Lumenator&quot;). This ends the morning wake-up sequence at 6:30 AM. Keep execution quick - under 10 seconds.</td><td class=m style='color:#555;font-size:10px'>task-1780578028593-mczyt1</td></tr><tr><td class=m>55 5 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T12:55</td><td>Turn on Tofu Plug at 5:55 AM, then turn on Lumenator at 5:59 AM for the 6:00 AM wake-up. This creates a gradual 5-minute ramp. Use Govee API with the following devices:
-- Tofu Plug: 76:D6:98:17:3C:95:1F:7C
-- Lumenator: 22:D0:98:17:3C:A4:25:1A
-Model: H5080
-
-Keep the execution quick - under 30 seconds total.</td><td class=m style='color:#555;font-size:10px'>task-1776833406032-v5xuib</td></tr><tr><td class=m>55 5 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T12:55</td><td>Morning wake cascade (merged task — handles ramp + auto-off):
+Keep it under 10 seconds total execution time.</td><td class=m style='color:#555;font-size:10px'>task-1781205257743-zuzuks</td></tr><tr><td class=m>55 5 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T12:55</td><td>Morning wake cascade (merged task — handles ramp + auto-off):
 
 1. Turn on Tofu Plug now (5:55 AM, gentle start) using govee_turn_on(&quot;Tofu Plug&quot;).
 2. Wait until ~5:59-6:00, then turn on Lumenator using govee_turn_on(&quot;Lumenator&quot;). This is the real wake moment — end of the 5-min ramp.
