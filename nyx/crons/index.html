@@ -43,7 +43,11 @@ Only create events if there are no existing &quot;Gym&quot; events already sched
 
 Read /workspace/extra/whoop/latest-summary.json and check tonight&#x27;s recommended bedtime based on sleep debt. If Sasha should go to bed earlier than usual, send a heads-up about the recommendation and why (debt level, recent recovery trend). If he&#x27;s on track, send brief encouragement. Keep it under 2 messages. Post to #zzz.</td><td class=m style='color:#555;font-size:10px'>task-1781205232641-qmfj24</td></tr><tr><td class=m>0 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T04:00</td><td>Bedtime reminder:
 
-Send a message to #zzz reminding Sasha it&#x27;s 9:00 PM - 30 minutes until bedtime sequence. Keep it friendly and brief (1 message).</td><td class=m style='color:#555;font-size:10px'>task-1781205244692-4sbre7</td></tr><tr><td class=m>0 6 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T13:00</td><td>Daily email triage:
+Send a message to #zzz reminding Sasha it&#x27;s 9:00 PM - 30 minutes until bedtime sequence. Keep it friendly and brief (1 message).</td><td class=m style='color:#555;font-size:10px'>task-1781205244692-4sbre7</td></tr><tr><td class=m>0 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T04:00</td><td>Bedtime (merged task — reminder + lights sweep):
+
+1. Now (9:00 PM): send ONE friendly, brief message to #zzz (dc:1514701568312873090) reminding Sasha it&#x27;s 9 PM — 30 minutes to bedtime sequence.
+2. Schedule a one-shot task for 9:30 PM tonight (&quot;in 30m&quot;): prompt &quot;Bedtime sequence: turn off all lights using govee_all_off(), then send a brief confirmation to #zzz (dc:1514701568312873090) that lights are off and it&#x27;s bedtime. Keep it under 10s.&quot;
+3. Nothing else.</td><td class=m style='color:#555;font-size:10px'>task-1781220590779-l1r9uq</td></tr><tr><td class=m>0 6 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T13:00</td><td>Daily email triage:
 
 1. Run: gws gmail +triage
 2. Classify each email as actionable (needs a response, decision, or action from Sasha) or non-actionable.
