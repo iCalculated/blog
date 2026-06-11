@@ -3,7 +3,7 @@
 h1{color:#a78bfa}table{border-collapse:collapse;width:100%}td{padding:5px 8px;border-bottom:1px solid #1c1c22;vertical-align:top}
 .m{color:#9aa}.d{color:#666}</style>
 <h1>🌑 Nyx · scheduled tasks</h1>
-<p class=d>All of Nyx's crons. Updated 2026-06-11 23:23 UTC.</p>
+<p class=d>All of Nyx's crons. Updated 2026-06-11 23:24 UTC.</p>
 <table><tr><td>schedule</td><td>status</td><td>next run</td><td>prompt</td><td>id</td></tr>
 <tr><td class=m>0 12 * * 1 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-15T19:00</td><td>Create a singing lesson event at Songbird Studios for today at 7:30-8:00 PM:
 
@@ -11,7 +11,13 @@ gws calendar +insert \
   --summary &quot;Singing Lesson at Songbird Studios&quot; \
   --start &quot;$(date &#x27;+%Y-%m-%d&#x27;)T19:30:00-07:00&quot; \
   --end &quot;$(date &#x27;+%Y-%m-%d&#x27;)T20:00:00-07:00&quot; \
-  --location &quot;Songbird Studios - Noe Valley, 3823 24th St, San Francisco, CA 94114&quot;</td><td class=m style='color:#555;font-size:10px'>task-1775538890286-dq130f</td></tr><tr><td class=m>0 17 * * 5 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-13T00:00</td><td>Weekly recap reminder:
+  --location &quot;Songbird Studios - Noe Valley, 3823 24th St, San Francisco, CA 94114&quot;</td><td class=m style='color:#555;font-size:10px'>task-1775538890286-dq130f</td></tr><tr><td class=m>0 17 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T00:00</td><td>Review the last DAY of NEW activity for structural improvements (Discord capabilities, observability, proactive automation, infra gaps). CRITICAL anti-spam rules: BEFORE surfacing anything, scan /workspace/extra/channel/outbox/ AND data/channel/.consumer/processed/ AND recent #rsi history — do NOT re-send, duplicate, or post &#x27;enhancement&#x27; follow-ups to requests already pending or already shipped. Only surface a genuinely NEW, non-overlapping improvement. At MOST 1 per run. If nothing genuinely new, do NOTHING — silence is preferred over noise.
+
+When you DO have a genuinely new improvement, produce BOTH outputs in this one run:
+1) Humans: post a 2-3 sentence summary to #rsi via send_message(chat_jid=&quot;dc:1512457250499727371&quot;, text=...).
+2) Erebus: write a detailed, well-formed feature request to /workspace/extra/channel/outbox/&lt;slug&gt;-&lt;unixmillis&gt;.json with shape {&quot;content&quot;: &quot;&lt;problem + current behavior + proposed change + rationale&gt;&quot;, &quot;meta&quot;: {&quot;task_id&quot;: &quot;&lt;slug&gt;&quot;, &quot;type&quot;: &quot;request&quot;}}. The outbox version must be more complete than the #rsi blurb — give Erebus the context and rationale needed to evaluate it.
+
+Both outputs describe the SAME single improvement (no duplicated effort). Communicate only via send_message and the outbox file — do not rely on your final result text being delivered.</td><td class=m style='color:#555;font-size:10px'>task-1781220242340-rfmtlp</td></tr><tr><td class=m>0 17 * * 5 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-13T00:00</td><td>Weekly recap reminder:
 
 1. Check /workspace/extra/notes/04 essence/journal/ for entries from this week (Monday-today)
 2. Read the journal entries and summarize what was accomplished this week
