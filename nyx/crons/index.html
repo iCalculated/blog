@@ -3,7 +3,7 @@
 h1{color:#a78bfa}table{border-collapse:collapse;width:100%}td{padding:5px 8px;border-bottom:1px solid #1c1c22;vertical-align:top}
 .m{color:#9aa}.d{color:#666}</style>
 <h1>🌑 Nyx · scheduled tasks</h1>
-<p class=d>All of Nyx's crons. Updated 2026-06-11 23:24 UTC.</p>
+<p class=d>All of Nyx's crons. Updated 2026-06-11 23:29 UTC.</p>
 <table><tr><td>schedule</td><td>status</td><td>next run</td><td>prompt</td><td>id</td></tr>
 <tr><td class=m>0 12 * * 1 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-15T19:00</td><td>Create a singing lesson event at Songbird Studios for today at 7:30-8:00 PM:
 
@@ -95,4 +95,9 @@ Keep it under 10 seconds total execution time.</td><td class=m style='color:#555
 - Lumenator: 22:D0:98:17:3C:A4:25:1A
 Model: H5080
 
-Keep the execution quick - under 30 seconds total.</td><td class=m style='color:#555;font-size:10px'>task-1776833406032-v5xuib</td></tr></table>
+Keep the execution quick - under 30 seconds total.</td><td class=m style='color:#555;font-size:10px'>task-1776833406032-v5xuib</td></tr><tr><td class=m>55 5 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T12:55</td><td>Morning wake cascade (merged task — handles ramp + auto-off):
+
+1. Turn on Tofu Plug now (5:55 AM, gentle start) using govee_turn_on(&quot;Tofu Plug&quot;).
+2. Wait until ~5:59-6:00, then turn on Lumenator using govee_turn_on(&quot;Lumenator&quot;). This is the real wake moment — end of the 5-min ramp.
+3. Schedule a one-shot task for 6:30 AM today: prompt &quot;Turn off Lumenator using govee_turn_off(\&quot;Lumenator\&quot;) to end the morning wake sequence. Announce nothing unless it fails.&quot;, schedule_type &quot;once&quot;, schedule_value today&#x27;s date at 06:30 local (e.g. &quot;in 30m&quot; relative from when you finish is ~6:30 if you finish at 6:00).
+4. No messages unless something fails.</td><td class=m style='color:#555;font-size:10px'>task-1781220587760-d4f3fe</td></tr></table>
