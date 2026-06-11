@@ -3,7 +3,7 @@
 h1{color:#a78bfa}table{border-collapse:collapse;width:100%}td{padding:5px 8px;border-bottom:1px solid #1c1c22;vertical-align:top}
 .m{color:#9aa}.d{color:#666}</style>
 <h1>🌑 Nyx · scheduled tasks</h1>
-<p class=d>All of Nyx's crons. Updated 2026-06-11 19:13 UTC.</p>
+<p class=d>All of Nyx's crons. Updated 2026-06-11 19:14 UTC.</p>
 <table><tr><td>schedule</td><td>status</td><td>next run</td><td>prompt</td><td>id</td></tr>
 <tr><td class=m>0 * * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-11T20:00</td><td>Review the last hour of NEW activity for structural improvements (Discord capabilities, observability, proactive automation, infra gaps). CRITICAL anti-spam rules: BEFORE surfacing anything, scan /workspace/extra/channel/outbox/ AND data/channel/.consumer/processed/ AND recent #rsi history — do NOT re-send, duplicate, or post &#x27;enhancement&#x27; follow-ups to requests already pending or already shipped. Only surface a genuinely NEW, non-overlapping improvement. At MOST 1 per run. If nothing genuinely new, do NOTHING — silence is preferred over noise.
 
@@ -41,17 +41,7 @@ Keep the summary concise (3-5 bullet points) highlighting the most significant i
 
 Only create events if there are no existing &quot;Gym&quot; events already scheduled for those days.</td><td class=m style='color:#555;font-size:10px'>task-1774499440934-ra4uvs</td></tr><tr><td class=m>0 19 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T02:00</td><td>Evening Sleep Tribunal (interventions for tonight):
 
-Read /workspace/extra/whoop/latest-summary.json and check tonight&#x27;s recommended bedtime based on sleep debt. If Sasha should go to bed earlier than usual, send a heads-up about the recommendation and why (debt level, recent recovery trend). If he&#x27;s on track, send brief encouragement. Keep it under 2 messages. Post to #zzz.</td><td class=m style='color:#555;font-size:10px'>task-1781205232641-qmfj24</td></tr><tr><td class=m>0 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T04:00</td><td>Bedtime reminder:
-
-Send a message to #general reminding Sasha and Hung to go to bed. Tag both of them so they get notified:
-- Sasha (entropy): &lt;@245061030831587329&gt;
-- Hung: &lt;@262224863723388929&gt;
-
-Keep it friendly and brief, like:
-
-&quot;🌙 &lt;@245061030831587329&gt; &lt;@262224863723388929&gt; Bedtime! Time to wrap up for the night and get some rest.&quot;
-
-This runs at 9 PM local time every day.</td><td class=m style='color:#555;font-size:10px'>task-1780718656675-4vndt7</td></tr><tr><td class=m>0 6 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T13:00</td><td>Daily email triage:
+Read /workspace/extra/whoop/latest-summary.json and check tonight&#x27;s recommended bedtime based on sleep debt. If Sasha should go to bed earlier than usual, send a heads-up about the recommendation and why (debt level, recent recovery trend). If he&#x27;s on track, send brief encouragement. Keep it under 2 messages. Post to #zzz.</td><td class=m style='color:#555;font-size:10px'>task-1781205232641-qmfj24</td></tr><tr><td class=m>0 6 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T13:00</td><td>Daily email triage:
 
 1. Run: gws gmail +triage
 2. Classify each email as actionable (needs a response, decision, or action from Sasha) or non-actionable.
