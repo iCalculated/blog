@@ -1,0 +1,419 @@
+<!doctype html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Anthill Housing Gallery</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,system-ui,sans-serif;background:#0b0f14;color:#e5e7eb;padding:24px}
+a{color:inherit;text-decoration:none}
+h1{font-size:1.6rem;margin-bottom:4px}
+.sub{color:#9ca3af;margin-bottom:24px;font-size:.9rem}
+h2{font-size:1.1rem;margin:28px 0 12px;color:#93c5fd}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.card{background:#111827;border-radius:12px;overflow:hidden;border:1px solid #1f2937;transition:transform .15s}
+.card:hover{transform:translateY(-3px);border-color:#374151}
+.card img{width:100%;height:180px;object-fit:cover;display:block}
+.card .body{padding:12px 14px}
+.card .addr{font-weight:600;font-size:.95rem}
+.card .meta{color:#9ca3af;font-size:.8rem;margin-top:4px}
+.card .row{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.score{font-weight:700;font-size:1.1rem}
+.score.good{color:#4ade80}.score.mid{color:#facc15}.score.bad{color:#f87171}.score.na{color:#4b5563}
+.badge{font-size:.7rem;padding:2px 8px;border-radius:99px;color:#fff;font-weight:600}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-top:16px}
+.photos img{width:100%;border-radius:8px;display:block;cursor:pointer}
+.desc{background:#111827;border:1px solid #1f2937;border-radius:12px;padding:16px;margin:16px 0;line-height:1.55;white-space:pre-wrap;font-size:.92rem;color:#d1d5db}
+.back{display:inline-block;margin-bottom:16px;color:#93c5fd;font-size:.9rem}
+.stats{display:flex;gap:18px;flex-wrap:wrap;margin:12px 0;color:#d1d5db;font-size:.9rem}
+.stats b{color:#fff}
+table.sb{border-collapse:collapse;margin:12px 0;font-size:.85rem}
+table.sb td{padding:3px 12px 3px 0;color:#9ca3af}
+table.sb td:last-child{color:#e5e7eb;text-align:right}
+</style></head><body>
+<h1>🐜 Anthill Housing Gallery</h1>
+<div class="sub">47 properties · 1158 photos · built by Nyx</div>
+<h2>🏠 Rentals (Anthill candidates) <span style="color:#4b5563;font-size:.85rem">(2)</span></h2>
+<div class="grid">
+<a class="card" href="180-parker-ave/">
+<img src="img/180-parker-ave/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">180 Parker Ave</div>
+<div class="meta">$12,000/mo</div>
+<div class="meta">6bd · 5ba · 2,800 sqft</div>
+<div class="row"><span class="score na">—</span></div>
+</div></a>
+<a class="card" href="2453-pacific-ave/">
+<img src="img/2453-pacific-ave/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">2453 Pacific Ave</div>
+<div class="meta">$56,900/mo</div>
+<div class="meta">6bd · 6ba · 5,500 sqft</div>
+<div class="row"><span class="score na">—</span></div>
+</div></a>
+</div>
+<h2>💰 For Sale — scored <span style="color:#4b5563;font-size:.85rem">(33)</span></h2>
+<div class="grid">
+<a class="card" href="2315-broadway-st/">
+<img src="img/2315-broadway-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">2315 Broadway St</div>
+<div class="meta">$25.00M · Pacific Heights</div>
+<div class="meta">9.0bd · 8.0ba · 9,325 sqft</div>
+<div class="row"><span class="score good">72/75</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="67-belcher-st/">
+<img src="img/67-belcher-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">67 Belcher St</div>
+<div class="meta">$6.97M · Castro / Duboce</div>
+<div class="meta">7.0bd · 6.0ba · 18,964 sqft</div>
+<div class="row"><span class="score good">60/75</span><span class="badge" style="background:#d97706">mixed</span></div>
+</div></a>
+<a class="card" href="150-central-ave/">
+<img src="img/150-central-ave/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">150 Central Ave</div>
+<div class="meta">$3.19M · NoPa / Haight</div>
+<div class="meta">8.0bd · 5.0ba · 4,930 sqft</div>
+<div class="row"><span class="score good">56/75</span><span class="badge" style="background:#d97706">mixed</span></div>
+</div></a>
+<a class="card" href="1855-california-st/">
+<img src="img/1855-california-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">1855 California St</div>
+<div class="meta">$5.15M · Polk / Nob Hill</div>
+<div class="meta">17.0bd · 8.0ba · 10,590 sqft</div>
+<div class="row"><span class="score bad">13/75</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="630-haight-st/">
+<img src="img/630-haight-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">630 Haight St</div>
+<div class="meta">$3.10M · Lower Haight</div>
+<div class="meta">11.0bd · 5.0ba · 4,600 sqft</div>
+<div class="row"><span class="score bad">-4/75</span><span class="badge" style="background:#dc2626">occupied</span></div>
+</div></a>
+<a class="card" href="1522-1524-waller-st/">
+<img src="img/1522-1524-waller-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">1522-1524 Waller St</div>
+<div class="meta">$5.00M · Haight-Ashbury</div>
+<div class="meta">8.0bd · 6.0ba · 4,189 sqft</div>
+<div class="row"><span class="score bad">-12/75</span><span class="badge" style="background:#16a34a">vacant</span></div>
+</div></a>
+<a class="card" href="4138-4140-fulton-st/">
+<img src="img/4138-4140-fulton-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">4138-4140 Fulton St</div>
+<div class="meta">$3.19M · Outer Richmond</div>
+<div class="meta">6.0bd · 5.0ba · 3,847 sqft</div>
+<div class="row"><span class="score bad">-15/75</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="2445-harrison-st/">
+<img src="img/2445-harrison-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">2445 Harrison St</div>
+<div class="meta">$3.50M · Mission</div>
+<div class="meta">18.0bd · 6.0ba · 6,465 sqft</div>
+<div class="row"><span class="score bad">-24/75</span><span class="badge" style="background:#dc2626">occupied</span></div>
+</div></a>
+<a class="card" href="1-15-russia-ave/">
+<img src="img/1-15-russia-ave/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">1-15 Russia Ave</div>
+<div class="meta">$3.27M · Excelsior</div>
+<div class="meta">8.0bd · ?ba · 11,189 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="1062-sutter-st/">
+<img src="img/1062-sutter-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">1062 Sutter St</div>
+<div class="meta">$4.10M · Lower Nob Hill</div>
+<div class="meta">5.0bd · ?ba · 8,888 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#dc2626">occupied</span></div>
+</div></a>
+<a class="card" href="1159-union-st/">
+<img src="img/1159-union-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">1159 Union St</div>
+<div class="meta">$3.80M · Russian Hill</div>
+<div class="meta">12.0bd · ?ba · 9,123 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#dc2626">occupied</span></div>
+</div></a>
+<a class="card" href="1163-pine-st/">
+<img src="img/1163-pine-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">1163 Pine St</div>
+<div class="meta">$5.89M · Nob Hill</div>
+<div class="meta">13.0bd · ?ba · 10,200 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="1230-jackson-st/">
+<img src="img/1230-jackson-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">1230 Jackson St</div>
+<div class="meta">$3.19M · Nob Hill</div>
+<div class="meta">12.0bd · ?ba · 4,986 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="1316-1326-vallejo-st/">
+<img src="img/1316-1326-vallejo-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">1316-1326 Vallejo St</div>
+<div class="meta">$3.70M · Russian Hill</div>
+<div class="meta">12.0bd · ?ba · 5,088 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#16a34a">vacant</span></div>
+</div></a>
+<a class="card" href="136-noe-st/">
+<img src="img/136-noe-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">136 Noe St</div>
+<div class="meta">$6.65M · Castro</div>
+<div class="meta">26.0bd · ?ba · 9,990 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#16a34a">vacant</span></div>
+</div></a>
+<a class="card" href="1668-washington-st/">
+<img src="img/1668-washington-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">1668 Washington St</div>
+<div class="meta">$3.60M · Nob Hill</div>
+<div class="meta">11.0bd · ?ba · 5,146 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#dc2626">occupied</span></div>
+</div></a>
+<a class="card" href="1745-market-st/">
+<img src="img/1745-market-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">1745 Market St</div>
+<div class="meta">$16.75M · SoMa / Civic Center</div>
+<div class="meta">28.0bd · ?ba · 57,448 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="270-turk-st/">
+<img src="img/270-turk-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">270 Turk St</div>
+<div class="meta">$11.60M · Tenderloin</div>
+<div class="meta">18.0bd · ?ba · 47,054 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#dc2626">occupied</span></div>
+</div></a>
+<a class="card" href="278-states-st/">
+<img src="img/278-states-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">278 States St</div>
+<div class="meta">$4.30M · Corona Heights</div>
+<div class="meta">16.0bd · ?ba · 7,268 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#dc2626">occupied</span></div>
+</div></a>
+<a class="card" href="2929-geary-blvd/">
+<img src="img/2929-geary-blvd/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">2929 Geary Blvd</div>
+<div class="meta">$5.65M · Laurel Heights</div>
+<div class="meta">11.0bd · ?ba · 17,488 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="3025-21st-st/">
+<img src="img/3025-21st-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">3025 21st St</div>
+<div class="meta">$3.75M · Mission</div>
+<div class="meta">8.0bd · ?ba · 5,496 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="40-irving-st/">
+<img src="img/40-irving-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">40 Irving St</div>
+<div class="meta">$3.80M · Inner Sunset</div>
+<div class="meta">10.0bd · ?ba · 9,157 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="512-grant-ave/">
+<img src="img/512-grant-ave/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">512 Grant Ave</div>
+<div class="meta">$5.39M · Chinatown</div>
+<div class="meta">9.0bd · ?ba · 7,087 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#dc2626">occupied</span></div>
+</div></a>
+<a class="card" href="67-69-belcher-st/">
+<img src="img/67-69-belcher-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">67-69 Belcher St</div>
+<div class="meta">$6.97M · Castro / Duboce</div>
+<div class="meta">6.0bd · ?ba · 18,964 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#d97706">mixed</span></div>
+</div></a>
+<a class="card" href="675-ofarrell-st/">
+<img src="img/675-ofarrell-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">675 Ofarrell St</div>
+<div class="meta">$3.50M · Tenderloin</div>
+<div class="meta">?bd · ?ba · 12,000 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#dc2626">occupied</span></div>
+</div></a>
+<a class="card" href="702-712-vallejo-st/">
+<img src="img/702-712-vallejo-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">702-712 Vallejo St</div>
+<div class="meta">$3.60M · North Beach</div>
+<div class="meta">?bd · ?ba · 12,000 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="755-bush-st/">
+<img src="img/755-bush-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">755 Bush St</div>
+<div class="meta">$9.20M · Nob Hill</div>
+<div class="meta">11.0bd · ?ba · 16,588 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="78-parker-ave/">
+<img src="img/78-parker-ave/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">78 Parker Ave</div>
+<div class="meta">$4.35M · Jordan Park</div>
+<div class="meta">8.0bd · ?ba · 6,718 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="812-taraval-st/">
+<img src="img/812-taraval-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">812 Taraval St</div>
+<div class="meta">$3.60M · Parkside</div>
+<div class="meta">13.0bd · ?ba · 6,950 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#d97706">mixed</span></div>
+</div></a>
+<a class="card" href="840-greenwich-st/">
+<img src="img/840-greenwich-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">840 Greenwich St</div>
+<div class="meta">$6.25M · North Beach</div>
+<div class="meta">20.0bd · ?ba · 9,515 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="930-baker-st/">
+<img src="img/930-baker-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">930 Baker St</div>
+<div class="meta">$3.00M · Anza Vista</div>
+<div class="meta">8.0bd · 12.0ba · 8,000 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+<a class="card" href="970-post-st/">
+<img src="img/970-post-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">970 Post St</div>
+<div class="meta">$6.80M · Tenderloin</div>
+<div class="meta">27.0bd · ?ba · 22,310 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#dc2626">occupied</span></div>
+</div></a>
+<a class="card" href="973-market-st/">
+<img src="img/973-market-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">973 Market St</div>
+<div class="meta">$20.00M · SoMa</div>
+<div class="meta">30.0bd · ?ba · 39,339 sqft</div>
+<div class="row"><span class="score na">—</span><span class="badge" style="background:#6b7280">—</span></div>
+</div></a>
+</div>
+<h2>📷 Other listings <span style="color:#4b5563;font-size:.85rem">(12)</span></h2>
+<div class="grid">
+<a class="card" href="1520-leavenworth-st/">
+<img src="img/1520-leavenworth-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">1520 Leavenworth St</div>
+<div class="meta">$3.00M</div>
+<div class="meta">11bd · ?ba · 4,850 sqft</div>
+<div class="row"><span class="score na">—</span></div>
+</div></a>
+<a class="card" href="160-bernard-st/">
+<img src="img/160-bernard-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">160 Bernard St</div>
+<div class="meta">$7.00M</div>
+<div class="meta">6bd · 7ba · 4,100 sqft</div>
+<div class="row"><span class="score na">—</span></div>
+</div></a>
+<a class="card" href="1756-broadway/">
+<img src="img/1756-broadway/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">1756 Broadway</div>
+<div class="meta">$5.79M</div>
+<div class="meta">6bd · ?ba · 5,822 sqft</div>
+<div class="row"><span class="score na">—</span></div>
+</div></a>
+<a class="card" href="1818-california-st/">
+<img src="img/1818-california-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">1818 California St</div>
+<div class="meta">$8.50M</div>
+<div class="meta">6bd · 7ba · 8,215 sqft</div>
+<div class="row"><span class="score na">—</span></div>
+</div></a>
+<a class="card" href="1948-pacific-ave/">
+<img src="img/1948-pacific-ave/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">1948 Pacific Ave</div>
+<div class="meta">$18.00M</div>
+<div class="meta">6bd · 8ba · 8,485 sqft</div>
+<div class="row"><span class="score na">—</span></div>
+</div></a>
+<a class="card" href="2368-3rd-st/">
+<img src="img/2368-3rd-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">2368 3rd St</div>
+<div class="meta">$3.00M</div>
+<div class="meta">6bd · ?ba · 4,500 sqft</div>
+<div class="row"><span class="score na">—</span></div>
+</div></a>
+<a class="card" href="2730-23rd-st/">
+<img src="img/2730-23rd-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">2730 23rd St</div>
+<div class="meta">$3.00M</div>
+<div class="meta">7bd · 7ba · 3,640 sqft</div>
+<div class="row"><span class="score na">—</span></div>
+</div></a>
+<a class="card" href="2928-2932-larkin-st/">
+<img src="img/2928-2932-larkin-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">2928-2932 Larkin St</div>
+<div class="meta">$3.00M</div>
+<div class="meta">8bd · 8ba · 5,538 sqft</div>
+<div class="row"><span class="score na">—</span></div>
+</div></a>
+<a class="card" href="3059-california-st/">
+<img src="img/3059-california-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">3059 California St</div>
+<div class="meta">$6.35M</div>
+<div class="meta">6bd · 7ba · 5,000 sqft</div>
+<div class="row"><span class="score na">—</span></div>
+</div></a>
+<a class="card" href="3545-20th-st/">
+<img src="img/3545-20th-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">3545 20Th St</div>
+<div class="meta">—</div>
+<div class="meta">?bd · ?ba · 0 sqft</div>
+<div class="row"><span class="score na">—</span></div>
+</div></a>
+<a class="card" href="500-512-church-st/">
+<img src="img/500-512-church-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">500-512 Church St</div>
+<div class="meta">$7.29M</div>
+<div class="meta">16bd · ?ba · 12,600 sqft</div>
+<div class="row"><span class="score na">—</span></div>
+</div></a>
+<a class="card" href="924-grove-st/">
+<img src="img/924-grove-st/photo-01.jpg" loading="lazy" alt="">
+<div class="body">
+<div class="addr">924 Grove St</div>
+<div class="meta">$7.50M</div>
+<div class="meta">6bd · 6ba · 5,519 sqft</div>
+<div class="row"><span class="score na">—</span></div>
+</div></a>
+</div>
+
+</body></html>
