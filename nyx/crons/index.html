@@ -83,7 +83,12 @@ Read /workspace/extra/whoop/latest-summary.json and deliver verdict on last nigh
 - Sleep debt (current carried debt in minutes)
 - Disturbances and wake events
 
-Tone: mix of celebration for wins and gentle roasting for poor choices. Keep it under 3 messages. Post to #zzz.</td><td class=m style='color:#555;font-size:10px'>task-1781205218591-v9sa3z</td></tr><tr><td class=m>30 6 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T13:30</td><td>Turn off Lumenator (Fairy Plug) using govee_turn_off(&quot;Lumenator&quot;). This ends the morning wake-up sequence at 6:30 AM. Keep execution quick - under 10 seconds.</td><td class=m style='color:#555;font-size:10px'>task-1780578028593-mczyt1</td></tr><tr><td class=m>55 5 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T12:55</td><td>Turn on Tofu Plug at 5:55 AM, then turn on Lumenator at 5:59 AM for the 6:00 AM wake-up. This creates a gradual 5-minute ramp. Use Govee API with the following devices:
+Tone: mix of celebration for wins and gentle roasting for poor choices. Keep it under 3 messages. Post to #zzz.</td><td class=m style='color:#555;font-size:10px'>task-1781205218591-v9sa3z</td></tr><tr><td class=m>30 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T04:30</td><td>Bedtime sequence:
+
+1. Turn off all lights (Tofu Plug, LR Plug, Lumenator, Bookshelf) using govee_all_off()
+2. Send brief confirmation to #zzz that lights are off and it&#x27;s bedtime
+
+Keep it under 10 seconds total execution time.</td><td class=m style='color:#555;font-size:10px'>task-1781205257743-zuzuks</td></tr><tr><td class=m>30 6 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T13:30</td><td>Turn off Lumenator (Fairy Plug) using govee_turn_off(&quot;Lumenator&quot;). This ends the morning wake-up sequence at 6:30 AM. Keep execution quick - under 10 seconds.</td><td class=m style='color:#555;font-size:10px'>task-1780578028593-mczyt1</td></tr><tr><td class=m>55 5 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-12T12:55</td><td>Turn on Tofu Plug at 5:55 AM, then turn on Lumenator at 5:59 AM for the 6:00 AM wake-up. This creates a gradual 5-minute ramp. Use Govee API with the following devices:
 - Tofu Plug: 76:D6:98:17:3C:95:1F:7C
 - Lumenator: 22:D0:98:17:3C:A4:25:1A
 Model: H5080
