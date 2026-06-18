@@ -52,6 +52,8 @@
   .stats{display:flex;gap:12px;flex-wrap:wrap;color:var(--txt);font-size:13px;margin-top:2px}
   .stats b{font-weight:700}
   .price{font-size:16px;font-weight:800;color:#fff}
+  .price .permo{font-size:11px;font-weight:600;color:var(--muted);margin-left:1px}
+  .subprice{font-size:11.5px;color:var(--muted);margin-top:-2px}
   .cat{display:inline-block;font-size:10.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
   .actions{display:flex;gap:6px;margin-top:auto;padding-top:8px}
   .btn{flex:1;border:1px solid var(--line);background:var(--panel2);color:var(--txt);border-radius:8px;padding:7px;font-size:12px;font-weight:600;cursor:pointer;transition:.12s}
@@ -138,6 +140,7 @@ let DATA=null, FILTERED=[], CUR=null, CIDX=0, CFILTER=null;
 
 const $=s=>document.querySelector(s);
 const money=v=> v==null?"—":"$"+Number(v).toLocaleString();
+function rentOf(p){ const pr=p.projected_rent||{}; const v=pr.monthly??p.est_rent; return v==null?null:{v,proj:pr.monthly!=null}; }
 function scoreColor(t){ if(t==null) return "#5b6172"; if(t>=70) return "#3ecf8e"; if(t>=55) return "#a9d65a"; if(t>=40) return "#e7b94f"; return "#e0666b"; }
 function localPipe(){ try{return JSON.parse(localStorage.getItem("nyx_pipe")||"{}")}catch{return {}} }
 function setLocalPipe(id,v){ const p=localPipe(); if(v) p[id]=v; else delete p[id]; localStorage.setItem("nyx_pipe",JSON.stringify(p)); }
@@ -209,11 +212,12 @@ function card(p){
       <div class="addr">${p.address||"—"}</div>
       <div class="hood">${p.neighborhood||""} ${p.category?`· <span class="cat">${p.category}</span>`:""}</div>
       <div class="stats">
-        <span class="price">${money(p.price)}</span>
+        ${(()=>{const r=rentOf(p);return r?`<span class="price">${money(r.v)}<span class="permo">/mo${r.proj?"":" est"}</span></span>`:`<span class="price">${money(p.price)}</span>`;})()}
         ${p.beds?`<span><b>${p.beds}</b> bd</span>`:""}
         ${p.baths?`<span><b>${p.baths}</b> ba</span>`:""}
         ${p.sqft?`<span><b>${Number(p.sqft).toLocaleString()}</b> sf</span>`:""}
       </div>
+      ${rentOf(p)?`<div class="subprice">list ${money(p.price)}</div>`:""}
       ${p.disqualified
         ? `<div class="dqnote">✕ ${(p.fail_reason||'Objectively non-viable')}</div>`
         : `${p.longshot?`<div class="lsnote">★ ${p.longshot_reason||'Long shot'}</div>`:""}
