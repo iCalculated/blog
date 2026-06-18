@@ -136,6 +136,13 @@
   .fin{background:var(--panel2);border-radius:12px;padding:12px 14px;font-size:13px}
   .fin div{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dashed var(--line)}
   .fin div:last-child{border:none}
+  .pill.flag{background:#a33;cursor:help}
+  .flagbox{margin-top:10px;background:rgba(224,102,107,.10);border:1px solid var(--bad);border-radius:12px;padding:10px 12px}
+  .flaghd{font-size:12.5px;font-weight:600;color:var(--bad);margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+  .flagpts{font-size:11px;font-weight:600;opacity:.8;font-variant-numeric:tabular-nums}
+  .flaglist{margin:0;padding-left:18px;font-size:12.5px;line-height:1.45}
+  .flaglist li{margin:3px 0}
+  .flaglist .fdet{color:var(--muted);font-weight:400}
   .verdict{font-size:12.5px;padding:9px 12px;border-radius:10px;margin-top:10px}
   .verdict.feasible{background:rgba(62,207,142,.13);border:1px solid var(--good)}
   .verdict.not-feasible{background:rgba(224,102,107,.12);border:1px solid var(--bad)}
@@ -221,6 +228,24 @@ const TEN_ICON={vacant:"🟢",occupied:"🔴",mixed:"🟡",unknown:"⚪"};
 function tenChip(p){ const k=p.tenancy||"unknown"; const lbl=p.tenancy_label||"Occupancy TBD";
   const sig=[...(p.occupancy&&p.occupancy.vacant_signals||[]),...(p.occupancy&&p.occupancy.occupied_signals||[])].join(", ");
   return `<span class="ten ${k}" title="${sig?sig.replace(/"/g,'&quot;'):'no tenancy signals found'}">${TEN_ICON[k]||"⚪"} ${lbl}</span>`; }
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+// red-flag pill: shows the count, but hover reveals the actual flags (tooltip).
+function flagPill(p){
+  const rr=p.red_flag_reasons||[];
+  if(!p.red_flags) return "";
+  const n=rr.length;
+  const tip=n?rr.map(r=>"• "+r.flag).join("\n"):"see details";
+  return `<span class="pill flag" title="${esc(tip)}">⚑ ${n?n+(n>1?" flags":" flag"):p.red_flags}</span>`;
+}
+// full red-flag breakdown for the detail modal.
+function flagBlock(p){
+  const rr=p.red_flag_reasons||[];
+  if(!rr.length) return "";
+  return `<div class="flagbox">
+    <div class="flaghd">⚑ Red flags <span class="flagpts">${p.red_flags} pts</span></div>
+    <ul class="flaglist">${rr.map(r=>`<li><b>${esc(r.flag)}</b>${r.detail?` — <span class="fdet">${esc(r.detail)}</span>`:""}</li>`).join("")}</ul>
+  </div>`;
+}
 function localPipe(){ try{return JSON.parse(localStorage.getItem("nyx_pipe")||"{}")}catch{return {}} }
 function setLocalPipe(id,v){ const p=localPipe(); if(v) p[id]=v; else delete p[id]; localStorage.setItem("nyx_pipe",JSON.stringify(p)); }
 function pipeOf(p){ const l=localPipe(); return l[p.id]||p.pipeline||"active"; }
@@ -294,7 +319,7 @@ function rowEl(p){
       <div class="rowbadge">${badge}
         ${!p.disqualified&&pipe==="shortlist"?'<span class="pill shortlist">★</span>':""}
         ${!p.disqualified&&pipe==="rejected"?'<span class="pill rejected">✕</span>':""}
-        ${p.red_flags?`<span class="pill" style="background:#a33">⚑ ${p.red_flags}</span>`:""}
+        ${flagPill(p)}
       </div>
       <div class="addr">${p.address||"—"}</div>
       <div class="hood">${p.neighborhood||""} ${p.category?`· <span class="cat">${p.category}</span>`:""}</div>
@@ -355,7 +380,7 @@ function card(p){
       <div class="pillrow">
         ${!p.disqualified&&pipe==="shortlist"?'<span class="pill shortlist">★ shortlist</span>':""}
         ${!p.disqualified&&pipe==="rejected"?'<span class="pill rejected">✕ rejected</span>':""}
-        ${p.red_flags?`<span class="pill" style="background:#a33">⚑ ${p.red_flags}</span>`:""}
+        ${flagPill(p)}
       </div>
     </div>
     <div class="body">
@@ -479,6 +504,7 @@ function openDetail(p, startIdx){
           ${pr.headcount?`<div><span>Headcount</span><b>${pr.headcount}</b></div>`:""}
           ${p.sqft?`<div><span>Sqft</span><b>${Number(p.sqft).toLocaleString()}</b></div>`:""}
         </div>
+        ${flagBlock(p)}
         ${fe.verdict?`<div class="verdict ${fe.verdict}"><b>Move-in: ${fe.verdict}</b><br>${(fe.rationale||"").slice(0,420)}${(fe.rationale||"").length>420?"…":""}</div>`:""}
       </div>
       ${p.disqualified?"":`<div class="dactions">

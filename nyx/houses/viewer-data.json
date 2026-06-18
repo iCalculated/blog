@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-06-17T19:41:16",
+ "generated_at": "2026-06-17T22:39:44",
  "url_base": "https://icalculated.github.io/shydrie-housing-photos",
  "count": 33,
  "score_fields": [
@@ -133,6 +133,7 @@
     }
    ],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "Newly listed",
    "zpid": "2089893839",
    "photo_count": 44,
@@ -541,6 +542,20 @@
     }
    ],
    "red_flags": -5,
+   "red_flag_reasons": [
+    {
+     "flag": "Photo-12 is a RENDERING",
+     "detail": "outdoor space may not be built yet"
+    },
+    {
+     "flag": "Only 13 photos for a $7M property - less transparency",
+     "detail": ""
+    },
+    {
+     "flag": "Some uncertainty about finished state",
+     "detail": ""
+    }
+   ],
    "notes": "Indoor basketball court; huge sqft for price",
    "zpid": "2100769443",
    "photo_count": 13,
@@ -734,6 +749,16 @@
     }
    ],
    "red_flags": -2,
+   "red_flag_reasons": [
+    {
+     "flag": "5 baths for 8BR is tight",
+     "detail": "morning coordination will be challenging"
+    },
+    {
+     "flag": "No other major red flags identified",
+     "detail": ""
+    }
+   ],
    "notes": "8BR + detached carriage house",
    "zpid": "2107458048",
    "photo_count": 37,
@@ -1097,6 +1122,24 @@
     }
    ],
    "red_flags": -15,
+   "red_flag_reasons": [
+    {
+     "flag": "Multi-unit apartment building",
+     "detail": "configured for 8+ separate households, NOT one group"
+    },
+    {
+     "flag": "Would require major conversion",
+     "detail": "gut reno to combine units, create shared spaces"
+    },
+    {
+     "flag": "Basic finishes throughout - no high-end anything",
+     "detail": ""
+    },
+    {
+     "flag": "Currently generating rental income - owner likely wants investor, not group house buyer",
+     "detail": ""
+    }
+   ],
    "notes": "17BR; original period details",
    "zpid": "2112529064",
    "photo_count": 30,
@@ -1310,6 +1353,28 @@
     }
    ],
    "red_flags": -30,
+   "red_flag_reasons": [
+    {
+     "flag": "MULTI-UNIT BUILDING, NOT A GROUP HOUSE",
+     "detail": "photo-01 shows 5 separate Victorian units with separate entrances"
+    },
+    {
+     "flag": "NO COMMON SPACES for group living",
+     "detail": "this is 11 separate apartments, not a unified house"
+    },
+    {
+     "flag": "Water damage/deferred maintenance",
+     "detail": "photo-05 ceiling stains"
+    },
+    {
+     "flag": "Severe bathroom shortage",
+     "detail": "5 baths for 11 people = major sharing issues"
+    },
+    {
+     "flag": "Cramped bedrooms at 418 sqft/person",
+     "detail": "well below livable group house density"
+    }
+   ],
    "notes": "11BR; large flat-style units",
    "zpid": "89239475",
    "photo_count": 14,
@@ -1413,6 +1478,7 @@
    "score_confidence": 3,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "8BR; open Sun",
    "zpid": "447476991",
    "photo_count": 42,
@@ -1626,6 +1692,7 @@
    "score_confidence": 3,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "6BR; open Sun",
    "zpid": "332856130",
    "photo_count": 56,
@@ -1945,6 +2012,32 @@
     }
    ],
    "red_flags": -35,
+   "red_flag_reasons": [
+    {
+     "flag": "ONLY 4 PHOTOS for a $3.5M property",
+     "detail": "massive transparency issue, seller hiding something"
+    },
+    {
+     "flag": "NO INTERIOR PHOTOS",
+     "detail": "cannot see kitchens, baths, bedrooms, common spaces"
+    },
+    {
+     "flag": "Multi-unit building with ground-floor commercial",
+     "detail": "photo-01/02 show \"Atrium\" storefront"
+    },
+    {
+     "flag": "6 baths for 18BR = 0.33 ratio",
+     "detail": "worst bathroom shortage in entire search"
+    },
+    {
+     "flag": "Extreme density at 359 sqft/person",
+     "detail": "SRO-level cramping"
+    },
+    {
+     "flag": "Category: Multi-family",
+     "detail": "confirms this is NOT a unified group house"
+    }
+   ],
    "notes": "18BR; partial eastern views",
    "zpid": "447129843",
    "photo_count": 4,
@@ -2006,6 +2099,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "11BR; very large apartments",
    "zpid": "2065665855",
    "photo_count": 17,
@@ -2119,6 +2213,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "13BR",
    "zpid": "2055833042",
    "photo_count": 12,
@@ -2217,6 +2312,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "Same property as 67 Belcher; basketball court",
    "zpid": "2078631412",
    "photo_count": 29,
@@ -2378,6 +2474,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "11BR, lots of light",
    "zpid": "2109792043",
    "photo_count": 15,
@@ -2485,6 +2582,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "9BR; lots of natural light",
    "zpid": "461296085",
    "photo_count": 10,
@@ -2570,6 +2668,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "20BR; white cabinetry remodel",
    "zpid": "2067353269",
    "photo_count": 5,
@@ -2635,6 +2734,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "8BR; new roof, big lot",
    "zpid": "455651129",
    "photo_count": 17,
@@ -2751,6 +2851,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "12,000 sqft; bed count not listed",
    "zpid": "2078592125",
    "photo_count": 12,
@@ -2844,6 +2945,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "12,000 sqft; 559 days on mkt (very stale)",
    "zpid": "442680268",
    "photo_count": 11,
@@ -2935,6 +3037,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "12BR",
    "zpid": "462572523",
    "photo_count": 9,
@@ -3018,6 +3121,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "12BR; period details",
    "zpid": "2057725939",
    "photo_count": 40,
@@ -3223,6 +3327,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "10BR; updated windows",
    "zpid": "2102221916",
    "photo_count": 12,
@@ -3319,6 +3424,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "Large building; bed count likely understated",
    "zpid": "2080436582",
    "photo_count": 12,
@@ -3414,6 +3520,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "16BR; private deck, hill views",
    "zpid": "2061469226",
    "photo_count": 34,
@@ -3602,6 +3709,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "13BR; two-car parking",
    "zpid": "462607964",
    "photo_count": 48,
@@ -3841,6 +3949,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "11BR; shared backyard",
    "zpid": "2080637664",
    "photo_count": 14,
@@ -3942,6 +4051,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "8BR; landscaped garden",
    "zpid": "2102711693",
    "photo_count": 16,
@@ -4051,6 +4161,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "8BR; quiet tree-lined setting",
    "zpid": "2100992456",
    "photo_count": 15,
@@ -4156,6 +4267,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "12BR; shared backyard",
    "zpid": "2079266220",
    "photo_count": 11,
@@ -4248,6 +4360,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "18BR; elevator building",
    "zpid": "2073926708",
    "photo_count": 10,
@@ -4333,6 +4446,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "28BR; commercial-scale",
    "zpid": "2115773450",
    "photo_count": 39,
@@ -4534,6 +4648,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "30BR; commercial-scale",
    "zpid": "2107110239",
    "photo_count": 13,
@@ -4631,6 +4746,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "8bd/12ba new build; suite-style layout",
    "zpid": "447274642",
    "photo_count": 8,
@@ -4711,6 +4827,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "27BR; income building",
    "zpid": "2063490575",
    "photo_count": 1,
@@ -4763,6 +4880,7 @@
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
+   "red_flag_reasons": [],
    "notes": "26BR across many small units",
    "zpid": "2098111361",
    "photo_count": 29,
