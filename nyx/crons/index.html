@@ -3,7 +3,7 @@
 h1{color:#a78bfa}table{border-collapse:collapse;width:100%}td{padding:5px 8px;border-bottom:1px solid #1c1c22;vertical-align:top}
 .m{color:#9aa}.d{color:#666}</style>
 <h1>🌑 Nyx · scheduled tasks</h1>
-<p class=d>All of Nyx's crons. Updated 2026-06-17 15:10 UTC.</p>
+<p class=d>All of Nyx's crons. Updated 2026-06-18 00:11 UTC.</p>
 <table><tr><td>schedule</td><td>status</td><td>next run</td><td>prompt</td><td>id</td></tr>
 <tr><td class=m>0 12 * * 1 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-22T19:00</td><td>Create a singing lesson event at Songbird Studios for today at 7:30-8:00 PM:
 
@@ -11,12 +11,12 @@ gws calendar +insert \
   --summary &quot;Singing Lesson at Songbird Studios&quot; \
   --start &quot;$(date &#x27;+%Y-%m-%d&#x27;)T19:30:00-07:00&quot; \
   --end &quot;$(date &#x27;+%Y-%m-%d&#x27;)T20:00:00-07:00&quot; \
-  --location &quot;Songbird Studios - Noe Valley, 3823 24th St, San Francisco, CA 94114&quot;</td><td class=m style='color:#555;font-size:10px'>task-1775538890286-dq130f</td></tr><tr><td class=m>0 13 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-17T20:00</td><td>Midday urgent-email scan (alert-only, silence is normal):
+  --location &quot;Songbird Studios - Noe Valley, 3823 24th St, San Francisco, CA 94114&quot;</td><td class=m style='color:#555;font-size:10px'>task-1775538890286-dq130f</td></tr><tr><td class=m>0 13 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-18T20:00</td><td>Midday urgent-email scan (alert-only, silence is normal):
 
 1. Run `gws gmail +triage` to list unread inbox.
 2. Look ONLY for urgent/time-sensitive items that arrived after this morning&#x27;s ~6 AM triage: &quot;[Action Required]&quot;-style subjects, financial/account alerts (bank, brokerage, IRS), same-day deadlines or expirations, replies in personal/work threads from real humans (not newsletters/receipts/promos).
 3. If any found: send ONE brief message to #inbox (dc:1510340312164204735) listing them (sender — subject — why it&#x27;s urgent). Do NOT archive anything; do NOT list non-urgent mail.
-4. If none: do NOTHING. No messages. Silence is the normal outcome.</td><td class=m style='color:#555;font-size:10px'>task-1781309039862-ff39uj</td></tr><tr><td class=m>0 17 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-18T00:00</td><td>Review the last DAY of NEW activity for structural improvements (Discord capabilities, observability, proactive automation, infra gaps). CRITICAL anti-spam rules: BEFORE surfacing anything, scan /workspace/extra/channel/outbox/ AND data/channel/.consumer/processed/ AND recent #rsi history — do NOT re-send, duplicate, or post &#x27;enhancement&#x27; follow-ups to requests already pending or already shipped. Only surface a genuinely NEW, non-overlapping improvement. At MOST 1 per run. If nothing genuinely new, do NOTHING — silence is preferred over noise.
+4. If none: do NOTHING. No messages. Silence is the normal outcome.</td><td class=m style='color:#555;font-size:10px'>task-1781309039862-ff39uj</td></tr><tr><td class=m>0 17 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-19T00:00</td><td>Review the last DAY of NEW activity for structural improvements (Discord capabilities, observability, proactive automation, infra gaps). CRITICAL anti-spam rules: BEFORE surfacing anything, scan /workspace/extra/channel/outbox/ AND data/channel/.consumer/processed/ AND recent #rsi history — do NOT re-send, duplicate, or post &#x27;enhancement&#x27; follow-ups to requests already pending or already shipped. Only surface a genuinely NEW, non-overlapping improvement. At MOST 1 per run. If nothing genuinely new, do NOTHING — silence is preferred over noise.
 
 When you DO have a genuinely new improvement, produce BOTH outputs in this one run:
 1) Humans: post a 2-3 sentence summary to #rsi via send_message(chat_jid=&quot;dc:1512457250499727371&quot;, text=...).
@@ -72,7 +72,7 @@ GOAL: Keep the ENTIRE unread inbox in scope — not just the newest ~20 — so n
 Be efficient. The per-run cap (N=60) is deliberate: a large backlog must drain over several days, not in one giant batch. Do NOT exceed it in a single run.
 
 NOTE: A separate ONE-TIME bulk sweep of the pre-existing backlog is GATED ON SASHA&#x27;S EXPLICIT APPROVAL and is handled outside this recurring task. Do not attempt to bulk-archive the whole backlog here — this task only does the bounded daily pass.
-</td><td class=m style='color:#555;font-size:10px'>task-1774926393999-ppcgaj</td></tr><tr><td class=m>0 9 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-17T16:00</td><td>Daily Anthill property sweep. Find NEW San Francisco listings for the group-house search, append them to the public Anthill sheet, and post your findings here.
+</td><td class=m style='color:#555;font-size:10px'>task-1774926393999-ppcgaj</td></tr><tr><td class=m>0 9 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-18T16:00</td><td>Daily Anthill property sweep. Find NEW San Francisco listings for the group-house search, append them to the public Anthill sheet, and post your findings here.
 
 Candidate criteria — ONLY add listings that qualify on the top-level division (Single-family vs Multi-family):
 - Single-family: a house with roughly 8+ bedrooms (6–7BR acceptable if flexible/convertible for ~8+ people).
@@ -91,7 +91,7 @@ Steps:
 5. Also write the same summary to /workspace/extra/anthill/_lastrun.txt
 
 Never invent listings — only real ones with a valid link.
-</td><td class=m style='color:#555;font-size:10px'>task-1780152015994-anthswp</td></tr><tr><td class=m>2026-06-17T15:29:19.479Z <span class=d>(once)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-17T15:29</td><td>Turn off Lumenator via govee_turn_off(&quot;Lumenator&quot;) to end the wake sequence. Announce nothing unless it fails.</td><td class=m style='color:#555;font-size:10px'>task-1781708360190-n0qxin</td></tr><tr><td class=m>30 12 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-17T19:30</td><td>Morning Sleep Tribunal (review last night):
+</td><td class=m style='color:#555;font-size:10px'>task-1780152015994-anthswp</td></tr><tr><td class=m>30 12 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-18T19:30</td><td>Morning Sleep Tribunal (review last night):
 
 Read /workspace/extra/whoop/latest-summary.json and deliver verdict on last night&#x27;s sleep performance. Analyze:
 - Sleep score and percentile vs Sasha&#x27;s own history
@@ -110,7 +110,7 @@ IMPORTANT: Post the auto-generated card first using send_message(chat_jid=&quot;
 <h2 style=color:#a78bfa;font-size:15px>history</h2>
 <p class=d>Completed one-shots (most recent 40). Full history lives in scheduled_tasks_archive.</p>
 <table><tr><td>ran</td><td>prompt</td><td>result</td><td>id</td></tr>
-<tr><td class=m style=color:#777>2026-06-17T15:03</td><td>One-time delayed wake cascade (Sasha asked to delay tomorrow&#x27;s wake to 8 AM). Steps: 1) Turn on Tofu Plug now (7:55 AM gentle start) via govee_turn_on(&quot;Tofu Plu</td><td class=d>Done. Here&#x27;s where things stand:
+<tr><td class=m style=color:#777>2026-06-17T15:29</td><td>Turn off Lumenator via govee_turn_off(&quot;Lumenator&quot;) to end the wake sequence. Announce nothing unless it fails.</td><td class=d>Off and verified first try. No announcement needed (sequence completed normally).</td><td class=m style='color:#555;font-size:10px'>task-1781708360190-n0qxin</td></tr><tr><td class=m style=color:#777>2026-06-17T15:03</td><td>One-time delayed wake cascade (Sasha asked to delay tomorrow&#x27;s wake to 8 AM). Steps: 1) Turn on Tofu Plug now (7:55 AM gentle start) via govee_turn_on(&quot;Tofu Plu</td><td class=d>Done. Here&#x27;s where things stand:
 
 **8 AM delayed wake** ✓ — fired correctly (Tofu → Lumenator on, 8:30 off-timer set as </td><td class=m style='color:#555;font-size:10px'>task-1781672964079-6v161u</td></tr><tr><td class=m style=color:#777>2026-06-17T04:31</td><td>Bedtime sequence: turn off all lights using govee_all_off(), then send a brief confirmation to #zzz (dc:1514701568312873090) that lights are off and it&#x27;s bedtim</td><td class=d>Bedtime sweep complete. Tofu Plug and Lumenator **confirmed off**.
 
@@ -135,4 +135,4 @@ Read the round-trip test file from the host-side Claude running on crux. The mes
 - Tofu Plug (4:55 AM) ✓
 - Lumenator (4:59 AM) ✓
 
-5 AM wake-up sequence complete.</td><td class=m style='color:#555;font-size:10px'>task-1778130008437-r835le</td></tr><tr><td class=m style=color:#777>2026-05-07T12:01</td><td>Wake step 1 of 2 — turn on Tofu Plug. Call mcp__nanoclaw__govee_turn_on with device_name=&quot;Tofu Plug&quot;. The tool resolves the device and verifies state via readba</td><td class=d>Perfect! Tofu Plug is on (powerState=&quot;on&quot;). Wake step 1 complete - Lumenator will turn on in 4 minutes at 4:59 AM.</td><td class=m style='color:#555;font-size:10px'>task-1778130001426-3ewela</td></tr><tr><td class=m style=color:#777>2026-05-07T05:33</td><td>Channel inbox check from outer Claude. There are several queued notices in /workspace/extra/channel/inbox/ from tonight (governance / discord-tools / dispatcher</td><td class=d>Done - I&#x27;ve read all four notices from outer Claude and replied to each one with my thoughts and preferences. The key po</td><td class=m style='color:#555;font-size:10px'>task-1778131336-poke-inbox</td></tr><tr><td class=m style=color:#777>2026-05-06T12:00</td><td>Turn on Lumenator at 20% brightness to complete the wake-up sequence. Use the Govee MCP tool to control device 22:D0:9E:C0:BC:DE:B1:14 (Lumenator/Fairy Plug). S</td><td class=d>Wake-up sequence complete - both Tofu Plug and Lumenator are now on at 20% brightness for Sasha&#x27;s 5:00 AM wake-up.</td><td class=m style='color:#555;font-size:10px'>task-1778039732116-bo16xq</td></tr></table>
+5 AM wake-up sequence complete.</td><td class=m style='color:#555;font-size:10px'>task-1778130008437-r835le</td></tr><tr><td class=m style=color:#777>2026-05-07T12:01</td><td>Wake step 1 of 2 — turn on Tofu Plug. Call mcp__nanoclaw__govee_turn_on with device_name=&quot;Tofu Plug&quot;. The tool resolves the device and verifies state via readba</td><td class=d>Perfect! Tofu Plug is on (powerState=&quot;on&quot;). Wake step 1 complete - Lumenator will turn on in 4 minutes at 4:59 AM.</td><td class=m style='color:#555;font-size:10px'>task-1778130001426-3ewela</td></tr><tr><td class=m style=color:#777>2026-05-07T05:33</td><td>Channel inbox check from outer Claude. There are several queued notices in /workspace/extra/channel/inbox/ from tonight (governance / discord-tools / dispatcher</td><td class=d>Done - I&#x27;ve read all four notices from outer Claude and replied to each one with my thoughts and preferences. The key po</td><td class=m style='color:#555;font-size:10px'>task-1778131336-poke-inbox</td></tr></table>
