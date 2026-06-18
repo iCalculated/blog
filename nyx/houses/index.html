@@ -28,6 +28,10 @@
   .photo img{width:100%;height:100%;object-fit:cover;display:block}
   .photo .nophoto{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px}
   .badge{position:absolute;top:10px;left:10px;width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#0c0e12;box-shadow:0 2px 10px rgba(0,0,0,.4)}
+  .badge.fail{width:auto;height:auto;border-radius:9px;padding:5px 9px;font-size:12px;letter-spacing:.5px;background:#e0666b;color:#1a0707}
+  .card.dq{opacity:.62}
+  .card.dq:hover{opacity:1}
+  .card.dq .photo::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(224,102,107,.05)0,rgba(224,102,107,.05)10px,rgba(0,0,0,0)10px,rgba(0,0,0,0)20px);pointer-events:none}
   .pillrow{position:absolute;top:10px;right:10px;display:flex;gap:6px;flex-direction:column;align-items:flex-end}
   .pill{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(0,0,0,.55);color:#fff;text-transform:uppercase;letter-spacing:.4px}
   .pill.shortlist{background:var(--good);color:#06140d}
@@ -76,6 +80,7 @@
   .close{position:absolute;top:14px;right:16px;z-index:5;background:rgba(0,0,0,.55);color:#fff;border:none;width:34px;height:34px;border-radius:50%;font-size:18px;cursor:pointer}
   .dactions{grid-column:1/-1;display:flex;gap:10px}
   .dactions .btn{flex:1;padding:11px;font-size:13.5px}
+  .dqnote{margin-top:auto;padding-top:8px;font-size:12px;color:var(--bad);line-height:1.35}
   .empty{color:var(--muted);text-align:center;padding:60px 20px}
   @media(max-width:680px){.detail{grid-template-columns:1fr}.grid{padding:12px;gap:12px}}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--accent);color:var(--txt);padding:10px 16px;border-radius:10px;font-size:13px;z-index:90;opacity:0;transition:.2s;pointer-events:none}
@@ -93,10 +98,12 @@
       <input type="search" id="q" placeholder="Search address / hood…">
       <select id="fcat"><option value="">All categories</option></select>
       <select id="fpipe">
-        <option value="">All pipeline</option>
+        <option value="candidates">Candidates (hide DQ'd)</option>
+        <option value="">Everything</option>
         <option value="active">Active</option>
         <option value="shortlist">Shortlisted</option>
         <option value="rejected">Rejected</option>
+        <option value="disqualified">Disqualified</option>
       </select>
       <select id="sort">
         <option value="score">Sort: Score ↓</option>
@@ -129,7 +136,8 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("sh
 async function load(){
   const r=await fetch("viewer-data.json?_="+Date.now());
   DATA=await r.json();
-  $("#count").textContent="· "+DATA.count+" homes";
+  const nDq=DATA.properties.filter(p=>p.disqualified).length, nCand=DATA.count-nDq;
+  $("#count").textContent="· "+nCand+" candidates · "+nDq+" disqualified";
   $("#gen").textContent="updated "+(DATA.generated_at||"").replace("T"," ");
   const cats=[...new Set(DATA.properties.map(p=>p.category).filter(Boolean))].sort();
   for(const c of cats){ const o=document.createElement("option"); o.value=c;o.textContent=c; $("#fcat").appendChild(o); }
@@ -141,7 +149,9 @@ function render(){
   const q=$("#q").value.toLowerCase().trim(), fc=$("#fcat").value, fp=$("#fpipe").value, sort=$("#sort").value;
   let arr=DATA.properties.filter(p=>{
     if(fc && p.category!==fc) return false;
-    if(fp && pipeOf(p)!==fp) return false;
+    if(fp==="candidates"){ if(p.disqualified) return false; }
+    else if(fp==="disqualified"){ if(!p.disqualified) return false; }
+    else if(fp){ if(p.disqualified) return false; if(pipeOf(p)!==fp) return false; }
     if(q && !((p.address||"").toLowerCase().includes(q)||(p.neighborhood||"").toLowerCase().includes(q))) return false;
     return true;
   });
@@ -155,17 +165,20 @@ function render(){
 }
 
 function card(p){
-  const el=document.createElement("div"); el.className="card";
+  const el=document.createElement("div"); el.className="card"+(p.disqualified?" dq":"");
   const pipe=pipeOf(p);
   const t=p.score_total;
+  const badge = p.disqualified
+    ? `<div class="badge fail" title="${(p.fail_reason||'Analyzed and ruled non-viable').replace(/"/g,'&quot;')}">✕ FAIL</div>`
+    : `<div class="badge" style="background:${scoreColor(t)}">${t==null?"—":t}</div>`;
   el.innerHTML=`
     <div class="photo">
       ${p.hero?`<img loading="lazy" src="${p.hero}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`:""}
       <div class="nophoto" style="display:${p.hero?'none':'flex'}">📷 photos syncing…</div>
-      <div class="badge" style="background:${scoreColor(t)}">${t==null?"—":t}</div>
+      ${badge}
       <div class="pillrow">
-        ${pipe==="shortlist"?'<span class="pill shortlist">★ shortlist</span>':""}
-        ${pipe==="rejected"?'<span class="pill rejected">✕ rejected</span>':""}
+        ${!p.disqualified&&pipe==="shortlist"?'<span class="pill shortlist">★ shortlist</span>':""}
+        ${!p.disqualified&&pipe==="rejected"?'<span class="pill rejected">✕ rejected</span>':""}
         ${p.red_flags?`<span class="pill" style="background:#a33">⚑ ${p.red_flags}</span>`:""}
       </div>
     </div>
@@ -178,10 +191,12 @@ function card(p){
         ${p.baths?`<span><b>${p.baths}</b> ba</span>`:""}
         ${p.sqft?`<span><b>${Number(p.sqft).toLocaleString()}</b> sf</span>`:""}
       </div>
-      <div class="actions">
-        <button class="btn short ${pipe==='shortlist'?'on':''}" data-act="shortlist">★ Shortlist</button>
-        <button class="btn rej ${pipe==='rejected'?'on':''}" data-act="rejected">✕ Reject</button>
-      </div>
+      ${p.disqualified
+        ? `<div class="dqnote">✕ ${(p.fail_reason||'Analyzed and ruled non-viable')}</div>`
+        : `<div class="actions">
+            <button class="btn short ${pipe==='shortlist'?'on':''}" data-act="shortlist">★ Shortlist</button>
+            <button class="btn rej ${pipe==='rejected'?'on':''}" data-act="rejected">✕ Reject</button>
+          </div>`}
     </div>`;
   el.querySelector(".photo").addEventListener("click",()=>openDetail(p));
   el.querySelector(".body .addr").addEventListener("click",()=>openDetail(p));
@@ -236,10 +251,12 @@ function openDetail(p){
         <h2>${p.address||"—"}</h2>
         <div class="dmeta">${p.neighborhood||""} ${p.category?"· "+p.category:""} ${p.zpid?`· <a href="https://www.zillow.com/homedetails/${p.zpid}_zpid/" target="_blank">Zillow ↗</a>`:""}</div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <div class="badge" style="position:static;background:${scoreColor(p.score_total)}">${p.score_total==null?"—":p.score_total}</div>
-          <div style="font-size:13px;color:#9aa3b2">overall score${p.score_confidence?` · confidence ${p.score_confidence}/5`:""}</div>
+          ${p.disqualified
+            ? `<div class="badge fail" style="position:static">✕ FAIL</div>`
+            : `<div class="badge" style="position:static;background:${scoreColor(p.score_total)}">${p.score_total==null?"—":p.score_total}</div>`}
+          <div style="font-size:13px;color:#9aa3b2">${p.disqualified?"disqualified · analyzed non-viable":"overall score"+(p.score_confidence?` · confidence ${p.score_confidence}/5`:"")}</div>
         </div>
-        ${bars||'<div class="sub">No score breakdown.</div>'}
+        ${p.disqualified?`<div class="verdict not-feasible"><b>Why FAIL:</b> ${p.fail_reason||'Analyzed and ruled non-viable.'}</div>`:(bars||'<div class="sub">No score breakdown.</div>')}
         ${p.notes?`<div class="dmeta" style="margin-top:10px">📝 ${p.notes}</div>`:""}
       </div>
       <div>
@@ -253,10 +270,10 @@ function openDetail(p){
         </div>
         ${fe.verdict?`<div class="verdict ${fe.verdict}"><b>Move-in: ${fe.verdict}</b><br>${(fe.rationale||"").slice(0,420)}${(fe.rationale||"").length>420?"…":""}</div>`:""}
       </div>
-      <div class="dactions">
+      ${p.disqualified?"":`<div class="dactions">
         <button class="btn short ${pipe==='shortlist'?'on':''}" onclick="togglePipe(CUR,'shortlist')">★ Shortlist</button>
         <button class="btn rej ${pipe==='rejected'?'on':''}" onclick="togglePipe(CUR,'rejected')">✕ Reject</button>
-      </div>
+      </div>`}
     </div>`;
   $("#modal").classList.add("open");
   if(photos.length) updateCarousel();

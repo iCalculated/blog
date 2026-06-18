@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-06-17T18:58:46",
+ "generated_at": "2026-06-17T19:08:10",
  "url_base": "https://icalculated.github.io/shydrie-housing-photos",
  "count": 33,
  "score_fields": [
@@ -73,6 +73,8 @@
     "rationale": "This property is fundamentally incompatible with group-house living for multiple blocking reasons: (1) FOR SALE at $25M\u2014group leasing requires an investor/owner willing to lease back, which is virtually unheard of at this price tier; trophy properties sell to owner-occupants or investors seeking appreciation, not rental yield. (2) The 2026 Decorator Showcase renovation positions this as a museum-quality showpiece\u2014no landlord would expose $25M of bespoke finishes, hand-painted murals, and custom marble to group-house wear. (3) Prestige mismatch: this is a landmark mansion designed for a single wealthy family or executive, not a coliving arrangement. The architectural integrity, original millwork, and 9 fireplaces are assets for a private estate, liabilities for group durability. (4) Even if an investor agreed to lease it, $70k/mo rent (~$280k annual vs $25M purchase = 1.1% yield) makes zero financial sense; they'd want $15-20k/mo minimum for viable returns, making per-person cost astronomical. Verdict: this is a once-in-a-generation sale of a San Francisco landmark. A group of friends cannot move in soon\u2014or likely ever."
    },
    "score_total": 72,
+   "disqualified": false,
+   "fail_reason": null,
    "score_confidence": 3,
    "score_breakdown": [
     {
@@ -465,6 +467,8 @@
     "rationale": "This is a FOR SALE property at $6.975M, not a rental. Acquisition or master-lease negotiation at this price point is extremely challenging for a group house. The description mentions 67 Belcher is currently leased month-to-month and 69 Belcher (the warehouse studio) 'can be delivered vacant,' suggesting some flexibility, but no indication the owner is interested in a long-term group lease vs. selling to a developer (property is approved for 31-unit condo conversion). The property is spectacular and move-in ready with incredible amenities, but accessing it requires either purchasing at $7M or convincing the owner to do a creative lease arrangement instead of selling\u2014both are long shots for a group-house search."
    },
    "score_total": 60,
+   "disqualified": false,
+   "fail_reason": null,
    "score_confidence": 4,
    "score_breakdown": [
     {
@@ -642,6 +646,8 @@
     "rationale": "MAJOR RED FLAG: Description explicitly states 3 of 4 units are tenant-occupied with in-place income, only the oversized 3BR unit is vacant. For a group-house lease, you need the entire building vacant. SF tenant protections make evicting existing tenants extremely difficult\u2014requires just cause (Ellis Act, owner move-in, etc.), 120+ days notice, relocation payments averaging $7k-$20k per tenant, and potential legal challenges. Even if buyer negotiates vacant possession at close, existing tenants have strong legal protections and the process typically takes 6-12+ months. The one vacant 3BR unit could theoretically house 3-4 people immediately, but that defeats the purpose of an 8-person group house. Unless the seller pre-negotiates buyouts with all tenants or uses Ellis Act (which requires taking the entire building off rental market for 5+ years), this is not realistically move-in ready for a whole-building group lease. Best case: 6-12 month timeline with significant legal/buyout costs. Worst case: tied up in litigation for years."
    },
    "score_total": 56,
+   "disqualified": false,
+   "fail_reason": null,
    "score_confidence": 4,
    "score_breakdown": [
     {
@@ -994,6 +1000,8 @@
     "rationale": null
    },
    "score_total": 13,
+   "disqualified": false,
+   "fail_reason": null,
    "score_confidence": 2,
    "score_breakdown": [
     {
@@ -1194,6 +1202,8 @@
     "rationale": null
    },
    "score_total": -4,
+   "disqualified": false,
+   "fail_reason": null,
    "score_confidence": 2,
    "score_breakdown": [
     {
@@ -1330,6 +1340,8 @@
     "rationale": null
    },
    "score_total": -12,
+   "disqualified": false,
+   "fail_reason": null,
    "score_confidence": 3,
    "score_breakdown": [],
    "red_flags": 0,
@@ -1532,6 +1544,8 @@
     "rationale": null
    },
    "score_total": -15,
+   "disqualified": false,
+   "fail_reason": null,
    "score_confidence": 3,
    "score_breakdown": [],
    "red_flags": 0,
@@ -1790,6 +1804,8 @@
     "rationale": null
    },
    "score_total": -24,
+   "disqualified": false,
+   "fail_reason": null,
    "score_confidence": 6,
    "score_breakdown": [
     {
@@ -1886,6 +1902,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "18BR; elevator building",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -1960,6 +1978,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "28BR; commercial-scale",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -2150,6 +2170,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "30BR; commercial-scale",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -2236,6 +2258,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "8bd/12ba new build; suite-style layout",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -2302,6 +2326,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "11BR; very large apartments",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -2404,6 +2430,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "13BR",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -2486,6 +2514,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "27BR; income building",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -2524,6 +2554,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "Same property as 67 Belcher; basketball court",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -2674,6 +2706,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "11BR, lots of light",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -2768,6 +2802,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "9BR; lots of natural light",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -2842,6 +2878,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "20BR; white cabinetry remodel",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -2896,6 +2934,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "26BR across many small units",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -3046,6 +3086,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "8BR; new roof, big lot",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -3148,6 +3190,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "12,000 sqft; bed count not listed",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -3230,6 +3274,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "12,000 sqft; 559 days on mkt (very stale)",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -3308,6 +3354,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "12BR",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -3378,6 +3426,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "12BR; period details",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -3572,6 +3622,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "10BR; updated windows",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -3654,6 +3706,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "Large building; bed count likely understated",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -3736,6 +3790,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "16BR; private deck, hill views",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -3906,6 +3962,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "13BR; two-car parking",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -4132,6 +4190,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "11BR; shared backyard",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -4222,6 +4282,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "8BR; landscaped garden",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -4320,6 +4382,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "8BR; quiet tree-lined setting",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
@@ -4414,6 +4478,8 @@
     "rationale": null
    },
    "score_total": null,
+   "disqualified": true,
+   "fail_reason": "12BR; shared backyard",
    "score_confidence": 0,
    "score_breakdown": [],
    "red_flags": 0,
