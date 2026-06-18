@@ -3,7 +3,7 @@
 h1{color:#a78bfa}table{border-collapse:collapse;width:100%}td{padding:5px 8px;border-bottom:1px solid #1c1c22;vertical-align:top}
 .m{color:#9aa}.d{color:#666}</style>
 <h1>🌑 Nyx · scheduled tasks</h1>
-<p class=d>All of Nyx's crons. Updated 2026-06-18 21:27 UTC.</p>
+<p class=d>All of Nyx's crons. Updated 2026-06-18 21:29 UTC.</p>
 <table><tr><td>schedule</td><td>status</td><td>next run</td><td>prompt</td><td>id</td></tr>
 <tr><td class=m>0 12 * * 1 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-22T19:00</td><td>Create a singing lesson event at Songbird Studios for today at 7:30-8:00 PM:
 
@@ -28,7 +28,13 @@ STEPS:
    - &quot;📬 Fresh &amp; worth a look:&quot; then sender — subject — why it likely needs a response
 5. If none: do NOTHING. No message. Silence is the normal outcome.
 
-Bias toward surfacing a borderline personal/financial email (category B) rather than letting it slip — a false positive (one extra line) is cheaper than Sasha missing a real outreach. When genuinely unsure if something is actionable, include it under &quot;Fresh &amp; worth a look.&quot;</td><td class=m style='color:#555;font-size:10px'>task-1781818025164-ou2mky</td></tr><tr><td class=m>0 17 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-19T00:00</td><td>Review the last DAY of NEW activity for structural improvements (Discord capabilities, observability, proactive automation, infra gaps). CRITICAL anti-spam rules: BEFORE surfacing anything, scan /workspace/extra/channel/outbox/ AND data/channel/.consumer/processed/ AND recent #rsi history — do NOT re-send, duplicate, or post &#x27;enhancement&#x27; follow-ups to requests already pending or already shipped. Only surface a genuinely NEW, non-overlapping improvement. At MOST 1 per run. If nothing genuinely new, do NOTHING — silence is preferred over noise.
+Bias toward surfacing a borderline personal/financial email (category B) rather than letting it slip — a false positive (one extra line) is cheaper than Sasha missing a real outreach. When genuinely unsure if something is actionable, include it under &quot;Fresh &amp; worth a look.&quot;</td><td class=m style='color:#555;font-size:10px'>task-1781818025164-ou2mky</td></tr><tr><td class=m>0 13 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-19T20:00</td><td>Midday fresh-mail scan (urgent + fresh-actionable). Run gws to look at mail that arrived since this morning&#x27;s triage. Query: `gws gmail users messages list --params &#x27;{&quot;userId&quot;:&quot;me&quot;,&quot;q&quot;:&quot;in:inbox is:unread newer_than:1d&quot;,&quot;maxResults&quot;:50}&#x27;`. For each, read enough to classify:
+
+CATEGORY A — URGENT: time-sensitive, deadline, security/account alert, payment due, anything that breaks if ignored today.
+
+CATEGORY B — FRESH &amp; ACTIONABLE: real human / personal / financial-advisor / scheduling mail that wants a response from Sasha, even if not narrowly &quot;urgent.&quot; This is the Stardust Wealth gap — an advisor email that needs a reply but isn&#x27;t a deadline. Bias toward surfacing borderline personal/financial mail rather than letting it sink into the backlog.
+
+If anything is in A or B, post a short digest to #inbox (dc:1510340312164204735): sender, one-line subject/why, and the category. If NOTHING qualifies, send no message (silence is normal). Do not archive anything in this scan — just surface. Skip pure newsletters/promos/receipts.</td><td class=m style='color:#555;font-size:10px'>task-1781818195628-m248nh</td></tr><tr><td class=m>0 17 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-19T00:00</td><td>Review the last DAY of NEW activity for structural improvements (Discord capabilities, observability, proactive automation, infra gaps). CRITICAL anti-spam rules: BEFORE surfacing anything, scan /workspace/extra/channel/outbox/ AND data/channel/.consumer/processed/ AND recent #rsi history — do NOT re-send, duplicate, or post &#x27;enhancement&#x27; follow-ups to requests already pending or already shipped. Only surface a genuinely NEW, non-overlapping improvement. At MOST 1 per run. If nothing genuinely new, do NOTHING — silence is preferred over noise.
 
 When you DO have a genuinely new improvement, produce BOTH outputs in this one run:
 1) Humans: post a 2-3 sentence summary to #rsi via send_message(chat_jid=&quot;dc:1512457250499727371&quot;, text=...).
