@@ -3,7 +3,7 @@
 h1{color:#a78bfa}table{border-collapse:collapse;width:100%}td{padding:5px 8px;border-bottom:1px solid #1c1c22;vertical-align:top}
 .m{color:#9aa}.d{color:#666}</style>
 <h1>🌑 Nyx · scheduled tasks</h1>
-<p class=d>All of Nyx's crons. Updated 2026-06-18 21:26 UTC.</p>
+<p class=d>All of Nyx's crons. Updated 2026-06-18 21:27 UTC.</p>
 <table><tr><td>schedule</td><td>status</td><td>next run</td><td>prompt</td><td>id</td></tr>
 <tr><td class=m>0 12 * * 1 <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-22T19:00</td><td>Create a singing lesson event at Songbird Studios for today at 7:30-8:00 PM:
 
@@ -11,7 +11,24 @@ gws calendar +insert \
   --summary &quot;Singing Lesson at Songbird Studios&quot; \
   --start &quot;$(date &#x27;+%Y-%m-%d&#x27;)T19:30:00-07:00&quot; \
   --end &quot;$(date &#x27;+%Y-%m-%d&#x27;)T20:00:00-07:00&quot; \
-  --location &quot;Songbird Studios - Noe Valley, 3823 24th St, San Francisco, CA 94114&quot;</td><td class=m style='color:#555;font-size:10px'>task-1775538890286-dq130f</td></tr><tr><td class=m>0 17 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-19T00:00</td><td>Review the last DAY of NEW activity for structural improvements (Discord capabilities, observability, proactive automation, infra gaps). CRITICAL anti-spam rules: BEFORE surfacing anything, scan /workspace/extra/channel/outbox/ AND data/channel/.consumer/processed/ AND recent #rsi history — do NOT re-send, duplicate, or post &#x27;enhancement&#x27; follow-ups to requests already pending or already shipped. Only surface a genuinely NEW, non-overlapping improvement. At MOST 1 per run. If nothing genuinely new, do NOTHING — silence is preferred over noise.
+  --location &quot;Songbird Studios - Noe Valley, 3823 24th St, San Francisco, CA 94114&quot;</td><td class=m style='color:#555;font-size:10px'>task-1775538890286-dq130f</td></tr><tr><td class=m>0 13 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-19T20:00</td><td>Midday fresh-mail scan (urgent + fresh-actionable; alert-only, silence is normal):
+
+This scan catches mail that arrived AFTER this morning&#x27;s ~6 AM triage. The morning triage drains the backlog oldest-first, so fresh mail is NOT covered by it — this scan is the safety net for new arrivals. Surface two categories:
+
+A) URGENT/time-sensitive: &quot;[Action Required]&quot;-style subjects, financial/account/security alerts (bank, brokerage, IRS), same-day deadlines or expirations, replies in personal/work threads from real humans.
+
+B) FRESH &amp; ACTIONABLE (NEW — this is the gap that let a Stardust Wealth advisor intro sit unsurfaced): mail from a real human / personal contact / financial advisor / scheduling that needs a response or decision from Sasha, even if it&#x27;s not narrowly &quot;urgent.&quot; Examples: a personal intro/outreach, a meeting request, a reply in a real thread, a service/advisor follow-up. NOT newsletters, promos, receipts, order confirmations, social notifications, or automated digests.
+
+STEPS:
+1. Enumerate unread inbox mail that arrived since ~6 AM today. Run: gws gmail users messages list --params &#x27;{&quot;userId&quot;:&quot;me&quot;,&quot;q&quot;:&quot;in:inbox is:unread newer_than:1d&quot;,&quot;maxResults&quot;:50}&#x27;. For each, fetch From/Subject/Date (metadata format).
+2. Classify each into A (urgent), B (fresh &amp; actionable), or neither (skip).
+3. Do NOT archive anything. Do NOT list non-actionable mail.
+4. If any A or B items found: send ONE brief message to #inbox (dc:1510340312164204735), grouped:
+   - &quot;⚡ Urgent:&quot; then sender — subject — why
+   - &quot;📬 Fresh &amp; worth a look:&quot; then sender — subject — why it likely needs a response
+5. If none: do NOTHING. No message. Silence is the normal outcome.
+
+Bias toward surfacing a borderline personal/financial email (category B) rather than letting it slip — a false positive (one extra line) is cheaper than Sasha missing a real outreach. When genuinely unsure if something is actionable, include it under &quot;Fresh &amp; worth a look.&quot;</td><td class=m style='color:#555;font-size:10px'>task-1781818025164-ou2mky</td></tr><tr><td class=m>0 17 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-06-19T00:00</td><td>Review the last DAY of NEW activity for structural improvements (Discord capabilities, observability, proactive automation, infra gaps). CRITICAL anti-spam rules: BEFORE surfacing anything, scan /workspace/extra/channel/outbox/ AND data/channel/.consumer/processed/ AND recent #rsi history — do NOT re-send, duplicate, or post &#x27;enhancement&#x27; follow-ups to requests already pending or already shipped. Only surface a genuinely NEW, non-overlapping improvement. At MOST 1 per run. If nothing genuinely new, do NOTHING — silence is preferred over noise.
 
 When you DO have a genuinely new improvement, produce BOTH outputs in this one run:
 1) Humans: post a 2-3 sentence summary to #rsi via send_message(chat_jid=&quot;dc:1512457250499727371&quot;, text=...).
