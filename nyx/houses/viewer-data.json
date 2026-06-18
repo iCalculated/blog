@@ -1,0 +1,4473 @@
+{
+ "generated_at": "2026-06-17T18:58:46",
+ "url_base": "https://icalculated.github.io/shydrie-housing-photos",
+ "count": 33,
+ "score_fields": [
+  {
+   "key": "common_spaces",
+   "label": "Common spaces",
+   "max": 15
+  },
+  {
+   "key": "natural_light",
+   "label": "Natural light",
+   "max": 10
+  },
+  {
+   "key": "kitchen_quality",
+   "label": "Kitchen",
+   "max": 10
+  },
+  {
+   "key": "condition_finishes",
+   "label": "Condition / finishes",
+   "max": 10
+  },
+  {
+   "key": "character_charm",
+   "label": "Character / charm",
+   "max": 10
+  },
+  {
+   "key": "bathroom_quality",
+   "label": "Bathrooms",
+   "max": 10
+  },
+  {
+   "key": "outdoor_space",
+   "label": "Outdoor space",
+   "max": 5
+  },
+  {
+   "key": "storage_closets",
+   "label": "Storage",
+   "max": 5
+  },
+  {
+   "key": "bedrooms",
+   "label": "Bedrooms",
+   "max": 5
+  }
+ ],
+ "properties": [
+  {
+   "id": "L003",
+   "address": "2315 Broadway St",
+   "slug": "2315-broadway-st",
+   "category": "Single-family",
+   "neighborhood": "Pacific Heights",
+   "beds": 9.0,
+   "baths": 8.0,
+   "sqft": 9325.0,
+   "price": 25000000,
+   "est_rent": 45000,
+   "rent_per_person": 5000,
+   "projected_rent": {
+    "monthly": 70000,
+    "per_person": 7778,
+    "dollars_per_sqft": 7.5,
+    "headcount": 9
+   },
+   "feasibility": {
+    "verdict": "not-feasible",
+    "rationale": "This property is fundamentally incompatible with group-house living for multiple blocking reasons: (1) FOR SALE at $25M\u2014group leasing requires an investor/owner willing to lease back, which is virtually unheard of at this price tier; trophy properties sell to owner-occupants or investors seeking appreciation, not rental yield. (2) The 2026 Decorator Showcase renovation positions this as a museum-quality showpiece\u2014no landlord would expose $25M of bespoke finishes, hand-painted murals, and custom marble to group-house wear. (3) Prestige mismatch: this is a landmark mansion designed for a single wealthy family or executive, not a coliving arrangement. The architectural integrity, original millwork, and 9 fireplaces are assets for a private estate, liabilities for group durability. (4) Even if an investor agreed to lease it, $70k/mo rent (~$280k annual vs $25M purchase = 1.1% yield) makes zero financial sense; they'd want $15-20k/mo minimum for viable returns, making per-person cost astronomical. Verdict: this is a once-in-a-generation sale of a San Francisco landmark. A group of friends cannot move in soon\u2014or likely ever."
+   },
+   "score_total": 72,
+   "score_confidence": 3,
+   "score_breakdown": [
+    {
+     "label": "Common spaces",
+     "value": 14,
+     "max": 15
+    },
+    {
+     "label": "Natural light",
+     "value": 9,
+     "max": 10
+    },
+    {
+     "label": "Kitchen",
+     "value": 10,
+     "max": 10
+    },
+    {
+     "label": "Condition / finishes",
+     "value": 10,
+     "max": 10
+    },
+    {
+     "label": "Character / charm",
+     "value": 10,
+     "max": 10
+    },
+    {
+     "label": "Bathrooms",
+     "value": 8,
+     "max": 10
+    },
+    {
+     "label": "Outdoor space",
+     "value": 5,
+     "max": 5
+    },
+    {
+     "label": "Storage",
+     "value": 4,
+     "max": 5
+    },
+    {
+     "label": "Bedrooms",
+     "value": 2,
+     "max": 5
+    }
+   ],
+   "red_flags": 0,
+   "notes": "Newly listed",
+   "zpid": "2089893839",
+   "photo_count": 44,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-01.jpg",
+     "categories": [
+      "exterior",
+      "outdoor_space"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-02.jpg",
+     "categories": [
+      "exterior"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-03.jpg",
+     "categories": [
+      "exterior",
+      "outdoor_space"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-04.jpg",
+     "categories": [
+      "common_spaces",
+      "character_charm",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-05.jpg",
+     "categories": [
+      "common_spaces",
+      "character_charm",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-06.jpg",
+     "categories": [
+      "common_spaces",
+      "character_charm",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-07.jpg",
+     "categories": [
+      "common_spaces",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-08.jpg",
+     "categories": [
+      "common_spaces",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-09.jpg",
+     "categories": [
+      "kitchen",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-10.jpg",
+     "categories": [
+      "kitchen",
+      "character_charm",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-11.jpg",
+     "categories": [
+      "kitchen",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-12.jpg",
+     "categories": [
+      "kitchen",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-13.jpg",
+     "categories": [
+      "kitchen",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-14.jpg",
+     "categories": [
+      "bathroom",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-15.jpg",
+     "categories": [
+      "bathroom",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-16.jpg",
+     "categories": [
+      "common_spaces",
+      "character_charm",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-17.jpg",
+     "categories": [
+      "bedroom",
+      "outdoor_space",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-18.jpg",
+     "categories": [
+      "bedroom",
+      "outdoor_space",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-19.jpg",
+     "categories": [
+      "bedroom",
+      "outdoor_space",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-20.jpg",
+     "categories": [
+      "bathroom",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-21.jpg",
+     "categories": [
+      "bathroom",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-22.jpg",
+     "categories": [
+      "bedroom",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-23.jpg",
+     "categories": [
+      "bedroom",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-24.jpg",
+     "categories": [
+      "bedroom",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-25.jpg",
+     "categories": [
+      "bathroom",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-26.jpg",
+     "categories": [
+      "outdoor_space",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-27.jpg",
+     "categories": [
+      "common_spaces",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-28.jpg",
+     "categories": [
+      "bedroom",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-29.jpg",
+     "categories": [
+      "bathroom",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-30.jpg",
+     "categories": [
+      "bathroom",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-31.jpg",
+     "categories": [
+      "kitchen",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-32.jpg",
+     "categories": [
+      "common_spaces",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-33.jpg",
+     "categories": [
+      "common_spaces",
+      "outdoor_space",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-34.jpg",
+     "categories": [
+      "common_spaces",
+      "outdoor_space"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-35.jpg",
+     "categories": [
+      "common_spaces",
+      "outdoor_space"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-36.jpg",
+     "categories": [
+      "kitchen",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-37.jpg",
+     "categories": [
+      "bathroom",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-38.jpg",
+     "categories": [
+      "bedroom",
+      "character_charm",
+      "outdoor_space"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-39.jpg",
+     "categories": [
+      "outdoor_space"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-40.jpg",
+     "categories": [
+      "outdoor_space",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-41.jpg",
+     "categories": [
+      "outdoor_space"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-42.jpg",
+     "categories": [
+      "outdoor_space"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-43.jpg",
+     "categories": [
+      "outdoor_space"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-44.jpg",
+     "categories": [
+      "floorplan"
+     ]
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/2315-broadway-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L009",
+   "address": "67 Belcher St",
+   "slug": "67-belcher-st",
+   "category": "Single-family",
+   "neighborhood": "Castro / Duboce",
+   "beds": 7.0,
+   "baths": 6.0,
+   "sqft": 18964.0,
+   "price": 6975000,
+   "est_rent": 15345,
+   "rent_per_person": 2192,
+   "projected_rent": {
+    "monthly": 32000,
+    "per_person": 4000,
+    "dollars_per_sqft": 3.56,
+    "headcount": 8
+   },
+   "feasibility": {
+    "verdict": "long-shot",
+    "rationale": "This is a FOR SALE property at $6.975M, not a rental. Acquisition or master-lease negotiation at this price point is extremely challenging for a group house. The description mentions 67 Belcher is currently leased month-to-month and 69 Belcher (the warehouse studio) 'can be delivered vacant,' suggesting some flexibility, but no indication the owner is interested in a long-term group lease vs. selling to a developer (property is approved for 31-unit condo conversion). The property is spectacular and move-in ready with incredible amenities, but accessing it requires either purchasing at $7M or convincing the owner to do a creative lease arrangement instead of selling\u2014both are long shots for a group-house search."
+   },
+   "score_total": 60,
+   "score_confidence": 4,
+   "score_breakdown": [
+    {
+     "label": "Common spaces",
+     "value": 12,
+     "max": 15
+    },
+    {
+     "label": "Natural light",
+     "value": 10,
+     "max": 10
+    },
+    {
+     "label": "Kitchen",
+     "value": 6,
+     "max": 10
+    },
+    {
+     "label": "Condition / finishes",
+     "value": 8,
+     "max": 10
+    },
+    {
+     "label": "Character / charm",
+     "value": 9,
+     "max": 10
+    },
+    {
+     "label": "Bathrooms",
+     "value": 7,
+     "max": 10
+    },
+    {
+     "label": "Outdoor space",
+     "value": 4,
+     "max": 5
+    },
+    {
+     "label": "Storage",
+     "value": 5,
+     "max": 5
+    },
+    {
+     "label": "Bedrooms",
+     "value": 2,
+     "max": 5
+    }
+   ],
+   "red_flags": -5,
+   "notes": "Indoor basketball court; huge sqft for price",
+   "zpid": "2100769443",
+   "photo_count": 13,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-belcher-st/photo-01.jpg",
+     "categories": [
+      "exterior",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-belcher-st/photo-02.jpg",
+     "categories": [
+      "common_spaces",
+      "kitchen",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-belcher-st/photo-03.jpg",
+     "categories": [
+      "kitchen",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-belcher-st/photo-04.jpg",
+     "categories": [
+      "common_spaces",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-belcher-st/photo-05.jpg",
+     "categories": [
+      "common_spaces",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-belcher-st/photo-06.jpg",
+     "categories": [
+      "bathroom",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-belcher-st/photo-07.jpg",
+     "categories": [
+      "bathroom",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-belcher-st/photo-08.jpg",
+     "categories": [
+      "outdoor_space",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-belcher-st/photo-09.jpg",
+     "categories": [
+      "storage",
+      "common_spaces",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-belcher-st/photo-10.jpg",
+     "categories": [
+      "storage",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-belcher-st/photo-11.jpg",
+     "categories": [
+      "floorplan",
+      "other"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-belcher-st/photo-12.jpg",
+     "categories": [
+      "floorplan",
+      "other"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-belcher-st/photo-13.jpg",
+     "categories": [
+      "exterior",
+      "other"
+     ]
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/67-belcher-st/photo-01.jpg",
+   "pipeline": "rejected"
+  },
+  {
+   "id": "L040",
+   "address": "150 Central Ave",
+   "slug": "150-central-ave",
+   "category": "Multi-family",
+   "neighborhood": "NoPa / Haight",
+   "beds": 8.0,
+   "baths": 5.0,
+   "sqft": 4930.0,
+   "price": 3195000,
+   "est_rent": 14378,
+   "rent_per_person": 1797,
+   "projected_rent": {
+    "monthly": 21000,
+    "per_person": 2625,
+    "dollars_per_sqft": 4.26,
+    "headcount": 8
+   },
+   "feasibility": {
+    "verdict": "long-shot",
+    "rationale": "MAJOR RED FLAG: Description explicitly states 3 of 4 units are tenant-occupied with in-place income, only the oversized 3BR unit is vacant. For a group-house lease, you need the entire building vacant. SF tenant protections make evicting existing tenants extremely difficult\u2014requires just cause (Ellis Act, owner move-in, etc.), 120+ days notice, relocation payments averaging $7k-$20k per tenant, and potential legal challenges. Even if buyer negotiates vacant possession at close, existing tenants have strong legal protections and the process typically takes 6-12+ months. The one vacant 3BR unit could theoretically house 3-4 people immediately, but that defeats the purpose of an 8-person group house. Unless the seller pre-negotiates buyouts with all tenants or uses Ellis Act (which requires taking the entire building off rental market for 5+ years), this is not realistically move-in ready for a whole-building group lease. Best case: 6-12 month timeline with significant legal/buyout costs. Worst case: tied up in litigation for years."
+   },
+   "score_total": 56,
+   "score_confidence": 4,
+   "score_breakdown": [
+    {
+     "label": "Common spaces",
+     "value": 11,
+     "max": 15
+    },
+    {
+     "label": "Natural light",
+     "value": 8,
+     "max": 10
+    },
+    {
+     "label": "Kitchen",
+     "value": 7,
+     "max": 10
+    },
+    {
+     "label": "Condition / finishes",
+     "value": 8,
+     "max": 10
+    },
+    {
+     "label": "Character / charm",
+     "value": 9,
+     "max": 10
+    },
+    {
+     "label": "Bathrooms",
+     "value": 5,
+     "max": 10
+    },
+    {
+     "label": "Outdoor space",
+     "value": 4,
+     "max": 5
+    },
+    {
+     "label": "Storage",
+     "value": 4,
+     "max": 5
+    },
+    {
+     "label": "Bedrooms",
+     "value": 2,
+     "max": 5
+    }
+   ],
+   "red_flags": -2,
+   "notes": "8BR + detached carriage house",
+   "zpid": "2107458048",
+   "photo_count": 37,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-01.jpg",
+     "categories": [
+      "exterior",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-02.jpg",
+     "categories": [
+      "exterior",
+      "character_charm",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-03.jpg",
+     "categories": [
+      "exterior",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-04.jpg",
+     "categories": [
+      "exterior",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-05.jpg",
+     "categories": [
+      "common_spaces",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-06.jpg",
+     "categories": [
+      "common_spaces",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-07.jpg",
+     "categories": [
+      "common_spaces",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-08.jpg",
+     "categories": [
+      "common_spaces",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-09.jpg",
+     "categories": [
+      "common_spaces",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-10.jpg",
+     "categories": [
+      "common_spaces",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-11.jpg",
+     "categories": [
+      "common_spaces",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-12.jpg",
+     "categories": [
+      "common_spaces",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-13.jpg",
+     "categories": [
+      "common_spaces",
+      "character_charm",
+      "storage"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-14.jpg",
+     "categories": [
+      "common_spaces",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-15.jpg",
+     "categories": [
+      "kitchen",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-16.jpg",
+     "categories": [
+      "kitchen",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-17.jpg",
+     "categories": [
+      "kitchen",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-18.jpg",
+     "categories": [
+      "kitchen",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-19.jpg",
+     "categories": [
+      "kitchen",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-20.jpg",
+     "categories": [
+      "bedroom",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-21.jpg",
+     "categories": [
+      "bedroom",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-22.jpg",
+     "categories": [
+      "bedroom",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-23.jpg",
+     "categories": [
+      "bathroom",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-24.jpg",
+     "categories": [
+      "bathroom",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-25.jpg",
+     "categories": [
+      "bedroom",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-26.jpg",
+     "categories": [
+      "bedroom",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-27.jpg",
+     "categories": [
+      "bedroom",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-28.jpg",
+     "categories": [
+      "bedroom",
+      "bathroom",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-29.jpg",
+     "categories": [
+      "bathroom",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-30.jpg",
+     "categories": [
+      "bathroom"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-31.jpg",
+     "categories": [
+      "bedroom",
+      "natural_light",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-32.jpg",
+     "categories": [
+      "bedroom",
+      "natural_light"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-33.jpg",
+     "categories": [
+      "storage"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-34.jpg",
+     "categories": [
+      "outdoor_space"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-35.jpg",
+     "categories": [
+      "outdoor_space",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-36.jpg",
+     "categories": [
+      "outdoor_space",
+      "character_charm"
+     ]
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-37.jpg",
+     "categories": [
+      "outdoor_space",
+      "character_charm",
+      "storage"
+     ]
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/150-central-ave/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L023",
+   "address": "1855 California St",
+   "slug": "1855-california-st",
+   "category": "Multi-family",
+   "neighborhood": "Polk / Nob Hill",
+   "beds": 17.0,
+   "baths": 8.0,
+   "sqft": 10590.0,
+   "price": 5149000,
+   "est_rent": 23170,
+   "rent_per_person": 1363,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": 13,
+   "score_confidence": 2,
+   "score_breakdown": [
+    {
+     "label": "Common spaces",
+     "value": 3,
+     "max": 15
+    },
+    {
+     "label": "Natural light",
+     "value": 7,
+     "max": 10
+    },
+    {
+     "label": "Kitchen",
+     "value": 4,
+     "max": 10
+    },
+    {
+     "label": "Condition / finishes",
+     "value": 5,
+     "max": 10
+    },
+    {
+     "label": "Character / charm",
+     "value": 2,
+     "max": 10
+    },
+    {
+     "label": "Bathrooms",
+     "value": 3,
+     "max": 10
+    },
+    {
+     "label": "Outdoor space",
+     "value": 1,
+     "max": 5
+    },
+    {
+     "label": "Storage",
+     "value": 2,
+     "max": 5
+    },
+    {
+     "label": "Bedrooms",
+     "value": 1,
+     "max": 5
+    }
+   ],
+   "red_flags": -15,
+   "notes": "17BR; original period details",
+   "zpid": "2112529064",
+   "photo_count": 30,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-14.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-15.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-16.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-17.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-18.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-19.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-20.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-21.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-22.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-23.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-24.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-25.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-26.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-27.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-28.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-29.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-30.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/1855-california-st/photo-01.jpg",
+   "pipeline": "rejected"
+  },
+  {
+   "id": "L042",
+   "address": "630 Haight St",
+   "slug": "630-haight-st",
+   "category": "Multi-family",
+   "neighborhood": "Lower Haight",
+   "beds": 11.0,
+   "baths": 5.0,
+   "sqft": 4600.0,
+   "price": 3100000,
+   "est_rent": 13950,
+   "rent_per_person": 1268,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": -4,
+   "score_confidence": 2,
+   "score_breakdown": [
+    {
+     "label": "Common spaces",
+     "value": 2,
+     "max": 15
+    },
+    {
+     "label": "Natural light",
+     "value": 4,
+     "max": 10
+    },
+    {
+     "label": "Kitchen",
+     "value": 3,
+     "max": 10
+    },
+    {
+     "label": "Condition / finishes",
+     "value": 4,
+     "max": 10
+    },
+    {
+     "label": "Character / charm",
+     "value": 6,
+     "max": 10
+    },
+    {
+     "label": "Bathrooms",
+     "value": 2,
+     "max": 10
+    },
+    {
+     "label": "Outdoor space",
+     "value": 2,
+     "max": 5
+    },
+    {
+     "label": "Storage",
+     "value": 2,
+     "max": 5
+    },
+    {
+     "label": "Bedrooms",
+     "value": 1,
+     "max": 5
+    }
+   ],
+   "red_flags": -30,
+   "notes": "11BR; large flat-style units",
+   "zpid": "89239475",
+   "photo_count": 14,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-14.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/630-haight-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L024",
+   "address": "1522-1524 Waller St",
+   "slug": "1522-1524-waller-st",
+   "category": "Multi-family",
+   "neighborhood": "Haight-Ashbury",
+   "beds": 8.0,
+   "baths": 6.0,
+   "sqft": 4189.0,
+   "price": 4995000,
+   "est_rent": 22478,
+   "rent_per_person": 2810,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": -12,
+   "score_confidence": 3,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "8BR; open Sun",
+   "zpid": "447476991",
+   "photo_count": 42,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-14.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-15.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-16.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-17.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-18.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-19.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-20.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-21.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-22.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-23.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-24.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-25.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-26.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-27.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-28.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-29.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-30.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-31.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-32.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-33.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-34.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-35.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-36.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-37.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-38.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-39.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-40.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-41.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-42.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/1522-1524-waller-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L041",
+   "address": "4138-4140 Fulton St",
+   "slug": "4138-4140-fulton-st",
+   "category": "Multi-family",
+   "neighborhood": "Outer Richmond",
+   "beds": 6.0,
+   "baths": 5.0,
+   "sqft": 3847.0,
+   "price": 3190000,
+   "est_rent": 14355,
+   "rent_per_person": 2392,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": -15,
+   "score_confidence": 3,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "6BR; open Sun",
+   "zpid": "332856130",
+   "photo_count": 56,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-14.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-15.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-16.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-17.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-18.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-19.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-20.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-21.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-22.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-23.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-24.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-25.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-26.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-27.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-28.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-29.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-30.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-31.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-32.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-33.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-34.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-35.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-36.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-37.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-38.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-39.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-40.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-41.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-42.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-43.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-44.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-45.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-46.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-47.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-48.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-49.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-50.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-51.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-52.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-53.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-54.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-55.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-56.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/4138-4140-fulton-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L036",
+   "address": "2445 Harrison St",
+   "slug": "2445-harrison-st",
+   "category": "Multi-family",
+   "neighborhood": "Mission",
+   "beds": 18.0,
+   "baths": 6.0,
+   "sqft": 6465.0,
+   "price": 3500000,
+   "est_rent": 15750,
+   "rent_per_person": 875,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": -24,
+   "score_confidence": 6,
+   "score_breakdown": [
+    {
+     "label": "Common spaces",
+     "value": 0,
+     "max": 15
+    },
+    {
+     "label": "Natural light",
+     "value": 3,
+     "max": 10
+    },
+    {
+     "label": "Kitchen",
+     "value": 0,
+     "max": 10
+    },
+    {
+     "label": "Condition / finishes",
+     "value": 2,
+     "max": 10
+    },
+    {
+     "label": "Character / charm",
+     "value": 4,
+     "max": 10
+    },
+    {
+     "label": "Bathrooms",
+     "value": 1,
+     "max": 10
+    },
+    {
+     "label": "Outdoor space",
+     "value": 1,
+     "max": 5
+    },
+    {
+     "label": "Storage",
+     "value": 0,
+     "max": 5
+    },
+    {
+     "label": "Bedrooms",
+     "value": 0,
+     "max": 5
+    }
+   ],
+   "red_flags": -35,
+   "notes": "18BR; partial eastern views",
+   "zpid": "447129843",
+   "photo_count": 4,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2445-harrison-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2445-harrison-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2445-harrison-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2445-harrison-st/photo-04.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/2445-harrison-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L012",
+   "address": "270 Turk St",
+   "slug": "270-turk-st",
+   "category": "Multi-family",
+   "neighborhood": "Tenderloin",
+   "beds": 18.0,
+   "baths": 0,
+   "sqft": 47054.0,
+   "price": 11600000,
+   "est_rent": 52200,
+   "rent_per_person": 2900,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "18BR; elevator building",
+   "zpid": "2073926708",
+   "photo_count": 10,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/270-turk-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/270-turk-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/270-turk-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/270-turk-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/270-turk-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/270-turk-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/270-turk-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/270-turk-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/270-turk-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/270-turk-st/photo-10.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/270-turk-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L011",
+   "address": "1745 Market St",
+   "slug": "1745-market-st",
+   "category": "Multi-family",
+   "neighborhood": "SoMa / Civic Center",
+   "beds": 28.0,
+   "baths": 0,
+   "sqft": 57448.0,
+   "price": 16750000,
+   "est_rent": 75375,
+   "rent_per_person": 2692,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "28BR; commercial-scale",
+   "zpid": "2115773450",
+   "photo_count": 39,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-14.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-15.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-16.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-17.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-18.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-19.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-20.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-21.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-22.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-23.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-24.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-25.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-26.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-27.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-28.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-29.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-30.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-31.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-32.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-33.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-34.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-35.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-36.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-37.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-38.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-39.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/1745-market-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L010",
+   "address": "973 Market St",
+   "slug": "973-market-st",
+   "category": "Multi-family",
+   "neighborhood": "SoMa",
+   "beds": 30.0,
+   "baths": 0,
+   "sqft": 39339.0,
+   "price": 20000000,
+   "est_rent": 90000,
+   "rent_per_person": 3000,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "30BR; commercial-scale",
+   "zpid": "2107110239",
+   "photo_count": 13,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/973-market-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/973-market-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/973-market-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/973-market-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/973-market-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/973-market-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/973-market-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/973-market-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/973-market-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/973-market-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/973-market-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/973-market-st/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/973-market-st/photo-13.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/973-market-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L005",
+   "address": "930 Baker St",
+   "slug": "930-baker-st",
+   "category": "Single-family",
+   "neighborhood": "Anza Vista",
+   "beds": 8.0,
+   "baths": 12.0,
+   "sqft": 8000.0,
+   "price": 2995000,
+   "est_rent": 5391,
+   "rent_per_person": 674,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "8bd/12ba new build; suite-style layout",
+   "zpid": "447274642",
+   "photo_count": 8,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/930-baker-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/930-baker-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/930-baker-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/930-baker-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/930-baker-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/930-baker-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/930-baker-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/930-baker-st/photo-08.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/930-baker-st/photo-01.jpg",
+   "pipeline": "rejected"
+  },
+  {
+   "id": "L021",
+   "address": "2929 Geary Blvd",
+   "slug": "2929-geary-blvd",
+   "category": "Multi-family",
+   "neighborhood": "Laurel Heights",
+   "beds": 11.0,
+   "baths": 0,
+   "sqft": 17488.0,
+   "price": 5650000,
+   "est_rent": 25425,
+   "rent_per_person": 2311,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "11BR; very large apartments",
+   "zpid": "2065665855",
+   "photo_count": 17,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-14.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-15.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-16.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-17.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/2929-geary-blvd/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L019",
+   "address": "1163 Pine St",
+   "slug": "1163-pine-st",
+   "category": "Multi-family",
+   "neighborhood": "Nob Hill",
+   "beds": 13.0,
+   "baths": 0,
+   "sqft": 10200.0,
+   "price": 5895000,
+   "est_rent": 26528,
+   "rent_per_person": 2041,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "13BR",
+   "zpid": "2055833042",
+   "photo_count": 12,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1163-pine-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1163-pine-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1163-pine-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1163-pine-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1163-pine-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1163-pine-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1163-pine-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1163-pine-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1163-pine-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1163-pine-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1163-pine-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1163-pine-st/photo-12.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/1163-pine-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L016",
+   "address": "970 Post St",
+   "slug": "970-post-st",
+   "category": "Multi-family",
+   "neighborhood": "Tenderloin",
+   "beds": 27.0,
+   "baths": 0,
+   "sqft": 22310.0,
+   "price": 6800000,
+   "est_rent": 30600,
+   "rent_per_person": 1133,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "27BR; income building",
+   "zpid": "2063490575",
+   "photo_count": 1,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/970-post-st/photo-01.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/970-post-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L015",
+   "address": "67-69 Belcher St",
+   "slug": "67-69-belcher-st",
+   "category": "Multi-family",
+   "neighborhood": "Castro / Duboce",
+   "beds": 6.0,
+   "baths": 0,
+   "sqft": 18964.0,
+   "price": 6975000,
+   "est_rent": 31388,
+   "rent_per_person": 5231,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "Same property as 67 Belcher; basketball court",
+   "zpid": "2078631412",
+   "photo_count": 29,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-14.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-15.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-16.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-17.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-18.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-19.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-20.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-21.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-22.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-23.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-24.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-25.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-26.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-27.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-28.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-29.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/67-69-belcher-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L013",
+   "address": "755 Bush St",
+   "slug": "755-bush-st",
+   "category": "Multi-family",
+   "neighborhood": "Nob Hill",
+   "beds": 11.0,
+   "baths": 0,
+   "sqft": 16588.0,
+   "price": 9195000,
+   "est_rent": 41378,
+   "rent_per_person": 3762,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "11BR, lots of light",
+   "zpid": "2109792043",
+   "photo_count": 15,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-14.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-15.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/755-bush-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L022",
+   "address": "512 Grant Ave",
+   "slug": "512-grant-ave",
+   "category": "Multi-family",
+   "neighborhood": "Chinatown",
+   "beds": 9.0,
+   "baths": 0,
+   "sqft": 7087.0,
+   "price": 5395000,
+   "est_rent": 24278,
+   "rent_per_person": 2698,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "9BR; lots of natural light",
+   "zpid": "461296085",
+   "photo_count": 10,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/512-grant-ave/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/512-grant-ave/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/512-grant-ave/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/512-grant-ave/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/512-grant-ave/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/512-grant-ave/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/512-grant-ave/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/512-grant-ave/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/512-grant-ave/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/512-grant-ave/photo-10.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/512-grant-ave/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L018",
+   "address": "840 Greenwich St",
+   "slug": "840-greenwich-st",
+   "category": "Multi-family",
+   "neighborhood": "North Beach",
+   "beds": 20.0,
+   "baths": 0,
+   "sqft": 9515.0,
+   "price": 6250000,
+   "est_rent": 28125,
+   "rent_per_person": 1406,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "20BR; white cabinetry remodel",
+   "zpid": "2067353269",
+   "photo_count": 5,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/840-greenwich-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/840-greenwich-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/840-greenwich-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/840-greenwich-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/840-greenwich-st/photo-05.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/840-greenwich-st/photo-01.jpg",
+   "pipeline": "shortlist"
+  },
+  {
+   "id": "L017",
+   "address": "136 Noe St",
+   "slug": "136-noe-st",
+   "category": "Multi-family",
+   "neighborhood": "Castro",
+   "beds": 26.0,
+   "baths": 0,
+   "sqft": 9990.0,
+   "price": 6650000,
+   "est_rent": 29925,
+   "rent_per_person": 1151,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "26BR across many small units",
+   "zpid": "2098111361",
+   "photo_count": 29,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-14.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-15.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-16.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-17.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-18.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-19.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-20.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-21.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-22.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-23.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-24.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-25.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-26.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-27.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-28.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-29.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/136-noe-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L038",
+   "address": "1-15 Russia Ave",
+   "slug": "1-15-russia-ave",
+   "category": "Multi-family",
+   "neighborhood": "Excelsior",
+   "beds": 8.0,
+   "baths": 0,
+   "sqft": 11189.0,
+   "price": 3275000,
+   "est_rent": 14738,
+   "rent_per_person": 1842,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "8BR; new roof, big lot",
+   "zpid": "455651129",
+   "photo_count": 17,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-14.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-15.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-16.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-17.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/1-15-russia-ave/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L037",
+   "address": "675 Ofarrell St",
+   "slug": "675-ofarrell-st",
+   "category": "Multi-family",
+   "neighborhood": "Tenderloin",
+   "beds": 0,
+   "baths": 0,
+   "sqft": 12000.0,
+   "price": 3500000,
+   "est_rent": 15750,
+   "rent_per_person": 0,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "12,000 sqft; bed count not listed",
+   "zpid": "2078592125",
+   "photo_count": 12,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/675-ofarrell-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/675-ofarrell-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/675-ofarrell-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/675-ofarrell-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/675-ofarrell-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/675-ofarrell-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/675-ofarrell-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/675-ofarrell-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/675-ofarrell-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/675-ofarrell-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/675-ofarrell-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/675-ofarrell-st/photo-12.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/675-ofarrell-st/photo-01.jpg",
+   "pipeline": "rejected"
+  },
+  {
+   "id": "L033",
+   "address": "702-712 Vallejo St",
+   "slug": "702-712-vallejo-st",
+   "category": "Multi-family",
+   "neighborhood": "North Beach",
+   "beds": 0,
+   "baths": 0,
+   "sqft": 12000.0,
+   "price": 3600000,
+   "est_rent": 16200,
+   "rent_per_person": 0,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "12,000 sqft; 559 days on mkt (very stale)",
+   "zpid": "442680268",
+   "photo_count": 11,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/702-712-vallejo-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/702-712-vallejo-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/702-712-vallejo-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/702-712-vallejo-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/702-712-vallejo-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/702-712-vallejo-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/702-712-vallejo-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/702-712-vallejo-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/702-712-vallejo-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/702-712-vallejo-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/702-712-vallejo-st/photo-11.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/702-712-vallejo-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L029",
+   "address": "1159 Union St",
+   "slug": "1159-union-st",
+   "category": "Multi-family",
+   "neighborhood": "Russian Hill",
+   "beds": 12.0,
+   "baths": 0,
+   "sqft": 9123.0,
+   "price": 3800000,
+   "est_rent": 17100,
+   "rent_per_person": 1425,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "12BR",
+   "zpid": "462572523",
+   "photo_count": 9,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1159-union-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1159-union-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1159-union-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1159-union-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1159-union-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1159-union-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1159-union-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1159-union-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1159-union-st/photo-09.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/1159-union-st/photo-01.jpg",
+   "pipeline": "shortlist"
+  },
+  {
+   "id": "L032",
+   "address": "1316-1326 Vallejo St",
+   "slug": "1316-1326-vallejo-st",
+   "category": "Multi-family",
+   "neighborhood": "Russian Hill",
+   "beds": 12.0,
+   "baths": 0,
+   "sqft": 5088.0,
+   "price": 3700000,
+   "est_rent": 16650,
+   "rent_per_person": 1388,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "12BR; period details",
+   "zpid": "2057725939",
+   "photo_count": 40,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-14.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-15.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-16.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-17.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-18.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-19.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-20.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-21.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-22.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-23.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-24.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-25.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-26.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-27.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-28.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-29.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-30.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-31.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-32.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-33.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-34.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-35.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-36.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-37.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-38.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-39.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-40.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/1316-1326-vallejo-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L030",
+   "address": "40 Irving St",
+   "slug": "40-irving-st",
+   "category": "Multi-family",
+   "neighborhood": "Inner Sunset",
+   "beds": 10.0,
+   "baths": 0,
+   "sqft": 9157.0,
+   "price": 3800000,
+   "est_rent": 17100,
+   "rent_per_person": 1710,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "10BR; updated windows",
+   "zpid": "2102221916",
+   "photo_count": 12,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/40-irving-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/40-irving-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/40-irving-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/40-irving-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/40-irving-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/40-irving-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/40-irving-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/40-irving-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/40-irving-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/40-irving-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/40-irving-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/40-irving-st/photo-12.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/40-irving-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L028",
+   "address": "1062 Sutter St",
+   "slug": "1062-sutter-st",
+   "category": "Multi-family",
+   "neighborhood": "Lower Nob Hill",
+   "beds": 5.0,
+   "baths": 0,
+   "sqft": 8888.0,
+   "price": 4100000,
+   "est_rent": 18450,
+   "rent_per_person": 3690,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "Large building; bed count likely understated",
+   "zpid": "2080436582",
+   "photo_count": 12,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1062-sutter-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1062-sutter-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1062-sutter-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1062-sutter-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1062-sutter-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1062-sutter-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1062-sutter-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1062-sutter-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1062-sutter-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1062-sutter-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1062-sutter-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1062-sutter-st/photo-12.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/1062-sutter-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L027",
+   "address": "278 States St",
+   "slug": "278-states-st",
+   "category": "Multi-family",
+   "neighborhood": "Corona Heights",
+   "beds": 16.0,
+   "baths": 0,
+   "sqft": 7268.0,
+   "price": 4300000,
+   "est_rent": 19350,
+   "rent_per_person": 1209,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "16BR; private deck, hill views",
+   "zpid": "2061469226",
+   "photo_count": 34,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-14.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-15.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-16.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-17.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-18.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-19.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-20.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-21.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-22.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-23.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-24.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-25.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-26.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-27.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-28.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-29.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-30.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-31.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-32.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-33.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-34.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/278-states-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L034",
+   "address": "812 Taraval St",
+   "slug": "812-taraval-st",
+   "category": "Multi-family",
+   "neighborhood": "Parkside",
+   "beds": 13.0,
+   "baths": 0,
+   "sqft": 6950.0,
+   "price": 3595000,
+   "est_rent": 16178,
+   "rent_per_person": 1244,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "13BR; two-car parking",
+   "zpid": "462607964",
+   "photo_count": 48,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-14.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-15.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-16.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-17.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-18.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-19.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-20.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-21.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-22.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-23.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-24.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-25.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-26.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-27.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-28.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-29.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-30.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-31.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-32.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-33.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-34.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-35.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-36.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-37.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-38.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-39.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-40.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-41.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-42.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-43.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-44.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-45.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-46.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-47.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-48.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/812-taraval-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L035",
+   "address": "1668 Washington St",
+   "slug": "1668-washington-st",
+   "category": "Multi-family",
+   "neighborhood": "Nob Hill",
+   "beds": 11.0,
+   "baths": 0,
+   "sqft": 5146.0,
+   "price": 3595000,
+   "est_rent": 16178,
+   "rent_per_person": 1471,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "11BR; shared backyard",
+   "zpid": "2080637664",
+   "photo_count": 14,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-14.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/1668-washington-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L031",
+   "address": "3025 21st St",
+   "slug": "3025-21st-st",
+   "category": "Multi-family",
+   "neighborhood": "Mission",
+   "beds": 8.0,
+   "baths": 0,
+   "sqft": 5496.0,
+   "price": 3750000,
+   "est_rent": 16875,
+   "rent_per_person": 2109,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "8BR; landscaped garden",
+   "zpid": "2102711693",
+   "photo_count": 16,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-14.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-15.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-16.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/3025-21st-st/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L026",
+   "address": "78 Parker Ave",
+   "slug": "78-parker-ave",
+   "category": "Multi-family",
+   "neighborhood": "Jordan Park",
+   "beds": 8.0,
+   "baths": 0,
+   "sqft": 6718.0,
+   "price": 4350000,
+   "est_rent": 19575,
+   "rent_per_person": 2447,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "8BR; quiet tree-lined setting",
+   "zpid": "2100992456",
+   "photo_count": 15,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-11.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-12.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-13.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-14.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-15.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/78-parker-ave/photo-01.jpg",
+   "pipeline": "active"
+  },
+  {
+   "id": "L039",
+   "address": "1230 Jackson St",
+   "slug": "1230-jackson-st",
+   "category": "Multi-family",
+   "neighborhood": "Nob Hill",
+   "beds": 12.0,
+   "baths": 0,
+   "sqft": 4986.0,
+   "price": 3195000,
+   "est_rent": 14378,
+   "rent_per_person": 1198,
+   "projected_rent": {
+    "monthly": null,
+    "per_person": null,
+    "dollars_per_sqft": null,
+    "headcount": null
+   },
+   "feasibility": {
+    "verdict": null,
+    "rationale": null
+   },
+   "score_total": null,
+   "score_confidence": 0,
+   "score_breakdown": [],
+   "red_flags": 0,
+   "notes": "12BR; shared backyard",
+   "zpid": "2079266220",
+   "photo_count": 11,
+   "photos": [
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1230-jackson-st/photo-01.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1230-jackson-st/photo-02.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1230-jackson-st/photo-03.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1230-jackson-st/photo-04.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1230-jackson-st/photo-05.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1230-jackson-st/photo-06.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1230-jackson-st/photo-07.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1230-jackson-st/photo-08.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1230-jackson-st/photo-09.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1230-jackson-st/photo-10.jpg",
+     "categories": []
+    },
+    {
+     "url": "https://icalculated.github.io/shydrie-housing-photos/1230-jackson-st/photo-11.jpg",
+     "categories": []
+    }
+   ],
+   "hero": "https://icalculated.github.io/shydrie-housing-photos/1230-jackson-st/photo-01.jpg",
+   "pipeline": "rejected"
+  }
+ ]
+}
