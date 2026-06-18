@@ -73,6 +73,13 @@
   .pill{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:20px;background:rgba(0,0,0,.55);color:#fff;text-transform:uppercase;letter-spacing:.4px}
   .pill.shortlist{background:var(--good);color:#06140d}
   .pill.rejected{background:var(--bad);color:#1a0707}
+  /* tenancy (rent-vs-deliverable) chip */
+  .ten{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:20px;letter-spacing:.2px;white-space:nowrap}
+  .ten.vacant{background:rgba(62,207,142,.16);color:#5fe0a6;border:1px solid rgba(62,207,142,.5)}
+  .ten.occupied{background:rgba(224,102,107,.14);color:#ec8d91;border:1px solid rgba(224,102,107,.45)}
+  .ten.mixed{background:rgba(231,185,79,.14);color:#edca7c;border:1px solid rgba(231,185,79,.45)}
+  .ten.unknown{background:rgba(120,130,150,.14);color:#9aa3b2;border:1px solid rgba(120,130,150,.4)}
+  .photo .ten{position:absolute;left:10px;bottom:10px;z-index:4;box-shadow:0 2px 8px rgba(0,0,0,.5)}
   .body{padding:12px 14px;display:flex;flex-direction:column;gap:6px;flex:1}
   .addr{font-weight:700;font-size:15px}
   .hood{color:var(--muted);font-size:12.5px}
@@ -146,6 +153,13 @@
         <option value="rejected">Rejected</option>
         <option value="disqualified">Disqualified (fails)</option>
       </select>
+      <select id="ften">
+        <option value="">Any occupancy</option>
+        <option value="vacant">🟢 Vacant</option>
+        <option value="occupied">🔴 Tenant-occupied</option>
+        <option value="mixed">🟡 Mixed</option>
+        <option value="unknown">⚪ TBD</option>
+      </select>
       <select id="sort">
         <option value="score">Sort: Score ↓</option>
         <option value="price_asc">Price ↑</option>
@@ -186,6 +200,10 @@ const $=s=>document.querySelector(s);
 const money=v=> v==null?"—":"$"+Number(v).toLocaleString();
 function rentOf(p){ const pr=p.projected_rent||{}; const v=pr.monthly??p.est_rent; return v==null?null:{v,proj:pr.monthly!=null}; }
 function scoreColor(t){ if(t==null) return "#5b6172"; if(t>=70) return "#3ecf8e"; if(t>=55) return "#a9d65a"; if(t>=40) return "#e7b94f"; return "#e0666b"; }
+const TEN_ICON={vacant:"🟢",occupied:"🔴",mixed:"🟡",unknown:"⚪"};
+function tenChip(p){ const k=p.tenancy||"unknown"; const lbl=p.tenancy_label||"Occupancy TBD";
+  const sig=[...(p.occupancy&&p.occupancy.vacant_signals||[]),...(p.occupancy&&p.occupancy.occupied_signals||[])].join(", ");
+  return `<span class="ten ${k}" title="${sig?sig.replace(/"/g,'&quot;'):'no tenancy signals found'}">${TEN_ICON[k]||"⚪"} ${lbl}</span>`; }
 function localPipe(){ try{return JSON.parse(localStorage.getItem("nyx_pipe")||"{}")}catch{return {}} }
 function setLocalPipe(id,v){ const p=localPipe(); if(v) p[id]=v; else delete p[id]; localStorage.setItem("nyx_pipe",JSON.stringify(p)); }
 function pipeOf(p){ const l=localPipe(); return l[p.id]||p.pipeline||"active"; }
@@ -202,7 +220,7 @@ async function load(){
   $("#gen").textContent="updated "+(DATA.generated_at||"").replace("T"," ");
   const cats=[...new Set(DATA.properties.map(p=>p.category).filter(Boolean))].sort();
   for(const c of cats){ const o=document.createElement("option"); o.value=c;o.textContent=c; $("#fcat").appendChild(o); }
-  ["q","fcat","fpipe","sort"].forEach(id=>$("#"+id).addEventListener("input",render));
+  ["q","fcat","fpipe","ften","sort"].forEach(id=>$("#"+id).addEventListener("input",render));
   // layout toggle
   function setLayout(l){ LAYOUT=l; localStorage.setItem("nyx_layout",l);
     $("#lrows").classList.toggle("on",l==="rows"); $("#lgrid").classList.toggle("on",l==="grid"); render(); }
@@ -213,9 +231,10 @@ async function load(){
 }
 
 function render(){
-  const q=$("#q").value.toLowerCase().trim(), fc=$("#fcat").value, fp=$("#fpipe").value, sort=$("#sort").value;
+  const q=$("#q").value.toLowerCase().trim(), fc=$("#fcat").value, fp=$("#fpipe").value, ft=$("#ften").value, sort=$("#sort").value;
   let arr=DATA.properties.filter(p=>{
     if(fc && p.category!==fc) return false;
+    if(ft && (p.tenancy||"unknown")!==ft) return false;
     if(fp==="candidates"){ if(p.disqualified) return false; }
     else if(fp==="scored"){ if(p.disqualified||p.longshot) return false; }
     else if(fp==="longshot"){ if(!p.longshot) return false; }
@@ -262,6 +281,7 @@ function rowEl(p){
       </div>
       <div class="addr">${p.address||"—"}</div>
       <div class="hood">${p.neighborhood||""} ${p.category?`· <span class="cat">${p.category}</span>`:""}</div>
+      <div>${tenChip(p)}</div>
       <div class="stats">
         ${r?`<span class="price">${money(r.v)}<span class="permo">/mo${r.proj?"":" est"}</span></span>`:`<span class="price">${money(p.price)}</span>`}
       </div>
@@ -314,6 +334,7 @@ function card(p){
         <div class="dots">${photos.map((_,i)=>`<i class="${i===0?'on':''}"></i>`).join("")}</div>
         <div class="pcount">1/${np}</div>`:""}
       ${badge}
+      ${tenChip(p)}
       <div class="pillrow">
         ${!p.disqualified&&pipe==="shortlist"?'<span class="pill shortlist">★ shortlist</span>':""}
         ${!p.disqualified&&pipe==="rejected"?'<span class="pill rejected">✕ rejected</span>':""}
@@ -432,6 +453,7 @@ function openDetail(p, startIdx){
         ${p.notes?`<div class="dmeta" style="margin-top:10px">📝 ${p.notes}</div>`:""}
       </div>
       <div>
+        <div style="margin-bottom:10px">${tenChip(p)}</div>
         <div class="fin">
           <div><span>List price</span><b>${money(p.price)}</b></div>
           ${pr.monthly?`<div><span>Projected rent/mo</span><b>${money(pr.monthly)}</b></div>`:(p.est_rent?`<div><span>Est rent/mo</span><b>${money(p.est_rent)}</b></div>`:"")}

@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-06-17T19:22:17",
+ "generated_at": "2026-06-17T19:41:16",
  "url_base": "https://icalculated.github.io/shydrie-housing-photos",
  "count": 33,
  "score_fields": [
@@ -71,6 +71,13 @@
    "feasibility": {
     "verdict": "not-feasible",
     "rationale": "This property is fundamentally incompatible with group-house living for multiple blocking reasons: (1) FOR SALE at $25M\u2014group leasing requires an investor/owner willing to lease back, which is virtually unheard of at this price tier; trophy properties sell to owner-occupants or investors seeking appreciation, not rental yield. (2) The 2026 Decorator Showcase renovation positions this as a museum-quality showpiece\u2014no landlord would expose $25M of bespoke finishes, hand-painted murals, and custom marble to group-house wear. (3) Prestige mismatch: this is a landmark mansion designed for a single wealthy family or executive, not a coliving arrangement. The architectural integrity, original millwork, and 9 fireplaces are assets for a private estate, liabilities for group durability. (4) Even if an investor agreed to lease it, $70k/mo rent (~$280k annual vs $25M purchase = 1.1% yield) makes zero financial sense; they'd want $15-20k/mo minimum for viable returns, making per-person cost astronomical. Verdict: this is a once-in-a-generation sale of a San Francisco landmark. A group of friends cannot move in soon\u2014or likely ever."
+   },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
    },
    "score_total": 72,
    "disqualified": false,
@@ -468,6 +475,18 @@
     "verdict": "long-shot",
     "rationale": "This is a FOR SALE property at $6.975M, not a rental. Acquisition or master-lease negotiation at this price point is extremely challenging for a group house. The description mentions 67 Belcher is currently leased month-to-month and 69 Belcher (the warehouse studio) 'can be delivered vacant,' suggesting some flexibility, but no indication the owner is interested in a long-term group lease vs. selling to a developer (property is approved for 31-unit condo conversion). The property is spectacular and move-in ready with incredible amenities, but accessing it requires either purchasing at $7M or convincing the owner to do a creative lease arrangement instead of selling\u2014both are long shots for a group-house search."
    },
+   "tenancy": "mixed",
+   "tenancy_label": "Mixed occupancy",
+   "occupancy": {
+    "verdict": "mixed-signals",
+    "occupied_signals": [
+     "month-to-month"
+    ],
+    "vacant_signals": [
+     "delivered vacant",
+     "vacant"
+    ]
+   },
    "score_total": 60,
    "disqualified": false,
    "fail_reason": null,
@@ -648,6 +667,18 @@
    "feasibility": {
     "verdict": "long-shot",
     "rationale": "MAJOR RED FLAG: Description explicitly states 3 of 4 units are tenant-occupied with in-place income, only the oversized 3BR unit is vacant. For a group-house lease, you need the entire building vacant. SF tenant protections make evicting existing tenants extremely difficult\u2014requires just cause (Ellis Act, owner move-in, etc.), 120+ days notice, relocation payments averaging $7k-$20k per tenant, and potential legal challenges. Even if buyer negotiates vacant possession at close, existing tenants have strong legal protections and the process typically takes 6-12+ months. The one vacant 3BR unit could theoretically house 3-4 people immediately, but that defeats the purpose of an 8-person group house. Unless the seller pre-negotiates buyouts with all tenants or uses Ellis Act (which requires taking the entire building off rental market for 5+ years), this is not realistically move-in ready for a whole-building group lease. Best case: 6-12 month timeline with significant legal/buyout costs. Worst case: tied up in litigation for years."
+   },
+   "tenancy": "mixed",
+   "tenancy_label": "Mixed occupancy",
+   "occupancy": {
+    "verdict": "mixed-signals",
+    "occupied_signals": [
+     "in-place income",
+     "occupied"
+    ],
+    "vacant_signals": [
+     "vacant"
+    ]
    },
    "score_total": 56,
    "disqualified": false,
@@ -1005,6 +1036,13 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
+   },
    "score_total": 13,
    "disqualified": false,
    "fail_reason": null,
@@ -1209,6 +1247,15 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "occupied",
+   "tenancy_label": "Tenant-occupied",
+   "occupancy": {
+    "verdict": "likely-occupied",
+    "occupied_signals": [
+     "in-place income"
+    ],
+    "vacant_signals": []
+   },
    "score_total": -4,
    "disqualified": false,
    "fail_reason": null,
@@ -1348,6 +1395,15 @@
    "feasibility": {
     "verdict": null,
     "rationale": null
+   },
+   "tenancy": "vacant",
+   "tenancy_label": "Vacant",
+   "occupancy": {
+    "verdict": "likely-vacant",
+    "occupied_signals": [],
+    "vacant_signals": [
+     "vacant"
+    ]
    },
    "score_total": -12,
    "disqualified": false,
@@ -1554,6 +1610,13 @@
    "feasibility": {
     "verdict": null,
     "rationale": null
+   },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
    },
    "score_total": -15,
    "disqualified": false,
@@ -1817,6 +1880,17 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "occupied",
+   "tenancy_label": "Tenant-occupied",
+   "occupancy": {
+    "verdict": "likely-occupied",
+    "occupied_signals": [
+     "in-place income",
+     "occupied",
+     "tenant occupied"
+    ],
+    "vacant_signals": []
+   },
    "score_total": -24,
    "disqualified": false,
    "fail_reason": null,
@@ -1916,6 +1990,13 @@
    "feasibility": {
     "verdict": null,
     "rationale": null
+   },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
    },
    "score_total": null,
    "disqualified": false,
@@ -2023,6 +2104,13 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": false,
    "fail_reason": null,
@@ -2108,6 +2196,18 @@
    "feasibility": {
     "verdict": null,
     "rationale": null
+   },
+   "tenancy": "mixed",
+   "tenancy_label": "Mixed occupancy",
+   "occupancy": {
+    "verdict": "mixed-signals",
+    "occupied_signals": [
+     "month-to-month"
+    ],
+    "vacant_signals": [
+     "delivered vacant",
+     "vacant"
+    ]
    },
    "score_total": null,
    "disqualified": false,
@@ -2263,6 +2363,13 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": false,
    "fail_reason": null,
@@ -2361,6 +2468,15 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "occupied",
+   "tenancy_label": "Tenant-occupied",
+   "occupancy": {
+    "verdict": "likely-occupied",
+    "occupied_signals": [
+     "in-place income"
+    ],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": false,
    "fail_reason": null,
@@ -2439,6 +2555,13 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": false,
    "fail_reason": null,
@@ -2496,6 +2619,13 @@
    "feasibility": {
     "verdict": null,
     "rationale": null
+   },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
    },
    "score_total": null,
    "disqualified": false,
@@ -2603,6 +2733,16 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "occupied",
+   "tenancy_label": "Tenant-occupied",
+   "occupancy": {
+    "verdict": "likely-occupied",
+    "occupied_signals": [
+     "current rents",
+     "in-place income"
+    ],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": false,
    "fail_reason": null,
@@ -2689,6 +2829,13 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": false,
    "fail_reason": null,
@@ -2771,6 +2918,15 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "occupied",
+   "tenancy_label": "Tenant-occupied",
+   "occupancy": {
+    "verdict": "likely-occupied",
+    "occupied_signals": [
+     "in-place rents"
+    ],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": false,
    "fail_reason": null,
@@ -2844,6 +3000,15 @@
    "feasibility": {
     "verdict": null,
     "rationale": null
+   },
+   "tenancy": "vacant",
+   "tenancy_label": "Vacant",
+   "occupancy": {
+    "verdict": "likely-vacant",
+    "occupied_signals": [],
+    "vacant_signals": [
+     "vacant"
+    ]
    },
    "score_total": null,
    "disqualified": false,
@@ -3043,6 +3208,13 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": false,
    "fail_reason": null,
@@ -3129,6 +3301,16 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "occupied",
+   "tenancy_label": "Tenant-occupied",
+   "occupancy": {
+    "verdict": "likely-occupied",
+    "occupied_signals": [
+     "in-place income",
+     "rent roll"
+    ],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": false,
    "fail_reason": null,
@@ -3214,6 +3396,15 @@
    "feasibility": {
     "verdict": null,
     "rationale": null
+   },
+   "tenancy": "occupied",
+   "tenancy_label": "Tenant-occupied",
+   "occupancy": {
+    "verdict": "likely-occupied",
+    "occupied_signals": [
+     "occupied"
+    ],
+    "vacant_signals": []
    },
    "score_total": null,
    "disqualified": false,
@@ -3388,6 +3579,20 @@
    "feasibility": {
     "verdict": null,
     "rationale": null
+   },
+   "tenancy": "mixed",
+   "tenancy_label": "Mixed occupancy",
+   "occupancy": {
+    "verdict": "mixed-signals",
+    "occupied_signals": [
+     "cap rate",
+     "fully occupied",
+     "occupied"
+    ],
+    "vacant_signals": [
+     "delivered vacant",
+     "vacant"
+    ]
    },
    "score_total": null,
    "disqualified": false,
@@ -3619,6 +3824,15 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "occupied",
+   "tenancy_label": "Tenant-occupied",
+   "occupancy": {
+    "verdict": "likely-occupied",
+    "occupied_signals": [
+     "in-place income"
+    ],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": false,
    "fail_reason": null,
@@ -3712,6 +3926,13 @@
    "feasibility": {
     "verdict": null,
     "rationale": null
+   },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
    },
    "score_total": null,
    "disqualified": false,
@@ -3815,6 +4036,13 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": false,
    "fail_reason": null,
@@ -3913,6 +4141,13 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": false,
    "fail_reason": null,
@@ -3995,6 +4230,16 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "occupied",
+   "tenancy_label": "Tenant-occupied",
+   "occupancy": {
+    "verdict": "likely-occupied",
+    "occupied_signals": [
+     "current rents",
+     "in-place income"
+    ],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": true,
    "fail_reason": "Apartment building",
@@ -4072,6 +4317,13 @@
    "feasibility": {
     "verdict": null,
     "rationale": null
+   },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
    },
    "score_total": null,
    "disqualified": true,
@@ -4267,6 +4519,13 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": true,
    "fail_reason": "Commercial-scale",
@@ -4357,6 +4616,13 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "unknown",
+   "tenancy_label": "Occupancy TBD",
+   "occupancy": {
+    "verdict": "unknown",
+    "occupied_signals": [],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": true,
    "fail_reason": "Suite-style units",
@@ -4427,6 +4693,16 @@
     "verdict": null,
     "rationale": null
    },
+   "tenancy": "occupied",
+   "tenancy_label": "Tenant-occupied",
+   "occupancy": {
+    "verdict": "likely-occupied",
+    "occupied_signals": [
+     "in-place rents",
+     "rent roll"
+    ],
+    "vacant_signals": []
+   },
    "score_total": null,
    "disqualified": true,
    "fail_reason": "Income property",
@@ -4468,6 +4744,16 @@
    "feasibility": {
     "verdict": null,
     "rationale": null
+   },
+   "tenancy": "vacant",
+   "tenancy_label": "Vacant",
+   "occupancy": {
+    "verdict": "likely-vacant",
+    "occupied_signals": [],
+    "vacant_signals": [
+     "delivered vacant",
+     "vacant"
+    ]
    },
    "score_total": null,
    "disqualified": true,
