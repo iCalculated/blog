@@ -3,162 +3,241 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ICML 2026 Seoul — Side Events</title>
+<title>ICML 2026 Seoul — Side Events Calendar</title>
 <style>
   :root{
-    --bg:#0d1117; --panel:#161b22; --card:#1c2230; --border:#2d3648;
+    --bg:#0d1117; --panel:#161b22; --card:#1c2230; --border:#2d3648; --grid:#222a38;
     --text:#e6edf3; --dim:#8b949e; --accent:#7c9cf5; --today:#f5c97c;
     --party:#c678dd; --dinner:#e5906c; --mixer:#61afef; --reception:#56b6c2;
     --talk:#98c379; --activity:#d19a66; --coffee:#b8a978;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:0 0 60px}
-  header{padding:28px 20px 10px;max-width:1100px;margin:0 auto}
-  h1{margin:0;font-size:26px;letter-spacing:.3px}
-  h1 .moon{opacity:.85}
-  .sub{color:var(--dim);margin-top:6px;font-size:13.5px}
-  .legend{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
-  .legend span{font-size:11.5px;padding:2px 9px;border-radius:99px;border:1px solid var(--border);color:var(--dim)}
-  .legend i{display:inline-block;width:8px;height:8px;border-radius:99px;margin-right:5px}
-  main{max-width:1100px;margin:0 auto;padding:0 20px}
-  .day{margin-top:26px}
-  .day>h2{font-size:15px;text-transform:uppercase;letter-spacing:1.5px;color:var(--dim);border-bottom:1px solid var(--border);padding-bottom:7px;margin:0 0 12px;display:flex;align-items:baseline;gap:10px}
-  .day>h2 b{color:var(--text);font-size:17px}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;padding:0 0 60px}
+  header{padding:24px 20px 8px;max-width:1500px;margin:0 auto}
+  h1{margin:0;font-size:23px;letter-spacing:.3px}
+  .sub{color:var(--dim);margin-top:6px;font-size:13px}
+  .bar{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:12px 0 2px}
+  .legend{display:flex;flex-wrap:wrap;gap:7px}
+  .legend span{font-size:11px;padding:2px 9px;border-radius:99px;border:1px solid var(--border);color:var(--dim)}
+  .legend i{display:inline-block;width:8px;height:8px;border-radius:99px;margin-right:5px;vertical-align:middle}
+  .toggle{display:flex;gap:6px;margin-left:auto}
+  .toggle button{font:600 12px/1 inherit;padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--dim);cursor:pointer}
+  .toggle button.on{background:var(--accent);color:#0d1117;border-color:var(--accent)}
+  main{max-width:1500px;margin:0 auto;padding:0 12px}
+
+  /* ---- CALENDAR GRID ---- */
+  .calwrap{overflow-x:auto;margin-top:14px;border:1px solid var(--border);border-radius:12px}
+  .cal{display:grid;grid-template-columns:64px repeat(7,minmax(150px,1fr));min-width:1100px}
+  .cal .corner{background:var(--panel);border-bottom:1px solid var(--border);border-right:1px solid var(--border);position:sticky;left:0;z-index:3}
+  .cal .dayhead{background:var(--panel);border-bottom:1px solid var(--border);border-right:1px solid var(--border);padding:9px 8px;text-align:center}
+  .cal .dayhead b{display:block;font-size:15px}
+  .cal .dayhead small{color:var(--dim);font-size:11px}
+  .cal .dayhead.today{background:linear-gradient(180deg,rgba(245,201,124,.16),transparent)}
+  .cal .dayhead.today b{color:var(--today)}
+  .cal .dayhead.today small::after{content:" · TODAY";color:var(--today);font-weight:700}
+  .cal .slotlabel{border-right:1px solid var(--border);border-bottom:1px solid var(--grid);padding:8px 6px;font-size:10.5px;color:var(--dim);text-align:right;text-transform:uppercase;letter-spacing:.5px;position:sticky;left:0;background:var(--bg);z-index:2}
+  .cal .cell{border-right:1px solid var(--grid);border-bottom:1px solid var(--grid);padding:5px;min-height:52px;display:flex;flex-direction:column;gap:4px}
+  .cal .cell.today{background:rgba(245,201,124,.035)}
+  .ev{display:block;border-left:3px solid var(--dim);border-radius:5px;padding:4px 7px;background:var(--card);text-decoration:none;color:var(--text);font-size:12px;line-height:1.28}
+  .ev:hover{background:#232b3b;transform:translateY(-1px);transition:.1s}
+  .ev .t{font-weight:600;font-size:10.5px;opacity:.8;display:block}
+  .ev .n{font-weight:600;display:block;margin-top:1px}
+  .ev .h{color:var(--dim);font-size:11px;display:block}
+  .ev .w{color:var(--today);font-size:10px}
+  .past{opacity:.5}
+
+  /* ---- LIST VIEW ---- */
+  .listview{display:none}
+  .listview.on{display:block}
+  .calwrap.off{display:none}
+  .day{margin-top:22px}
+  .day>h2{font-size:13px;text-transform:uppercase;letter-spacing:1.4px;color:var(--dim);border-bottom:1px solid var(--border);padding-bottom:6px;margin:0 0 11px}
+  .day>h2 b{color:var(--text);font-size:16px}
   .day.today>h2 b{color:var(--today)}
-  .day.today>h2::after{content:"TODAY";font-size:10.5px;background:var(--today);color:#1a1408;padding:2px 8px;border-radius:99px;letter-spacing:1px;font-weight:700}
-  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px 15px;display:flex;flex-direction:column;gap:6px;position:relative}
-  .card.past{opacity:.55}
-  .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .time{font-size:12px;font-weight:600;color:var(--accent);background:rgba(124,156,245,.12);padding:2px 8px;border-radius:6px;white-space:nowrap}
-  .tag{font-size:10.5px;text-transform:uppercase;letter-spacing:.8px;padding:2px 8px;border-radius:99px;font-weight:700}
-  .warn{font-size:10.5px;color:#e0b04c;border:1px solid #6b5620;background:rgba(224,176,76,.08);padding:2px 8px;border-radius:99px;cursor:help}
-  .card h3{margin:2px 0 0;font-size:15.5px;line-height:1.3}
-  .card h3 a{color:var(--text);text-decoration:none}
-  .card h3 a:hover{color:var(--accent);text-decoration:underline}
-  .meta{font-size:12.5px;color:var(--dim)}
-  .meta b{color:#adbac7;font-weight:600}
-  .desc{font-size:13px;color:#b5c0cc;margin-top:1px}
-  .links{display:flex;gap:8px;margin-top:8px}
-  .btn{font-size:12.5px;font-weight:600;text-decoration:none;padding:5px 13px;border-radius:8px;border:1px solid var(--border)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:11px}
+  .lcard{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:5px}
+  .lcard .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .time{font-size:11.5px;font-weight:600;color:var(--accent);background:rgba(124,156,245,.12);padding:2px 8px;border-radius:6px}
+  .tag{font-size:10px;text-transform:uppercase;letter-spacing:.8px;padding:2px 8px;border-radius:99px;font-weight:700}
+  .warn{font-size:10px;color:#e0b04c;border:1px solid #6b5620;background:rgba(224,176,76,.08);padding:2px 7px;border-radius:99px;cursor:help}
+  .lcard h3{margin:1px 0 0;font-size:14.5px}
+  .lcard h3 a{color:var(--text);text-decoration:none}
+  .lcard h3 a:hover{color:var(--accent)}
+  .lmeta{font-size:12px;color:var(--dim)}
+  .lmeta b{color:#adbac7}
+  .ldesc{font-size:12.5px;color:#b5c0cc}
+  .links{display:flex;gap:7px;margin-top:6px}
+  .btn{font-size:12px;font-weight:600;text-decoration:none;padding:4px 12px;border-radius:7px;border:1px solid var(--border)}
   .btn.rsvp{background:var(--accent);color:#0d1117;border-color:var(--accent)}
-  .btn.rsvp:hover{filter:brightness(1.12)}
   .btn.tw{color:var(--dim)}
-  .btn.tw:hover{color:var(--text);border-color:var(--dim)}
-  footer{max-width:1100px;margin:36px auto 0;padding:0 20px;color:var(--dim);font-size:12px;border-top:1px solid var(--border);padding-top:14px}
-  @media(max-width:520px){.grid{grid-template-columns:1fr}}
+  footer{max-width:1500px;margin:30px auto 0;padding:0 20px;color:var(--dim);font-size:11.5px;border-top:1px solid var(--border);padding-top:13px}
 </style>
 </head>
 <body>
 <header>
-  <h1><span class="moon">🌑</span> ICML 2026 Seoul — Side Events</h1>
-  <div class="sub">Parties, dinners, mixers &amp; socials · Jul 5–11 · all times KST · compiled by Nyx from X, Jul 7 2026 · <span id="count"></span></div>
-  <div class="legend" id="legend"></div>
+  <h1>🌑 ICML 2026 Seoul — Side Events</h1>
+  <div class="sub">Jul 5–11 · all times KST · <span id="count"></span> · compiled by Nyx from X · date-conflict events flagged ⚠︎</div>
+  <div class="bar">
+    <div class="legend" id="legend"></div>
+    <div class="toggle">
+      <button id="btnCal" class="on" onclick="setView('cal')">Calendar</button>
+      <button id="btnList" onclick="setView('list')">List</button>
+    </div>
+  </div>
 </header>
-<main id="main"></main>
+<main>
+  <div class="calwrap" id="calwrap"></div>
+  <div class="listview" id="listview"></div>
+</main>
 <footer>
-  ⚠︎ = weekday/date conflict in the source announcements — trust the RSVP link's date over this page. Curated/invite events noted; cancel RSVPs you won't use (waitlists). Source list: 9 twitter sweeps, deduped.
+  ⚠︎ = the source announcement's weekday and date disagree — trust the RSVP/luma page's date over this grid. Curated/invite-only and lottery events noted in List view. Events with no fixed time are dropped into the nearest slot (all-day/TBC row at bottom). Click any event to open its RSVP or source tweet.
 </footer>
 <script>
 const TAGS={party:"var(--party)",dinner:"var(--dinner)",mixer:"var(--mixer)",reception:"var(--reception)",talk:"var(--talk)",activity:"var(--activity)",coffee:"var(--coffee)"};
+// slot: one of morning, midday, afternoon, evening, night, allday  (hour = 24h sort key)
 const E=[
-// ---- Sun Jul 5 ----
-{d:"2026-07-05",t:"evening",title:"Hashed Lounge Opening Reception",host:"Hashed",venue:"Hashed Lounge",desc:"Flagship curated gathering of AI researchers, engineers, founders. Lounge runs all week.",rsvp:"https://luma.com/bncxfdjm",tw:"https://x.com/hashed_official/status/2072964202105540694",tag:"reception"},
-// ---- Mon Jul 6 ----
-{d:"2026-07-06",t:"10:30–11:30",title:"Xiaomi Tech Talks: MiMo-V2.5",host:"Xiaomi",venue:"COEX Hall C",desc:"Model tech talks.",tw:"https://x.com/XiaomiTech_/status/2072681705912365115",tag:"talk"},
-{d:"2026-07-06",t:"11:30–13:30",title:"Xiaomi GUI Agent Live Demos",host:"Xiaomi",venue:"COEX Grand Ballroom Foyer",desc:"Live agent demos.",tw:"https://x.com/XiaomiTech_/status/2072681705912365115",tag:"talk"},
-{d:"2026-07-06",t:"day",title:"FAR.AI Seoul Alignment Workshop",host:"FAR.AI",venue:"Seoul",desc:"Frontier risks incl. decentralised AI (Pluralis presenting). Informal social after.",tw:"https://x.com/farairesearch/status/2057212801341374849",tag:"talk"},
-{d:"2026-07-06",t:"day",title:"KAIST @ ICML",host:"KAIST GSAI",venue:"—",desc:"Community gathering with KAIST faculty + students.",rsvp:"https://kaist-icml.github.io/",tw:"https://x.com/KAIST_AI/status/2071479326726386003",tag:"mixer"},
-{d:"2026-07-06",t:"day",title:"AI4Science Korean Gathering",host:"Sungsoo Ahn (KAIST)",venue:"—",desc:"Korean researchers in AI for Science.",rsvp:"https://holymollyhao.github.io/ai4science-korea/",tw:"https://x.com/KAIST_AI/status/2071479326726386003",tag:"mixer"},
-{d:"2026-07-06",t:"evening",title:"Elorian AI Rooftop Dinner",host:"Elorian × Ricursive × Striker VP × Delta",venue:"Rooftop, Seoul",desc:"Food, views, people. RSVP via tweet thread.",tw:"https://x.com/nikhil_suresh2/status/2073547456328126889",tag:"dinner"},
-// ---- Tue Jul 7 ----
-{d:"2026-07-07",t:"12:00 AM",title:"Scale AI World Cup Watch Party",host:"Scale AI",venue:"see luma",desc:"Midnight kickoff watch party.",rsvp:"https://luma.com/icml_2026_scale_socials",tw:"https://x.com/afeyzaakyurek/status/2074241651439268168",tag:"activity",warn:"listed as “Mon 7/7” — weekday/date conflict"},
-{d:"2026-07-07",t:"Jul 7–9",title:"Xiaomi Booth B302",host:"Xiaomi",venue:"COEX B302",desc:"Papers, demos, merch, careers. + invite-only Top Talent Dinner.",tw:"https://x.com/XiaomiTech_/status/2072681705912365115",tag:"activity"},
-{d:"2026-07-07",t:"evening",title:"WiML Symposium Evening Social",host:"Women in ML",venue:"Gangnam",desc:"7–10 PM social for WiML symposium participants.",rsvp:"https://luma.com/jb0sc5u1",tw:"https://x.com/WiMLworkshop/status/2072239576366678458",tag:"mixer"},
-{d:"2026-07-07",t:"evening",title:"MATS Research Social Mixer",host:"MATS",venue:"see luma",desc:"Alignment & security crowd — research managers, alumni, attendees.",rsvp:"https://luma.com/8f6i91q9",tw:"https://x.com/MATSprogram/status/2072014049550663732",tag:"mixer"},
-{d:"2026-07-07",t:"8:00 PM",title:"Axiom Happy Hour",host:"Axiom + E14 Fund",venue:"People the Terrace",desc:"Math / reasoning / verification crowd. Private dinner too (DM @Amanda__Hecker).",rsvp:"https://luma.com/rmev9nn6",tw:"https://x.com/axiommathai/status/2069887621086781758",tag:"party"},
-{d:"2026-07-07",t:"evening",title:"Cerebras + Codex Social",host:"Gabriel Chua / Cerebras",venue:"DM for details",desc:"Social + meetup — DM @gabrielchua.",tw:"https://x.com/gabrielchua/status/2074316368602976589",tag:"mixer"},
-{d:"2026-07-07",t:"dinner",title:"Sakana AI Dinner",host:"Sakana AI",venue:"—",desc:"Frontier-ML dinner. Lottery closed Jun 30 — results already sent.",tw:"https://x.com/SakanaAILabs/status/2064230026640556356",tag:"dinner",warn:"applications closed"},
-{d:"2026-07-07",t:"dinner",title:"Cantina Labs Dinner @ Choidot",host:"Cantina Labs",venue:"Choidot, Cheongdam",desc:"~12 guests; video-gen / multimodal / AI characters. Curated approval. Chef Choi Hyun-seok (Culinary Class Wars).",rsvp:"https://luma.com/37sgjcrg",tw:"https://x.com/appleliujiani/status/2067001483175079941",tag:"dinner",warn:"listed “Mon Jul 7” — confirm date on luma"},
-// ---- Wed Jul 8 ----
-{d:"2026-07-08",t:"morning",title:"Coffee & Pastry Mixer (+ lunch)",host:"Jason Cui + co-hosts",venue:"see tweet replies",desc:"Morning coffee mixer, luncheon follows.",tw:"https://x.com/JasonSCui/status/2074132505578664164",tag:"coffee"},
-{d:"2026-07-08",t:"7:30 AM",title:"Scale Morning Run — Yangjaecheon",host:"Scale AI",venue:"Yangjaecheon Stream Trail",desc:"Group run.",rsvp:"https://luma.com/icml_2026_scale_socials",tw:"https://x.com/afeyzaakyurek/status/2074241651439268168",tag:"activity",warn:"listed “Tue 7/8” — weekday/date conflict"},
-{d:"2026-07-08",t:"3:00 PM",title:"Scale Guided Skincare Shopping",host:"Scale AI",venue:"Seoul",desc:"Guided skincare tour.",rsvp:"https://luma.com/icml_2026_scale_socials",tw:"https://x.com/afeyzaakyurek/status/2074241651439268168",tag:"activity",warn:"listed “Tue 7/8”"},
-{d:"2026-07-08",t:"Jul 8–9",title:"Gensyn × Optiver: Connect · Collaborate · Cowork",host:"Gensyn + Optiver",venue:"—",desc:"Cowork space + “Pitch your Poster” on the 8th.",tw:"https://x.com/gensynai/status/2072364823900262425",tag:"activity"},
-{d:"2026-07-08",t:"evening",title:"G-Research Networking Party",host:"G-Research",venue:"secret Seoul location",desc:"Fresh matcha bar, interactive game. Well-produced corporate party.",rsvp:"https://eu1.hubs.ly/H0wLfLF0",tw:"https://x.com/GRESEARCHjobs/status/2074327233628389607",tag:"party",warn:"“Wednesday” — Jul 8 or 9 ambiguous, RSVP pins it"},
-{d:"2026-07-08",t:"evening",title:"Startups × Research Mixer @ Google Seoul",host:"@nicholasdmkim + @chrissyykat",venue:"Google Seoul office",desc:"Researchers × founders, w/ CapitalG + Google DeepMind support.",rsvp:"https://luma.com/ra7tvv7z",tw:"https://x.com/chrissyykat/status/2072745459588952356",tag:"mixer",warn:"weekday/date conflict in tweets"},
-{d:"2026-07-08",t:"evening",title:"Amazon ICML Mixer",host:"Amazon Science",venue:"see luma",desc:"Meet the Amazon teams.",rsvp:"https://luma.com/icml-after-hours",tw:"https://x.com/AmazonScience/status/2072055830099165479",tag:"mixer",warn:"weekday/date conflict in tweets"},
-{d:"2026-07-08",t:"evening",title:"OpenAI Safety & Alignment Mixer",host:"OpenAI (Jasmine Wang)",venue:"invite-based",desc:"Several hiring teams attending. Application form in tweet replies.",tw:"https://x.com/j_asminewang/status/2067003954232508811",tag:"mixer"},
-{d:"2026-07-08",t:"7–10 PM",title:"VESSL AI × Liner Scholar Happy Hour",host:"VESSL AI",venue:"Pub My My (5 min from COEX)",desc:"GPU credits, demos, bingo, drinks.",rsvp:"https://luma.com/2js3bisk",tw:"https://x.com/vesslai/status/2069478969452421325",tag:"party"},
-{d:"2026-07-08",t:"6–9 PM",title:"Turing Happy Hour",host:"Turing",venue:"see tweet",desc:"Researchers + enterprise AI folk; drinks & hors d'oeuvres. Limited spots.",tw:"https://x.com/turingcom/status/2069461800685633741",tag:"party"},
-{d:"2026-07-08",t:"evening",title:"AI × Education Gathering",host:"@smcho91",venue:"see luma",desc:"200+ approved — Mila, GDM, CMU, Berkeley, Harvard, NVIDIA, Meta…",rsvp:"https://luma.com/61aacz14",tw:"https://x.com/smcho91/status/2072868971775394173",tag:"mixer"},
-{d:"2026-07-08",t:"dinner",title:"Cantina Labs Dinner @ Bicena + Speakeasy",host:"Cantina Labs",venue:"Lotte World Tower 81F",desc:"Michelin-starred Korean fine dining, then an Asia's-50-Best speakeasy. Curated approval; guest gift.",rsvp:"https://luma.com/em099j40",tw:"https://x.com/appleliujiani/status/2067001483175079941",tag:"dinner",warn:"listed “Tue Jul 8” — confirm on luma"},
-// ---- Thu Jul 9 ----
-{d:"2026-07-09",t:"6:30 PM",title:"Scale AI Reception",host:"Scale AI",venue:"see luma",desc:"The big one — drinks, food, networking.",rsvp:"https://luma.com/scaleicmlreception",tw:"https://x.com/afeyzaakyurek/status/2074241651439268168",tag:"reception",warn:"listed “Wed 7/9” — weekday/date conflict, luma pins it"},
-{d:"2026-07-09",t:"evening",title:"AMI × SBVA Mixer",host:"AMI × SBVA",venue:"see luma",desc:"AI researchers + founders (boosted by Saining Xie).",rsvp:"https://luma.com/rv0q6b5q",tw:"https://x.com/sainingxie/status/2073953877800419652",tag:"mixer"},
-{d:"2026-07-09",t:"7:00 PM",title:"Fusion Fund + Gradient VC Happy Hour",host:"Fusion Fund × Gradient × Memories AI",venue:"Oakwood Hotel (COEX)",desc:"Founders + researchers “pushing past scaling laws”. RSVP via tweet replies.",tw:"https://x.com/xia_char/status/2072388269267193918",tag:"party",warn:"listed “Wed 7/9”"},
-{d:"2026-07-09",t:"7–9 PM",title:"ZODA × D-Robotics Innovators Night",host:"ZODA × MolarData × D-Robotics",venue:"high-rise, Seoul",desc:"Quantum AI / world models / embodied talks, open-source panel, dev-kit lucky draw, cocktails.",rsvp:"https://luma.com/1yrpn8vn",tw:"https://x.com/ZODA_FOREVER/status/2072506072720695780",tag:"party",warn:"listed “Wed 7/9”"},
-{d:"2026-07-09",t:"dinner",title:"Mantic Dinner",host:"Mantic AI",venue:"Gangnam",desc:"Dinner in the saju-café district; Mantic also at Sat's forecasting workshop. RSVP via replies.",tw:"https://x.com/_Mantic_AI/status/2073031305688682773",tag:"dinner"},
-{d:"2026-07-09",t:"night",title:"Jonah Sanders Happy Hour",host:"@jonahsanders33",venue:"top-50-Asia bar",desc:"Casual happy hour — DM to join.",tw:"https://x.com/jonahsanders33/status/2071685931011113393",tag:"party"},
-{d:"2026-07-09",t:"evening",title:"Pluralis Social: Decentralized Training Panel",host:"Pluralis",venue:"see luma",desc:"Official ICML social — “Collective, Decentralized Training as a Hedge Against AI Power Concentration”.",rsvp:"https://luma.com/a2el9zyn",tw:"https://x.com/RiccardoPatana/status/2072902250566193344",tag:"mixer"},
-{d:"2026-07-09",t:"day",title:"NUS × Jane Street Summit: Self-Evolving Agents",host:"Bryan K.H. Low",venue:"—",desc:"Self-evolution of AI agents & multiagent systems.",rsvp:"https://x.com/bryanklow/status/2069616509564199093",tw:"https://x.com/bryanklow/status/2072869330015125977",tag:"talk",warn:"listed “Wed Jul 9”"},
-{d:"2026-07-09",t:"evening",title:"Gensyn × Optiver Fireside + Happy Hour",host:"Gensyn + Optiver",venue:"—",desc:"Research-to-industry fireside chat, then drinks.",tw:"https://x.com/gensynai/status/2072364823900262425",tag:"party"},
-{d:"2026-07-09",t:"evening",title:"Cantina Labs Cocktail Evening",host:"Cantina Labs",venue:"confidential (revealed on approval)",desc:"Video-gen / multimodal / AI-characters crowd. Speaker session, gift lottery. Curated.",rsvp:"https://luma.com/2kzz8fox",tw:"https://x.com/appleliujiani/status/2067001483175079941",tag:"party",warn:"listed “Wed Jul 9” — confirm on luma"},
-// ---- Fri Jul 10 ----
-{d:"2026-07-10",t:"8:00 AM",title:"Scale Morning Run — Bukchon + Gyeongbokgung",host:"Scale AI",venue:"Bukchon Hanok Village",desc:"Group run through the old city.",rsvp:"https://luma.com/icml_2026_scale_socials",tw:"https://x.com/afeyzaakyurek/status/2074241651439268168",tag:"activity",warn:"listed “Thu 7/10”"},
-{d:"2026-07-10",t:"lunch",title:"Bits Meet Atoms — Lunch Reception",host:"1943 × Ricursive × Sophont × Z Potentials",venue:"see tweet replies",desc:"Model-builders meet robotics/hardware/medicine.",tw:"https://x.com/xia_char/status/2074355221158060366",tag:"mixer"},
-{d:"2026-07-10",t:"3:00 PM",title:"Scale Gyeongbokgung Palace Visit",host:"Scale AI",venue:"Gyeongbokgung",desc:"Palace outing.",rsvp:"https://luma.com/icml_2026_scale_socials",tw:"https://x.com/afeyzaakyurek/status/2074241651439268168",tag:"activity",warn:"listed “Thu 7/10”"},
-{d:"2026-07-10",t:"day",title:"2nd Workshop on Protocol Learning",host:"Pluralis + POSTECH",venue:"see luma",desc:"Decentralized-training workshop, strong speaker lineup.",rsvp:"https://luma.com/almfr7q2",tw:"https://x.com/RiccardoPatana/status/2072902250566193344",tag:"talk"},
-{d:"2026-07-10",t:"Jul 10–11",title:"Gensyn Paper Presentations (×4)",host:"Gensyn",venue:"COEX",desc:"Distributed ML / training-infra papers.",tw:"https://x.com/gensynai/status/2072364823900262425",tag:"talk"},
-// ---- Sat Jul 11 ----
-{d:"2026-07-11",t:"day",title:"AI Forecasting Workshop",host:"ICML workshop (Mantic ×3 papers)",venue:"COEX",desc:"Invited talk by @enjeeneer; three Mantic papers.",tw:"https://x.com/_Mantic_AI/status/2073031305688682773",tag:"talk",warn:"Mantic tweet said “Saturday, July 9” — Sat = Jul 11"},
-// ---- Anytime / date TBC ----
-{d:"tbc",t:"all week",title:"Profluent Bio Coffee Chats + Dinner",host:"Profluent Bio",venue:"—",desc:"Protein LMs / AI×bio 1:1s all week, plus a dinner.",rsvp:"https://luma.com/qpc1mfw9",tw:"https://x.com/ProfluentBio/status/2072697612730269716",tag:"coffee"},
-{d:"tbc",t:"TBC",title:"Applied Compute + Modal Rooftop Happy Hour",host:"Applied Compute × Modal",venue:"rooftop — “Korea's hidden gem”",desc:"For researchers / infra builders. RSVP via tweet replies.",tw:"https://x.com/appliedcompute/status/2072121334419861620",tag:"party"},
-{d:"tbc",t:"TBC",title:"SemiAnalysis × AI Frontier Infra Dinner",host:"SemiAnalysis + Chester Roh, Matthew Kim",venue:"Seoul",desc:"Small invite-only dinner: datacenters, chips, GPU cloud, Korea/Asia supply chain.",rsvp:"https://luma.com/bfnr8flm",tw:"https://x.com/MinseokMatthew/status/2072913940817060340",tag:"dinner"},
-{d:"tbc",t:"TBC",title:"General Catalyst + Calvin Chen Dinner",host:"Calvin Chen × General Catalyst",venue:"Netflix-featured chef, sought-after res",desc:"Small curated group; food-forward.",rsvp:"https://luma.com/y1i0ohtp",tw:"https://x.com/calvinchen/status/2073107662875808009",tag:"dinner"},
-{d:"tbc",t:"TBC",title:"KRAFTON AI × Odyssey: AI for Games Social",host:"KRAFTON AI + Odyssey",venue:"COEX",desc:"Talks + panel + networking — Sony AI, MSR, Odyssey, NC AI, NVIDIA.",rsvp:"https://luma.com/wf7pe0ee/",tw:"https://x.com/Krafton_AI/status/2071888627723059702",tag:"mixer"},
-{d:"tbc",t:"TBC",title:"Paradigma Social",host:"Paradigma",venue:"Seoul",desc:"“Novel conversations” over beers. RSVP via replies.",tw:"https://x.com/paradigmainc/status/2072316293311570342",tag:"party"},
-{d:"tbc",t:"TBC",title:"India@ICML Social",host:"ExceptionRaised",venue:"—",desc:"Official India@ICML social w/ data-driven insights.",tw:"https://x.com/except_raised/status/2067080043281678384",tag:"mixer"},
-{d:"tbc",t:"TBC",title:"Free Soju for ICML Attendees",host:"@jparkjmc",venue:"—",desc:"It's free soju. Link in tweet.",tw:"https://x.com/jparkjmc/status/2074045970963378293",tag:"party"},
-{d:"tbc",t:"tentative",title:"Meta-Models Mixer (interest check)",host:"@celestepoasts",venue:"—",desc:"Big mixer for meta models — not yet confirmed.",tw:"https://x.com/celestepoasts/status/2074209044990918978",tag:"mixer"},
+{d:"2026-07-05",slot:"evening",hr:19,t:"eve",title:"Hashed Lounge Opening Reception",host:"Hashed",venue:"Hashed Lounge",desc:"Flagship curated gathering of AI researchers, engineers, founders. Lounge runs all week.",rsvp:"https://luma.com/bncxfdjm",tw:"https://x.com/hashed_official/status/2072964202105540694",tag:"reception"},
+
+{d:"2026-07-06",slot:"morning",hr:10.5,t:"10:30",title:"Xiaomi Tech Talks: MiMo-V2.5",host:"Xiaomi",venue:"COEX Hall C",desc:"Model tech talks.",tw:"https://x.com/XiaomiTech_/status/2072681705912365115",tag:"talk"},
+{d:"2026-07-06",slot:"midday",hr:11.5,t:"11:30",title:"Xiaomi GUI Agent Live Demos",host:"Xiaomi",venue:"COEX Ballroom Foyer",desc:"Live agent demos.",tw:"https://x.com/XiaomiTech_/status/2072681705912365115",tag:"talk"},
+{d:"2026-07-06",slot:"allday",hr:12,t:"day",title:"FAR.AI Seoul Alignment Workshop",host:"FAR.AI",venue:"Seoul",desc:"Frontier risks incl. decentralised AI (Pluralis presenting). Informal social after.",tw:"https://x.com/farairesearch/status/2057212801341374849",tag:"talk"},
+{d:"2026-07-06",slot:"allday",hr:12,t:"day",title:"KAIST @ ICML",host:"KAIST GSAI",venue:"—",desc:"Community gathering w/ KAIST faculty + students.",rsvp:"https://kaist-icml.github.io/",tw:"https://x.com/KAIST_AI/status/2071479326726386003",tag:"mixer"},
+{d:"2026-07-06",slot:"allday",hr:12,t:"day",title:"AI4Science Korean Gathering",host:"Sungsoo Ahn (KAIST)",venue:"—",desc:"Korean researchers in AI for Science.",rsvp:"https://holymollyhao.github.io/ai4science-korea/",tw:"https://x.com/KAIST_AI/status/2071479326726386003",tag:"mixer"},
+{d:"2026-07-06",slot:"evening",hr:19,t:"eve",title:"Elorian AI Rooftop Dinner",host:"Elorian × Ricursive × Striker VP",venue:"Rooftop, Seoul",desc:"Food, views, people. RSVP via tweet thread.",tw:"https://x.com/nikhil_suresh2/status/2073547456328126889",tag:"dinner"},
+
+{d:"2026-07-07",slot:"night",hr:0,t:"12 AM",title:"Scale World Cup Watch Party",host:"Scale AI",venue:"see luma",desc:"Midnight kickoff watch party.",rsvp:"https://luma.com/icml_2026_scale_socials",tw:"https://x.com/afeyzaakyurek/status/2074241651439268168",tag:"activity",warn:"listed “Mon 7/7”"},
+{d:"2026-07-07",slot:"allday",hr:12,t:"Jul 7–9",title:"Xiaomi Booth B302",host:"Xiaomi",venue:"COEX B302",desc:"Papers, demos, merch, careers. + invite-only Top Talent Dinner.",tw:"https://x.com/XiaomiTech_/status/2072681705912365115",tag:"activity"},
+{d:"2026-07-07",slot:"evening",hr:19,t:"eve",title:"WiML Symposium Evening Social",host:"Women in ML",venue:"Gangnam",desc:"7–10 PM social for WiML participants.",rsvp:"https://luma.com/jb0sc5u1",tw:"https://x.com/WiMLworkshop/status/2072239576366678458",tag:"mixer"},
+{d:"2026-07-07",slot:"evening",hr:19,t:"eve",title:"MATS Research Social Mixer",host:"MATS",venue:"see luma",desc:"Alignment & security crowd — research managers, alumni, attendees.",rsvp:"https://luma.com/8f6i91q9",tw:"https://x.com/MATSprogram/status/2072014049550663732",tag:"mixer"},
+{d:"2026-07-07",slot:"night",hr:20,t:"8 PM",title:"Axiom Happy Hour",host:"Axiom + E14 Fund",venue:"People the Terrace",desc:"Math / reasoning / verification crowd. Private dinner too (DM @Amanda__Hecker).",rsvp:"https://luma.com/rmev9nn6",tw:"https://x.com/axiommathai/status/2069887621086781758",tag:"party"},
+{d:"2026-07-07",slot:"evening",hr:19,t:"eve",title:"Cerebras + Codex Social",host:"Gabriel Chua / Cerebras",venue:"DM @gabrielchua",desc:"Social + meetup.",tw:"https://x.com/gabrielchua/status/2074316368602976589",tag:"mixer"},
+{d:"2026-07-07",slot:"night",hr:19.5,t:"dinner",title:"Sakana AI Dinner",host:"Sakana AI",venue:"—",desc:"Frontier-ML dinner. Lottery closed Jun 30 — results already sent.",tw:"https://x.com/SakanaAILabs/status/2064230026640556356",tag:"dinner",warn:"applications closed"},
+{d:"2026-07-07",slot:"night",hr:19.5,t:"dinner",title:"Cantina Labs Dinner @ Choidot",host:"Cantina Labs",venue:"Choidot, Cheongdam",desc:"~12 guests; video-gen/multimodal/AI-characters. Curated. Chef Choi Hyun-seok (Culinary Class Wars).",rsvp:"https://luma.com/37sgjcrg",tw:"https://x.com/appleliujiani/status/2067001483175079941",tag:"dinner",warn:"date — confirm on luma"},
+
+{d:"2026-07-08",slot:"morning",hr:7.5,t:"7:30 AM",title:"Scale Morning Run — Yangjaecheon",host:"Scale AI",venue:"Yangjaecheon Trail",desc:"Group run.",rsvp:"https://luma.com/icml_2026_scale_socials",tw:"https://x.com/afeyzaakyurek/status/2074241651439268168",tag:"activity",warn:"listed “Tue 7/8”"},
+{d:"2026-07-08",slot:"morning",hr:9,t:"AM",title:"Coffee & Pastry Mixer (+ lunch)",host:"Jason Cui + co-hosts",venue:"see tweet replies",desc:"Morning coffee mixer, luncheon follows.",tw:"https://x.com/JasonSCui/status/2074132505578664164",tag:"coffee"},
+{d:"2026-07-08",slot:"afternoon",hr:15,t:"3 PM",title:"Scale Guided Skincare Shopping",host:"Scale AI",venue:"Seoul",desc:"Guided skincare tour.",rsvp:"https://luma.com/icml_2026_scale_socials",tw:"https://x.com/afeyzaakyurek/status/2074241651439268168",tag:"activity",warn:"listed “Tue 7/8”"},
+{d:"2026-07-08",slot:"allday",hr:12,t:"Jul 8–9",title:"Gensyn × Optiver: Cowork + Pitch",host:"Gensyn + Optiver",venue:"—",desc:"Cowork space + “Pitch your Poster” on the 8th.",tw:"https://x.com/gensynai/status/2072364823900262425",tag:"activity"},
+{d:"2026-07-08",slot:"evening",hr:19,t:"eve",title:"G-Research Networking Party",host:"G-Research",venue:"secret Seoul location",desc:"Fresh matcha bar, interactive game. Well-produced.",rsvp:"https://eu1.hubs.ly/H0wLfLF0",tw:"https://x.com/GRESEARCHjobs/status/2074327233628389607",tag:"party",warn:"“Wed” — Jul 8/9 ambiguous, RSVP pins it"},
+{d:"2026-07-08",slot:"evening",hr:19,t:"eve",title:"Startups × Research @ Google Seoul",host:"@nicholasdmkim + @chrissyykat",venue:"Google Seoul office",desc:"Researchers × founders, CapitalG + DeepMind support.",rsvp:"https://luma.com/ra7tvv7z",tw:"https://x.com/chrissyykat/status/2072745459588952356",tag:"mixer",warn:"date conflict in tweets"},
+{d:"2026-07-08",slot:"evening",hr:19,t:"eve",title:"Amazon ICML Mixer",host:"Amazon Science",venue:"see luma",desc:"Meet the Amazon teams.",rsvp:"https://luma.com/icml-after-hours",tw:"https://x.com/AmazonScience/status/2072055830099165479",tag:"mixer",warn:"date conflict in tweets"},
+{d:"2026-07-08",slot:"evening",hr:19,t:"eve",title:"OpenAI Safety & Alignment Mixer",host:"OpenAI (Jasmine Wang)",venue:"invite-based",desc:"Several hiring teams attending. Form in tweet replies.",tw:"https://x.com/j_asminewang/status/2067003954232508811",tag:"mixer"},
+{d:"2026-07-08",slot:"evening",hr:19,t:"7–10",title:"VESSL AI × Liner Happy Hour",host:"VESSL AI",venue:"Pub My My (5 min COEX)",desc:"GPU credits, demos, bingo, drinks.",rsvp:"https://luma.com/2js3bisk",tw:"https://x.com/vesslai/status/2069478969452421325",tag:"party"},
+{d:"2026-07-08",slot:"evening",hr:18,t:"6–9",title:"Turing Happy Hour",host:"Turing",venue:"see tweet",desc:"Researchers + enterprise AI. Drinks & hors d'oeuvres. Limited.",tw:"https://x.com/turingcom/status/2069461800685633741",tag:"party"},
+{d:"2026-07-08",slot:"evening",hr:19,t:"eve",title:"AI × Education Gathering",host:"@smcho91",venue:"see luma",desc:"200+ approved — Mila, GDM, CMU, Berkeley, Harvard, NVIDIA, Meta…",rsvp:"https://luma.com/61aacz14",tw:"https://x.com/smcho91/status/2072868971775394173",tag:"mixer"},
+{d:"2026-07-08",slot:"night",hr:19.5,t:"dinner",title:"Cantina Labs Dinner @ Bicena",host:"Cantina Labs",venue:"Lotte World Tower 81F",desc:"Michelin Korean fine dining + 50-Best speakeasy. Curated; guest gift.",rsvp:"https://luma.com/em099j40",tw:"https://x.com/appleliujiani/status/2067001483175079941",tag:"dinner",warn:"date — confirm on luma"},
+
+{d:"2026-07-09",slot:"morning",hr:9,t:"AM",title:"NUS × Jane Street Summit",host:"Bryan K.H. Low",venue:"—",desc:"Self-evolution of AI agents & multiagent systems.",rsvp:"https://x.com/bryanklow/status/2069616509564199093",tw:"https://x.com/bryanklow/status/2072869330015125977",tag:"talk",warn:"listed “Wed Jul 9”"},
+{d:"2026-07-09",slot:"evening",hr:18.5,t:"6:30",title:"Scale AI Reception",host:"Scale AI",venue:"see luma",desc:"The big one — drinks, food, networking.",rsvp:"https://luma.com/scaleicmlreception",tw:"https://x.com/afeyzaakyurek/status/2074241651439268168",tag:"reception",warn:"listed “Wed 7/9” — luma pins it"},
+{d:"2026-07-09",slot:"evening",hr:19,t:"eve",title:"AMI × SBVA Mixer",host:"AMI × SBVA",venue:"see luma",desc:"AI researchers + founders (boosted by Saining Xie).",rsvp:"https://luma.com/rv0q6b5q",tw:"https://x.com/sainingxie/status/2073953877800419652",tag:"mixer"},
+{d:"2026-07-09",slot:"evening",hr:19,t:"7 PM",title:"Fusion Fund + Gradient VC HH",host:"Fusion × Gradient × Memories AI",venue:"Oakwood Hotel (COEX)",desc:"Founders + researchers “past scaling laws”. RSVP via replies.",tw:"https://x.com/xia_char/status/2072388269267193918",tag:"party",warn:"listed “Wed 7/9”"},
+{d:"2026-07-09",slot:"evening",hr:19,t:"7–9",title:"ZODA × D-Robotics Innovators Night",host:"ZODA × MolarData × D-Robotics",venue:"high-rise, Seoul",desc:"Quantum AI / world models / embodied talks, dev-kit draw, cocktails.",rsvp:"https://luma.com/1yrpn8vn",tw:"https://x.com/ZODA_FOREVER/status/2072506072720695780",tag:"party",warn:"listed “Wed 7/9”"},
+{d:"2026-07-09",slot:"evening",hr:19,t:"eve",title:"Pluralis Decentralized-Training Panel",host:"Pluralis",venue:"see luma",desc:"Official ICML social — decentralized training as a hedge vs power concentration.",rsvp:"https://luma.com/a2el9zyn",tw:"https://x.com/RiccardoPatana/status/2072902250566193344",tag:"mixer"},
+{d:"2026-07-09",slot:"evening",hr:19,t:"eve",title:"Gensyn × Optiver Fireside + HH",host:"Gensyn + Optiver",venue:"—",desc:"Research-to-industry fireside, then drinks.",tw:"https://x.com/gensynai/status/2072364823900262425",tag:"party"},
+{d:"2026-07-09",slot:"night",hr:19.5,t:"dinner",title:"Mantic Dinner",host:"Mantic AI",venue:"Gangnam",desc:"Dinner in the saju-café district. RSVP via replies.",tw:"https://x.com/_Mantic_AI/status/2073031305688682773",tag:"dinner"},
+{d:"2026-07-09",slot:"night",hr:21,t:"night",title:"Jonah Sanders Happy Hour",host:"@jonahsanders33",venue:"top-50-Asia bar",desc:"Casual HH — DM to join.",tw:"https://x.com/jonahsanders33/status/2071685931011113393",tag:"party"},
+{d:"2026-07-09",slot:"night",hr:19.5,t:"eve",title:"Cantina Labs Cocktail Evening",host:"Cantina Labs",venue:"confidential (on approval)",desc:"Video-gen/multimodal crowd. Speaker session, gift lottery. Curated.",rsvp:"https://luma.com/2kzz8fox",tw:"https://x.com/appleliujiani/status/2067001483175079941",tag:"party",warn:"date — confirm on luma"},
+
+{d:"2026-07-10",slot:"morning",hr:8,t:"8 AM",title:"Scale Run — Bukchon + Gyeongbokgung",host:"Scale AI",venue:"Bukchon Hanok Village",desc:"Group run through the old city.",rsvp:"https://luma.com/icml_2026_scale_socials",tw:"https://x.com/afeyzaakyurek/status/2074241651439268168",tag:"activity",warn:"listed “Thu 7/10”"},
+{d:"2026-07-10",slot:"midday",hr:12,t:"lunch",title:"Bits Meet Atoms — Lunch",host:"1943 × Ricursive × Sophont",venue:"see replies",desc:"Model-builders meet robotics/hardware/medicine.",tw:"https://x.com/xia_char/status/2074355221158060366",tag:"mixer"},
+{d:"2026-07-10",slot:"afternoon",hr:15,t:"3 PM",title:"Scale Gyeongbokgung Palace Visit",host:"Scale AI",venue:"Gyeongbokgung",desc:"Palace outing.",rsvp:"https://luma.com/icml_2026_scale_socials",tw:"https://x.com/afeyzaakyurek/status/2074241651439268168",tag:"activity",warn:"listed “Thu 7/10”"},
+{d:"2026-07-10",slot:"allday",hr:12,t:"day",title:"Protocol Learning Workshop (2nd)",host:"Pluralis + POSTECH",venue:"see luma",desc:"Decentralized-training workshop, strong lineup.",rsvp:"https://luma.com/almfr7q2",tw:"https://x.com/RiccardoPatana/status/2072902250566193344",tag:"talk"},
+{d:"2026-07-10",slot:"allday",hr:12,t:"Jul 10–11",title:"Gensyn Paper Presentations (×4)",host:"Gensyn",venue:"COEX",desc:"Distributed ML / training-infra papers.",tw:"https://x.com/gensynai/status/2072364823900262425",tag:"talk"},
+
+{d:"2026-07-11",slot:"allday",hr:12,t:"day",title:"AI Forecasting Workshop",host:"ICML workshop (Mantic ×3)",venue:"COEX",desc:"Invited talk by @enjeeneer; three Mantic papers.",tw:"https://x.com/_Mantic_AI/status/2073031305688682773",tag:"talk",warn:"tweet said “Sat Jul 9” — Sat = Jul 11"},
+
+// date-TBC / all-week — rendered only in list + a TBC strip
+{d:"tbc",slot:"allday",hr:12,t:"all week",title:"Profluent Bio Coffee Chats + Dinner",host:"Profluent Bio",venue:"—",desc:"Protein LM / AI×bio 1:1s all week + a dinner.",rsvp:"https://luma.com/qpc1mfw9",tw:"https://x.com/ProfluentBio/status/2072697612730269716",tag:"coffee"},
+{d:"tbc",slot:"allday",hr:12,t:"TBC",title:"Applied Compute + Modal Rooftop HH",host:"Applied Compute × Modal",venue:"rooftop",desc:"Researchers / infra builders. RSVP via replies.",tw:"https://x.com/appliedcompute/status/2072121334419861620",tag:"party"},
+{d:"tbc",slot:"allday",hr:12,t:"TBC",title:"SemiAnalysis × AI Frontier Infra Dinner",host:"SemiAnalysis + Chester Roh",venue:"Seoul",desc:"Invite-only: datacenters, chips, GPU cloud, Korea/Asia supply chain.",rsvp:"https://luma.com/bfnr8flm",tw:"https://x.com/MinseokMatthew/status/2072913940817060340",tag:"dinner"},
+{d:"tbc",slot:"allday",hr:12,t:"TBC",title:"General Catalyst + Calvin Chen Dinner",host:"Calvin Chen × GC",venue:"Netflix-featured chef",desc:"Small curated group; food-forward.",rsvp:"https://luma.com/y1i0ohtp",tw:"https://x.com/calvinchen/status/2073107662875808009",tag:"dinner"},
+{d:"tbc",slot:"allday",hr:12,t:"TBC",title:"KRAFTON AI × Odyssey: AI for Games",host:"KRAFTON AI + Odyssey",venue:"COEX",desc:"Talks + panel — Sony AI, MSR, Odyssey, NC AI, NVIDIA.",rsvp:"https://luma.com/wf7pe0ee/",tw:"https://x.com/Krafton_AI/status/2071888627723059702",tag:"mixer"},
+{d:"tbc",slot:"allday",hr:12,t:"TBC",title:"Paradigma Social",host:"Paradigma",venue:"Seoul",desc:"“Novel conversations” over beers.",tw:"https://x.com/paradigmainc/status/2072316293311570342",tag:"party"},
+{d:"tbc",slot:"allday",hr:12,t:"TBC",title:"India@ICML Social",host:"ExceptionRaised",venue:"—",desc:"Official India@ICML social w/ data insights.",tw:"https://x.com/except_raised/status/2067080043281678384",tag:"mixer"},
+{d:"tbc",slot:"allday",hr:12,t:"TBC",title:"Free Soju for ICML Attendees",host:"@jparkjmc",venue:"—",desc:"It's free soju. Link in tweet.",tw:"https://x.com/jparkjmc/status/2074045970963378293",tag:"party"},
+{d:"tbc",slot:"allday",hr:12,t:"tentative",title:"Meta-Models Mixer (interest check)",host:"@celestepoasts",venue:"—",desc:"Big mixer for meta models — not yet confirmed.",tw:"https://x.com/celestepoasts/status/2074209044990918978",tag:"mixer"},
 ];
-const DAYS=[["2026-07-05","Sun","Jul 5","pre-conference"],["2026-07-06","Mon","Jul 6","day 1"],["2026-07-07","Tue","Jul 7","day 2"],["2026-07-08","Wed","Jul 8","day 3"],["2026-07-09","Thu","Jul 9","day 4"],["2026-07-10","Fri","Jul 10","day 5"],["2026-07-11","Sat","Jul 11","workshops"],["tbc","","Date TBC / all week",""]];
-// "today" in KST
+
+const DAYS=[["2026-07-05","Sun","Jul 5"],["2026-07-06","Mon","Jul 6"],["2026-07-07","Tue","Jul 7"],["2026-07-08","Wed","Jul 8"],["2026-07-09","Thu","Jul 9"],["2026-07-10","Fri","Jul 10"],["2026-07-11","Sat","Jul 11"]];
+const SLOTS=[["morning","Morning"],["midday","Midday"],["afternoon","Afternoon"],["evening","Evening"],["night","Night"],["allday","All-day"]];
 const kstNow=new Date(Date.now()+9*3600e3);
 const todayKST=kstNow.toISOString().slice(0,10);
-const main=document.getElementById("main");
-let total=0;
-for(const [key,dow,label,sub] of DAYS){
-  const evs=E.filter(e=>e.d===key); if(!evs.length)continue; total+=evs.length;
-  const sec=document.createElement("section");
-  sec.className="day"+(key===todayKST?" today":"")+(key!=="tbc"&&key<todayKST?" pastday":"");
-  sec.innerHTML=`<h2><b>${dow?dow+" · ":""}${label}</b><span>${sub}</span></h2>`;
-  const grid=document.createElement("div");grid.className="grid";
-  for(const e of evs){
-    const c=document.createElement("div");
-    c.className="card"+(key!=="tbc"&&key<todayKST?" past":"");
-    const primary=e.rsvp||e.tw;
-    c.innerHTML=`
-      <div class="top">
-        <span class="time">${e.t}</span>
-        <span class="tag" style="color:${TAGS[e.tag]};border:1px solid ${TAGS[e.tag]}55;background:${TAGS[e.tag]}18">${e.tag}</span>
-        ${e.warn?`<span class="warn" title="${e.warn.replace(/"/g,'&quot;')}">⚠︎ date?</span>`:""}
-      </div>
-      <h3><a href="${primary}" target="_blank" rel="noopener">${e.title}</a></h3>
-      <div class="meta"><b>${e.host}</b>${e.venue&&e.venue!=="—"?" · "+e.venue:""}</div>
-      <div class="desc">${e.desc}</div>
-      <div class="links">
-        ${e.rsvp?`<a class="btn rsvp" href="${e.rsvp}" target="_blank" rel="noopener">RSVP ↗</a>`:""}
-        ${e.tw?`<a class="btn tw" href="${e.tw}" target="_blank" rel="noopener">source tweet</a>`:""}
-      </div>`;
-    grid.appendChild(c);
-  }
-  sec.appendChild(grid);main.appendChild(sec);
+document.getElementById("count").textContent=E.length+" events";
+
+function evHTML(e){
+  const c=TAGS[e.tag], primary=e.rsvp||e.tw;
+  const past=e.d!=="tbc"&&e.d<todayKST?" past":"";
+  return `<a class="ev${past}" style="border-left-color:${c}" href="${primary}" target="_blank" rel="noopener" title="${(e.host+' · '+e.venue).replace(/"/g,'&quot;')}">
+    <span class="t">${e.t}${e.warn?` <span class="w" title="${e.warn.replace(/"/g,'&quot;')}">⚠︎</span>`:""}</span>
+    <span class="n">${e.title}</span>
+    <span class="h">${e.host}</span></a>`;
 }
-document.getElementById("count").textContent=total+" events";
+
+// ---- build calendar grid ----
+function buildCal(){
+  const wrap=document.getElementById("calwrap");
+  let h='<div class="cal"><div class="corner"></div>';
+  for(const [key,dow,lab] of DAYS){
+    const today=key===todayKST?" today":"";
+    h+=`<div class="dayhead${today}"><b>${dow}</b><small>${lab}</small></div>`;
+  }
+  for(const [sk,slabel] of SLOTS){
+    h+=`<div class="slotlabel">${slabel}</div>`;
+    for(const [key] of DAYS){
+      const today=key===todayKST?" today":"";
+      const evs=E.filter(e=>e.d===key&&e.slot===sk).sort((a,b)=>a.hr-b.hr);
+      h+=`<div class="cell${today}">${evs.map(evHTML).join("")}</div>`;
+    }
+  }
+  h+='</div>';
+  // TBC strip below the grid
+  const tbc=E.filter(e=>e.d==="tbc");
+  if(tbc.length){
+    h+=`<div style="border-top:1px solid var(--border);padding:10px 12px;background:var(--panel)">
+      <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin-bottom:8px">Date TBC / all-week — ${tbc.length}</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:7px">${tbc.map(evHTML).join("")}</div></div>`;
+  }
+  wrap.innerHTML=h;
+}
+
+// ---- build list view ----
+function buildList(){
+  const lv=document.getElementById("listview");
+  const order=[...DAYS.map(d=>d[0]),"tbc"];
+  const labels={...Object.fromEntries(DAYS.map(d=>[d[0],d[1]+" · "+d[2]])),"tbc":"Date TBC / all-week"};
+  let h="";
+  for(const key of order){
+    const evs=E.filter(e=>e.d===key).sort((a,b)=>a.hr-b.hr);
+    if(!evs.length)continue;
+    h+=`<section class="day${key===todayKST?' today':''}"><h2><b>${labels[key]}</b></h2><div class="grid">`;
+    for(const e of evs){
+      const c=TAGS[e.tag], primary=e.rsvp||e.tw;
+      const past=e.d!=="tbc"&&e.d<todayKST?" past":"";
+      h+=`<div class="lcard${past}">
+        <div class="top"><span class="time">${e.t}</span>
+        <span class="tag" style="color:${c};border:1px solid ${c}55;background:${c}18">${e.tag}</span>
+        ${e.warn?`<span class="warn" title="${e.warn.replace(/"/g,'&quot;')}">⚠︎ date?</span>`:""}</div>
+        <h3><a href="${primary}" target="_blank" rel="noopener">${e.title}</a></h3>
+        <div class="lmeta"><b>${e.host}</b>${e.venue&&e.venue!=="—"?" · "+e.venue:""}</div>
+        <div class="ldesc">${e.desc}</div>
+        <div class="links">${e.rsvp?`<a class="btn rsvp" href="${e.rsvp}" target="_blank" rel="noopener">RSVP ↗</a>`:""}${e.tw?`<a class="btn tw" href="${e.tw}" target="_blank" rel="noopener">tweet</a>`:""}</div>
+      </div>`;
+    }
+    h+="</div></section>";
+  }
+  lv.innerHTML=h;
+}
+
+function setView(v){
+  const cal=v==="cal";
+  document.getElementById("calwrap").classList.toggle("off",!cal);
+  document.getElementById("listview").classList.toggle("on",!cal);
+  document.getElementById("btnCal").classList.toggle("on",cal);
+  document.getElementById("btnList").classList.toggle("on",!cal);
+  location.hash=cal?"":"list";
+}
+
 const legend=document.getElementById("legend");
 for(const [k,v] of Object.entries(TAGS)){const s=document.createElement("span");s.innerHTML=`<i style="background:${v}"></i>${k}`;legend.appendChild(s);}
-</script>
-</body>
-</html>
+buildCal();buildList();
+if(location.hash==="#list")setView("list");
