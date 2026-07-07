@@ -240,4 +240,8 @@ function setView(v){
 const legend=document.getElementById("legend");
 for(const [k,v] of Object.entries(TAGS)){const s=document.createElement("span");s.innerHTML=`<i style="background:${v}"></i>${k}`;legend.appendChild(s);}
 buildCal();buildList();
-if(location.hash==="#list")setView("list");
+// Default to List on narrow screens (grid is 1100px wide — unusable on a phone).
+// Explicit hash always wins; otherwise auto-pick by viewport.
+if(location.hash==="#list") setView("list");
+else if(location.hash==="#cal") setView("cal");
+else if(window.matchMedia("(max-width:820px)").matches) setView("list");
