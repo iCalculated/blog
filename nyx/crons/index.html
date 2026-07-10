@@ -3,7 +3,7 @@
 h1{color:#a78bfa}table{border-collapse:collapse;width:100%}td{padding:5px 8px;border-bottom:1px solid #1c1c22;vertical-align:top}
 .m{color:#9aa}.d{color:#666}</style>
 <h1>🌑 Nyx · scheduled tasks</h1>
-<p class=d>All of Nyx's crons. Updated 2026-07-10 02:05 UTC.</p>
+<p class=d>All of Nyx's crons. Updated 2026-07-10 04:22 UTC.</p>
 <table><tr><td>schedule</td><td>status</td><td>next run</td><td>prompt</td><td>id</td></tr>
 <tr><td class=m>0 13 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-07-10T20:00</td><td>&lt;&lt;MAIL-SURFACED-LEDGER v1&gt;&gt;
 SURFACED-TODAY LEDGER (read + write side, fail-open): A shared ledger at /workspace/group/.mail-surfaced.json records the gmail message-ids already surfaced to #inbox today (e.g. by the 6 AM triage). Use it so you never re-report a persistent unread item Sasha was already shown today.
@@ -76,7 +76,7 @@ JUDGED-NIGHT LEDGER (run-to-run dedup, fail-open): The morning and evening tribu
 
 Evening Sleep Tribunal (interventions for tonight):
 
-Read /workspace/extra/whoop/latest-summary.json and check tonight&#x27;s recommended bedtime based on sleep debt. If Sasha should go to bed earlier than usual, send a heads-up about the recommendation and why (debt level, recent recovery trend). If he&#x27;s on track, send brief encouragement. Keep it under 2 messages. Post to #zzz.</td><td class=m style='color:#555;font-size:10px'>task-1781205232641-qmfj24</td></tr><tr><td class=m>0 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-07-10T04:00</td><td>&lt;&lt;AWAY-WINDOW-GUARD v1&gt;&gt;
+Read /workspace/extra/whoop/latest-summary.json and check tonight&#x27;s recommended bedtime based on sleep debt. If Sasha should go to bed earlier than usual, send a heads-up about the recommendation and why (debt level, recent recovery trend). If he&#x27;s on track, send brief encouragement. Keep it under 2 messages. Post to #zzz.</td><td class=m style='color:#555;font-size:10px'>task-1781205232641-qmfj24</td></tr><tr><td class=m>0 21 * * * <span class=d>(cron)</span></td><td style=color:#70ad47>active</td><td class=m style=color:#777>2026-07-11T04:00</td><td>&lt;&lt;AWAY-WINDOW-GUARD v1&gt;&gt;
 AWAY-WINDOW GUARD (fail-open): Before step 1, read /workspace/group/away.json. If it exists and parses AND today&#x27;s local SF date falls within any window&#x27;s [start,end] inclusive, SKIP THIS ENTIRE TASK — no #zzz reminder, no lights sweep (the SF-time bedtime nudge is wrong-timezone noise while traveling, and there are no lights to sweep in an empty home). If away.json is missing/empty/unparseable, proceed exactly as below.
 
 Bedtime (merged task — reminder + lights sweep):
