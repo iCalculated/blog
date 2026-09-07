@@ -329,6 +329,30 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
 
 .card-pin .pin-icon { width: 19px; height: 21px; display: block; }
 
+/* v4: scouting, ranged lanes, variable fronts and run ranks */
+#board.fog-night .tile.bloom-glow .plant { filter: drop-shadow(0 0 9px rgba(255,201,104,.7)); }
+#board.fog-night .tile.plant-glow:not(.target):not(.first-target):not(.threat) { box-shadow: inset 0 0 20px rgba(255,201,104,.18), inset 0 0 0 2px var(--night-3); }
+#board.fog-night .tile.plant-glow.threat:not(.target):not(.first-target) { box-shadow: inset 0 0 0 3px rgba(191,230,255,.8), inset 0 0 20px rgba(255,201,104,.18); }
+.tile .roots-recovery { position: absolute; bottom: 3px; left: 3px; z-index: 4; color: #f3dcb4; background: #463454; border-radius: 5px; padding: 1px 4px; font-size: 10px; pointer-events: none; }
+.unseen-count { color: var(--wisp); border-top: 1px solid rgba(191,230,255,.2); padding-top: 8px; margin-top: 9px; font-size: 14px; font-weight: 700; }
+.tile .wail-line-horizontal, .tile .wail-line-vertical { position: absolute; z-index: 3; pointer-events: none; font-size: 0; opacity: .9; }
+.tile .wail-line-horizontal { left: 0; right: 0; top: 50%; border-top: 3px dotted #d5c4ff; }
+.tile .wail-line-vertical { top: 0; bottom: 0; left: 50%; border-left: 3px dotted #d5c4ff; }
+.piece.wail .body { filter: hue-rotate(33deg) saturate(.8) drop-shadow(0 0 4px #a99cda); }
+.piece .wail-name { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); color: #eadfff; background: #302b51; border: 1px solid #b3a1dc; border-radius: 5px; padding: 1px 4px; font: 700 10px/1.2 system-ui, sans-serif; }
+.piece .wail-intent, .wail-puff { filter: hue-rotate(32deg) drop-shadow(0 0 4px #b4a1e8); }
+.arrows { z-index: 8; }
+.arrow.away { inset: 50% auto auto 50%; transform: translate(-50%, -50%); min-width: 58px; width: auto; height: 25px; padding: 3px 5px; border-radius: 8px; font-size: 11px; white-space: nowrap; }
+.arrow.away:hover { transform: translate(-50%, -50%) scale(1.06); }
+.tile.front-next { border: 0; background: var(--soil); }
+.tile.front-next.front-west { border-left: 3px solid rgba(218,241,255,.9); background: linear-gradient(90deg, rgba(178,220,245,.28), transparent 75%), var(--soil); }
+.tile.front-next.front-east { border-right: 3px solid rgba(218,241,255,.9); background: linear-gradient(270deg, rgba(178,220,245,.28), transparent 75%), var(--soil); }
+.tile.front-next.front-north { border-top: 3px solid rgba(218,241,255,.9); background: linear-gradient(180deg, rgba(178,220,245,.28), transparent 75%), var(--soil); }
+.tile.front-next.front-south { border-bottom: 3px solid rgba(218,241,255,.9); background: linear-gradient(0deg, rgba(178,220,245,.28), transparent 75%), var(--soil); }
+.weather-geometry { color: var(--wisp); font-size: 12.5px; font-weight: 700; margin-top: 7px; }
+.glow-rank { color: var(--amber); font-family: var(--font-title); font-size: 19px; margin: 8px 0 16px; }
+.banner small.glow-rank { color: var(--amber); font-size: 16px; margin-bottom: 0; }
+
 </style>
 </head>
 <body>
@@ -396,13 +420,14 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     flurry: { name: 'Flurry', hp: 1, moves: 3, fickle: 0.2, area: false, sleet: false },
     hoar: { name: 'Hoar', hp: 2, moves: 1, fickle: 0, area: true, sleet: false },
     sleet: { name: 'Sleet', hp: 1, moves: 2, fickle: 0, area: false, sleet: true },
+    wail: { name: 'Wail', hp: 1, moves: 1, fickle: 0, area: false, sleet: false, ranged: true },
   };
 
   const DEFAULT_CONFIG = {
     W: 7, H: 6, nights: 5, hours: 6, warmth: 5, handSize: 3, cardsPerHour: 2,
     lantern: 2, sharedLanterns: true, carryCap: 3, charmThreshold: 4,
     dawnLowByNight: [2, 3, 4, 5, 5], // each missing bloom costs 1 Warmth, capped at 2 per dawn
-    // Calibrated v3 schedule (PLAYTEST.md): marked spawns, index 0 = night 1
+    // v4 balance schedule (PLAYTEST.md): marked spawns, index 0 = night 1
     schedule: [
       [1, 1, 2, 1, 2, 0],
       [2, 2, 2, 1, 2, 0],
@@ -415,9 +440,9 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     typeWeights: [
       { chill: 1 },
       { chill: 3, flurry: 2 },
-      { chill: 2, flurry: 1, sleet: 2 },
-      { chill: 2, flurry: 2, hoar: 1 },
-      { chill: 2, flurry: 1, hoar: 2, sleet: 1 },
+      { chill: 2, flurry: 1, sleet: 2, wail: 1 },
+      { chill: 2, flurry: 2, hoar: 1, wail: 1 },
+      { chill: 2, flurry: 1, hoar: 2, sleet: 1, wail: 1 },
     ],
     difficulty: 'standard', frontHours: [2, 5, 6],
     stones: [4, 6], ponds: [1, 2],
@@ -442,25 +467,74 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   function frontHours(state) {
     return state.config.frontHours || (state.config.difficulty === 'gentle' ? [3, 6] : state.config.difficulty === 'harsh' ? [2, 3, 4, 5, 6] : DEFAULT_CONFIG.frontHours);
   }
+  const SIDE_NAMES = { N: 'north', E: 'east', S: 'south', W: 'west' };
+  const SIDE_DIRS = { north: 'N', east: 'E', south: 'S', west: 'W' };
+  // Reserve geometry before the draft so the public forecast is the geometry
+  // that will actually arrive. Reading a forecast never consumes randomness.
+  function reserveWeather(state, night) {
+    if (!state.weatherByNight) state.weatherByNight = {};
+    if (state.weatherByNight[night]) return state.weatherByNight[night];
+    const geometry = {};
+    if (night === 5) geometry.frontSide = SIDE_NAMES[rngPick(state, DIR_LIST)];
+    if (night === 3) {
+      const entryDir = rngPick(state, DIR_LIST);
+      geometry.streamEntry = SIDE_NAMES[entryDir];
+      geometry.streamExit = SIDE_NAMES[OPP[entryDir]];
+      geometry.streamBank = rngInt(state, 2);
+      if (state.config.difficulty === 'harsh') {
+        const length = entryDir === 'N' || entryDir === 'S' ? state.config.H : state.config.W;
+        geometry.streamTurn = 1 + rngInt(state, Math.max(1, length - 2));
+      }
+    }
+    state.weatherByNight[night] = geometry;
+    return geometry;
+  }
+  function frontBand(state, depth, side) {
+    side = side || state.frontSide || 'west';
+    depth = depth === undefined ? state.frontColumn || 0 : depth;
+    const vertical = side === 'west' || side === 'east';
+    const limit = vertical ? state.config.W : state.config.H;
+    if (depth >= limit) return [];
+    const index = side === 'east' || side === 'south' ? limit - 1 - depth : depth;
+    const out = [];
+    for (let n = 0; n < (vertical ? state.config.H : state.config.W); n++) {
+      out.push(vertical ? { x: index, y: n } : { x: n, y: index });
+    }
+    return out;
+  }
   function weatherInfo(state, night) {
     const n = night === undefined ? state.night : night;
+    const current = n === state.night;
     const mode = state.config.difficulty || 'standard';
     const hours = frontHours(state);
+    const geometry = (state.weatherByNight || {})[n] || {};
+    const side = n === 5 ? (current && state.frontSide || geometry.frontSide || 'west') : null;
+    const entry = n === 3 ? (current && state.stream && state.stream.entry || geometry.streamEntry) : null;
+    const exit = n === 3 ? (current && state.stream && state.stream.exit || geometry.streamExit) : null;
+    const streamDirection = entry && exit ? `${entry} → ${exit}` : null;
+    const lastGust = n === 4 && current && state.hour === 6;
     const rules = [
       ['still', 'Still Air', 'No twist tonight. Learn the garden.'],
-      ['fog', 'Fog', mode === 'gentle' ? 'Lanterns reach 2; dark Chills drift 25%; spawn types are hidden.' : mode === 'harsh' ? 'Lanterns reach 1 even with Long Wick; dark Chills drift 40%; spawn types are hidden.' : 'Lanterns reach 1 (2 with Long Wick); dark Chills drift 40%; spawn types are hidden.'],
-      ['meltwater', 'Meltwater', 'A permanent stream carries soaked Chills downstream at dusk; Sleet hunts and freezes it.'],
-      ['gale', 'Gale Night', mode === 'gentle' ? 'Wind turns each hour; dry Chills away from plants slide at dusk; downwind card pushes go farther.' : mode === 'harsh' ? 'Wind turns each hour; dry Chills and keepers slide at dusk; downwind card pushes go farther.' : 'Wind turns each hour; dry Chills slide at dusk; downwind card pushes go farther.'],
-      ['longdark', 'The Long Dark', `The west frost front advances at dusk of hours ${hours.join(', ')}; spawns avoid the west edge.`],
+      ['fog', 'Fog', mode === 'gentle' ? 'Lanterns reach 2; unseen Chills show positions only; sprouts and blooms reveal nearby Chills.' : mode === 'harsh' ? 'Lanterns reach 2; unseen Chills are hidden; only blooms reveal nearby Chills; spawn types are hidden.' : 'Lanterns reach 2; unseen Chills are hidden; sprouts and blooms reveal nearby Chills.'],
+      ['meltwater', 'Meltwater', `A permanent stream ${streamDirection ? `flows ${streamDirection} and ` : ''}carries soaked Chills downstream at dusk; early Sleet hunts and freezes it.`],
+      ['gale', 'Gale Night', (mode === 'gentle' ? 'Wind turns each hour; dry Chills away from plants slide at dusk.' : mode === 'harsh' ? 'Wind turns each hour; dry Chills and keepers slide at dusk.' : 'Wind turns each hour; dry Chills slide at dusk.') + (lastGust ? ' The last gust: pushes go +2 this hour (downwind).' : ' Downwind card pushes go +1; hour 6 brings the last gust (+2).')],
+      ['longdark', 'The Long Dark', `The front comes from the ${side}; it advances at dusk of hours ${hours.join(', ')}; spawns avoid the ${side} edge.`],
     ];
     const [id, name, rule] = rules[Math.max(0, Math.min(n - 1, rules.length - 1))];
-    return { id, name, rule, windDir: n === 4 ? DIR_LIST[((n === state.night ? Math.max(1, state.hour) : 1) - 1) % 4] : null,
-      frontColumn: n === 5 ? (n === state.night ? state.frontColumn || 0 : 0) : null,
-      nextFrontHour: n === 5 && !(n === state.night && ['won', 'lost', 'draft'].includes(state.phase))
-        ? hours.find(h => h >= (n === state.night ? state.hour : 1)) || null : null,
-      frontHours: n === 5 ? hours.slice() : [], hideSpawnTypes: n === 2 };
+    const depth = n === 5 ? (current ? state.frontColumn || 0 : 0) : null;
+    const band = n === 5 ? frontBand(state, depth, side) : [];
+    const axis = n === 5 ? (side === 'north' || side === 'south' ? 'row' : 'column') : null;
+    return { id, name, rule, windDir: n === 4 ? DIR_LIST[((current ? Math.max(1, state.hour) : 1) - 1) % 4] : null,
+      frontSide: side, frontColumn: depth, frontAxis: axis, frontIndex: band.length ? band[0][axis === 'row' ? 'y' : 'x'] : null, frontTiles: band,
+      nextFrontHour: n === 5 && !(current && ['won', 'lost', 'draft'].includes(state.phase))
+        ? hours.find(h => h >= (current ? state.hour : 1)) || null : null,
+      frontHours: n === 5 ? hours.slice() : [], hideSpawnTypes: n === 2 && mode === 'harsh',
+      streamDirection, streamEntry: entry || null, streamExit: exit || null, lastGust, pushBonus: n === 4 ? (lastGust ? 2 : 1) : 0 };
   }
-  function spawnTypeVisible(state) { return state.night !== 2; }
+  function spawnTypeVisible(state) { return state.night !== 2 || state.config.difficulty !== 'harsh'; }
+  function glowRank(glow) {
+    return glow < 20 ? 'the garden slept early' : glow < 28 ? 'kept the garden' : glow < 36 ? 'a bright dawn' : 'midwinter bloom';
+  }
   function freshHourFlags() { return { galePushed: [], galePlanted: [], rillWatered: [], rillTouched: [] }; }
   function addFlag(state, name, value) {
     if (!Array.isArray(state.hourFlags[name])) state.hourFlags[name] = [];
@@ -492,7 +566,12 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   function wispAt(state, x, y) { return state.wisps.find(w => w.hp > 0 && w.x === x && w.y === y) || null; }
   function keeperAt(state, x, y) { return KEEPER_IDS.map(k => state.keepers[k]).find(k => k.x === x && k.y === y) || null; }
   function manhattan(ax, ay, bx, by) { return Math.abs(ax - bx) + Math.abs(ay - by); }
-  function isSpawnEdge(state, x, y) { return isEdge(state, x, y) && (state.night !== 5 || x > 0); }
+  function isSpawnEdge(state, x, y) {
+    if (!isEdge(state, x, y)) return false;
+    if (state.night !== 5) return true;
+    const side = state.frontSide || 'west';
+    return side === 'west' ? x > 0 : side === 'east' ? x < state.config.W - 1 : side === 'north' ? y > 0 : y < state.config.H - 1;
+  }
   function isEdge(state, x, y) { return x === 0 || y === 0 || x === state.config.W - 1 || y === state.config.H - 1; }
   function coordName(x, y) { return String.fromCharCode(65 + x) + (y + 1); }
   function hasCharm(state, id) { return state.charms.includes(id); }
@@ -513,16 +592,22 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     if (k.id === 'rill' && hasCharm(state, 'webbed')) s += 1;
     return s + (k.dashBonus || 0);
   }
-  function lanternRadius(state) {
-    const mode = state.config.difficulty;
-    if (state.night === 2 && mode === 'harsh') return 1;
-    const base = state.night === 2 ? (mode === 'gentle' ? 2 : 1) : state.config.lantern;
-    return base + (hasCharm(state, 'longwick') ? 1 : 0);
+  function lanternRadius(state) { return state.config.lantern + (hasCharm(state, 'longwick') ? 1 : 0); }
+  function fickleChance(state, w) { return WISP_TYPES[w.type].fickle; }
+  function plantGlowVisible(state, w) {
+    if (state.night !== 2) return false;
+    const minimum = state.config.difficulty === 'harsh' ? 3 : 2;
+    return DIR_LIST.some(d => {
+      const t = tileAt(state, w.x + DIRS[d][0], w.y + DIRS[d][1]);
+      return t && t.plant >= minimum;
+    });
   }
-  function fickleChance(state, w) {
-    if (!WISP_TYPES[w.type].fickle) return 0;
-    const lit = KEEPER_IDS.some(id => manhattan(w.x, w.y, state.keepers[id].x, state.keepers[id].y) <= lanternRadius(state));
-    return state.night === 2 && !lit ? (state.config.difficulty === 'gentle' ? 0.25 : 0.4) : WISP_TYPES[w.type].fickle;
+  function wispVisibleTo(state, w, viewerId) {
+    if (state.night !== 2 || state.config.difficulty === 'gentle') return true;
+    return plantGlowVisible(state, w) || KEEPER_IDS.some(id => {
+      const k = state.keepers[id];
+      return manhattan(w.x, w.y, k.x, k.y) <= lanternRadius(state);
+    });
   }
 
   // Blocking for movement of anything (keeper or wisp): stone, plant, keeper, wisp.
@@ -588,7 +673,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     return true;
   }
   function pushWisp(state, w, dir, steps, why) {
-    if (state.phase === 'act' && state.night === 4 && dir === windDirection(state)) steps += 1;
+    if (state.phase === 'act' && state.night === 4 && dir === windDirection(state)) steps += state.hour === 6 ? 2 : 1;
     for (let i = 0; i < steps; i++) {
       const r = pushStep(state, w, dir, why);
       if (r !== true) break;
@@ -606,11 +691,13 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     if (stage === 3 && hasCharm(state, 'deeproots') && !state.nightFlags.deepRootsUsed) {
       state.nightFlags.deepRootsUsed = true;
       t.plant = 2;
+      t.recoveryNight = state.night; t.recoveryHour = state.hour;
       emit(state, { type: 'wither', x, y, stage: 3, to: 2 });
       log(state, `The bloom at ${coordName(x, y)} withers to a sprout (Deep Roots).`, 'warn');
       return;
     }
     t.plant = 0;
+    delete t.recoveryNight; delete t.recoveryHour;
     state.hourFlags.galePlanted = (state.hourFlags.galePlanted || []).filter(key => key !== tileKey(x, y));
     if (t.terrain === 'soil') t.terrain = 'frost';
     emit(state, { type: 'freeze', x, y, stage });
@@ -696,10 +783,35 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   function openDirs(state, w) {
     return DIR_LIST.filter(d => { const b = blockedFor(state, w.x + DIRS[d][0], w.y + DIRS[d][1], w); return !b || b === 'wisp'; });
   }
+  // Recompute from the Wail's current position, preserving only its chosen
+  // direction: pushes redirect the attack and a keeper can step in to shield.
+  function wailLane(state, w, dir) {
+    dir = dir || (w.intent && w.intent.kind === 'wail' ? w.intent.dir : null);
+    if (!DIRS[dir]) return [];
+    const [dx, dy] = DIRS[dir], lane = [];
+    for (let distance = 1; distance <= 3; distance++) {
+      const x = w.x + dx * distance, y = w.y + dy * distance, t = tileAt(state, x, y);
+      if (!t) break;
+      lane.push({ x, y });
+      if (t.terrain === 'stone' || keeperAt(state, x, y) || wispAt(state, x, y) || t.plant) break;
+    }
+    return lane;
+  }
   function computeIntent(state, w) {
     const T = WISP_TYPES[w.type];
+    if (T.ranged) {
+      let lanes = DIR_LIST.map(dir => {
+        const lane = wailLane(state, w, dir), last = lane[lane.length - 1];
+        return { dir, stage: last ? tileAt(state, last.x, last.y).plant : 0 };
+      }).filter(candidate => candidate.stage > 0);
+      if (lanes.length) {
+        if (hasCharm(state, 'brightbulbs') && lanes.some(lane => lane.stage === 1)) lanes = lanes.filter(lane => lane.stage === 1);
+        const best = Math.max(...lanes.map(lane => lane.stage));
+        return { kind: 'wail', dir: rngPick(state, lanes.filter(lane => lane.stage === best)).dir, steps: 0 };
+      }
+    }
     const adj = adjacentPlantDirs(state, w);
-    if (adj.length && !T.sleet) {
+    if (adj.length && !T.sleet && !T.ranged) {
       let pool = adj;
       if (hasCharm(state, 'brightbulbs') && adj.some(a => a.stage === 1)) pool = adj.filter(a => a.stage === 1);
       const best = Math.max(...pool.map(a => a.stage));
@@ -814,7 +926,8 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     // The last dusk ends the garden; arrivals there would never activate.
     if (state.hour >= state.config.hours) return;
     const sched = state.config.schedule[Math.min(state.night, state.config.schedule.length) - 1];
-    const n = sched[Math.min(state.hour, sched.length) - 1];
+    const earlySleet = state.hour === 1 && (state.night === 3 || state.night === 5);
+    const n = Math.max(earlySleet ? 1 : 0, sched[Math.min(state.hour, sched.length) - 1]);
     const cands = [];
     for (let y = 0; y < state.config.H; y++) for (let x = 0; x < state.config.W; x++) {
       if (!isSpawnEdge(state, x, y)) continue;
@@ -823,8 +936,16 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       if (keeperAt(state, x, y) || wispAt(state, x, y)) continue;
       cands.push({ x, y });
     }
-    const chosen = shuffle(state, cands).slice(0, n);
-    for (const c of chosen) state.spawns.push({ x: c.x, y: c.y, type: pickWispType(state) });
+    let ordered = shuffle(state, cands);
+    if (state.hour === 5) {
+      const ps = plants(state);
+      // Prefer every available entry that can reach a plant by the finale;
+      // retain the spawn budget if fewer such entries exist than arrivals.
+      const near = c => ps.some(p => manhattan(c.x, c.y, p.x, p.y) <= 2);
+      ordered = ordered.filter(near).concat(ordered.filter(c => !near(c)));
+    }
+    const chosen = ordered.slice(0, n);
+    for (const [i, c] of chosen.entries()) state.spawns.push({ x: c.x, y: c.y, type: earlySleet && i === 0 ? 'sleet' : pickWispType(state) });
   }
   function freeEdgeNear(state, x, y) {
     const cands = [];
@@ -868,7 +989,19 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       if (w.hp <= 0) continue;
       const it = w.intent;
       if (!it || it.kind === 'none') continue;
-      if (it.kind === 'breathe' && !WISP_TYPES[w.type].sleet) {
+      if (it.kind === 'wail' && WISP_TYPES[w.type].ranged) {
+        const lane = wailLane(state, w), last = lane[lane.length - 1];
+        emit(state, { type: 'wail', id: w.id, x: w.x, y: w.y, dir: it.dir, lane });
+        if (last) {
+          const t = tileAt(state, last.x, last.y), k = keeperAt(state, last.x, last.y);
+          if (t.plant) killPlant(state, last.x, last.y, 'wail');
+          else if (k) {
+            k.frosted = true;
+            emit(state, { type: 'frostKeeper', keeper: k.id });
+            log(state, `${keeperName(k.id)} shielded the garden from a Wail and is frosted.`, 'warn');
+          }
+        }
+      } else if (it.kind === 'breathe' && !WISP_TYPES[w.type].sleet) {
         const dirs = WISP_TYPES[w.type].area ? DIR_LIST : [it.dir];
         for (const d of dirs) {
           const tx = w.x + DIRS[d][0], ty = w.y + DIRS[d][1];
@@ -894,21 +1027,24 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
 
   // The plan is a snapshot: duplicate choices grow only once, and a newly
   // grown plant never changes another puddle's choice during this irrigation.
-  function wateringPlan(state) {
+  function wateringPlan(state, atDusk) {
     const plan = [], rill = state.keepers.rill;
     for (let y = 0; y < state.config.H; y++) for (let x = 0; x < state.config.W; x++) {
       if (!isPuddle(state, x, y)) continue;
       const candidates = DIR_LIST.map(d => ({ x: x + DIRS[d][0], y: y + DIRS[d][1] }))
-        .filter(p => { const t = tileAt(state, p.x, p.y); return t && t.plant > 0 && t.plant < 3; });
+        .filter(p => {
+          const t = tileAt(state, p.x, p.y);
+          return t && t.plant > 0 && t.plant < 3 && !(atDusk && t.recoveryNight === state.night && t.recoveryHour === state.hour);
+        });
       candidates.sort((a, b) => tileAt(state, b.x, b.y).plant - tileAt(state, a.x, a.y).plant ||
         manhattan(a.x, a.y, rill.x, rill.y) - manhattan(b.x, b.y, rill.x, rill.y) || a.y - b.y || a.x - b.x);
       if (candidates.length) plan.push({ x, y, tx: candidates[0].x, ty: candidates[0].y });
     }
     return plan;
   }
-  function irrigate(state) {
+  function irrigate(state, atDusk) {
     const grown = new Set();
-    for (const p of wateringPlan(state)) {
+    for (const p of wateringPlan(state, atDusk)) {
       const key = tileKey(p.tx, p.ty);
       if (!grown.has(key) && growPlant(state, p.tx, p.ty)) grown.add(key);
     }
@@ -951,9 +1087,10 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   }
   function advanceFront(state) {
     if (state.night !== 5 || !frontHours(state).includes(state.hour)) return;
-    const x = state.frontColumn || 0;
-    if (x >= state.config.W) return;
-    for (let y = 0; y < state.config.H; y++) {
+    const depth = state.frontColumn || 0, side = state.frontSide || 'west';
+    const band = frontBand(state, depth, side);
+    if (!band.length) return;
+    for (const { x, y } of band) {
       const t = tileAt(state, x, y);
       if (t.plant) killPlant(state, x, y, 'front');
       // Deep Roots leaves its rescued sprout on soil, just as for a breath.
@@ -964,9 +1101,11 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       if (k) { k.frosted = true; emit(state, { type: 'frostKeeper', keeper: k.id }); }
       emit(state, { type: 'frost', x, y });
     }
-    state.frontColumn = x + 1;
-    emit(state, { type: 'front', column: x });
-    log(state, `The frost front swallowed column ${String.fromCharCode(65 + x)}.`, 'warn');
+    state.frontColumn = depth + 1;
+    const axis = side === 'north' || side === 'south' ? 'row' : 'column';
+    const index = axis === 'row' ? band[0].y : band[0].x;
+    emit(state, { type: 'front', side, axis, index, column: axis === 'column' ? index : null, tiles: band });
+    log(state, `The ${side} frost front swallowed ${axis} ${axis === 'row' ? index + 1 : String.fromCharCode(65 + index)}.`, 'warn');
   }
 
   // ---------- dusk ----------
@@ -982,7 +1121,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       emit(state, { type: 'freezeWater', id: w.id, x: w.x, y: w.y });
       log(state, `Sleet froze the water at ${coordName(w.x, w.y)}.`, 'bad');
     }
-    const grown = irrigate(state);
+    const grown = irrigate(state, true);
     if (grown) log(state, `${grown} plant${grown > 1 ? 's' : ''} grew by the water.`, 'good');
     // Card puddles last for two growth dusks. Natural ponds have no life field.
     for (let i = 0; i < state.tiles.length; i++) {
@@ -1031,6 +1170,8 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   }
   function startHour(state) {
     state.hourFlags = freshHourFlags();
+    for (const t of state.tiles) { delete t.recoveryNight; delete t.recoveryHour; }
+    if (state.night === 4 && state.hour === 6) log(state, 'The last gust: pushes go +2 this hour (downwind).', 'title');
     for (const id of KEEPER_IDS) {
       const k = state.keepers[id];
       drawCards(state, k);
@@ -1069,7 +1210,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     state.glowByNight.push(blooms);
     state.lastBlooms = blooms;
     log(state, `Dawn. ${blooms} bloom${blooms === 1 ? '' : 's'} lit the garden. Glow ${state.glow}.`, 'good');
-    emit(state, { type: 'dawn', blooms, glow: state.glow });
+    emit(state, { type: 'dawn', blooms, glow: state.glow, rank: glowRank(state.glow) });
     const dawnLow = dawnNeed(state);
     if (blooms < dawnLow) {
       const shortfall = dawnLow - blooms, cost = Math.min(2, shortfall);
@@ -1080,6 +1221,8 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     if (state.night >= state.config.nights) { state.phase = 'won'; emit(state, { type: 'won' }); return; }
     // draft
     state.phase = 'draft';
+    reserveWeather(state, state.night + 1);
+    log(state, `Forecast: ${weatherInfo(state, state.night + 1).name}. ${weatherInfo(state, state.night + 1).rule}`, 'title');
     const offers = {};
     for (const id of KEEPER_IDS) {
       const pool = CARD_POOLS[id];
@@ -1133,26 +1276,29 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
 
   function makeStream(state) {
     const W = state.config.W, H = state.config.H;
-    const right = rngInt(state, 2) === 1;
-    const inner = right ? W - 2 : 1, outer = right ? W - 1 : 0;
-    const harsh = state.config.difficulty === 'harsh';
-    const turn = harsh ? 1 + rngInt(state, Math.max(1, H - 2)) : -1;
+    const geometry = reserveWeather(state, 3);
+    const vertical = geometry.streamEntry === 'north' || geometry.streamEntry === 'south';
+    const across = vertical ? W : H, length = vertical ? H : W;
+    const farBank = geometry.streamBank === 1;
+    const inner = farBank ? across - 2 : 1, outer = farBank ? across - 1 : 0;
+    const harsh = state.config.difficulty === 'harsh', turn = geometry.streamTurn;
     const path = [];
-    // Six tiles are the shortest north-south crossing of a six-row garden.
-    // Harsh inserts one lateral turn, producing seven without centre plants.
-    for (let y = 0; y < H; y++) {
-      const x = harsh && y > turn ? outer : inner;
-      path.push({ x, y });
-      if (harsh && y === turn) path.push({ x: outer, y });
+    // Opposite-edge crossings need six tiles vertically or seven horizontally.
+    // Harsh adds one lateral step; generation then avoids all stream tiles.
+    const point = (along, bank) => vertical ? { x: bank, y: along } : { x: along, y: bank };
+    for (let along = 0; along < length; along++) {
+      path.push(point(along, harsh && along > turn ? outer : inner));
+      if (harsh && along === turn) path.push(point(along, outer));
     }
-    if (rngInt(state, 2)) path.reverse();
+    if (geometry.streamEntry === 'south' || geometry.streamEntry === 'east') path.reverse();
     for (let i = 0; i < path.length; i++) {
       const p = path[i], next = path[i + 1];
-      // At the mouth, the current turns along the hedge onto ordinary ground.
-      p.dir = next ? dirFromTo(p.x, p.y, next.x, next.y) : (right ? 'W' : 'E');
+      // At the mouth, the current turns along the hedge toward ordinary ground.
+      p.dir = next ? dirFromTo(p.x, p.y, next.x, next.y) : vertical ? (farBank ? 'W' : 'E') : (farBank ? 'N' : 'S');
       const t = tileAt(state, p.x, p.y); t.terrain = 'puddle'; t.streamDir = p.dir;
     }
-    state.stream = { path, dir: path[0].y < path[path.length - 1].y ? 'S' : 'N' };
+    state.stream = { path, dir: OPP[SIDE_DIRS[geometry.streamEntry]], entry: geometry.streamEntry, exit: geometry.streamExit };
+    state.streamDirection = `${state.stream.entry} → ${state.stream.exit}`;
   }
 
   function startNight(state, carrySeeds) {
@@ -1161,7 +1307,9 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     for (let i = 0; i < W * H; i++) state.tiles.push({ terrain: 'soil', plant: 0 });
     state.wisps = []; state.spawns = [];
     state.nightFlags = { deepRootsUsed: false };
-    state.frontColumn = 0; state.stream = null;
+    const geometry = reserveWeather(state, state.night);
+    state.frontColumn = 0; state.frontSide = state.night === 5 ? geometry.frontSide : null;
+    state.stream = null; state.streamDirection = null;
     state.hour = 1;
     const cx = Math.floor(W / 2), cy = Math.floor((H - 1) / 2); // 3, 2
     // keepers
@@ -1220,7 +1368,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
         if (isSpawnEdge(state, x, y) && !blockedFor(state, x, y, null)) edges.push({ x, y });
       }
-      state.spawns = shuffle(state, edges).slice(0, count).map(p => ({ x: p.x, y: p.y, type: pickWispType(state) }));
+      state.spawns = shuffle(state, edges).slice(0, count).map(p => ({ x: p.x, y: p.y, type: state.night === 3 || state.night === 5 ? 'sleet' : pickWispType(state) }));
       resolveSpawns(state);
       log(state, `${state.wisps.length} lingering Chill${state.wisps.length === 1 ? '' : 's'} already haunt the hedge.`, 'warn');
     }
@@ -1266,8 +1414,8 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       effect(s, k) { for (const w of wispsWithin(s, k, 1)) if (w.hp > 0) pushWisp(s, w, dirFromTo(k.x, k.y, w.x, w.y), 1); } },
     kite: { name: 'Kite', keeper: 'gale', text: 'Carry a plant within 2 to an adjacent empty soil tile, keeping its stage.', target: 'plant-move', range: 2, stage: [1, 2, 3],
       effect(s, k, t) { const from = tileAt(s, t.x, t.y); const st = from.plant; from.plant = 0; movePlantFlag(s, t.x, t.y, t.tx, t.ty); placePlant(s, t.tx, t.ty, st); emit(s, { type: 'carry', from: [t.x, t.y], to: [t.tx, t.ty] }); } },
-    followingwind: { name: 'Following Wind', keeper: 'gale', text: 'Push an adjacent Chill one tile away from you. If Rill’s cards touched that Chill this hour, push it two.', target: 'wisp-adjacent',
-      effect(s, k, t) { const w = findWisp(s, t.wisp); pushWisp(s, w, dirFromTo(k.x, k.y, w.x, w.y), flagged(s, 'rillTouched', w.id) ? 2 : 1); } },
+    followingwind: { name: 'Following Wind', keeper: 'gale', text: 'Push an adjacent Chill one tile away from you. If Rill’s cards touched that Chill this hour, push it two, or one tile in any direction of your choice.', target: 'wisp-adjacent',
+      effect(s, k, t) { const w = findWisp(s, t.wisp); pushWisp(s, w, t.dir || dirFromTo(k.x, k.y, w.x, w.y), !t.dir && flagged(s, 'rillTouched', w.id) ? 2 : 1); } },
     seedwind: { name: 'Seed Wind', keeper: 'gale', text: 'Plant a seed on an empty soil tile within 2. If Rill made a puddle this hour, plant a second seed on empty soil next to one of those puddles.', target: 'seed-pair', range: 2,
       effect(s, k, t) { placePlant(s, t.x, t.y, 1); if (t.tx !== undefined) placePlant(s, t.tx, t.ty, 1); } },
     secondwind: { name: 'Second Wind', keeper: 'gale', text: 'Draw two cards.', target: 'none',
@@ -1283,7 +1431,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       effect(s, k, t) { makePuddle(s, t.x, t.y); } },
     splash: { name: 'Splash', keeper: 'rill', text: 'Push an adjacent Chill one tile away from you.', target: 'wisp-adjacent',
       effect(s, k, t) { const w = findWisp(s, t.wisp); pushWisp(s, w, dirFromTo(k.x, k.y, w.x, w.y), 1); } },
-    sprinkle: { name: 'Sprinkle', keeper: 'rill', text: 'A plant within 2 grows one stage.', target: 'plant-range', range: 2, stage: [1, 2],
+    sprinkle: { name: 'Sprinkle', keeper: 'rill', text: 'A plant within 3 grows one stage.', target: 'plant-range', range: 3, stage: [1, 2],
       effect(s, k, t) { growPlant(s, t.x, t.y); } },
     mist: { name: 'Mist', keeper: 'rill', text: 'A Chill within 2 forgets its intent this hour.', target: 'wisp-range', range: 2,
       effect(s, k, t) { const w = findWisp(s, t.wisp); w.intent = { kind: 'none', dir: null, steps: 0 }; emit(s, { type: 'calm', id: w.id, x: w.x, y: w.y }); } },
@@ -1303,8 +1451,8 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       effect(s) { irrigate(s); } },
     dew: { name: 'Dew', keeper: 'rill', text: 'Every seed next to a puddle becomes a sprout now.', target: 'none',
       effect(s) { for (const p of plants(s)) if (p.stage === 1 && DIR_LIST.some(d => isPuddle(s, p.x + DIRS[d][0], p.y + DIRS[d][1]))) growPlant(s, p.x, p.y); } },
-    backwash: { name: 'Backwash', keeper: 'rill', text: 'Every soaked Chill shivers for 1; a Chill Gale pushed this hour shivers for 2.', target: 'none', needs: 'soaked-any',
-      effect(s) { for (const w of livingWisps(s)) if (w.soaked) damageWisp(s, w, flagged(s, 'galePushed', w.id) ? 2 : 1, 'backwash'); s.wisps = s.wisps.filter(w => w.hp > 0); } },
+    backwash: { name: 'Backwash', keeper: 'rill', text: 'Every soaked Chill shivers for 1. Chills Gale pushed this hour count as soaked for this card.', target: 'none', needs: 'backwash-any',
+      effect(s) { for (const w of livingWisps(s)) if (w.soaked || flagged(s, 'galePushed', w.id)) damageWisp(s, w, 1, 'backwash'); s.wisps = s.wisps.filter(w => w.hp > 0); } },
     drinkdeep: { name: 'Drink Deep', keeper: 'rill', text: 'A plant within 2 grows one stage. If Gale planted or moved that plant this hour, it grows two.', target: 'plant-range', range: 2, stage: [1, 2],
       effect(s, k, t) { growPlant(s, t.x, t.y); if (flagged(s, 'galePlanted', tileKey(t.x, t.y))) growPlant(s, t.x, t.y); } },
     lilypad: { name: 'Lily Pad', keeper: 'rill', text: 'Make a life-2 puddle on a soil tile within 2 with no plant, then leap onto it.', target: 'tile-range', range: 2,
@@ -1329,7 +1477,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   const CHARMS = {
     kindling: { name: 'Kindling', text: 'Warmth +2.', apply(s) { s.warmth += 2; } },
     longwick: { name: 'Long Wick', text: 'Both lanterns reach one tile farther.' },
-    deeproots: { name: 'Deep Roots', text: 'Once per night, the first bloom that would freeze withers to a sprout instead, with no Warmth loss.' },
+    deeproots: { name: 'Deep Roots', text: 'Once per night, the first bloom that would freeze withers to a sprout instead, with no Warmth loss. It cannot grow at that dusk; immediate growth cards still work.' },
     tailwind: { name: 'Tailwind', text: 'Gale moves one tile farther.' },
     webbed: { name: 'Webbed Feet', text: 'Rill moves one tile farther.' },
     earlythaw: { name: 'Early Thaw', text: 'At dusk, one frost tile beside a puddle becomes soil.' },
@@ -1346,8 +1494,13 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
         if (c.needs === 'wisp-adjacent' && !wispsWithin(state, k, 1).length) return [];
         if (c.needs === 'wisp-range2' && !wispsWithin(state, k, 2).length) return [];
         if (c.needs === 'soaked-any' && !livingWisps(state).some(w => w.soaked)) return [];
+        if (c.needs === 'backwash-any' && !livingWisps(state).some(w => w.soaked || flagged(state, 'galePushed', w.id))) return [];
         return [{}];
-      case 'wisp-adjacent': return wispsWithin(state, k, 1).map(w => ({ wisp: w.id }));
+      case 'wisp-adjacent': return wispsWithin(state, k, 1).flatMap(w => {
+        const targets = [{ wisp: w.id }];
+        if (cardId === 'followingwind' && flagged(state, 'rillTouched', w.id)) for (const dir of DIR_LIST) targets.push({ wisp: w.id, dir });
+        return targets;
+      });
       case 'wisp-range': return wispsWithin(state, k, r).map(w => ({ wisp: w.id }));
       case 'wisp-dir': {
         const out = [];
@@ -1391,7 +1544,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   function partnerBonusTargets(state, cardId, keeper) {
     const k = typeof keeper === 'string' ? state.keepers[keeper] : keeper || state.keepers[CARDS[cardId].keeper];
     if (cardId === 'followingwind') return cardTargets(state, k, cardId).filter(t => flagged(state, 'rillTouched', t.wisp));
-    if (cardId === 'backwash') return livingWisps(state).filter(w => w.soaked && flagged(state, 'galePushed', w.id)).map(w => ({ wisp: w.id }));
+    if (cardId === 'backwash') return livingWisps(state).filter(w => flagged(state, 'galePushed', w.id)).map(w => ({ wisp: w.id }));
     if (cardId === 'drinkdeep') return cardTargets(state, k, cardId).filter(t => flagged(state, 'galePlanted', tileKey(t.x, t.y)));
     if (cardId === 'seedwind') return seedWindBonusTiles(state);
     return [];
@@ -1410,6 +1563,12 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     return out;
   }
   function movePlantFlag(state, x, y, tx, ty) {
+    const from = tileAt(state, x, y), to = tileAt(state, tx, ty);
+    delete to.recoveryNight; delete to.recoveryHour;
+    if (from.recoveryNight !== undefined) {
+      to.recoveryNight = from.recoveryNight; to.recoveryHour = from.recoveryHour;
+    }
+    delete from.recoveryNight; delete from.recoveryHour;
     const old = tileKey(x, y), had = flagged(state, 'galePlanted', old);
     state.hourFlags.galePlanted = (state.hourFlags.galePlanted || []).filter(key => key !== old);
     if (had) addFlag(state, 'galePlanted', tileKey(tx, ty));
@@ -1423,7 +1582,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       seed, rng: seed >>> 0, config, phase: 'lobby', night: 0, hour: 0,
       warmth: config.warmth, glow: 0, glowByNight: [], lastBlooms: 0,
       tiles: [], wisps: [], nextWispId: 1, spawns: [], charms: [], draft: null, nightFlags: { deepRootsUsed: false },
-      hourFlags: freshHourFlags(), frontColumn: 0, stream: null,
+      hourFlags: freshHourFlags(), frontColumn: 0, frontSide: null, stream: null, streamDirection: null, weatherByNight: {},
       keepers: {}, log: [], events: [], actionCount: 0,
     };
     for (const id of KEEPER_IDS) {
@@ -1565,7 +1724,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     const mine = manhattan(w.x, w.y, state.keepers[viewerId].x, state.keepers[viewerId].y) <= r;
     const other = KEEPER_IDS.find(id => id !== viewerId);
     const theirs = manhattan(w.x, w.y, state.keepers[other].x, state.keepers[other].y) <= r;
-    if (mine) return 'mine';
+    if (mine || plantGlowVisible(state, w)) return 'mine';
     if (theirs) return state.config.sharedLanterns ? 'mine' : 'partner';
     return 'dark';
   }
@@ -1580,7 +1739,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   return {
     DIRS, DIR_LIST, OPP, KEEPER_IDS, WISP_TYPES, CARDS, CHARMS, STARTERS, CARD_POOLS, DEFAULT_CONFIG, STAGE_NAME,
     newGame, applyAction, validate, legalActions, replay, cardTargets, keeperReach, keeperSpeed, lanternRadius,
-    intentVisibleTo, plants, countBlooms, livingWisps, tileAt, wispAt, keeperAt, coordName, manhattan, cloneState, keeperName, dawnNeed,
+    intentVisibleTo, wispVisibleTo, wailLane, glowRank, plants, countBlooms, livingWisps, tileAt, wispAt, keeperAt, coordName, manhattan, cloneState, keeperName, dawnNeed,
     rngNext, rngInt, shuffle, wateringPlan, transplantTargets, partnerBonusTargets, bonusTargets,
     weatherInfo, difficultyConfig, windDirection, frontHours, fickleChance, spawnTypeVisible,
   };
@@ -1666,6 +1825,13 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       // Sleet threatens irrigation, never the plants directly.
       const d = nearestTargetDist(w, w.type === 'sleet' ? water : ps);
       if (d < 4) v += W.threat * (4 - d);
+      // A Wail can threaten from three tiles away. Read its actual fixed lane
+      // so a sideways push or a keeper shield removes that immediate threat.
+      if (w.intent && w.intent.kind === 'wail') {
+        const end = TL.wailLane(state, w).at(-1);
+        const stage = end && TL.tileAt(state, end.x, end.y).plant;
+        if (stage) v += W.threat * stage;
+      }
       if (w.soaked) v += W.soaked; // one delayed activation, not a permanent trap
     }
     for (const t of state.tiles) if (t.terrain === 'frost') v += W.frost;
@@ -2925,8 +3091,8 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   const $ = (s) => document.querySelector(s);
   const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
   const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const sprite = (key, cls) => ART.svg(key, cls);
-  const RULES_VERSION = 3;
+  const sprite = (key, cls) => ART.svg(key === 'wail' ? 'flurry' : key, cls);
+  const RULES_VERSION = 4;
   const KNAME = { gale: 'Gale', rill: 'Rill' };
   const KSUB = { gale: 'the fox · wind', rill: 'the frog · water' };
   const LS = { get(k, d) { try { const v = localStorage.getItem('tl.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('tl.' + k, JSON.stringify(v)); } catch (e) {} }, del(k) { try { localStorage.removeItem('tl.' + k); } catch (e) {} } };
@@ -2934,6 +3100,27 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   const DIFFICULTY = Object.fromEntries(['gentle', 'standard', 'harsh'].map(name => [name, TL.difficultyConfig(name)]));
   const DIR_ARROW = { N: '↑', E: '→', S: '↓', W: '←' };
   const DIR_NAME = { N: 'north', E: 'east', S: 'south', W: 'west' };
+
+  // Target highlights and previews use only the pieces this keeper can see.
+  // In Fog, an uncommitted hover must not act as a free scouting move.
+  function visibleWisp(s, w) { return !!w && TL.wispVisibleTo(s, w, A.role); }
+  function observedState(s) {
+    const wisps = s.wisps.filter(w => visibleWisp(s, w));
+    return wisps.length === s.wisps.length ? s : Object.assign({}, s, { wisps });
+  }
+  function cardTargets(s, keeper, cid) { return TL.cardTargets(observedState(s), keeper, cid); }
+  function transplantTargets(s, keeper) { return TL.transplantTargets(observedState(s), keeper); }
+  function keeperReach(s, keeper) { return TL.keeperReach(observedState(s), keeper); }
+  function bonusTargets(s, keeper, cid) { return TL.bonusTargets(observedState(s), keeper, cid); }
+  function frontLabel(weather) { return weather.frontAxis === 'row' ? `Row ${weather.frontIndex + 1}` : `Column ${String.fromCharCode(65 + weather.frontIndex)}`; }
+  function frontDepth(weather, x, y) {
+    return { west: x, east: 6 - x, north: y, south: 5 - y }[weather.frontSide];
+  }
+  function weatherGeometry(weather) {
+    if (weather.id === 'longdark') return `The front comes from the ${weather.frontSide}.`;
+    if (weather.id === 'meltwater') return weather.streamDirection ? `Stream direction: ${weather.streamDirection}.` : 'The stream’s entry and direction are announced before the draft.';
+    return '';
+  }
 
   // ---------- app state ----------
   const A = {
@@ -2986,7 +3173,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   }
   function animateThen(before, events, action) {
     const big = events.some(e => e.type === 'wispPhase' || e.type === 'night' || e.type === 'dawn');
-    if (!big) { render(); flashEvents(events); afterAction(action); drainQueue(); return; }
+    if (!big) { render(); flashEvents(events, before); afterAction(action); drainQueue(); return; }
     playEvents(before, events, () => { render(); afterAction(action); drainQueue(); });
   }
   function drainQueue() {
@@ -3048,7 +3235,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
         return;
       }
       if (m.t === 'welcome') {
-        if (m.rulesVersion !== RULES_VERSION) { toast('This room uses older rules. Both keepers should reload and start a new v3 room.', 'bad'); return; }
+        if (m.rulesVersion !== RULES_VERSION) { toast('This room uses older rules. Both keepers should reload and start a new v4 room.', 'bad'); return; }
         A.role = m.guestRole; A.names = m.names; A.names[A.role] = A.myName;
         try { resetGame(m.seed, m.config); A.state = TL.replay(m.seed, m.config, m.log); A.log = m.log.slice(); }
         catch (e) { console.error(e); toast('Could not sync with host: ' + e.message, 'bad'); return; }
@@ -3214,7 +3401,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   async function resumeHost(code) {
     const saved = LS.get('host.' + code, null);
     if (!saved) return toast('No saved room ' + code, 'bad');
-    if (saved.rulesVersion !== RULES_VERSION) { A.lobby.view = 'home'; renderLobby(); toast('This saved room uses older rules. Start a new v3 room to play.', 'bad'); return; }
+    if (saved.rulesVersion !== RULES_VERSION) { A.lobby.view = 'home'; renderLobby(); toast('This saved room uses older rules. Start a new v4 room to play.', 'bad'); return; }
     A.isHost = true; A.solo = false; A.lobby.view = 'connecting'; A.lobby.msg = 'Reopening room ' + code + '…'; renderLobby();
     A.net = makeNet();
     try { await A.net.host(code); } catch (e) { A.net.close(); A.net = null; A.lobby.view = 'home'; renderLobby(); toast('Could not reopen ' + code + ': ' + (e.code || e.message), 'bad'); return; }
@@ -3318,7 +3505,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     const s = disp || A.state; if (!s || !s.tiles.length) return;
     const me = A.role, them = otherRole(me);
     const r = TL.lanternRadius(s), weather = TL.weatherInfo(s);
-    const plan = TL.wateringPlan(s);
+    const plan = TL.wateringPlan(s, true);
     const watered = new Map();
     for (const p of plan) { const key = p.tx + ',' + p.ty; if (!watered.has(key)) watered.set(key, []); watered.get(key).push(TL.coordName(p.x, p.y)); }
     $('#board').classList.toggle('fog-night', weather.id === 'fog');
@@ -3337,17 +3524,29 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     }
     if (!disp && s.phase === 'act') {
       const cards = sel && sel.kind === 'card' ? [sel.card] : s.keepers[me].hand;
-      for (const cid of cards) for (const t of TL.bonusTargets(s, s.keepers[me], cid)) {
+      for (const cid of cards) for (const t of bonusTargets(s, s.keepers[me], cid)) {
         if (t.wisp !== undefined) bonusWisps.add(t.wisp);
         else if (t.tx !== undefined) bonusTiles.add(t.tx + ',' + t.ty);
         else if (t.x !== undefined) bonusTiles.add(t.x + ',' + t.y);
       }
     }
-    // breath threat tiles from lit intents
+    // Draw only known intent lanes. Never infer a hidden piece from a short lane.
+    const lanes = new Map(), known = observedState(s);
     for (const w of s.wisps) {
-      if (w.hp <= 0 || !w.intent || w.intent.kind !== 'breathe') continue;
+      if (w.hp <= 0 || !visibleWisp(s, w) || !w.intent) continue;
       const vis = TL.intentVisibleTo(s, w, me);
       if (vis !== 'mine') continue;
+      if (w.intent.kind === 'wail') {
+        const lane = TL.wailLane(known, w);
+        for (const p of [{ x: w.x, y: w.y }, ...lane]) {
+          const key = p.x + ',' + p.y, axis = ['N', 'S'].includes(w.intent.dir) ? 'vertical' : 'horizontal';
+          if (!lanes.has(key)) lanes.set(key, new Set());
+          lanes.get(key).add(axis);
+          if (TL.tileAt(s, p.x, p.y).plant) threat.add(key);
+        }
+        continue;
+      }
+      if (w.intent.kind !== 'breathe') continue;
       const dirs = TL.WISP_TYPES[w.type].area ? TL.DIR_LIST : [w.intent.dir];
       for (const d of dirs) { const x = w.x + TL.DIRS[d][0], y = w.y + TL.DIRS[d][1]; const t = TL.tileAt(s, x, y); if (t && t.plant > 0) threat.add(x + ',' + y); }
     }
@@ -3379,17 +3578,29 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       const k = x + ',' + y;
       el.classList.toggle('target', targetTiles.has(k) || moveTiles.has(k)); el.classList.toggle('move', moveTiles.has(k));
       el.classList.toggle('threat', threat.has(k));
+      el.classList.toggle('wail-lane-horizontal', !!(lanes.has(k) && lanes.get(k).has('horizontal')));
+      el.classList.toggle('wail-lane-vertical', !!(lanes.has(k) && lanes.get(k).has('vertical')));
+      setTileBadge(el, 'wail-line-horizontal', lanes.has(k) && lanes.get(k).has('horizontal') ? '·' : '', 'Wail lane: the first plant or keeper takes the attack');
+      setTileBadge(el, 'wail-line-vertical', lanes.has(k) && lanes.get(k).has('vertical') ? '·' : '', 'Wail lane: the first plant or keeper takes the attack');
+      el.classList.toggle('bloom-glow', t.plant === 3);
+      el.classList.toggle('plant-glow', t.plant >= (s.config.difficulty === 'harsh' ? 3 : 2));
       el.classList.toggle('first-target', !!(sel && sel.step === 1 && sel.first && sel.first.x === x && sel.first.y === y));
       el.classList.toggle('bonus-target', bonusTiles.has(k));
-      el.classList.toggle('front-frozen', weather.id === 'longdark' && x < weather.frontColumn);
-      el.classList.toggle('front-next', weather.id === 'longdark' && weather.nextFrontHour !== null && x === weather.frontColumn);
+      const nextFront = weather.id === 'longdark' && weather.nextFrontHour !== null && weather.frontTiles.some(p => p.x === x && p.y === y);
+      el.classList.toggle('front-frozen', weather.id === 'longdark' && frontDepth(weather, x, y) < weather.frontColumn);
+      el.classList.toggle('front-next', nextFront);
+      for (const side of ['west', 'east', 'north', 'south']) el.classList.toggle('front-' + side, nextFront && weather.frontSide === side);
       setTileBadge(el, 'watering-drop', watered.has(k) ? '◆' : '', watered.has(k) ? `Will grow once from ${watered.get(k).join(', ')} at dusk; allocation can change before growth` : '');
+      const recovering = t.plant > 0 && t.plant < 3 && t.recoveryNight === s.night && t.recoveryHour === s.hour;
+      setTileBadge(el, 'roots-recovery', recovering ? 'rest' : '', 'Deep Roots recovery: skips irrigation at this dusk; immediate growth still works');
       setTileBadge(el, 'stream-chevron', t.terrain === 'puddle' && t.streamDir ? DIR_ARROW[t.streamDir] : '', t.streamDir ? `Stream flows ${DIR_NAME[t.streamDir]}` : '');
       setTileBadge(el, 'weather-wind', weather.windDir ? DIR_ARROW[weather.windDir] : '', weather.windDir ? `Dusk wind: ${DIR_NAME[weather.windDir]}` : '');
-      setTileBadge(el, 'front-label', weather.id === 'longdark' && weather.nextFrontHour !== null && x === weather.frontColumn && y === 0 ? `dusk ${weather.nextFrontHour}` : '', `Frost front advances at dusk of hour ${weather.nextFrontHour}`);
+      setTileBadge(el, 'front-label', nextFront && (weather.frontAxis === 'row' ? x === 0 : y === 0) ? `dusk ${weather.nextFrontHour}` : '', `Frost front from the ${weather.frontSide} advances at dusk of hour ${weather.nextFrontHour}`);
       if (watered.has(k)) el.title += ` · watered by ${watered.get(k).join(', ')}`;
+      if (recovering) el.title += ' · Deep Roots recovery: no irrigation growth this dusk';
       if (bonusTiles.has(k)) el.title += ' · partner bonus available';
-      if (weather.id === 'longdark' && x === weather.frontColumn && weather.nextFrontHour !== null) el.title += ` · frost front at dusk of hour ${weather.nextFrontHour}`;
+      if (nextFront) el.title += ` · frost front from the ${weather.frontSide} at dusk of hour ${weather.nextFrontHour}`;
+      if (lanes.has(k)) el.title += ' · Wail lane';
       if (spawn) el.title += ` · ${weather.hideSpawnTypes ? 'unknown Chill' : TL.WISP_TYPES[spawn.type].name} arrives at dusk`;
     }
     // pieces
@@ -3406,11 +3617,13 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       place(el, k.x, k.y);
     }
     for (const w of s.wisps) {
-      if (w.hp <= 0) continue;
+      if (w.hp <= 0 || !visibleWisp(s, w)) continue;
       const key = 'w-' + w.id; seen.add(key);
       let el = pieceEls.get(key);
       if (!el) { el = h('div', 'piece wisp'); el.innerHTML = '<div class="body"></div><div class="soak"></div><div class="hp"></div><div class="intent"></div><div class="steps"></div>'; piecesEl.appendChild(el); pieceEls.set(key, el); el.onclick = (e) => onWispClick(w.id, e); el.classList.add('spawnin'); }
       const body = el.children[0]; if (body.dataset.k !== w.type) { body.dataset.k = w.type; body.innerHTML = sprite(w.type); }
+      el.classList.toggle('wail', w.type === 'wail');
+      setTileBadge(el, 'wail-name', w.type === 'wail' ? 'Wail' : '', 'Wail: ranged lane attack, up to 3 tiles');
       el.children[1].innerHTML = w.soaked ? sprite('soaked_overlay') : '';
       const hp = el.children[2]; const hpk = TL.WISP_TYPES[w.type].hp > 1 ? w.hp : 0; if (hp.dataset.k !== String(hpk)) { hp.dataset.k = String(hpk); hp.innerHTML = hpk ? '<i></i>'.repeat(hpk) : ''; }
       const vis = TL.intentVisibleTo(s, w, me);
@@ -3419,7 +3632,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       let ik = '', cls = 'intent', steps = '';
       if (vis === 'dark') { ik = 'intent_unknown'; cls += ' center'; }
       else if (vis === 'partner') { ik = 'intent_partner'; cls += ' center'; }
-      else if (it.kind === 'breathe') { ik = 'intent_breathe'; cls += ' ' + it.dir; }
+      else if (it.kind === 'breathe' || it.kind === 'wail') { ik = 'intent_breathe'; cls += ' ' + it.dir + (it.kind === 'wail' ? ' wail-intent' : ''); }
       else if (it.kind === 'move') { ik = 'intent_move'; cls += ' ' + it.dir; steps = String(it.steps); }
       if (intentEl.dataset.k !== ik + cls) { intentEl.dataset.k = ik + cls; intentEl.className = cls; intentEl.innerHTML = ik ? sprite(ik) : ''; }
       stepsEl.textContent = steps; stepsEl.style.display = steps ? '' : 'none';
@@ -3429,7 +3642,11 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       if (bonusWisps.has(w.id)) el.title += ' Partner bonus available on this Chill.';
       place(el, w.x, w.y);
     }
-    for (const [key, el] of pieceEls) { if (!seen.has(key) && !el.classList.contains('ghost') && !el.classList.contains('fx')) { el.classList.add('poof'); pieceEls.delete(key); setTimeout(() => el.remove(), 450); } }
+    for (const [key, el] of pieceEls) { if (!seen.has(key) && !el.classList.contains('ghost') && !el.classList.contains('fx')) {
+      pieceEls.delete(key);
+      if (weather.id === 'fog') el.remove();
+      else { el.classList.add('poof'); setTimeout(() => el.remove(), 450); }
+    } }
     // ghosts & arrows are handled by preview/arrows layers
     renderArrows();
   }
@@ -3443,10 +3660,12 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     const T = TL.WISP_TYPES[w.type];
     let t = `${T.name}${T.hp > 1 ? ` (${w.hp} hp)` : ''}${w.soaked ? ', soaked (temporarily held; dries after its next hold intent)' : ''}. `;
     if (w.type === 'sleet') t += 'Hunts water, never breathes; freezes its puddle at dusk. ';
+    if (w.type === 'wail') t += 'Wails along a straight lane up to 3 tiles. Stone, keepers and Chills block the lane; a keeper shields the plant. ';
     if (vis === 'dark') t += 'Outside both lanterns: intent unknown.';
     else if (vis === 'partner') t += `Inside ${A.names[otherRole(A.role)] || 'your partner'}'s lantern: ask them what it intends.`;
-    else if (w.intent.kind === 'breathe') t += `Will breathe ${w.intent.dir}${T.area ? ' (all four sides)' : ''}.`;
-    else if (w.intent.kind === 'move') t += `Will move ${w.intent.steps} ${w.intent.dir}${w.intent.fickle ? ' (fickle drift)' : ''}.`;
+    else if (w.intent && w.intent.kind === 'wail') t += `Will wail ${DIR_NAME[w.intent.dir]} through ${TL.wailLane(observedState(s), w).map(p => TL.coordName(p.x, p.y)).join(' → ')}.`;
+    else if (w.intent && w.intent.kind === 'breathe') t += `Will breathe ${w.intent.dir}${T.area ? ' (all four sides)' : ''}.`;
+    else if (w.intent && w.intent.kind === 'move') t += `Will move ${w.intent.steps} ${w.intent.dir}${w.intent.fickle ? ' (fickle drift)' : ''}.`;
     else t += 'Will do nothing this hour.';
     return t;
   }
@@ -3457,14 +3676,24 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     const c = TL.CARDS[sel.card];
     let at = null, dirs = null;
     if (c.target === 'dir') { const k = A.state.keepers[A.role]; at = [k.x, k.y]; dirs = TL.DIR_LIST; }
-    if (c.target === 'wisp-dir' && sel.step === 1) { const w = A.state.wisps.find(w => w.id === sel.first.wisp); if (!w) return; at = [w.x, w.y]; dirs = sel.targets.filter(t => t.wisp === w.id).map(t => t.dir); }
+    const followingBonus = sel.card === 'followingwind' && sel.step === 1;
+    if ((c.target === 'wisp-dir' || followingBonus) && sel.step === 1) { const w = A.state.wisps.find(w => w.id === sel.first.wisp); if (!visibleWisp(A.state, w)) return; at = [w.x, w.y]; dirs = sel.targets.filter(t => t.wisp === w.id).map(t => t.dir); }
     if (!at) return;
     arrowsEl = h('div', 'arrows'); place(arrowsEl, at[0], at[1]);
     for (const d of TL.DIR_LIST) {
       const b = h('button', 'arrow ' + d, { N: '↑', E: '→', S: '↓', W: '←' }[d]);
       b.disabled = !dirs.includes(d);
+      b.title = followingBonus ? `Push once ${DIR_NAME[d]}` : `Push ${DIR_NAME[d]}`;
+      b.setAttribute('aria-label', b.title);
       b.onclick = (e) => { e.stopPropagation(); const target = c.target === 'dir' ? { dir: d } : { wisp: sel.first.wisp, dir: d }; playCard(target); };
       b.onmouseenter = () => previewTarget(c.target === 'dir' ? { dir: d } : { wisp: sel.first.wisp, dir: d }); b.onmouseleave = () => clearPreview();
+      arrowsEl.appendChild(b);
+    }
+    if (followingBonus && sel.targets.some(t => t.wisp === sel.first.wisp && t.dir === undefined)) {
+      const b = h('button', 'arrow away', 'away ×2');
+      b.title = 'Push two tiles away from Gale'; b.setAttribute('aria-label', b.title);
+      b.onclick = e => { e.stopPropagation(); playCard({ wisp: sel.first.wisp }); };
+      b.onmouseenter = () => previewTarget({ wisp: sel.first.wisp }); b.onmouseleave = clearPreview;
       arrowsEl.appendChild(b);
     }
     piecesEl.appendChild(arrowsEl);
@@ -3477,8 +3706,8 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     clearPreview();
     const sel = A.ui.sel; if (!sel || !['card', 'transplant'].includes(sel.kind)) return;
     const a = sel.kind === 'transplant' ? Object.assign({ k: 'transplant', keeper: A.role }, target) : { k: 'card', keeper: A.role, hand: sel.hand, target };
-    const r = TL.applyAction(A.state, a); if (r.error) return;
-    showDiff(A.state, r.state, r.events);
+    const known = observedState(A.state), r = TL.applyAction(known, a); if (r.error) return;
+    showDiff(known, r.state, r.events);
   }
   function previewMove(x, y) { clearPreview(); const g = ghost(A.role, x, y, 'keeper ' + A.role); previewEls.push(g); }
   function ghost(spriteKey, x, y, cls) { const g = h('div', 'piece ghost ' + (cls || '')); g.innerHTML = '<div class="body">' + sprite(spriteKey) + '</div>'; place(g, x, y); piecesEl.appendChild(g); return g; }
@@ -3486,7 +3715,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   function showDiff(before, after, events) {
     const bw = new Map(before.wisps.map(w => [w.id, w]));
     for (const w of after.wisps) {
-      const b = bw.get(w.id); if (!b) continue;
+      const b = bw.get(w.id); if (!b || !visibleWisp(before, b)) continue;
       if (b.x !== w.x || b.y !== w.y) { previewEls.push(ghost(w.type, w.x, w.y, 'wisp')); }
       if (w.hp < b.hp) previewEls.push(fx('label', w.x, w.y, '−' + (b.hp - w.hp)));
     }
@@ -3514,12 +3743,12 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   function selectMove() {
     if (!canAct() || myKeeper().moved) return;
     if (A.ui.sel && A.ui.sel.kind === 'move') return cancelSel();
-    A.ui.sel = { kind: 'move', tiles: TL.keeperReach(A.state, myKeeper()) }; clearPreview(); render();
+    A.ui.sel = { kind: 'move', tiles: keeperReach(A.state, myKeeper()) }; clearPreview(); render();
   }
   function selectTransplant() {
     if (!canAct() || myKeeper().played >= A.state.config.cardsPerHour) return;
     if (A.ui.sel && A.ui.sel.kind === 'transplant') return cancelSel();
-    const targets = TL.transplantTargets(A.state, myKeeper());
+    const targets = transplantTargets(A.state, myKeeper());
     if (!targets.length) return toast('No adjacent plant has an empty soil neighbour.');
     A.ui.sel = { kind: 'transplant', targets, step: 0, first: null }; clearPreview(); render();
   }
@@ -3528,7 +3757,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     const k = myKeeper(); if (k.played >= A.state.config.cardsPerHour) return toast('No card plays left this hour.');
     if (A.ui.sel && A.ui.sel.kind === 'card' && A.ui.sel.hand === i) return cancelSel();
     const cid = k.hand[i]; if (!cid) return;
-    const targets = TL.cardTargets(A.state, k, cid);
+    const targets = cardTargets(A.state, k, cid);
     if (!targets.length) return toast('No valid target for ' + TL.CARDS[cid].name + ' right now.');
     const c = TL.CARDS[cid];
     if (c.target === 'none') { A.ui.sel = { kind: 'card', hand: i, card: cid, targets, step: 0 }; playCard({}); return; }
@@ -3538,6 +3767,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   function targetHint(c) {
     const sel = A.ui.sel;
     if (sel && sel.step === 1) {
+      if (sel.card === 'followingwind') return 'Rill touched this Chill: choose any direction once, or away ×2.';
       if (c.target === 'seed-pair') return 'Click soil next to a puddle Rill made this hour for the bonus seed.';
       if (c.target === 'plant-move') return 'Now click where to carry it.';
       if (c.target === 'wisp-dir') return 'Now pick a direction.';
@@ -3584,10 +3814,12 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   }
   function onWispClick(id, e) {
     if (e) e.stopPropagation();
+    if (!visibleWisp(A.state, A.state.wisps.find(w => w.id === id))) return;
     if (e && e.shiftKey) { const w = A.state.wisps.find(w => w.id === id); if (w) sendPing(w.x, w.y); return; }
     const sel = A.ui.sel; if (!sel || sel.kind !== 'card' || !canAct()) return;
     const c = TL.CARDS[sel.card];
-    if (c.target === 'wisp-dir') { if (sel.targets.some(t => t.wisp === id)) { sel.first = { wisp: id }; sel.step = 1; render(); hint('Now pick a direction.'); } return; }
+    const followingBonus = sel.card === 'followingwind' && sel.targets.some(t => t.wisp === id && t.dir !== undefined);
+    if (c.target === 'wisp-dir' || followingBonus) { if (sel.targets.some(t => t.wisp === id)) { sel.first = { wisp: id }; sel.step = 1; clearPreview(); render(); hint(targetHint(c)); } return; }
     const t = sel.targets.find(t => t.wisp === id); if (t) playCard(t);
   }
   function onKeeperClick(id, e) { if (e) e.stopPropagation(); if (id === A.role) selectMove(); }
@@ -3604,8 +3836,8 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
         if (sel.targets.some(t => t.x === x && t.y === y)) previewEls.push(ghost('seed', x, y));
         return;
       }
-      else if (c.target === 'wisp-dir') t = null;
-      else { t = sel.targets.find(t => t.x === x && t.y === y && t.wisp === undefined); if (!t) { const w = TL.wispAt(A.state, x, y); if (w) t = sel.targets.find(t => t.wisp === w.id && t.dir === undefined); } }
+      else if (c.target === 'wisp-dir' || sel.card === 'followingwind' && sel.step === 1) t = null;
+      else { t = sel.targets.find(t => t.x === x && t.y === y && t.wisp === undefined); if (!t) { const w = TL.wispAt(A.state, x, y); if (visibleWisp(A.state, w)) t = sel.targets.find(t => t.wisp === w.id && t.dir === undefined); } }
       if (t) previewTarget(t); else clearPreview();
     }
   }
@@ -3631,18 +3863,18 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     const sel = A.ui.sel; if (!sel) return;
     const k = myKeeper();
     if (A.state.phase !== 'act' || k.done) { A.ui.sel = null; clearPreview(); return; }
-    if (sel.kind === 'move') { sel.tiles = TL.keeperReach(A.state, k); return; }
+    if (sel.kind === 'move') { sel.tiles = keeperReach(A.state, k); return; }
     if (sel.kind !== 'transplant' && k.hand[sel.hand] !== sel.card) { A.ui.sel = null; clearPreview(); return; }
     // A partner's action can activate Seed Wind or change either selected tile.
     if (k.played >= A.state.config.cardsPerHour) { A.ui.sel = null; clearPreview(); return; }
-    sel.targets = sel.kind === 'transplant' ? TL.transplantTargets(A.state, k) : TL.cardTargets(A.state, k, sel.card);
+    sel.targets = sel.kind === 'transplant' ? transplantTargets(A.state, k) : cardTargets(A.state, k, sel.card);
     if (sel.step === 1 && !sel.targets.some(t => sel.first.wisp !== undefined ? t.wisp === sel.first.wisp : t.x === sel.first.x && t.y === sel.first.y && t.tx !== undefined)) {
       sel.step = 0; sel.first = null; clearPreview();
     }
   }
   function partnerBonus(cid, state) {
     if (state.phase !== 'act') return '';
-    const targets = TL.bonusTargets(state, state.keepers[A.role], cid);
+    const targets = bonusTargets(state, state.keepers[A.role], cid);
     if (!targets.length) return '';
     const names = [...new Set(targets.map(t => {
       if (t.wisp !== undefined) { const w = state.wisps.find(w => w.id === t.wisp); return w ? TL.coordName(w.x, w.y) : ''; }
@@ -3663,7 +3895,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       $('#pillNight').textContent = s.phase === 'lobby' ? 'Getting ready' : s.phase === 'draft' ? `Dawn after night ${s.night}` : s.phase === 'won' ? 'Dawn of the last night' : s.phase === 'lost' ? 'The garden sleeps' : `Night ${s.night} · Hour ${s.hour}/${s.config.hours} · dawn needs ${TL.dawnNeed(s)} blooms · −1 Warmth per missing (max 2)`;
       const weather = TL.weatherInfo(s);
       const wb = $('#pillWind'); wb.hidden = !weather.windDir;
-      if (weather.windDir) { wb.textContent = `${DIR_ARROW[weather.windDir]} wind ${DIR_NAME[weather.windDir]}`; wb.title = weather.rule; }
+      if (weather.windDir) { wb.textContent = weather.lastGust ? `${DIR_ARROW[weather.windDir]} the last gust · pushes +2` : `${DIR_ARROW[weather.windDir]} wind ${DIR_NAME[weather.windDir]}`; wb.title = weather.rule; }
       $('#pillNight').title = 'At dawn, each missing bloom costs 1 Warmth, capped at 2 Warmth per dawn.';
       const flames = []; for (let i = 0; i < Math.max(s.warmth, s.config.warmth); i++) flames.push(`<span class="flame ${i < s.warmth ? 'on' : ''}">${sprite('warmth')}</span>`);
       $('#pillWarmth').innerHTML = `<span class="flames">${flames.join('')}</span> ${s.warmth}`;
@@ -3685,20 +3917,20 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     L.appendChild(st);
     const act = h('div', 'actions');
     const bMove = h('button', 'btn ghost move' + (A.ui.sel && A.ui.sel.kind === 'move' ? ' on' : ''), 'Move'); bMove.disabled = !canAct() || k.moved; bMove.onclick = selectMove; bMove.title = 'M';
-    const transplantTargets = TL.transplantTargets(s, k);
+    const availableTransplants = transplantTargets(s, k);
     const bTransplant = h('button', 'btn ghost transplant' + (A.ui.sel && A.ui.sel.kind === 'transplant' ? ' on' : ''), 'Transplant');
-    bTransplant.id = 'btnTransplant'; bTransplant.disabled = !canAct() || k.played >= s.config.cardsPerHour || !transplantTargets.length; bTransplant.onclick = selectTransplant;
+    bTransplant.id = 'btnTransplant'; bTransplant.disabled = !canAct() || k.played >= s.config.cardsPerHour || !availableTransplants.length; bTransplant.onclick = selectTransplant;
     bTransplant.title = 'T · Spend one card play to move an adjacent plant one tile. Blooms become sprouts.';
     const bDone = h('button', 'btn done', A.ui.pendingSeq ? '…' : 'Done'); bDone.id = 'btnDone'; bDone.disabled = !canAct(); bDone.title = 'D';
     const nothingLeft = k.moved && k.played >= s.config.cardsPerHour;
-    const nothingUseful = k.played >= s.config.cardsPerHour || (!transplantTargets.length && k.hand.every(cid => !TL.cardTargets(s, k, cid).length));
+    const nothingUseful = k.played >= s.config.cardsPerHour || (!availableTransplants.length && k.hand.every(cid => !cardTargets(s, k, cid).length));
     if (canAct() && (nothingLeft || (k.moved && nothingUseful))) bDone.classList.add('pulse');
     bDone.onclick = () => { if (!canAct()) return; cancelSel(); propose({ k: 'done', keeper: A.role }); };
     act.append(bMove, bTransplant); L.appendChild(act); L.appendChild(bDone);
     L.appendChild(h('div', 'section-title', 'hand'));
     const hand = h('div', 'hand');
     k.hand.forEach((cid, i) => {
-      const c = TL.CARDS[cid]; const ok = acting && k.played < s.config.cardsPerHour && TL.cardTargets(s, k, cid).length > 0;
+      const c = TL.CARDS[cid]; const ok = acting && k.played < s.config.cardsPerHour && cardTargets(s, k, cid).length > 0;
       const el = h('div', 'card ' + c.keeper + (ok && canAct() ? '' : ' disabled') + (A.ui.sel && A.ui.sel.kind === 'card' && A.ui.sel.hand === i ? ' selected' : ''));
       el.innerHTML = `<div class="title"><span>${esc(c.name)}</span><span class="tag">${c.exhaust ? 'exhaust · ' : ''}${i + 1}</span></div><div class="text">${esc(c.text)}</div>`;
       const bonus = partnerBonus(cid, s);
@@ -3736,7 +3968,13 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     const weather = TL.weatherInfo(s);
     const tonight = h('div', 'tonight');
     tonight.innerHTML = `<div class="section-title">tonight · ${esc(weather.name)}</div><p>${esc(weather.rule)}</p>`;
-    if (weather.id === 'longdark') tonight.appendChild(h('div', 'front-schedule', weather.nextFrontHour !== null ? `Column ${String.fromCharCode(65 + weather.frontColumn)} freezes at dusk of hour ${weather.nextFrontHour}.` : 'The frost front has finished advancing tonight.'));
+    if (weatherGeometry(weather)) tonight.appendChild(h('div', 'weather-geometry', esc(weatherGeometry(weather))));
+    if (weather.id === 'longdark') tonight.appendChild(h('div', 'front-schedule', weather.nextFrontHour !== null ? `${frontLabel(weather)} freezes at dusk of hour ${weather.nextFrontHour}.` : 'The frost front has finished advancing tonight.'));
+    if (weather.id === 'fog') {
+      const unseen = s.wisps.filter(w => w.hp > 0 && !visibleWisp(s, w)).length;
+      const counter = h('div', 'unseen-count', `${unseen} Chill${unseen === 1 ? '' : 's'} unseen`);
+      counter.setAttribute('aria-live', 'polite'); tonight.appendChild(counter);
+    }
     R.appendChild(tonight);
     R.appendChild(h('div', 'section-title', 'hand'));
     R.appendChild(h('div', 'talk', `<b>${k.hand.length} card${k.hand.length === 1 ? '' : 's'}</b> you can't see. Ask what they can do; tell them what you can.`));
@@ -3749,7 +3987,17 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     R.appendChild(h('div', 'section-title', 'the night so far'));
     const lg = h('div', 'log');
     const entries = s.log.slice(-60).reverse();
-    for (const e of entries) lg.appendChild(h('div', e.cls || '', `<span style="color:var(--muted)">${e.night ? 'n' + e.night + 'h' + e.hour : ''}</span> ${esc(e.text)}`));
+    for (const e of entries) {
+      // Enemy deaths and displaced arrivals can happen beyond the lanterns.
+      // Keep their result in the log without publishing an unseen position.
+      let message = e.text;
+      if (weather.id === 'fog' && e.night === s.night) {
+        message = message.replace(/(?:Chill|Flurry|Hoar|Sleet|Wail) at [A-G][1-6] melted away/, 'A Chill melted away');
+        message = message.replace(/The Chill squeezed in at [A-G][1-6] instead\./, 'A Chill squeezed in through the hedge.');
+        message = message.replace(/A Chill found no way in near [A-G][1-6]\./, 'A Chill found no way through the hedge.');
+      }
+      lg.appendChild(h('div', e.cls || '', `<span style="color:var(--muted)">${e.night ? 'n' + e.night + 'h' + e.hour : ''}</span> ${esc(message)}`));
+    }
     R.appendChild(lg);
   }
   function renderHint() {
@@ -3774,7 +4022,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
         A.ui.lastHourShown = key;
         const weather = TL.weatherInfo(s);
         if (s.hour === 1) banner(`Night ${s.night} · ${esc(weather.name)}<small>${esc(weather.rule)}</small>`, 3600);
-        else banner(`Hour ${s.hour}<small>${s.config.hours - s.hour} more until dawn${weather.windDir ? ` · wind ${DIR_ARROW[weather.windDir]} ${DIR_NAME[weather.windDir]}` : ''}</small>`, 1200);
+        else banner(`Hour ${s.hour}<small>${weather.lastGust ? 'The last gust: pushes go +2 this hour' : `${s.config.hours - s.hour} more until dawn`}${weather.windDir ? ` · wind ${DIR_ARROW[weather.windDir]} ${DIR_NAME[weather.windDir]}` : ''}</small>`, weather.lastGust ? 2400 : 1200);
       }
     }
   }
@@ -3792,8 +4040,9 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     const s = A.state, d = s.draft; C.innerHTML = '';
     C.appendChild(h('h2', '', `Dawn after night ${s.night}`));
     C.appendChild(h('p', 'sub', `${s.lastBlooms} bloom${s.lastBlooms === 1 ? '' : 's'} lit the garden. Glow ${s.glow}, Warmth ${s.warmth}. ${d.carry ? `${d.carry} seed${d.carry > 1 ? 's' : ''} carry to the next garden.` : 'No seeds carry over.'} Each keeper may learn one card, or skip to keep the deck lean. Offers are public: plan together.`));
+    C.appendChild(h('p', 'glow-rank', `Glow ${s.glow} · ${esc(TL.glowRank(s.glow))}`));
     const forecast = TL.weatherInfo(s, s.night + 1);
-    C.appendChild(h('div', 'weather-forecast', `<b>Next night: ${esc(forecast.name)}</b><p>${esc(forecast.rule)}</p>`));
+    C.appendChild(h('div', 'weather-forecast', `<b>Next night: ${esc(forecast.name)}</b><p>${esc(forecast.rule)}</p>${weatherGeometry(forecast) ? `<p class="weather-geometry">${esc(weatherGeometry(forecast))}</p>` : ''}`));
     const grid = h('div', 'draft');
     for (const id of TL.KEEPER_IDS) {
       const col = h('div', 'col ' + id); col.appendChild(h('h3', '', `${esc(A.names[id] || KNAME[id])} · ${KNAME[id]}${id === A.role ? ' (you)' : ''}`));
@@ -3836,6 +4085,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     const sum = h('div', 'summary');
     sum.innerHTML = `<div class="stat"><b>${s.glow}</b><span>glow</span></div><div class="stat"><b>${s.glowByNight.join(' · ') || '0'}</b><span>by night</span></div><div class="stat"><b>${s.warmth}</b><span>warmth left</span></div><div class="stat"><b>${s.charms.length}</b><span>charms</span></div>`;
     C.appendChild(sum);
+    C.appendChild(h('p', 'glow-rank', esc(TL.glowRank(s.glow))));
     const decks = h('div', 'draft');
     for (const id of TL.KEEPER_IDS) { const col = h('div', 'col ' + id); col.appendChild(h('h3', '', `${esc(A.names[id] || KNAME[id])}'s deck`)); col.appendChild(h('p', 'hint', esc(s.keepers[id].collection.map(c => TL.CARDS[c].name).join(', ')))); decks.appendChild(col); }
     C.appendChild(decks);
@@ -3853,14 +4103,15 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     <div class="help">
       <div><h3>Your hour</h3><p>Both keepers act in <b>any order</b>. Each gets one move and <b>two plays</b>, used for cards or Transplant. Coordinate freely, then both press Done. Chills follow their intents; weather, irrigation and marked arrivals follow.</p><p><b>Pin one card</b> with its pin icon to keep it at dusk. All other cards in hand are discarded, then you draw up to 3. Click the same pin to unpin, or another to change it. Playing your pinned card clears the pin. Second Wind draws two extra; exhausted cards return next night.</p></div>
       <div><h3>Transplant ${sprite('sprout')}</h3><p>Spend <b>one play, with no card</b>, to move a plant beside your keeper onto empty soil beside that plant. Click <b>Transplant</b>, the plant, then its destination. A bloom becomes a sprout; seeds and sprouts keep their stage. This can open an escape route or rescue a crop from the frost front.</p><p><b>Kite</b> still carries plants at range without downgrading them. Gale's planted or moved plants can earn Drink Deep's bonus that hour.</p></div>
-      <div><h3>One plant per puddle ${sprite('puddle')}</h3><p>Seed → sprout → bloom. Each puddle waters <b>one adjacent plant</b> at dusk: highest stage below bloom first, then nearest Rill, then reading order (top row first, left to right). A plant chosen by several puddles grows only one stage.</p><p>The blue droplet marks each chosen plant; hover it to see its water sources. Moving Rill can change ties. These show current allocations, which may change before dusk. <b>Sprinkle</b> grows instantly; <b>Frog Chorus</b> uses the same one-plant-per-puddle allocation immediately. Dew turns every seed beside water into a sprout.</p><p>Natural ponds and streams are permanent. Card puddles have <b>2 life</b>, losing one after each dusk's growth; at 0 they become soil.</p></div>
-      <div><h3>Chills and collisions ${sprite('chill')}</h3><p>Chill: 1 hp, move 2. Flurry: 1 hp, move 3. Hoar: 2 hp, move 1 and breathes on all four sides. Sleet: 1 hp, move 2, hunts water and <b>never breathes</b>; before irrigation it freezes any water underneath it, including a stream.</p><p>Breath freezes a plant. Losing a bloom costs <b>1 Warmth</b>. A keeper can block breath and movement, but breath frosts them: no move next hour. A push into stone, plant, keeper, Chill or board edge deals <b>1 damage</b>; a bumped Chill takes 1 too. Mossy Stones raises stone collision damage to 2.</p></div>
+      <div><h3>One plant per puddle ${sprite('puddle')}</h3><p>Seed → sprout → bloom. Each puddle waters <b>one adjacent plant</b> at dusk: highest stage below bloom first, then nearest Rill, then reading order (top row first, left to right). A plant chosen by several puddles grows only one stage.</p><p>The blue droplet marks each chosen plant; hover it to see its water sources. Moving Rill can change ties. These show current allocations, which may change before dusk. <b>Sprinkle</b> grows a plant instantly within <b>3 tiles</b>; Drink Deep reaches 2; <b>Frog Chorus</b> uses the same one-plant-per-puddle allocation immediately. Dew turns every seed beside water into a sprout.</p><p>Natural ponds and streams are permanent. Card puddles have <b>2 life</b>, losing one after each dusk's growth; at 0 they become soil.</p></div>
+      <div><h3>Chills and collisions ${sprite('chill')}</h3><p>Chill: 1 hp, move 2. Flurry: 1 hp, move 3. Hoar: 2 hp, move 1 and breathes on all four sides. Sleet: 1 hp, move 2, hunts water and <b>never breathes</b>; before irrigation it freezes any water underneath it, including a stream. <b>Wail</b>: 1 hp, move 1; it freezes the first plant in a straight lane up to 3 tiles. Stones, keepers and Chills block the lane. A keeper in the lane takes the wail and shields the plant.</p><p>Breath freezes a plant. Losing a bloom costs <b>1 Warmth</b>. A keeper can block breath and movement, but breath frosts them: no move next hour. A push into stone, plant, keeper, Chill or board edge deals <b>1 damage</b>; a bumped Chill takes 1 too. Mossy Stones raises stone collision damage to 2.</p></div>
       <div><h3>Soaking buys time</h3><p>A Chill entering water stops and becomes soaked. Its next intent is hold, or breath if a plant is adjacent; at the following hour start it dries and can move out. Leaving water also dries it. Entering again soaks it again; a blocked push leaves its soaking unchanged.</p><p>Making a puddle beneath a Chill soaks it and cancels its current move. The droplet on a Chill means soaked; the droplet on a plant means allocated irrigation. <b>Drain</b> damages only an occupant that is still soaked.</p></div>
-      <div><h3>Shared lanterns ${sprite('lantern')}</h3><p>Both players see intents inside <b>either lantern</b> by default. Beyond both lanterns, ${sprite('intent_unknown')} means unknown. Radius is normally 2, modified by Fog and Long Wick. The optional <b>private lanterns</b> setting shows each keeper only their own coverage; ${sprite('intent_partner')} means your partner can see it.</p><p>Intents are fixed at hour start. Pushing redirects where a breath lands, without changing its direction. Chill and Flurry can drift fickly; Hoar and Sleet never do. Fog increases fickleness for dark Chills and hides spawn types.</p></div>
-      <div><h3>Gale and Rill together</h3><p>Gale moves 3; Rill moves 2, with free steps into puddles. <b>Following Wind</b> pushes an adjacent Chill twice if Rill's cards pushed, soaked, drained or calmed <b>that Chill</b> earlier this hour. <b>Drink Deep</b> grows twice if Gale planted or moved <b>that plant</b> earlier this hour.</p><p><b>Seed Wind</b> puts its bonus seed beside water Rill made this hour. <b>Backwash</b> damages each soaked Chill for 1, or 2 for that Chill if Gale pushed or bumped it. Eligible targets glow green and the card names their coordinates. These records reset each hour.</p><p><b>Sweep</b> reaches every Chill in its line, even past stones and plants, farthest first.</p></div>
-      <div><h3>Weather changes the puzzle</h3><ul>${weathers}</ul><p>The next weather is shown <b>before your draft</b>. Board chevrons show stream current; arrows show tonight's wind. The pale column boundary marks the next frost advance and its hour. These rules reflect your selected difficulty.</p></div>
-      <div><h3>Arrivals and dawn</h3><p>Markers show where Chills arrive at dusk. Blocking a marker cannot cancel it: a keeper is frosted, a plant freezes, then the Chill takes the tile or squeezes onto a nearby open edge. Hour 6 has no marked arrivals. Later nights start with lingering Chills already able to act.</p><p>This difficulty needs <b>${config.dawnLowByNight.join(', ')}</b> blooms at successive dawns. Each missing bloom costs <b>1 Warmth, capped at 2</b>. Warmth does not recover on its own. Each keeper drafts one of three cards or skips after nights 1–4; four blooms earn a shared charm. Up to three surviving blooms carry over as seeds.</p></div>
-      <div><h3>Charms and communication</h3><p><b>Deep Roots</b> saves the first freezing bloom each night as a sprout, without Warmth loss. <b>Kindling</b> adds 2 Warmth; <b>Long Wick</b> adds lantern range except in harsh Fog. <b>Tailwind / Webbed Feet</b> raise Gale / Rill's speed. <b>Early Thaw</b> thaws one frost tile beside water each dusk; <b>Bright Bulbs</b> makes Chills prefer seeds.</p><p>Tell your partner what your hidden hand can do. Vacate a route, change irrigation priority, set up a collision or rescue a plant. Shift-click any tile to ping it. Keys: <b>1–5</b> cards, <b>M</b> move, <b>T</b> Transplant, <b>D</b> Done, <b>Esc</b> cancel.</p></div>
+      <div><h3>Shared lanterns ${sprite('lantern')}</h3><p>Both players see intents inside <b>either lantern</b> by default. Beyond both lanterns, ${sprite('intent_unknown')} means unknown. Radius is 2, plus 1 with Long Wick, including Fog. The optional <b>private lanterns</b> setting shows each keeper only their own coverage; ${sprite('intent_partner')} means your partner can see it.</p><p>Intents are fixed at hour start. Pushing redirects where a breath or Wail lane lands, without changing its direction. Chill and Flurry have a 20% chance of fickle drift; Hoar, Sleet and Wail never do. In <b>Fog</b>, Chills outside both lanterns disappear; the side panel counts them. Adjacent sprouts and blooms reveal Chills to both keepers. Gentle shows dark positions but hides intents. Harsh gives glow only to blooms and hides spawn types; other difficulties show marked types as usual.</p></div>
+      <div><h3>Gale and Rill together</h3><p>Gale moves 3; Rill moves 2, with free steps into puddles. <b>Following Wind</b> pushes an adjacent Chill away once. If Rill's cards pushed, soaked, drained or calmed <b>that Chill</b> earlier this hour, pick a direction for one push or <b>away ×2</b> for two pushes away from Gale. <b>Drink Deep</b> grows twice if Gale planted or moved <b>that plant</b> earlier this hour.</p><p><b>Seed Wind</b> puts its bonus seed beside water Rill made this hour. <b>Backwash</b> deals 1 to each soaked Chill. A Chill Gale pushed or bumped this hour counts as soaked for this card, even on dry soil. Eligible targets glow green and the card names their coordinates. These records reset each hour.</p><p><b>Sweep</b> reaches every Chill in its line, even past stones and plants, farthest first.</p></div>
+      <div><h3>Weather changes the puzzle</h3><ul>${weathers}</ul><p>The next weather is shown <b>before your draft</b>. Board chevrons show stream current; arrows show tonight's wind. The pale row or column boundary marks the next frost advance and its hour. The forecast names the random front side and stream direction. On Gale Night hour 6, <b>the last gust: pushes go +2 this hour</b> in the wind direction. These rules reflect your selected difficulty.</p></div>
+      <div><h3>Arrivals and dawn</h3><p>Markers show where Chills arrive at dusk. Blocking a marker cannot cancel it: a keeper is frosted, a plant freezes, then the Chill takes the tile or squeezes onto a nearby open edge. Hour 5 marks edge tiles within 2 of a plant whenever possible; hour 6 has no marked arrivals. Later nights start with lingering Chills already able to act. Meltwater and Long Dark lingering Chills are Sleet, and their first marked wave includes one Sleet. Long Dark arrivals avoid the front’s edge.</p><p>This difficulty needs <b>${config.dawnLowByNight.join(', ')}</b> blooms at successive dawns. Each missing bloom costs <b>1 Warmth, capped at 2</b>. Warmth does not recover on its own. Each keeper drafts one of three cards or skips after nights 1–4; four blooms earn a shared charm. Up to three surviving blooms carry over as seeds.</p></div>
+      <div><h3>Charms and communication</h3><p><b>Deep Roots</b> saves the first freezing bloom each night as a sprout, without Warmth loss. Its rescued sprout skips irrigation at that dusk; Sprinkle can still grow it. <b>Kindling</b> adds 2 Warmth; <b>Long Wick</b> adds lantern range, including harsh Fog. <b>Tailwind / Webbed Feet</b> raise Gale / Rill's speed. <b>Early Thaw</b> thaws one frost tile beside water each dusk; <b>Bright Bulbs</b> makes Chills prefer seeds.</p><p>Tell your partner what your hidden hand can do. Vacate a route, change irrigation priority, set up a collision or rescue a plant. Shift-click any tile to ping it. Keys: <b>1–5</b> cards, <b>M</b> move, <b>T</b> Transplant, <b>D</b> Done, <b>Esc</b> cancel.</p></div>
+      <div><h3>Glow ranks</h3><p><b>0–19</b> · the garden slept early<br><b>20–27</b> · kept the garden<br><b>28–35</b> · a bright dawn<br><b>36+</b> · midwinter bloom</p><p>Your total Glow earns this rank at each dawn and at the end of the run.</p></div>
     </div>`;
   }
   $('#btnHelp').onclick = () => { A.ui.helpOpen = !A.ui.helpOpen; if (A.mode === 'game') renderModal(); else { $('#modal').hidden = !A.ui.helpOpen; if (A.ui.helpOpen) { $('#modalCard').innerHTML = helpHtml(); const b = h('button', 'btn', 'Got it'); b.onclick = () => { A.ui.helpOpen = false; $('#modal').hidden = true; }; const act = h('div', 'modal-actions'); act.appendChild(b); $('#modalCard').appendChild(act); } } };
@@ -3868,8 +4119,9 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   $('#btnLeave').onclick = () => { if (confirm('Leave this game?')) leaveAll(); };
 
   // ---------- event playback ----------
-  function flashEvents(events) {
+  function flashEvents(events, before) {
     for (const e of events) {
+      if (e.id !== undefined && !visibleWisp(before, before.wisps.find(w => w.id === e.id))) continue;
       if (e.type === 'die') { const f = fx('float good', e.x, e.y, 'melt'); setTimeout(() => f.remove(), 1000); }
       if (e.type === 'hit' && !events.some(d => d.type === 'die' && d.id === e.id)) { const el = pieceEls.get('w-' + e.id); if (el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); } }
       if (e.type === 'bump') { const el = pieceEls.get('w-' + e.id); if (el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); } }
@@ -3884,7 +4136,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     A.ui.busy = true; clearPreview(); A.ui.sel = null;
     const d = TL.cloneState(before);
     const steps = [];
-    const dur = { current: 300, keeperWind: 300, front: 500, walk: 260, slide: 220, breathe: 520, die: 380, freeze: 320, grow: 180, plant: 160, spawn: 260, wispPhase: 350, dawn: 900, night: 600, hour: 10, thaw: 150, frostKeeper: 300, soak: 120, dry: 120, evaporate: 180, freezeWater: 240, warmth: 200 };
+    const dur = { current: 300, keeperWind: 300, front: 500, walk: 260, slide: 220, breathe: 520, wail: 520, die: 380, freeze: 320, grow: 180, plant: 160, spawn: 260, wispPhase: 350, dawn: 900, night: 600, hour: 10, thaw: 150, frostKeeper: 300, soak: 120, dry: 120, evaporate: 180, freezeWater: 240, warmth: 200 };
     for (const e of events) {
       const ms = dur[e.type] !== undefined ? dur[e.type] : 60;
       steps.push({ e, ms });
@@ -3894,20 +4146,22 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     const tick = () => {
       if (i >= steps.length) { A.ui.busy = false; done(); return; }
       const { e, ms } = steps[i++];
+      const seeActor = e.id === undefined || visibleWisp(d, wispOf(e.id));
       switch (e.type) {
         case 'wispPhase': banner('The Chills stir…', 700); break;
         case 'current': case 'walk': case 'slide': { const w = wispOf(e.id); if (w) { w.x = e.to[0]; w.y = e.to[1]; } break; }
         case 'keeperWind': { const k = d.keepers[e.keeper]; k.x = e.to[0]; k.y = e.to[1]; break; }
-        case 'front': { d.frontColumn = e.column + 1; banner(`The frost advances<small>Column ${String.fromCharCode(65 + e.column)} freezes</small>`, 1200); break; }
+        case 'front': { const weather = TL.weatherInfo(d); d.frontColumn += 1; banner(`The frost advances from the ${esc(weather.frontSide)}<small>${frontLabel(weather)} freezes</small>`, 1200); break; }
         case 'soak': { const w = wispOf(e.id); if (w) w.soaked = true; break; }
         case 'dry': { const w = wispOf(e.id); if (w) w.soaked = false; break; }
-        case 'breathe': { const x = e.x + TL.DIRS[e.dir][0], y = e.y + TL.DIRS[e.dir][1]; const f = fx('puff', x, y, sprite('intent_breathe')); f.style.transform += ` rotate(${{ N: -90, E: 0, S: 90, W: 180 }[e.dir]}deg)`; setTimeout(() => f.remove(), 700); break; }
+        case 'breathe': { if (!seeActor) break; const x = e.x + TL.DIRS[e.dir][0], y = e.y + TL.DIRS[e.dir][1]; const f = fx('puff', x, y, sprite('intent_breathe')); f.style.transform += ` rotate(${{ N: -90, E: 0, S: 90, W: 180 }[e.dir]}deg)`; setTimeout(() => f.remove(), 700); break; }
+        case 'wail': { if (!seeActor) break; for (const p of e.lane) { const f = fx('puff wail-puff', p.x, p.y, sprite('intent_breathe')); f.style.transform += ` rotate(${{ N: -90, E: 0, S: 90, W: 180 }[e.dir]}deg)`; setTimeout(() => f.remove(), 700); } break; }
         case 'freeze': { const t = d.tiles[e.y * 7 + e.x]; t.plant = 0; if (t.terrain === 'soil') t.terrain = 'frost'; const f = fx('float', e.x, e.y, e.stage === 3 ? 'bloom lost' : 'frozen'); setTimeout(() => f.remove(), 1000); break; }
         case 'wither': { const t = d.tiles[e.y * 7 + e.x]; t.plant = e.to; break; }
         case 'warmth': { const p = $('#pillWarmth'); p.classList.remove('shake'); void p.offsetWidth; p.style.animation = 'shake .4s ease'; setTimeout(() => p.style.animation = '', 450); d.warmth = e.warmth; break; }
         case 'frostKeeper': { d.keepers[e.keeper].frosted = true; const k = d.keepers[e.keeper]; const f = fx('float', k.x, k.y, 'frosted'); setTimeout(() => f.remove(), 1000); break; }
         case 'hit': { const el = pieceEls.get('w-' + e.id); if (el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); } const w = wispOf(e.id); if (w) w.hp -= e.n; break; }
-        case 'die': { d.wisps = d.wisps.filter(w => w.id !== e.id); const f = fx('float good', e.x, e.y, 'melt'); setTimeout(() => f.remove(), 1000); break; }
+        case 'die': { d.wisps = d.wisps.filter(w => w.id !== e.id); if (seeActor) { const f = fx('float good', e.x, e.y, 'melt'); setTimeout(() => f.remove(), 1000); } break; }
         case 'frost': { const t = d.tiles[e.y * 7 + e.x]; if (!t.plant) t.terrain = 'frost'; delete t.life; delete t.streamDir; break; }
         case 'grow': case 'plant': { d.tiles[e.y * 7 + e.x].plant = e.stage; break; }
         case 'thaw': { d.tiles[e.y * 7 + e.x].terrain = 'soil'; break; }
@@ -3918,7 +4172,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
           const f = fx('label', e.x, e.y, e.type === 'freezeWater' ? 'water freezes' : 'evaporates'); setTimeout(() => f.remove(), 1000); break;
         }
         case 'spawn': { d.wisps.push({ id: e.id, type: e.wtype, hp: TL.WISP_TYPES[e.wtype].hp, x: e.x, y: e.y, soaked: d.tiles[e.y * 7 + e.x].terrain === 'puddle', intent: { kind: 'none' } }); d.spawns = d.spawns.filter(s => !(s.x === e.x && s.y === e.y)); break; }
-        case 'dawn': { const need = TL.dawnNeed(before), loss = Math.min(2, Math.max(0, need - e.blooms)); banner(`Dawn<small>${e.blooms} bloom${e.blooms === 1 ? '' : 's'} lit the garden${loss ? ` · the hearth needed ${need}, Warmth −${loss}` : ''}</small>`, 1600); break; }
+        case 'dawn': { const need = TL.dawnNeed(before), loss = Math.min(2, Math.max(0, need - e.blooms)); d.glow = before.glow + e.blooms; banner(`Dawn<small>${e.blooms} bloom${e.blooms === 1 ? '' : 's'} lit the garden${loss ? ` · the hearth needed ${need}, Warmth −${loss}` : ''}</small><small class="glow-rank">Glow ${d.glow} · ${esc(TL.glowRank(d.glow))}</small>`, 2000); break; }
         case 'lost': banner('The last warmth is gone', 1200); break;
         case 'won': banner('You made it to dawn', 1400); break;
         case 'hour': { // new hour: snap everything to the real state (intents, hands, spawns) and finish
