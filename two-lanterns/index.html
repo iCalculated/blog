@@ -1,0 +1,3373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Two Lanterns</title>
+<meta name="description" content="A cooperative tactics game for two keepers on two laptops. Keep the glowblooms alive through the longest night.">
+<meta name="googlebot" content="noindex"><meta name="bingbot" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --night: #1b1a33; --night-2: #232247; --night-3: #2b2a52; --ink: #2b2a4a;
+  --cream: #f6efdc; --cream-dim: #c9c2b4; --muted: #8f8aa8;
+  --amber: #ffb347; --amber-deep: #e58a2a; --gale: #ff9a4a; --rill: #7fd39a; --wisp: #bfe6ff;
+  --puddle: #4f8fd6; --frost: #dff3ff; --bad: #ff7a7a; --good: #9be49b;
+  --soil: #2f2c52; --soil-2: #34315b; --tile: 72px; --radius: 16px;
+  --font-title: 'Fredoka', 'Nunito', system-ui, sans-serif; --font-body: 'Nunito', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--night); color: var(--cream); font-family: var(--font-body); font-size: 15px; }
+body { min-height: 100vh; background:
+  radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,.35) 50%, transparent 51%),
+  radial-gradient(1px 1px at 80% 12%, rgba(255,255,255,.3) 50%, transparent 51%),
+  radial-gradient(1.5px 1.5px at 62% 78%, rgba(255,255,255,.25) 50%, transparent 51%),
+  radial-gradient(1px 1px at 35% 92%, rgba(255,255,255,.3) 50%, transparent 51%),
+  radial-gradient(1px 1px at 92% 55%, rgba(255,255,255,.3) 50%, transparent 51%),
+  radial-gradient(1200px 500px at 50% -10%, #2a2955 0%, var(--night) 65%); }
+button { font-family: inherit; }
+h1, h2, h3 { font-family: var(--font-title); font-weight: 600; margin: 0; letter-spacing: .2px; }
+.sprite { display: block; width: 100%; height: 100%; }
+[hidden] { display: none !important; }
+
+/* ---------- top bar ---------- */
+#topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 18px; }
+.brand { display: flex; align-items: center; gap: 8px; font-family: var(--font-title); font-size: 20px; font-weight: 600; }
+.brand-lantern { width: 28px; height: 28px; display: inline-block; }
+.status { display: flex; gap: 8px; align-items: center; }
+.right { display: flex; gap: 8px; align-items: center; }
+.pill { background: var(--night-2); border: 1px solid rgba(255,255,255,.08); border-radius: 999px; padding: 5px 12px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.pill .ico { width: 16px; height: 16px; display: inline-block; }
+.pill.warmth .flames { display: inline-flex; gap: 2px; }
+.pill.warmth .flame { width: 14px; height: 14px; opacity: .25; }
+.pill.warmth .flame.on { opacity: 1; }
+.pill.room { font-family: var(--font-title); letter-spacing: 1px; cursor: pointer; }
+.pill.net.open { border-color: rgba(155,228,155,.5); color: var(--good); }
+.pill.net.bad { border-color: rgba(255,122,122,.5); color: var(--bad); }
+.pill.glow { color: var(--amber); }
+
+.btn { border: 0; border-radius: 12px; padding: 9px 16px; font-weight: 700; font-size: 14px; cursor: pointer; background: var(--amber); color: #2a1a05; transition: transform .08s ease, filter .12s ease, opacity .12s; }
+.btn:hover { filter: brightness(1.06); }
+.btn:active { transform: translateY(1px) scale(.99); }
+.btn:disabled { opacity: .45; cursor: default; filter: none; transform: none; }
+.btn.ghost { background: rgba(255,255,255,.06); color: var(--cream); border: 1px solid rgba(255,255,255,.1); }
+.btn.ghost:hover { background: rgba(255,255,255,.1); }
+.btn.small { padding: 6px 11px; font-size: 13px; }
+.btn.big { font-size: 16px; padding: 12px 20px; border-radius: 14px; }
+.btn.rill { background: var(--rill); color: #082b16; }
+.btn.gale { background: var(--gale); color: #2a1305; }
+.btn.danger { background: var(--bad); color: #2a0505; }
+
+/* ---------- lobby ---------- */
+#lobby { display: flex; justify-content: center; padding: 20px 16px 60px; }
+.lobby-card { width: min(760px, 100%); background: var(--night-2); border: 1px solid rgba(255,255,255,.07); border-radius: 24px; box-shadow: 0 30px 80px rgba(0,0,0,.35); overflow: hidden; }
+.lobby-hero { text-align: center; padding: 28px 24px 8px; }
+.hero-art { display: flex; justify-content: center; gap: 12px; align-items: flex-end; height: 120px; }
+.hero-art .sprite { width: 96px; height: 96px; }
+.hero-art .bloomy { width: 72px; height: 72px; margin-bottom: 8px; }
+.lobby-hero h1 { font-size: 40px; margin-top: 4px; }
+.tagline { color: var(--cream-dim); margin: 6px 0 0; }
+.lobby-body { padding: 18px 24px 26px; }
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.field label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+input[type=text] { background: var(--night); border: 1px solid rgba(255,255,255,.12); color: var(--cream); border-radius: 12px; padding: 10px 12px; font-size: 16px; font-family: inherit; outline: none; }
+input[type=text]:focus { border-color: var(--amber); }
+input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform: uppercase; font-size: 22px; text-align: center; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.row.split { justify-content: space-between; }
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.choice { background: var(--night); border: 2px solid rgba(255,255,255,.08); border-radius: 18px; padding: 14px; cursor: pointer; text-align: left; color: var(--cream); display: flex; gap: 12px; align-items: center; transition: border-color .12s, transform .08s; }
+.choice:hover { transform: translateY(-1px); }
+.choice .sprite { width: 64px; height: 64px; flex: 0 0 64px; }
+.choice.gale.on { border-color: var(--gale); box-shadow: 0 0 0 3px rgba(255,154,74,.18); }
+.choice.rill.on { border-color: var(--rill); box-shadow: 0 0 0 3px rgba(127,211,154,.18); }
+.choice.taken { opacity: .55; cursor: default; }
+.choice h3 { font-size: 18px; }
+.choice p { margin: 2px 0 0; color: var(--cream-dim); font-size: 13px; }
+.divider { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; margin: 18px 0; }
+.divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,.08); }
+.share { display: flex; gap: 8px; align-items: center; background: var(--night); border-radius: 12px; padding: 10px 12px; font-size: 13px; }
+.share code { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--cream-dim); }
+.code-big { font-family: var(--font-title); font-size: 44px; letter-spacing: 10px; text-align: center; color: var(--amber); margin: 4px 0; }
+.lobby-people { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+.person { background: var(--night); border-radius: 16px; padding: 12px; display: flex; gap: 10px; align-items: center; }
+.person .sprite { width: 48px; height: 48px; flex: 0 0 48px; }
+.person .who { flex: 1; }
+.person .who b { display: block; font-family: var(--font-title); font-weight: 500; font-size: 16px; }
+.person .who span { color: var(--muted); font-size: 12px; }
+.ready-dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.15); }
+.ready-dot.on { background: var(--good); box-shadow: 0 0 10px var(--good); }
+.hint { color: var(--muted); font-size: 13px; }
+.settings { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0 14px; }
+.seg { display: inline-flex; background: var(--night); border-radius: 12px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; color: var(--cream-dim); padding: 6px 12px; border-radius: 9px; cursor: pointer; font-weight: 700; font-size: 13px; }
+.seg button.on { background: rgba(255,255,255,.1); color: var(--cream); }
+.check { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--cream-dim); cursor: pointer; }
+
+/* ---------- game layout ---------- */
+#game { display: grid; grid-template-columns: 250px minmax(0, 1fr) 270px; gap: 14px; padding: 0 14px 20px; align-items: start; }
+.panel { background: var(--night-2); border: 1px solid rgba(255,255,255,.06); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 10px; min-height: 420px; }
+#boardwrap { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.boardhint { min-height: 24px; font-size: 14px; color: var(--cream-dim); text-align: center; }
+.boardhint b { color: var(--amber); }
+
+#board { position: relative; display: grid; grid-template-columns: 26px repeat(7, var(--tile)); grid-template-rows: 22px repeat(6, var(--tile)); gap: 0; background: var(--night-3); border-radius: 18px; padding: 6px 10px 10px 4px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.05), 0 30px 60px rgba(0,0,0,.35); user-select: none; }
+.coord { display: flex; align-items: center; justify-content: center; font-family: var(--font-title); font-size: 12px; color: var(--muted); }
+.tile { position: relative; width: var(--tile); height: var(--tile); border-radius: 12px; background: var(--soil); box-shadow: inset 0 0 0 2px var(--night-3); cursor: default; }
+.tile.alt { background: var(--soil-2); }
+.tile.edge::after { content: ''; position: absolute; inset: 0; border-radius: 12px; box-shadow: inset 0 0 14px rgba(0,0,0,.35); pointer-events: none; }
+.tile .terrain { position: absolute; inset: 0; pointer-events: none; }
+.tile.puddle .terrain, .tile.stone .terrain, .tile.frost .terrain { display: block; }
+.tile .plant { position: absolute; inset: 8px; pointer-events: none; transition: transform .25s ease; }
+.tile .plant.pop { animation: pop .35s ease; }
+.tile .spawn { position: absolute; inset: 10px; pointer-events: none; opacity: .9; animation: breathe 2s ease-in-out infinite; }
+.tile.lit-mine { box-shadow: inset 0 0 0 2px var(--night-3), inset 0 0 26px rgba(255,179,71,.34); }
+.tile.lit-partner { box-shadow: inset 0 0 0 2px var(--night-3), inset 0 0 26px rgba(127,211,154,.28); }
+.tile.lit-mine.lit-partner { box-shadow: inset 0 0 0 2px var(--night-3), inset 0 0 22px rgba(255,179,71,.2), inset 0 0 10px rgba(127,211,154,.2); }
+.tile.target { cursor: pointer; box-shadow: inset 0 0 0 3px var(--amber); }
+.tile.target:hover { box-shadow: inset 0 0 0 3px #fff, 0 0 18px rgba(255,179,71,.6); }
+.tile.target.move { box-shadow: inset 0 0 0 3px rgba(255,255,255,.55); }
+.tile.target.move:hover { box-shadow: inset 0 0 0 3px #fff, 0 0 18px rgba(255,255,255,.5); }
+.tile.threat { box-shadow: inset 0 0 0 3px rgba(191,230,255,.7); }
+.tile.threat.lit-mine { box-shadow: inset 0 0 0 3px rgba(191,230,255,.8), inset 0 0 22px rgba(255,179,71,.22); }
+.tile.pinged { animation: pingflash 1.6s ease; }
+.tile.flash { animation: tileflash .6s ease; }
+.tile .dew-tag { position: absolute; right: 4px; bottom: 3px; font-size: 10px; color: #cfe8ff; background: rgba(0,0,0,.35); border-radius: 6px; padding: 0 4px; pointer-events: none; }
+
+#pieces { position: absolute; left: 30px; top: 28px; width: calc(7 * var(--tile)); height: calc(6 * var(--tile)); pointer-events: none; }
+.piece { position: absolute; left: 0; top: 0; width: var(--tile); height: var(--tile); transition: transform .28s cubic-bezier(.3,.9,.4,1.1), opacity .3s; pointer-events: none; }
+.piece .body { position: absolute; inset: 6px; }
+.piece.keeper .body { inset: 4px; }
+.piece.wisp.target, .piece.wisp.clickable { pointer-events: auto; cursor: pointer; }
+.piece.wisp.target .body { filter: drop-shadow(0 0 6px var(--amber)) drop-shadow(0 0 2px var(--amber)); }
+.piece.wisp.target:hover .body { filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 3px #fff); }
+.piece.keeper.clickable { pointer-events: auto; cursor: pointer; }
+.piece.keeper.mine .body { filter: drop-shadow(0 0 8px rgba(255,179,71,.55)); }
+.piece.keeper.selected .body { filter: drop-shadow(0 0 10px #fff); }
+.piece.ghost { opacity: .5; }
+.piece.ghost .body { filter: grayscale(.3); }
+.piece .hp { position: absolute; right: 4px; top: 2px; display: flex; gap: 2px; }
+.piece .hp i { width: 8px; height: 8px; border-radius: 50%; background: var(--wisp); box-shadow: 0 0 4px var(--wisp); display: block; }
+.piece .soak { position: absolute; inset: 6px; pointer-events: none; }
+.piece .intent { position: absolute; width: 30px; height: 30px; left: 50%; top: 50%; margin: -15px 0 0 -15px; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,.6)); }
+.piece .intent.N { transform: translateY(-34px) rotate(-90deg); }
+.piece .intent.E { transform: translateX(34px); }
+.piece .intent.S { transform: translateY(34px) rotate(90deg); }
+.piece .intent.W { transform: translateX(-34px) rotate(180deg); }
+.piece .intent.center { transform: translateY(-30px); width: 24px; height: 24px; margin: -12px 0 0 -12px; }
+.piece .steps { position: absolute; left: 50%; top: 50%; margin: 18px 0 0 -10px; width: 20px; height: 16px; border-radius: 8px; background: rgba(0,0,0,.55); color: var(--wisp); font-size: 11px; font-weight: 700; text-align: center; line-height: 16px; }
+.piece.poof { animation: poof .45s ease forwards; }
+.piece.shake { animation: shake .35s ease; }
+.piece.spawnin { animation: spawnin .45s ease; }
+.arrows { position: absolute; width: var(--tile); height: var(--tile); pointer-events: none; }
+.arrow { position: absolute; width: 30px; height: 30px; border-radius: 50%; background: var(--amber); color: #2a1a05; border: 0; cursor: pointer; pointer-events: auto; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px; box-shadow: 0 4px 12px rgba(0,0,0,.4); transition: transform .08s; }
+.arrow:hover { transform: scale(1.12); background: #fff; }
+.arrow:disabled { opacity: .3; cursor: default; transform: none; }
+.arrow.N { left: 50%; top: 0; margin: -18px 0 0 -15px; }
+.arrow.S { left: 50%; bottom: 0; margin: 0 0 -18px -15px; }
+.arrow.W { top: 50%; left: 0; margin: -15px 0 0 -18px; }
+.arrow.E { top: 50%; right: 0; margin: -15px -18px 0 0; }
+.fx { position: absolute; width: var(--tile); height: var(--tile); pointer-events: none; }
+.fx.puff { animation: puff .7s ease forwards; }
+.fx.puff .sprite { width: 100%; height: 100%; }
+.fx.ping { animation: pingring 1.4s ease-out forwards; }
+.fx.melt { font-family: var(--font-title); color: var(--wisp); font-size: 13px; text-align: center; line-height: var(--tile); text-shadow: 0 0 6px #000; }
+.fx.label { font-family: var(--font-title); color: #fff; font-size: 12px; text-align: center; line-height: 18px; background: rgba(0,0,0,.6); border-radius: 8px; height: 18px; width: auto; padding: 0 6px; transform: translate(6px, -6px); }
+.fx.float { animation: floatup 1s ease forwards; font-family: var(--font-title); font-weight: 700; color: var(--bad); text-align: center; line-height: var(--tile); font-size: 18px; text-shadow: 0 0 8px #000; }
+.fx.float.good { color: var(--good); }
+
+.banner { position: absolute; z-index: 5; top: 40%; left: 50%; transform: translate(-50%, -50%); background: rgba(27,26,51,.92); border: 1px solid rgba(255,255,255,.1); border-radius: 18px; padding: 14px 28px; font-family: var(--font-title); font-size: 26px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,.5); pointer-events: none; animation: bannerin .4s ease; }
+.banner small { display: block; font-family: var(--font-body); font-size: 14px; color: var(--cream-dim); margin-top: 4px; }
+
+/* ---------- side panels ---------- */
+.keeper-head { display: flex; gap: 10px; align-items: center; }
+.keeper-head .portrait { width: 56px; height: 56px; flex: 0 0 56px; }
+.keeper-head .name { font-family: var(--font-title); font-size: 18px; }
+.keeper-head .sub { color: var(--muted); font-size: 12px; }
+.keeper-head.gale .name { color: var(--gale); }
+.keeper-head.rill .name { color: var(--rill); }
+.stat-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { background: var(--night); border-radius: 999px; padding: 4px 10px; font-size: 12px; color: var(--cream-dim); }
+.chip.on { color: var(--cream); border: 1px solid rgba(255,255,255,.14); }
+.chip.done { color: var(--good); }
+.chip.frosted { color: var(--wisp); }
+.actions { display: flex; gap: 8px; }
+.actions .btn { flex: 1; }
+.btn.move.on { background: #fff; color: #2a1a05; }
+.btn.done.pulse { animation: pulse 1.4s ease-in-out infinite; }
+.hand { display: flex; flex-direction: column; gap: 8px; }
+.card { background: var(--cream); color: #2a2340; border-radius: 14px; padding: 9px 11px 10px; cursor: pointer; border: 3px solid transparent; transition: transform .1s ease, box-shadow .12s, border-color .12s; position: relative; }
+.card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,0,0,.35); }
+.card.selected { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(255,179,71,.35); transform: translateY(-2px); }
+.card.disabled { opacity: .5; cursor: default; transform: none; box-shadow: none; }
+.card .title { font-family: var(--font-title); font-weight: 600; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
+.card .title .tag { font-family: var(--font-body); font-size: 10px; text-transform: uppercase; letter-spacing: .8px; color: #7a7195; }
+.card .text { font-size: 12.5px; line-height: 1.35; color: #4b4468; margin-top: 3px; }
+.card.gale .title { color: #b4560f; }
+.card.rill .title { color: #1e7a3f; }
+.card.partner { cursor: default; }
+.card.small { padding: 7px 10px; }
+.card.small .text { font-size: 12px; }
+.deckline { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; }
+.section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-top: 2px; }
+.charms { display: flex; flex-direction: column; gap: 6px; }
+.charm { background: var(--night); border-radius: 12px; padding: 7px 10px; font-size: 12.5px; }
+.charm b { color: var(--amber); font-family: var(--font-title); font-weight: 500; }
+.spawnlist { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.spawnlist .sp { display: flex; align-items: center; gap: 6px; color: var(--cream-dim); }
+.spawnlist .sp .sprite { width: 22px; height: 22px; }
+.log { flex: 1; overflow: auto; font-size: 12.5px; line-height: 1.4; max-height: 320px; display: flex; flex-direction: column-reverse; gap: 2px; scrollbar-width: thin; }
+.log div { color: var(--cream-dim); }
+.log .gale { color: var(--gale); }
+.log .rill { color: var(--rill); }
+.log .bad { color: var(--bad); }
+.log .good { color: var(--good); }
+.log .warn { color: var(--wisp); }
+.log .title { color: var(--amber); font-family: var(--font-title); margin-top: 6px; }
+.partner-status { display: flex; flex-direction: column; gap: 6px; }
+.lastplays { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--cream-dim); }
+.talk { background: var(--night); border-radius: 12px; padding: 8px 10px; font-size: 12.5px; color: var(--cream-dim); }
+.talk b { color: var(--cream); }
+
+/* ---------- modal ---------- */
+.modal { position: fixed; inset: 0; background: rgba(10,10,25,.72); display: flex; align-items: center; justify-content: center; z-index: 20; padding: 16px; backdrop-filter: blur(4px); }
+.modal-card { background: var(--night-2); border: 1px solid rgba(255,255,255,.08); border-radius: 22px; padding: 22px 24px; width: min(880px, 100%); max-height: 92vh; overflow: auto; box-shadow: 0 40px 100px rgba(0,0,0,.5); animation: bannerin .3s ease; }
+.modal-card h2 { font-size: 26px; }
+.modal-card .sub { color: var(--cream-dim); margin: 6px 0 14px; }
+.draft { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.draft .col h3 { font-size: 16px; margin-bottom: 8px; }
+.draft .col.gale h3 { color: var(--gale); } .draft .col.rill h3 { color: var(--rill); }
+.draft .offers { display: flex; flex-direction: column; gap: 8px; }
+.draft .card.picked { border-color: var(--good); }
+.draft .card.dim { opacity: .45; }
+.charm-offers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.charm-offer { background: var(--night); border: 2px solid rgba(255,255,255,.08); border-radius: 14px; padding: 12px; cursor: pointer; }
+.charm-offer:hover { border-color: var(--amber); }
+.charm-offer.picked { border-color: var(--good); }
+.charm-offer b { font-family: var(--font-title); font-weight: 500; color: var(--amber); font-size: 16px; display: block; }
+.charm-offer span { font-size: 13px; color: var(--cream-dim); }
+.help { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; font-size: 14px; line-height: 1.45; }
+.help h3 { font-size: 15px; color: var(--amber); margin-bottom: 4px; }
+.help p { margin: 0 0 6px; color: var(--cream-dim); }
+.help b { color: var(--cream); }
+.help .sprite { width: 30px; height: 30px; vertical-align: middle; display: inline-block; }
+.help ul { margin: 4px 0 0 16px; padding: 0; color: var(--cream-dim); }
+.help li { margin-bottom: 3px; }
+.summary { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.summary .stat { background: var(--night); border-radius: 14px; padding: 10px 14px; min-width: 90px; }
+.summary .stat b { display: block; font-family: var(--font-title); font-size: 26px; color: var(--amber); }
+.summary .stat span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+
+#toasts { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; z-index: 30; pointer-events: none; }
+.toast { background: rgba(27,26,51,.95); border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 8px 14px; font-size: 13px; animation: bannerin .25s ease; }
+.toast.bad { border-color: rgba(255,122,122,.5); }
+
+/* ---------- animations ---------- */
+@keyframes pop { 0% { transform: scale(.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+@keyframes breathe { 0%, 100% { opacity: .7; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.02); } }
+@keyframes poof { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+@keyframes shake { 0%, 100% { margin-left: 0; } 25% { margin-left: -5px; } 75% { margin-left: 5px; } }
+@keyframes spawnin { 0% { opacity: 0; transform: translateY(-10px) scale(.7); } 100% { opacity: 1; } }
+@keyframes puff { 0% { opacity: 0; transform: scale(.5); } 30% { opacity: 1; } 100% { opacity: 0; transform: scale(1.3); } }
+@keyframes pingring { 0% { opacity: 1; transform: scale(.4); } 100% { opacity: 0; transform: scale(1.4); } }
+@keyframes pingflash { 0%, 100% { box-shadow: inset 0 0 0 2px var(--night-3); } 30% { box-shadow: inset 0 0 0 4px #fff, 0 0 20px #fff; } }
+@keyframes tileflash { 0% { filter: brightness(2.2); } 100% { filter: brightness(1); } }
+@keyframes floatup { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-28px); } }
+@keyframes bannerin { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.9); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+.modal-card { animation: modalin .3s ease; }
+@keyframes modalin { 0% { opacity: 0; transform: scale(.94); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,179,71,.5); } 50% { box-shadow: 0 0 0 8px rgba(255,179,71,0); } }
+
+@media (max-width: 1100px) { :root { --tile: 60px; } #game { grid-template-columns: 220px minmax(0,1fr) 240px; } }
+@media (max-width: 900px) { #game { grid-template-columns: 1fr; } .panel { min-height: 0; } #boardwrap { order: -1; } :root { --tile: 52px; } }
+
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand"><span class="brand-lantern" id="brandLantern"></span><span class="brand-name">Two Lanterns</span></div>
+    <div class="status" id="statusBar" hidden>
+      <span class="pill" id="pillNight"></span>
+      <span class="pill warmth" id="pillWarmth" title="Warmth: the shared life of the garden. Each bloom that freezes costs one."></span>
+      <span class="pill glow" id="pillGlow" title="Glow: blooms that survived to dawn, summed over the run."></span>
+    </div>
+    <div class="right">
+      <span class="pill room" id="pillRoom" hidden></span>
+      <span class="pill net" id="pillNet" hidden></span>
+      <button class="btn ghost small" id="btnHelp">how to play</button>
+      <button class="btn ghost small" id="btnLeave" hidden>leave</button>
+    </div>
+  </header>
+
+  <section id="lobby">
+    <div class="lobby-card">
+      <div class="lobby-hero">
+        <div class="hero-art" id="heroArt"></div>
+        <h1>Two Lanterns</h1>
+        <p class="tagline">A walled garden on the longest night. Two keepers, two laptops, one hour at a time.</p>
+      </div>
+      <div class="lobby-body" id="lobbyBody"></div>
+    </div>
+  </section>
+
+  <main id="game" hidden>
+    <aside id="left" class="panel"></aside>
+    <section id="boardwrap">
+      <div id="banner" class="banner" hidden></div>
+      <div id="board"></div>
+      <div id="boardhint" class="boardhint"></div>
+    </section>
+    <aside id="right" class="panel"></aside>
+  </main>
+
+  <div id="modal" class="modal" hidden><div class="modal-card" id="modalCard"></div></div>
+  <div id="toasts"></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.5/peerjs.min.js"></script>
+<script>
+/* ---- engine.js ---- */
+/* Two Lanterns — pure rules engine. Deterministic given seed + ordered actions.
+   Browser global `TL` and CommonJS export. No DOM, no timers. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory();
+  else root.TL = factory();
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  // ---------- constants ----------
+  const DIRS = { N: [0, -1], E: [1, 0], S: [0, 1], W: [-1, 0] };
+  const DIR_LIST = ['N', 'E', 'S', 'W'];
+  const OPP = { N: 'S', S: 'N', E: 'W', W: 'E' };
+  const KEEPER_IDS = ['gale', 'rill'];
+  const STAGE_NAME = ['', 'seed', 'sprout', 'bloom'];
+
+  const WISP_TYPES = {
+    chill: { name: 'Chill', hp: 1, moves: 2, fickle: 0.25, area: false, sleet: false },
+    flurry: { name: 'Flurry', hp: 1, moves: 3, fickle: 0.25, area: false, sleet: false },
+    hoar: { name: 'Hoar', hp: 2, moves: 1, fickle: 0, area: true, sleet: false },
+    sleet: { name: 'Sleet', hp: 1, moves: 2, fickle: 0, area: false, sleet: true },
+  };
+
+  const DEFAULT_CONFIG = {
+    W: 7, H: 6, nights: 5, hours: 6, warmth: 5, handSize: 3, cardsPerHour: 2,
+    lantern: 2, sharedLanterns: false, carryCap: 3, charmThreshold: 4,
+    // spawns marked per hour, per night (index 0 = night 1)
+    schedule: [
+      [1, 1, 1, 2, 1, 2],
+      [1, 2, 1, 2, 2, 2],
+      [2, 2, 2, 3, 2, 3],
+      [2, 3, 3, 2, 3, 3],
+      [3, 3, 3, 3, 3, 4],
+    ],
+    // wisp type weights per night
+    typeWeights: [
+      { chill: 1 },
+      { chill: 3, flurry: 1 },
+      { chill: 3, flurry: 2, hoar: 1 },
+      { chill: 3, flurry: 2, hoar: 1, sleet: 1 },
+      { chill: 2, flurry: 2, hoar: 2, sleet: 1 },
+    ],
+    stones: [4, 6], ponds: [1, 2],
+    startPlants: { sprouts: 2, seeds: 1 },
+  };
+
+  // ---------- rng (mulberry32) ----------
+  function rngNext(state) {
+    let t = (state.rng += 0x6D2B79F5) >>> 0;
+    state.rng = t;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+  function rngInt(state, n) { return Math.floor(rngNext(state) * n); }
+  function rngPick(state, arr) { return arr[rngInt(state, arr.length)]; }
+  function shuffle(state, arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = rngInt(state, i + 1); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+
+  // ---------- helpers ----------
+  function idx(state, x, y) { return y * state.config.W + x; }
+  function inBoard(state, x, y) { return x >= 0 && y >= 0 && x < state.config.W && y < state.config.H; }
+  function tileAt(state, x, y) { return inBoard(state, x, y) ? state.tiles[idx(state, x, y)] : null; }
+  function wispAt(state, x, y) { return state.wisps.find(w => w.hp > 0 && w.x === x && w.y === y) || null; }
+  function keeperAt(state, x, y) { return KEEPER_IDS.map(k => state.keepers[k]).find(k => k.x === x && k.y === y) || null; }
+  function manhattan(ax, ay, bx, by) { return Math.abs(ax - bx) + Math.abs(ay - by); }
+  function isEdge(state, x, y) { return x === 0 || y === 0 || x === state.config.W - 1 || y === state.config.H - 1; }
+  function coordName(x, y) { return String.fromCharCode(65 + x) + (y + 1); }
+  function hasCharm(state, id) { return state.charms.includes(id); }
+  function livingWisps(state) { return state.wisps.filter(w => w.hp > 0); }
+  function plants(state) {
+    const out = [];
+    for (let y = 0; y < state.config.H; y++) for (let x = 0; x < state.config.W; x++) {
+      const t = state.tiles[idx(state, x, y)];
+      if (t.plant > 0) out.push({ x, y, stage: t.plant });
+    }
+    return out;
+  }
+  function countBlooms(state) { return plants(state).filter(p => p.stage === 3).length; }
+  function isPuddle(state, x, y) { const t = tileAt(state, x, y); return !!t && t.terrain === 'puddle'; }
+  function keeperSpeed(state, k) {
+    let s = k.id === 'gale' ? 3 : 2;
+    if (k.id === 'gale' && hasCharm(state, 'tailwind')) s += 1;
+    if (k.id === 'rill' && hasCharm(state, 'webbed')) s += 1;
+    return s + (k.dashBonus || 0);
+  }
+  function lanternRadius(state) { return state.config.lantern + (hasCharm(state, 'longwick') ? 1 : 0); }
+
+  // Blocking for movement of anything (keeper or wisp): stone, plant, keeper, wisp.
+  function blockedFor(state, x, y, mover) {
+    if (!inBoard(state, x, y)) return 'edge';
+    const t = state.tiles[idx(state, x, y)];
+    if (t.terrain === 'stone') return 'stone';
+    if (t.plant > 0) return 'plant';
+    const k = keeperAt(state, x, y); if (k && k !== mover) return 'keeper';
+    const w = wispAt(state, x, y); if (w && w !== mover) return 'wisp';
+    return null;
+  }
+
+  function log(state, text, cls) {
+    state.log.push({ night: state.night, hour: state.hour, text, cls: cls || '' });
+    if (state.log.length > 300) state.log.splice(0, state.log.length - 300);
+  }
+  function emit(state, ev) { state.events.push(ev); }
+
+  function cloneState(s) { return JSON.parse(JSON.stringify(s)); }
+
+  // ---------- wisp damage / death / push ----------
+  function damageWisp(state, w, n, why) {
+    if (w.hp <= 0) return;
+    w.hp -= n;
+    emit(state, { type: 'hit', id: w.id, x: w.x, y: w.y, n });
+    if (w.hp <= 0) {
+      emit(state, { type: 'die', id: w.id, x: w.x, y: w.y, wtype: w.type });
+      log(state, `${WISP_TYPES[w.type].name} at ${coordName(w.x, w.y)} melted away${why ? ' (' + why + ')' : ''}.`, 'good');
+      if (WISP_TYPES[w.type].sleet) {
+        const t = tileAt(state, w.x, w.y);
+        if (t && t.terrain === 'soil' && t.plant === 0) { t.terrain = 'frost'; emit(state, { type: 'frost', x: w.x, y: w.y }); }
+      }
+    }
+  }
+
+  // push one step. returns true if it moved.
+  function pushStep(state, w, dir, why) {
+    const [dx, dy] = DIRS[dir];
+    const nx = w.x + dx, ny = w.y + dy;
+    const b = blockedFor(state, nx, ny, w);
+    if (b) {
+      emit(state, { type: 'bump', id: w.id, x: w.x, y: w.y, dir, into: b });
+      damageWisp(state, w, 1, 'bumped ' + b);
+      if (b === 'wisp') { const o = wispAt(state, nx, ny); if (o) damageWisp(state, o, 1, 'bumped'); }
+      return false;
+    }
+    emit(state, { type: 'slide', id: w.id, from: [w.x, w.y], to: [nx, ny] });
+    w.x = nx; w.y = ny;
+    if (isPuddle(state, nx, ny)) { w.soaked = true; emit(state, { type: 'soak', id: w.id, x: nx, y: ny }); return 'soaked'; }
+    w.soaked = false;
+    return true;
+  }
+  function pushWisp(state, w, dir, steps, why) {
+    for (let i = 0; i < steps; i++) {
+      const r = pushStep(state, w, dir, why);
+      if (r !== true) break;
+    }
+  }
+  function dirFromTo(ax, ay, bx, by) {
+    if (bx > ax) return 'E'; if (bx < ax) return 'W'; if (by > ay) return 'S'; return 'N';
+  }
+
+  // ---------- plants ----------
+  function killPlant(state, x, y, cause) {
+    const t = tileAt(state, x, y);
+    if (!t || t.plant === 0) return;
+    const stage = t.plant;
+    if (stage === 3 && hasCharm(state, 'deeproots') && cause === 'breath') {
+      t.plant = 2;
+      emit(state, { type: 'wither', x, y, stage: 3, to: 2 });
+      log(state, `The bloom at ${coordName(x, y)} withers to a sprout (Deep Roots).`, 'warn');
+      return;
+    }
+    t.plant = 0;
+    if (t.terrain === 'soil') t.terrain = 'frost';
+    emit(state, { type: 'freeze', x, y, stage });
+    if (stage === 3) {
+      if (hasCharm(state, 'hearthstone') && !state.nightFlags.firstLoss) {
+        state.nightFlags.firstLoss = true;
+        log(state, `The bloom at ${coordName(x, y)} froze. Hearthstone keeps the Warmth.`, 'warn');
+      } else {
+        state.warmth -= 1;
+        emit(state, { type: 'warmth', warmth: state.warmth });
+        log(state, `The bloom at ${coordName(x, y)} froze. Warmth ${state.warmth}.`, 'bad');
+      }
+    } else {
+      log(state, `The ${STAGE_NAME[stage]} at ${coordName(x, y)} froze.`, 'warn');
+    }
+  }
+  function growPlant(state, x, y) {
+    const t = tileAt(state, x, y);
+    if (!t || t.plant === 0 || t.plant >= 3) return false;
+    t.plant += 1;
+    emit(state, { type: 'grow', x, y, stage: t.plant });
+    return true;
+  }
+  function placePlant(state, x, y, stage) {
+    const t = tileAt(state, x, y);
+    t.plant = stage;
+    emit(state, { type: 'plant', x, y, stage });
+  }
+
+  // ---------- pathing ----------
+  // BFS over tiles a wisp could walk (not stone/plant/keeper). Other wisps are passable for planning.
+  function bfsWisp(state, sx, sy) {
+    const W = state.config.W, H = state.config.H;
+    const dist = new Array(W * H).fill(-1);
+    const q = [[sx, sy]]; dist[sy * W + sx] = 0;
+    while (q.length) {
+      const [x, y] = q.shift();
+      for (const d of DIR_LIST) {
+        const nx = x + DIRS[d][0], ny = y + DIRS[d][1];
+        if (!inBoard(state, nx, ny)) continue;
+        const i = ny * W + nx;
+        if (dist[i] >= 0) continue;
+        const t = state.tiles[i];
+        if (t.terrain === 'stone' || t.plant > 0 || keeperAt(state, nx, ny)) continue;
+        dist[i] = dist[y * W + x] + 1;
+        q.push([nx, ny]);
+      }
+    }
+    return dist;
+  }
+
+  // Keeper reachable tiles with Rill's free puddle entry. Returns map idx -> cost.
+  function keeperReach(state, k) {
+    const W = state.config.W, H = state.config.H;
+    const speed = keeperSpeed(state, k);
+    const cost = new Array(W * H).fill(Infinity);
+    cost[idx(state, k.x, k.y)] = 0;
+    // Dijkstra on tiny graph
+    const open = [[0, k.x, k.y]];
+    while (open.length) {
+      open.sort((a, b) => a[0] - b[0]);
+      const [c, x, y] = open.shift();
+      if (c > cost[idx(state, x, y)]) continue;
+      for (const d of DIR_LIST) {
+        const nx = x + DIRS[d][0], ny = y + DIRS[d][1];
+        if (blockedFor(state, nx, ny, k)) continue;
+        const step = (k.id === 'rill' && isPuddle(state, nx, ny)) ? 0 : 1;
+        const nc = c + step;
+        if (nc > speed) continue;
+        const i = idx(state, nx, ny);
+        if (nc < cost[i]) { cost[i] = nc; open.push([nc, nx, ny]); }
+      }
+    }
+    const out = [];
+    for (let i = 0; i < W * H; i++) if (cost[i] < Infinity && i !== idx(state, k.x, k.y)) out.push({ x: i % W, y: Math.floor(i / W), cost: cost[i] });
+    return out;
+  }
+
+  // ---------- intents ----------
+  function adjacentPlantDirs(state, w) {
+    const out = [];
+    for (const d of DIR_LIST) {
+      const t = tileAt(state, w.x + DIRS[d][0], w.y + DIRS[d][1]);
+      if (t && t.plant > 0) out.push({ dir: d, stage: t.plant });
+    }
+    return out;
+  }
+  function openDirs(state, w) {
+    return DIR_LIST.filter(d => { const b = blockedFor(state, w.x + DIRS[d][0], w.y + DIRS[d][1], w); return !b || b === 'wisp'; });
+  }
+  function computeIntent(state, w) {
+    const T = WISP_TYPES[w.type];
+    const adj = adjacentPlantDirs(state, w);
+    if (adj.length) {
+      let pool = adj;
+      if (hasCharm(state, 'brightbulbs') && adj.some(a => a.stage === 1)) pool = adj.filter(a => a.stage === 1);
+      const best = Math.max(...pool.map(a => a.stage));
+      const dir = rngPick(state, pool.filter(a => a.stage === best)).dir;
+      return { kind: 'breathe', dir, steps: 0 };
+    }
+    if (w.soaked) return { kind: 'none', dir: null, steps: 0 };
+    const ps = plants(state);
+    if (!ps.length) {
+      const od = openDirs(state, w);
+      return od.length ? { kind: 'move', dir: rngPick(state, od), steps: T.moves, wander: true } : { kind: 'none', dir: null, steps: 0 };
+    }
+    // fickle roll happens before pathing so lantern-revealed intent includes it
+    if (T.fickle > 0 && rngNext(state) < T.fickle) {
+      const od = openDirs(state, w);
+      if (od.length) return { kind: 'move', dir: rngPick(state, od), steps: 1, fickle: true };
+    }
+    const dist = bfsWisp(state, w.x, w.y);
+    // distance to a plant = min dist over its free adjacent tiles
+    let candidates = ps.map(p => {
+      let best = Infinity;
+      for (const d of DIR_LIST) {
+        const nx = p.x + DIRS[d][0], ny = p.y + DIRS[d][1];
+        if (!inBoard(state, nx, ny)) continue;
+        const di = dist[idx(state, nx, ny)];
+        if (di >= 0 && di < best) best = di;
+      }
+      return { p, d: best };
+    }).filter(c => c.d < Infinity);
+    if (!candidates.length) {
+      const od = openDirs(state, w);
+      return od.length ? { kind: 'move', dir: rngPick(state, od), steps: T.moves, wander: true } : { kind: 'none', dir: null, steps: 0 };
+    }
+    if (hasCharm(state, 'brightbulbs') && candidates.some(c => c.p.stage === 1)) candidates = candidates.filter(c => c.p.stage === 1);
+    const dmin = Math.min(...candidates.map(c => c.d));
+    const target = rngPick(state, candidates.filter(c => c.d === dmin)).p;
+    // choose the first step: a neighbour whose distance-to-target is one less than ours
+    const tdist = bfsFrom(state, target);
+    const here = tdist[idx(state, w.x, w.y)];
+    const steps = DIR_LIST.filter(d => {
+      const nx = w.x + DIRS[d][0], ny = w.y + DIRS[d][1];
+      if (!inBoard(state, nx, ny)) return false;
+      const b = blockedFor(state, nx, ny, w);
+      if (b && b !== 'wisp') return false;
+      const di = tdist[idx(state, nx, ny)];
+      return di >= 0 && di === here - 1;
+    });
+    if (!steps.length) return { kind: 'none', dir: null, steps: 0 };
+    return { kind: 'move', dir: rngPick(state, steps), steps: T.moves, target: [target.x, target.y] };
+  }
+  // BFS distances *to* the tiles adjacent to a plant (multi-source), through wisp-walkable tiles.
+  function bfsFrom(state, plant) {
+    const W = state.config.W, H = state.config.H;
+    const dist = new Array(W * H).fill(-1);
+    const q = [];
+    for (const d of DIR_LIST) {
+      const nx = plant.x + DIRS[d][0], ny = plant.y + DIRS[d][1];
+      if (!inBoard(state, nx, ny)) continue;
+      const t = state.tiles[idx(state, nx, ny)];
+      if (t.terrain === 'stone' || t.plant > 0 || keeperAt(state, nx, ny)) continue;
+      dist[idx(state, nx, ny)] = 0; q.push([nx, ny]);
+    }
+    while (q.length) {
+      const [x, y] = q.shift();
+      for (const d of DIR_LIST) {
+        const nx = x + DIRS[d][0], ny = y + DIRS[d][1];
+        if (!inBoard(state, nx, ny)) continue;
+        const i = idx(state, nx, ny);
+        if (dist[i] >= 0) continue;
+        const t = state.tiles[i];
+        if (t.terrain === 'stone' || t.plant > 0 || keeperAt(state, nx, ny)) continue;
+        dist[i] = dist[idx(state, x, y)] + 1; q.push([nx, ny]);
+      }
+    }
+    return dist;
+  }
+  function assignIntents(state) {
+    for (const w of state.wisps) { if (w.hp > 0) w.intent = computeIntent(state, w); }
+  }
+
+  // ---------- spawning ----------
+  function pickWispType(state) {
+    const weights = state.config.typeWeights[Math.min(state.night, state.config.typeWeights.length) - 1];
+    const entries = Object.entries(weights);
+    const total = entries.reduce((a, [, v]) => a + v, 0);
+    let r = rngNext(state) * total;
+    for (const [t, v] of entries) { r -= v; if (r < 0) return t; }
+    return entries[entries.length - 1][0];
+  }
+  function markSpawns(state) {
+    state.spawns = [];
+    const sched = state.config.schedule[Math.min(state.night, state.config.schedule.length) - 1];
+    const n = sched[Math.min(state.hour, sched.length) - 1];
+    const cands = [];
+    for (let y = 0; y < state.config.H; y++) for (let x = 0; x < state.config.W; x++) {
+      if (!isEdge(state, x, y)) continue;
+      const t = state.tiles[idx(state, x, y)];
+      if (t.terrain === 'stone' || t.terrain === 'puddle' || t.plant > 0) continue;
+      if (keeperAt(state, x, y) || wispAt(state, x, y)) continue;
+      cands.push({ x, y });
+    }
+    const chosen = shuffle(state, cands).slice(0, n);
+    for (const c of chosen) state.spawns.push({ x: c.x, y: c.y, type: pickWispType(state) });
+  }
+  function freeEdgeNear(state, x, y) {
+    const cands = [];
+    for (let yy = 0; yy < state.config.H; yy++) for (let xx = 0; xx < state.config.W; xx++) {
+      if (!isEdge(state, xx, yy)) continue;
+      const t = state.tiles[idx(state, xx, yy)];
+      if (t.terrain === 'stone' || t.plant > 0) continue;
+      if (keeperAt(state, xx, yy) || wispAt(state, xx, yy)) continue;
+      if (state.spawns.some(sp => sp.x === xx && sp.y === yy && !sp.resolved)) continue;
+      cands.push({ x: xx, y: yy, d: manhattan(x, y, xx, yy) });
+    }
+    if (!cands.length) return null;
+    const dmin = Math.min(...cands.map(c => c.d));
+    return rngPick(state, cands.filter(c => c.d === dmin));
+  }
+  function resolveSpawns(state) {
+    for (const s of state.spawns) {
+      let x = s.x, y = s.y;
+      const k = keeperAt(state, x, y);
+      if (k) { k.frosted = true; emit(state, { type: 'frostKeeper', keeper: k.id }); log(state, `${keeperName(k.id)} stood in the Chill's way at ${coordName(x, y)} and got frosted.`, 'warn'); }
+      const t = tileAt(state, x, y);
+      if (t.plant > 0) killPlant(state, x, y, 'spawn');
+      if (keeperAt(state, x, y) || wispAt(state, x, y) || t.plant > 0 || t.terrain === 'stone') {
+        const alt = freeEdgeNear(state, x, y);
+        if (!alt) { log(state, `A Chill found no way in near ${coordName(x, y)}.`, ''); s.resolved = true; continue; }
+        log(state, `The Chill squeezed in at ${coordName(alt.x, alt.y)} instead.`, '');
+        x = alt.x; y = alt.y;
+      }
+      s.resolved = true;
+      const w = { id: state.nextWispId++, type: s.type, hp: WISP_TYPES[s.type].hp, x, y, soaked: isPuddle(state, x, y), intent: { kind: 'none', dir: null, steps: 0 } };
+      state.wisps.push(w);
+      emit(state, { type: 'spawn', id: w.id, x, y, wtype: s.type });
+    }
+    state.spawns = [];
+  }
+
+  // ---------- wisp phase ----------
+  function wispPhase(state) {
+    for (const w of state.wisps) {
+      if (w.hp <= 0) continue;
+      const it = w.intent;
+      if (!it || it.kind === 'none') continue;
+      if (it.kind === 'breathe') {
+        const dirs = WISP_TYPES[w.type].area ? DIR_LIST : [it.dir];
+        for (const d of dirs) {
+          const tx = w.x + DIRS[d][0], ty = w.y + DIRS[d][1];
+          if (!inBoard(state, tx, ty)) continue;
+          emit(state, { type: 'breathe', id: w.id, x: w.x, y: w.y, dir: d });
+          const t = tileAt(state, tx, ty);
+          if (t.plant > 0) killPlant(state, tx, ty, 'breath');
+          else { const k = keeperAt(state, tx, ty); if (k) { k.frosted = true; emit(state, { type: 'frostKeeper', keeper: k.id }); log(state, `${keeperName(k.id)} was breathed on and is frosted.`, 'warn'); } }
+        }
+      } else if (it.kind === 'move') {
+        if (w.soaked) continue; // soaked wisps cannot move
+        for (let s = 0; s < it.steps; s++) {
+          const nx = w.x + DIRS[it.dir][0], ny = w.y + DIRS[it.dir][1];
+          if (blockedFor(state, nx, ny, w)) break;
+          emit(state, { type: 'walk', id: w.id, from: [w.x, w.y], to: [nx, ny] });
+          w.x = nx; w.y = ny;
+          if (isPuddle(state, nx, ny)) { w.soaked = true; emit(state, { type: 'soak', id: w.id, x: nx, y: ny }); break; }
+        }
+      }
+    }
+    state.wisps = state.wisps.filter(w => w.hp > 0);
+  }
+
+  // ---------- dusk ----------
+  function dusk(state) {
+    // growth
+    const grow = [];
+    for (const p of plants(state)) {
+      if (p.stage >= 3) continue;
+      if (DIR_LIST.some(d => isPuddle(state, p.x + DIRS[d][0], p.y + DIRS[d][1]))) grow.push(p);
+    }
+    for (const p of grow) { growPlant(state, p.x, p.y); }
+    if (grow.length) log(state, `${grow.length} plant${grow.length > 1 ? 's' : ''} grew by the water.`, 'good');
+    // temporary puddles (Dew) revert
+    for (const t of state.tiles) if (t.dew) { t.dew = false; if (t.terrain === 'puddle') t.terrain = 'soil'; }
+    for (const w of state.wisps) if (w.soaked && !isPuddle(state, w.x, w.y)) w.soaked = false;
+    // early thaw
+    if (hasCharm(state, 'earlythaw')) {
+      const frost = [];
+      for (let y = 0; y < state.config.H; y++) for (let x = 0; x < state.config.W; x++) {
+        const t = state.tiles[idx(state, x, y)];
+        if (t.terrain === 'frost' && DIR_LIST.some(d => isPuddle(state, x + DIRS[d][0], y + DIRS[d][1]))) frost.push({ x, y });
+      }
+      if (frost.length) { const f = rngPick(state, frost); tileAt(state, f.x, f.y).terrain = 'soil'; emit(state, { type: 'thaw', x: f.x, y: f.y }); }
+    }
+    resolveSpawns(state);
+  }
+
+  // ---------- hours & nights ----------
+  function keeperName(id) { return id === 'gale' ? 'Gale' : 'Rill'; }
+
+  function drawCards(state, k) {
+    const size = state.config.handSize;
+    while (k.hand.length < size) {
+      if (!k.deck.length) {
+        if (!k.discard.length) break;
+        k.deck = shuffle(state, k.discard); k.discard = [];
+      }
+      k.hand.push(k.deck.pop());
+    }
+  }
+  function startHour(state) {
+    for (const id of KEEPER_IDS) {
+      const k = state.keepers[id];
+      k.discard.push(...k.hand); k.hand = [];
+      drawCards(state, k);
+      k.moved = k.frosted; // frosted keepers lose their move
+      k.frosted = false;
+      k.played = 0; k.done = false; k.dashBonus = 0;
+    }
+    assignIntents(state);
+    markSpawns(state);
+    state.phase = 'act';
+    emit(state, { type: 'hour', night: state.night, hour: state.hour });
+  }
+
+  function endHour(state) {
+    state.phase = 'wisps';
+    emit(state, { type: 'wispPhase' });
+    wispPhase(state);
+    if (state.warmth <= 0) { state.phase = 'lost'; log(state, 'The last warmth is gone. The garden sleeps.', 'bad'); emit(state, { type: 'lost' }); return; }
+    dusk(state);
+    if (state.warmth <= 0) { state.phase = 'lost'; log(state, 'The last warmth is gone. The garden sleeps.', 'bad'); emit(state, { type: 'lost' }); return; }
+    if (state.hour >= state.config.hours) { endNight(state); return; }
+    state.hour += 1;
+    startHour(state);
+  }
+
+  function endNight(state) {
+    const blooms = countBlooms(state);
+    state.glow += blooms;
+    state.glowByNight.push(blooms);
+    state.lastBlooms = blooms;
+    log(state, `Dawn. ${blooms} bloom${blooms === 1 ? '' : 's'} lit the garden. Glow ${state.glow}.`, 'good');
+    emit(state, { type: 'dawn', blooms, glow: state.glow });
+    if (state.night >= state.config.nights) { state.phase = 'won'; emit(state, { type: 'won' }); return; }
+    // draft
+    state.phase = 'draft';
+    const offers = {};
+    for (const id of KEEPER_IDS) {
+      const pool = CARD_POOLS[id];
+      offers[id] = shuffle(state, pool).slice(0, 3);
+    }
+    let charmOffers = null;
+    if (blooms >= state.config.charmThreshold) {
+      const remaining = Object.keys(CHARMS).filter(c => !state.charms.includes(c));
+      charmOffers = shuffle(state, remaining).slice(0, 2);
+      if (!charmOffers.length) charmOffers = null;
+    }
+    state.draft = { offers, picks: { gale: null, rill: null }, charmOffers, charmPick: null, carry: Math.min(blooms, state.config.carryCap) };
+  }
+
+  function maybeFinishDraft(state) {
+    const d = state.draft;
+    if (!d) return;
+    if (d.picks.gale === null || d.picks.rill === null) return;
+    if (d.charmOffers && d.charmPick === null) return;
+    for (const id of KEEPER_IDS) {
+      if (d.picks[id] === -1) continue;
+      const c = d.offers[id][d.picks[id]];
+      state.keepers[id].collection.push(c);
+    }
+    if (d.charmOffers) state.charms.push(d.charmOffers[d.charmPick]);
+    const carry = d.carry;
+    state.draft = null;
+    state.night += 1;
+    startNight(state, carry);
+  }
+
+  function connected(state) {
+    const W = state.config.W, H = state.config.H;
+    let start = -1;
+    for (let i = 0; i < W * H; i++) if (state.tiles[i].terrain !== 'stone') { start = i; break; }
+    const seen = new Array(W * H).fill(false); seen[start] = true;
+    const q = [start]; let n = 1;
+    while (q.length) {
+      const i = q.shift(); const x = i % W, y = Math.floor(i / W);
+      for (const d of DIR_LIST) {
+        const nx = x + DIRS[d][0], ny = y + DIRS[d][1];
+        if (!inBoard(state, nx, ny)) continue;
+        const j = ny * W + nx;
+        if (seen[j] || state.tiles[j].terrain === 'stone') continue;
+        seen[j] = true; n++; q.push(j);
+      }
+    }
+    const total = state.tiles.filter(t => t.terrain !== 'stone').length;
+    return n === total;
+  }
+
+  function startNight(state, carrySeeds) {
+    const W = state.config.W, H = state.config.H;
+    state.tiles = [];
+    for (let i = 0; i < W * H; i++) state.tiles.push({ terrain: 'soil', plant: 0 });
+    state.wisps = []; state.spawns = [];
+    state.nightFlags = { firstLoss: false };
+    state.hour = 1;
+    const cx = Math.floor(W / 2), cy = Math.floor((H - 1) / 2); // 3, 2
+    // keepers
+    state.keepers.gale.x = 1; state.keepers.gale.y = cy + 1;
+    state.keepers.rill.x = W - 2; state.keepers.rill.y = cy;
+    // stones (not adjacent to centre plants, never disconnect)
+    const nStones = state.config.stones[0] + rngInt(state, state.config.stones[1] - state.config.stones[0] + 1);
+    let placed = 0, tries = 0;
+    while (placed < nStones && tries++ < 200) {
+      const x = rngInt(state, W), y = rngInt(state, H);
+      if (manhattan(x, y, cx, cy) <= 1) continue;
+      if (keeperAt(state, x, y)) continue;
+      const t = state.tiles[idx(state, x, y)];
+      if (t.terrain !== 'soil') continue;
+      t.terrain = 'stone';
+      if (!connected(state)) { t.terrain = 'soil'; continue; }
+      placed++;
+    }
+    // ponds
+    const nPonds = state.config.ponds[0] + rngInt(state, state.config.ponds[1] - state.config.ponds[0] + 1);
+    placed = 0; tries = 0;
+    while (placed < nPonds && tries++ < 200) {
+      const x = 1 + rngInt(state, W - 2), y = 1 + rngInt(state, H - 2);
+      if (manhattan(x, y, cx, cy) === 0) continue;
+      if (keeperAt(state, x, y)) continue;
+      const t = state.tiles[idx(state, x, y)];
+      if (t.terrain !== 'soil') continue;
+      t.terrain = 'puddle'; placed++;
+    }
+    // plants near centre
+    const spots = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (manhattan(x, y, cx, cy) > 2 || isEdge(state, x, y)) continue;
+      const t = state.tiles[idx(state, x, y)];
+      if (t.terrain !== 'soil' || keeperAt(state, x, y)) continue;
+      spots.push({ x, y, d: manhattan(x, y, cx, cy) });
+    }
+    const order = shuffle(state, spots).sort((a, b) => a.d - b.d);
+    let i = 0;
+    for (let s = 0; s < state.config.startPlants.sprouts && i < order.length; s++, i++) state.tiles[idx(state, order[i].x, order[i].y)].plant = 2;
+    for (let s = 0; s < state.config.startPlants.seeds + (carrySeeds || 0) && i < order.length; s++, i++) state.tiles[idx(state, order[i].x, order[i].y)].plant = 1;
+    // decks
+    for (const id of KEEPER_IDS) {
+      const k = state.keepers[id];
+      k.deck = shuffle(state, k.collection.slice());
+      k.hand = []; k.discard = []; k.exhausted = [];
+      k.frosted = false; k.moved = false; k.played = 0; k.done = false; k.dashBonus = 0;
+    }
+    log(state, `Night ${state.night} falls over the garden.`, 'title');
+    emit(state, { type: 'night', night: state.night });
+    startHour(state);
+  }
+
+  // ---------- cards ----------
+  // target kinds: none | wisp-adjacent | wisp-range | tile-range | dir | plant-range | puddle-any | puddle-range | wisp-dir | plant-move | frost-range
+  function wispsWithin(state, k, r) { return livingWisps(state).filter(w => manhattan(w.x, w.y, k.x, k.y) <= r); }
+  function tilesWithin(state, k, r, pred) {
+    const out = [];
+    for (let y = 0; y < state.config.H; y++) for (let x = 0; x < state.config.W; x++) {
+      if (manhattan(x, y, k.x, k.y) > r) continue;
+      if (pred(state.tiles[idx(state, x, y)], x, y)) out.push({ x, y });
+    }
+    return out;
+  }
+  const emptySoil = (state) => (t, x, y) => t.terrain === 'soil' && t.plant === 0 && !wispAt(state, x, y) && !keeperAt(state, x, y);
+
+  const CARDS = {
+    // ----- Gale -----
+    gust: { name: 'Gust', keeper: 'gale', text: 'Push an adjacent Chill one tile away from you.', target: 'wisp-adjacent',
+      effect(s, k, t) { const w = findWisp(s, t.wisp); pushWisp(s, w, dirFromTo(k.x, k.y, w.x, w.y), 1); } },
+    sweep: { name: 'Sweep', keeper: 'gale', text: 'Choose a direction. Every Chill in that line from you is pushed one tile that way, farthest first.', target: 'dir',
+      effect(s, k, t) {
+        const [dx, dy] = DIRS[t.dir]; const line = [];
+        for (let x = k.x + dx, y = k.y + dy; inBoard(s, x, y); x += dx, y += dy) { const w = wispAt(s, x, y); if (w) line.push(w); }
+        for (const w of line.reverse()) pushWisp(s, w, t.dir, 1);
+      } },
+    scatter: { name: 'Scatter', keeper: 'gale', text: 'Plant a seed on an empty soil tile within 2.', target: 'tile-range', range: 2, pred: emptySoil,
+      effect(s, k, t) { placePlant(s, t.x, t.y, 1); } },
+    pollinate: { name: 'Pollinate', keeper: 'gale', text: 'Choose a bloom within 2. Seeds sprout on every empty soil tile next to it.', target: 'plant-range', range: 2, stage: [3],
+      effect(s, k, t) { for (const d of DIR_LIST) { const x = t.x + DIRS[d][0], y = t.y + DIRS[d][1]; const tile = tileAt(s, x, y); if (tile && emptySoil(s)(tile, x, y)) placePlant(s, x, y, 1); } } },
+    dash: { name: 'Dash', keeper: 'gale', text: 'You may move again this hour, with +1 speed.', target: 'none',
+      effect(s, k) { k.moved = false; k.dashBonus = (k.dashBonus || 0) + 1; } },
+    bluster: { name: 'Bluster', keeper: 'gale', text: 'A Chill within 2 forgets its intent this hour.', target: 'wisp-range', range: 2,
+      effect(s, k, t) { const w = findWisp(s, t.wisp); w.intent = { kind: 'none', dir: null, steps: 0 }; emit(s, { type: 'calm', id: w.id, x: w.x, y: w.y }); } },
+    updraft: { name: 'Updraft', keeper: 'gale', text: 'Push an adjacent Chill two tiles away from you.', target: 'wisp-adjacent',
+      effect(s, k, t) { const w = findWisp(s, t.wisp); pushWisp(s, w, dirFromTo(k.x, k.y, w.x, w.y), 2); } },
+    crosswind: { name: 'Crosswind', keeper: 'gale', text: 'Push a Chill within 2 one tile in any direction.', target: 'wisp-dir', range: 2,
+      effect(s, k, t) { const w = findWisp(s, t.wisp); pushWisp(s, w, t.dir, 1); } },
+    whirl: { name: 'Whirl', keeper: 'gale', text: 'Every Chill adjacent to you is pushed one tile away.', target: 'none', needs: 'wisp-adjacent',
+      effect(s, k) { for (const w of wispsWithin(s, k, 1)) if (w.hp > 0) pushWisp(s, w, dirFromTo(k.x, k.y, w.x, w.y), 1); } },
+    kite: { name: 'Kite', keeper: 'gale', text: 'Carry a seed or sprout within 2 to an adjacent empty soil tile.', target: 'plant-move', range: 2, stage: [1, 2],
+      effect(s, k, t) { const from = tileAt(s, t.x, t.y); const st = from.plant; from.plant = 0; placePlant(s, t.tx, t.ty, st); emit(s, { type: 'carry', from: [t.x, t.y], to: [t.tx, t.ty] }); } },
+    tailwind: { name: 'Tailwind', keeper: 'gale', text: 'Both keepers may move again this hour. Exhaust.', target: 'none', exhaust: true,
+      effect(s) { for (const id of KEEPER_IDS) s.keepers[id].moved = false; } },
+    secondwind: { name: 'Second Wind', keeper: 'gale', text: 'Draw two cards.', target: 'none',
+      effect(s, k) { const size = s.config.handSize; s.config.handSize = k.hand.length + 2; drawCards(s, k); s.config.handSize = size; } },
+    bait: { name: 'Bait', keeper: 'gale', text: 'Plant a seed on any empty soil tile on the board.', target: 'tile-range', range: 99, pred: emptySoil,
+      effect(s, k, t) { placePlant(s, t.x, t.y, 1); } },
+    howl: { name: 'Howl', keeper: 'gale', text: 'Every Chill within 2 forgets its intent this hour. Exhaust.', target: 'none', exhaust: true, needs: 'wisp-range2',
+      effect(s, k) { for (const w of wispsWithin(s, k, 2)) { w.intent = { kind: 'none', dir: null, steps: 0 }; emit(s, { type: 'calm', id: w.id, x: w.x, y: w.y }); } } },
+
+    // ----- Rill -----
+    puddle: { name: 'Puddle', keeper: 'rill', text: 'Make a puddle on a soil tile within 2 with no plant. A Chill standing there is soaked.', target: 'tile-range', range: 2,
+      pred: (state) => (t, x, y) => t.terrain === 'soil' && t.plant === 0,
+      effect(s, k, t) { makePuddle(s, t.x, t.y, false); } },
+    splash: { name: 'Splash', keeper: 'rill', text: 'Push an adjacent Chill one tile away from you.', target: 'wisp-adjacent',
+      effect(s, k, t) { const w = findWisp(s, t.wisp); pushWisp(s, w, dirFromTo(k.x, k.y, w.x, w.y), 1); } },
+    sprinkle: { name: 'Sprinkle', keeper: 'rill', text: 'A plant within 2 grows one stage.', target: 'plant-range', range: 2, stage: [1, 2],
+      effect(s, k, t) { growPlant(s, t.x, t.y); } },
+    mist: { name: 'Mist', keeper: 'rill', text: 'A Chill within 2 forgets its intent this hour.', target: 'wisp-range', range: 2,
+      effect(s, k, t) { const w = findWisp(s, t.wisp); w.intent = { kind: 'none', dir: null, steps: 0 }; emit(s, { type: 'calm', id: w.id, x: w.x, y: w.y }); } },
+    hop: { name: 'Hop', keeper: 'rill', text: 'Leap to any empty puddle on the board.', target: 'puddle-any',
+      effect(s, k, t) { emit(s, { type: 'hop', keeper: k.id, from: [k.x, k.y], to: [t.x, t.y] }); k.x = t.x; k.y = t.y; } },
+    drain: { name: 'Drain', keeper: 'rill', text: 'Remove a puddle within 2. A Chill soaking in it shivers for 1.', target: 'puddle-range', range: 2,
+      effect(s, k, t) { const tile = tileAt(s, t.x, t.y); tile.terrain = 'soil'; tile.dew = false; emit(s, { type: 'drain', x: t.x, y: t.y }); const w = wispAt(s, t.x, t.y); if (w) { w.soaked = false; damageWisp(s, w, 1, 'shivered'); } s.wisps = s.wisps.filter(w => w.hp > 0); } },
+    deluge: { name: 'Deluge', keeper: 'rill', text: 'Every soil tile next to you with no plant becomes a puddle.', target: 'none',
+      effect(s, k) { for (const d of DIR_LIST) { const x = k.x + DIRS[d][0], y = k.y + DIRS[d][1]; const t = tileAt(s, x, y); if (t && t.terrain === 'soil' && t.plant === 0) makePuddle(s, x, y, false); } } },
+    slick: { name: 'Slick', keeper: 'rill', text: 'A soaked Chill within 3 slides in a direction of your choice until it hits something.', target: 'wisp-dir', range: 3, soakedOnly: true,
+      effect(s, k, t) { const w = findWisp(s, t.wisp); w.soaked = false; pushWisp(s, w, t.dir, 12); } },
+    ripple: { name: 'Ripple', keeper: 'rill', text: 'Choose a puddle within 2. Every Chill next to it is pushed one tile away from it.', target: 'puddle-range', range: 2,
+      effect(s, k, t) { const ws = livingWisps(s).filter(w => manhattan(w.x, w.y, t.x, t.y) === 1); for (const w of ws) pushWisp(s, w, dirFromTo(t.x, t.y, w.x, w.y), 1); } },
+    thaw: { name: 'Thaw', keeper: 'rill', text: 'A frost tile within 2 melts into a puddle.', target: 'frost-range', range: 2,
+      effect(s, k, t) { tileAt(s, t.x, t.y).terrain = 'soil'; emit(s, { type: 'thaw', x: t.x, y: t.y }); makePuddle(s, t.x, t.y, false); } },
+    chorus: { name: 'Frog Chorus', keeper: 'rill', text: 'Every plant next to a puddle grows one stage now. Exhaust.', target: 'none', exhaust: true,
+      effect(s) { const g = plants(s).filter(p => p.stage < 3 && DIR_LIST.some(d => isPuddle(s, p.x + DIRS[d][0], p.y + DIRS[d][1]))); for (const p of g) growPlant(s, p.x, p.y); } },
+    dew: { name: 'Dew', keeper: 'rill', text: 'A soil tile within 2 becomes a puddle until dusk (plants beside it still grow).', target: 'tile-range', range: 2,
+      pred: (state) => (t, x, y) => t.terrain === 'soil' && t.plant === 0,
+      effect(s, k, t) { makePuddle(s, t.x, t.y, true); } },
+    snowmelt: { name: 'Snowmelt', keeper: 'rill', text: 'Every soaked Chill shivers for 1.', target: 'none', needs: 'soaked-any',
+      effect(s) { for (const w of livingWisps(s)) if (w.soaked) damageWisp(s, w, 1, 'snowmelt'); s.wisps = s.wisps.filter(w => w.hp > 0); } },
+    lilypad: { name: 'Lily Pad', keeper: 'rill', text: 'Make a puddle on a soil tile within 2 with no plant, then leap onto it.', target: 'tile-range', range: 2,
+      pred: (state) => (t, x, y) => t.terrain === 'soil' && t.plant === 0 && !wispAt(state, x, y) && !keeperAt(state, x, y),
+      effect(s, k, t) { makePuddle(s, t.x, t.y, false); emit(s, { type: 'hop', keeper: k.id, from: [k.x, k.y], to: [t.x, t.y] }); k.x = t.x; k.y = t.y; } },
+  };
+  function findWisp(s, id) { const w = s.wisps.find(w => w.id === id && w.hp > 0); if (!w) throw new Error('no such wisp'); return w; }
+  function makePuddle(s, x, y, temp) {
+    const t = tileAt(s, x, y); t.terrain = 'puddle'; t.dew = !!temp;
+    emit(s, { type: 'puddle', x, y, temp: !!temp });
+    const w = wispAt(s, x, y); if (w) { w.soaked = true; emit(s, { type: 'soak', id: w.id, x, y }); if (w.intent && w.intent.kind === 'move') w.intent = { kind: 'none', dir: null, steps: 0 }; }
+  }
+
+  const STARTERS = {
+    gale: ['gust', 'gust', 'sweep', 'scatter', 'scatter', 'pollinate', 'dash', 'bluster'],
+    rill: ['puddle', 'puddle', 'splash', 'sprinkle', 'sprinkle', 'mist', 'hop', 'drain'],
+  };
+  const CARD_POOLS = {
+    gale: ['updraft', 'crosswind', 'whirl', 'kite', 'tailwind', 'secondwind', 'bait', 'howl', 'gust', 'sweep', 'pollinate'],
+    rill: ['deluge', 'slick', 'ripple', 'thaw', 'chorus', 'dew', 'snowmelt', 'lilypad', 'puddle', 'sprinkle', 'mist'],
+  };
+  const CHARMS = {
+    kindling: { name: 'Kindling', text: 'Warmth +2.', apply(s) { s.warmth += 2; } },
+    longwick: { name: 'Long Wick', text: 'Both lanterns reach one tile farther.' },
+    deeproots: { name: 'Deep Roots', text: 'A bloom that is breathed on withers to a sprout instead of freezing.' },
+    tailwind: { name: 'Tailwind', text: 'Gale moves one tile farther.' },
+    webbed: { name: 'Webbed Feet', text: 'Rill moves one tile farther.' },
+    earlythaw: { name: 'Early Thaw', text: 'At dusk, one frost tile beside a puddle becomes soil.' },
+    brightbulbs: { name: 'Bright Bulbs', text: 'Chills go for seeds first whenever they can reach one.' },
+    hearthstone: { name: 'Hearthstone', text: 'The first bloom lost each night costs no Warmth.' },
+  };
+
+  // Enumerate legal targets for a card in a keeper's hand.
+  function cardTargets(state, k, cardId) {
+    const c = CARDS[cardId];
+    const r = c.range || 1;
+    switch (c.target) {
+      case 'none':
+        if (c.needs === 'wisp-adjacent' && !wispsWithin(state, k, 1).length) return [];
+        if (c.needs === 'wisp-range2' && !wispsWithin(state, k, 2).length) return [];
+        if (c.needs === 'soaked-any' && !livingWisps(state).some(w => w.soaked)) return [];
+        return [{}];
+      case 'wisp-adjacent': return wispsWithin(state, k, 1).map(w => ({ wisp: w.id }));
+      case 'wisp-range': return wispsWithin(state, k, r).map(w => ({ wisp: w.id }));
+      case 'wisp-dir': {
+        const out = [];
+        for (const w of wispsWithin(state, k, r)) { if (c.soakedOnly && !w.soaked) continue; for (const d of DIR_LIST) out.push({ wisp: w.id, dir: d }); }
+        return out;
+      }
+      case 'dir': return DIR_LIST.map(d => ({ dir: d }));
+      case 'tile-range': return tilesWithin(state, k, r, c.pred(state));
+      case 'plant-range': return tilesWithin(state, k, r, (t) => t.plant > 0 && c.stage.includes(t.plant));
+      case 'plant-move': {
+        const out = [];
+        for (const p of tilesWithin(state, k, r, (t) => t.plant > 0 && c.stage.includes(t.plant))) {
+          for (const d of DIR_LIST) { const x = p.x + DIRS[d][0], y = p.y + DIRS[d][1]; const t = tileAt(state, x, y); if (t && emptySoil(state)(t, x, y)) out.push({ x: p.x, y: p.y, tx: x, ty: y }); }
+        }
+        return out;
+      }
+      case 'puddle-any': return tilesWithin(state, k, 99, (t, x, y) => t.terrain === 'puddle' && !wispAt(state, x, y) && !keeperAt(state, x, y) && !(x === k.x && y === k.y));
+      case 'puddle-range': return tilesWithin(state, k, r, (t) => t.terrain === 'puddle');
+      case 'frost-range': return tilesWithin(state, k, r, (t) => t.terrain === 'frost');
+    }
+    return [];
+  }
+  function sameTarget(a, b) { return JSON.stringify(a || {}) === JSON.stringify(b || {}); }
+
+  // ---------- actions ----------
+  function newGame(seed, overrides) {
+    const config = Object.assign({}, DEFAULT_CONFIG, overrides || {});
+    const state = {
+      seed, rng: seed >>> 0, config, phase: 'lobby', night: 0, hour: 0,
+      warmth: config.warmth, glow: 0, glowByNight: [], lastBlooms: 0,
+      tiles: [], wisps: [], nextWispId: 1, spawns: [], charms: [], draft: null, nightFlags: { firstLoss: false },
+      keepers: {}, log: [], events: [], actionCount: 0,
+    };
+    for (const id of KEEPER_IDS) {
+      state.keepers[id] = { id, x: 0, y: 0, frosted: false, moved: false, played: 0, done: false, dashBonus: 0,
+        collection: STARTERS[id].slice(), deck: [], hand: [], discard: [], exhausted: [] };
+    }
+    return state;
+  }
+
+  function validate(state, a) {
+    if (!a || typeof a !== 'object') return 'bad action';
+    if (a.k === 'start') return state.phase === 'lobby' ? null : 'already started';
+    if (a.k === 'pick') {
+      if (state.phase !== 'draft') return 'not drafting';
+      if (!KEEPER_IDS.includes(a.keeper)) return 'bad keeper';
+      if (state.draft.picks[a.keeper] !== null) return 'already picked';
+      if (a.index !== -1 && !(a.index >= 0 && a.index < state.draft.offers[a.keeper].length)) return 'bad index';
+      return null;
+    }
+    if (a.k === 'charm') {
+      if (state.phase !== 'draft' || !state.draft.charmOffers) return 'no charm to pick';
+      if (state.draft.charmPick !== null) return 'already picked';
+      if (!(a.index >= 0 && a.index < state.draft.charmOffers.length)) return 'bad index';
+      return null;
+    }
+    if (state.phase !== 'act') return 'not acting';
+    if (!KEEPER_IDS.includes(a.keeper)) return 'bad keeper';
+    const k = state.keepers[a.keeper];
+    if (k.done) return 'already done';
+    if (a.k === 'done') return null;
+    if (a.k === 'move') {
+      if (k.moved) return 'already moved';
+      const ok = keeperReach(state, k).some(t => t.x === a.x && t.y === a.y);
+      return ok ? null : 'unreachable';
+    }
+    if (a.k === 'card') {
+      if (k.played >= state.config.cardsPerHour) return 'no card plays left';
+      if (!(a.hand >= 0 && a.hand < k.hand.length)) return 'bad hand index';
+      const cid = k.hand[a.hand];
+      const ts = cardTargets(state, k, cid);
+      if (!ts.length) return 'no valid target';
+      if (!ts.some(t => sameTarget(t, a.target))) return 'bad target';
+      return null;
+    }
+    return 'unknown action';
+  }
+
+  function applyAction(prev, a) {
+    const err = validate(prev, a);
+    if (err) return { state: prev, error: err, events: [] };
+    const state = cloneState(prev);
+    state.events = [];
+    state.actionCount += 1;
+    switch (a.k) {
+      case 'start': state.night = 1; startNight(state, 0); break;
+      case 'pick': state.draft.picks[a.keeper] = a.index; log(state, a.index === -1 ? `${keeperName(a.keeper)} kept their deck as it is.` : `${keeperName(a.keeper)} learned ${CARDS[state.draft.offers[a.keeper][a.index]].name}.`, 'good'); maybeFinishDraft(state); break;
+      case 'charm': state.draft.charmPick = a.index; { const c = CHARMS[state.draft.charmOffers[a.index]]; log(state, `The keepers found ${c.name}.`, 'good'); if (c.apply) c.apply(state); } maybeFinishDraft(state); break;
+      case 'move': { const k = state.keepers[a.keeper]; emit(state, { type: 'keeperMove', keeper: k.id, from: [k.x, k.y], to: [a.x, a.y] }); k.x = a.x; k.y = a.y; k.moved = true; break; }
+      case 'card': {
+        const k = state.keepers[a.keeper];
+        const cid = k.hand[a.hand];
+        const c = CARDS[cid];
+        k.hand.splice(a.hand, 1);
+        if (c.exhaust) k.exhausted.push(cid); else k.discard.push(cid);
+        k.played += 1;
+        emit(state, { type: 'card', keeper: k.id, card: cid, target: a.target });
+        log(state, `${keeperName(k.id)} played ${c.name}${describeTarget(a.target)}.`, k.id);
+        c.effect(state, k, a.target || {});
+        state.wisps = state.wisps.filter(w => w.hp > 0);
+        break;
+      }
+      case 'done': { const k = state.keepers[a.keeper]; k.done = true; if (KEEPER_IDS.every(id => state.keepers[id].done)) endHour(state); break; }
+    }
+    return { state, error: null, events: state.events };
+  }
+  function describeTarget(t) {
+    if (!t) return '';
+    if (t.tx !== undefined) return ` (${coordName(t.x, t.y)} → ${coordName(t.tx, t.ty)})`;
+    if (t.x !== undefined) return ` at ${coordName(t.x, t.y)}`;
+    if (t.dir && t.wisp) return ` (${t.dir})`;
+    if (t.dir) return ` ${t.dir}`;
+    return '';
+  }
+
+  // All legal actions for a keeper (for bots / UI).
+  function legalActions(state, keeperId) {
+    const out = [];
+    if (state.phase !== 'act') return out;
+    const k = state.keepers[keeperId];
+    if (k.done) return out;
+    if (!k.moved) for (const t of keeperReach(state, k)) out.push({ k: 'move', keeper: keeperId, x: t.x, y: t.y });
+    if (k.played < state.config.cardsPerHour) {
+      const seen = new Set();
+      k.hand.forEach((cid, hi) => {
+        if (seen.has(cid)) return; seen.add(cid);
+        for (const t of cardTargets(state, k, cid)) out.push({ k: 'card', keeper: keeperId, hand: hi, target: t });
+      });
+    }
+    out.push({ k: 'done', keeper: keeperId });
+    return out;
+  }
+
+  // What this viewer may see of a wisp's intent.
+  function intentVisibleTo(state, w, viewerId) {
+    const r = lanternRadius(state);
+    const mine = manhattan(w.x, w.y, state.keepers[viewerId].x, state.keepers[viewerId].y) <= r;
+    const other = KEEPER_IDS.find(id => id !== viewerId);
+    const theirs = manhattan(w.x, w.y, state.keepers[other].x, state.keepers[other].y) <= r;
+    if (mine) return 'mine';
+    if (theirs) return state.config.sharedLanterns ? 'mine' : 'partner';
+    return 'dark';
+  }
+
+  // Replay a log deterministically.
+  function replay(seed, config, actions) {
+    let s = newGame(seed, config);
+    for (const a of actions) { const r = applyAction(s, a); if (r.error) throw new Error('replay error: ' + r.error + ' on ' + JSON.stringify(a)); s = r.state; }
+    return s;
+  }
+
+  return {
+    DIRS, DIR_LIST, OPP, KEEPER_IDS, WISP_TYPES, CARDS, CHARMS, STARTERS, CARD_POOLS, DEFAULT_CONFIG, STAGE_NAME,
+    newGame, applyAction, validate, legalActions, replay, cardTargets, keeperReach, keeperSpeed, lanternRadius,
+    intentVisibleTo, plants, countBlooms, livingWisps, tileAt, wispAt, keeperAt, coordName, manhattan, cloneState, keeperName,
+    rngNext, rngInt, shuffle,
+  };
+});
+
+</script>
+<script>
+/* ---- bot.js ---- */
+/* Two Lanterns — greedy planning bot for both keepers. Used by sim.js and by the
+   in-page "solo practice" partner. Pure; depends only on engine.js. */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./engine.js'));
+  else root.TLBot = factory(root.TL);
+})(typeof self !== 'undefined' ? self : this, function (TL) {
+  'use strict';
+
+  const DEFAULT_W = {
+    warmth: 100, bloom: 15, sprout: 6, seed: 2, wisp: -4, hoarhp: -3, threat: -2, soaked: 2,
+    watered: 2.5, frost: -0.6, lost: -10000, plantsAlive: 1,
+  };
+  const POLICIES = {
+    greedy: DEFAULT_W,
+    defend: Object.assign({}, DEFAULT_W, { bloom: 8, sprout: 3, seed: 1, wisp: -8, threat: -4, watered: 0.5 }),
+    grow: Object.assign({}, DEFAULT_W, { bloom: 25, sprout: 10, seed: 4, wisp: -1, threat: -1, watered: 4 }),
+    // probes: ignore the wisps entirely / ignore growth entirely
+    growonly: Object.assign({}, DEFAULT_W, { wisp: 0, hoarhp: 0, threat: 0, soaked: 0 }),
+    defendonly: Object.assign({}, DEFAULT_W, { bloom: 0.5, sprout: 0.2, seed: 0.1, watered: 0, plantsAlive: 0.2 }),
+  };
+
+  function stripped(state) {
+    const s = TL.cloneState(state);
+    s.log = []; s.events = [];
+    return s;
+  }
+
+  // Simulate ending the hour from this state (both keepers done), return the resulting state.
+  function simulateEnd(state) {
+    let s = stripped(state);
+    for (const id of TL.KEEPER_IDS) {
+      if (s.keepers[id].done) continue;
+      const r = TL.applyAction(s, { k: 'done', keeper: id });
+      s = r.state;
+    }
+    return s;
+  }
+
+  function nearestPlantDist(state, w, ps) {
+    let best = 99;
+    for (const p of ps) { const d = TL.manhattan(w.x, w.y, p.x, p.y); if (d < best) best = d; }
+    return best;
+  }
+
+  function evaluate(state, W) {
+    if (state.phase === 'lost') return W.lost + state.glow;
+    let v = state.warmth * W.warmth + state.glow * 10;
+    const ps = TL.plants(state);
+    for (const p of ps) {
+      v += p.stage === 3 ? W.bloom : p.stage === 2 ? W.sprout : W.seed;
+      v += W.plantsAlive;
+      if (p.stage < 3 && TL.DIR_LIST.some(d => { const t = TL.tileAt(state, p.x + TL.DIRS[d][0], p.y + TL.DIRS[d][1]); return t && t.terrain === 'puddle'; })) v += W.watered;
+    }
+    for (const w of state.wisps) {
+      if (w.hp <= 0) continue;
+      v += W.wisp;
+      if (w.type === 'hoar') v += W.hoarhp * (w.hp - 1);
+      const d = nearestPlantDist(state, w, ps);
+      if (d < 4) v += W.threat * (4 - d);
+      if (w.soaked) v += W.soaked;
+    }
+    for (const t of state.tiles) if (t.terrain === 'frost') v += W.frost;
+    return v;
+  }
+
+  function scoreAfter(state, W) { return evaluate(simulateEnd(state), W); }
+
+  // Choose one action for keeper `id` with a 2-ply lookahead (second ply: any own action).
+  function chooseAction(state, id, opts) {
+    const W = (opts && opts.weights) || DEFAULT_W;
+    const rnd = (opts && opts.random) || Math.random;
+    const topN = (opts && opts.topN) || 10;
+    const acts = TL.legalActions(state, id);
+    if (!acts.length) return null;
+    if (acts.length === 1) return acts[0];
+    const scored = [];
+    for (const a of acts) {
+      const r = TL.applyAction(state, a);
+      if (r.error) continue;
+      scored.push({ a, s: r.state, v: scoreAfter(r.state, W) + rnd() * 0.01 });
+    }
+    scored.sort((p, q) => q.v - p.v);
+    const cut = scored.slice(0, topN);
+    let best = null, bestV = -Infinity;
+    for (const c of cut) {
+      let v2 = c.v;
+      if (c.a.k !== 'done' && c.s.phase === 'act') {
+        const next = TL.legalActions(c.s, id);
+        for (const b of next) {
+          if (b.k === 'done') continue;
+          const r2 = TL.applyAction(c.s, b);
+          if (r2.error) continue;
+          const v = scoreAfter(r2.state, W);
+          if (v > v2) v2 = v;
+        }
+      }
+      if (v2 > bestV) { bestV = v2; best = c.a; }
+    }
+    return best;
+  }
+
+  // Play a whole hour for both keepers, interleaving: the keeper whose best action scores higher goes first.
+  function playHour(state, opts) {
+    let s = state;
+    let guard = 0;
+    while (s.phase === 'act' && guard++ < 40) {
+      const ids = TL.KEEPER_IDS.filter(id => !s.keepers[id].done);
+      if (!ids.length) break;
+      // pick the keeper with the more valuable next action
+      let pick = null;
+      for (const id of ids) {
+        const a = chooseAction(s, id, opts);
+        if (!a) continue;
+        const r = TL.applyAction(s, a);
+        const v = scoreAfter(r.state, (opts && opts.weights) || DEFAULT_W);
+        if (!pick || v > pick.v) pick = { id, a, v, s: r.state };
+      }
+      if (!pick) break;
+      s = pick.s;
+    }
+    return s;
+  }
+
+  function draft(state, opts) {
+    let s = state;
+    const rnd = (opts && opts.random) || Math.random;
+    for (const id of TL.KEEPER_IDS) {
+      if (s.draft && s.draft.picks[id] === null) {
+        const offers = s.draft.offers[id];
+        const pref = (opts && opts.draftPref) || {};
+        let bi = 0, bv = -Infinity;
+        offers.forEach((c, i) => { const v = (pref[c] || 0) + rnd(); if (v > bv) { bv = v; bi = i; } });
+        s = TL.applyAction(s, { k: 'pick', keeper: id, index: bi }).state;
+      }
+    }
+    if (s.draft && s.draft.charmOffers && s.draft.charmPick === null) {
+      s = TL.applyAction(s, { k: 'charm', keeper: 'gale', index: Math.floor(rnd() * s.draft.charmOffers.length) }).state;
+    }
+    return s;
+  }
+
+  function playRun(seed, opts) {
+    let s = TL.newGame(seed, opts && opts.config);
+    s = TL.applyAction(s, { k: 'start' }).state;
+    const stats = { cards: {}, hoursPlayed: 0 };
+    let guard = 0;
+    while (s.phase !== 'won' && s.phase !== 'lost' && guard++ < 400) {
+      if (s.phase === 'draft') { s = draft(s, opts); continue; }
+      if (s.phase === 'act') {
+        const before = s.actionCount;
+        s = playHour(s, opts);
+        stats.hoursPlayed++;
+        for (const l of s.log.slice(-40)) { const m = /^(Gale|Rill) played ([A-Za-z ]+?)( at | \(|\.| [NESW]$)/.exec(l.text); if (m) stats.cards[m[2]] = (stats.cards[m[2]] || 0) + 1; }
+        continue;
+      }
+      break;
+    }
+    return { state: s, stats };
+  }
+
+  return { evaluate, simulateEnd, chooseAction, playHour, playRun, draft, POLICIES, DEFAULT_W };
+});
+
+</script>
+<script>
+/* ---- art.js ---- */
+/* Two Lanterns — sprite set.
+ * Defines window.ART (and module.exports when available).
+ *   ART.sprites[key]      -> SVG inner markup, drawn in a 0 0 64 64 viewBox
+ *   ART.svg(key, cls)     -> full <svg> string
+ *   ART.palette           -> colour tokens used by the sprites
+ * Style: chunky, rounded, dark-indigo outlines, flat fills, one highlight +
+ * one shadow per sprite, radial glow only on bloom + lantern.
+ */
+(function (root) {
+  'use strict';
+
+  const O = '#2b2a4a';                       // outline indigo
+  const L  = `stroke="${O}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"`;
+  const L2 = `stroke="${O}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"`;
+  const L1 = `stroke="${O}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"`;
+
+  const palette = {
+    night:    '#1b1a33',
+    outline:  O,
+    soil:     '#4a3b58',
+    soilAlt:  '#433551',
+    puddle:   '#5aa9e6',
+    puddleLight: '#a8dcff',
+    stone:    '#8a8fa8',
+    frost:    '#dff3ff',
+    bloom:    '#ffb347',
+    bloomCore:'#ffe38a',
+    gale:     '#f28c3b',
+    galeCream:'#ffe6c7',
+    rill:     '#7cc26b',
+    rillBelly:'#dff5c9',
+    wisp:     '#cfeeff',
+    wispFlurry:'#e3f5ff',
+    wispHoar: '#eef8ff',
+    wispSleet:'#c5cfdd',
+    leaf:     '#8fe38a',
+    stem:     '#5cb85c',
+    seed:     '#a86b3c',
+    accent:   '#ffd166',
+    frostedFur:'#a9cfef',
+    frostedCream:'#e8f5ff',
+  };
+
+  /* ---------- little helpers ---------- */
+
+  // dark oval eye with a white highlight dot
+  function eye(cx, cy, rx, ry) {
+    rx = rx || 3; ry = ry || 4;
+    return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${O}"/>` +
+           `<circle cx="${cx + rx * 0.38}" cy="${cy - ry * 0.4}" r="${Math.max(1, rx * 0.42)}" fill="#fff"/>`;
+  }
+  // round dot eye (wisps)
+  function dot(cx, cy, r) {
+    r = r || 2.8;
+    return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${O}"/>` +
+           `<circle cx="${cx + r * 0.35}" cy="${cy - r * 0.4}" r="${r * 0.36}" fill="#fff"/>`;
+  }
+  // four-point sparkle
+  function star(cx, cy, s, fill, op) {
+    const k = s * 0.22;
+    return `<path d="M ${cx} ${cy - s} Q ${cx + k} ${cy - k} ${cx + s} ${cy} Q ${cx + k} ${cy + k} ${cx} ${cy + s} Q ${cx - k} ${cy + k} ${cx - s} ${cy} Q ${cx - k} ${cy - k} ${cx} ${cy - s} Z" fill="${fill}"${op != null ? ` opacity="${op}"` : ''}/>`;
+  }
+  // teardrop, tip up
+  function drop(cx, cy, s, fill, outlined) {
+    return `<path d="M ${cx} ${cy - 1.5 * s} C ${cx + 1.1 * s} ${cy - 0.2 * s}, ${cx + 1.1 * s} ${cy + s}, ${cx} ${cy + s} C ${cx - 1.1 * s} ${cy + s}, ${cx - 1.1 * s} ${cy - 0.2 * s}, ${cx} ${cy - 1.5 * s} Z" fill="${fill}"${outlined ? ' ' + L1 : ''}/>`;
+  }
+  // radial glow (the only gradients in the set)
+  function glow(id, color, cx, cy, r, a) {
+    return `<defs><radialGradient id="${id}"><stop offset="0" stop-color="${color}" stop-opacity="${a}"/><stop offset=".45" stop-color="${color}" stop-opacity="${(a * 0.45).toFixed(3)}"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></radialGradient></defs>` +
+           `<circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#${id})"/>`;
+  }
+  // a little hand lantern (flat halo, no gradient) — used by the keepers
+  function miniLantern(cx, top, w, h) {
+    const x = cx - w / 2;
+    return `<circle cx="${cx}" cy="${top + h / 2}" r="${h * 0.75}" fill="${palette.accent}" opacity=".26"/>` +
+           `<rect x="${x + 1}" y="${top - 2.2}" width="${w - 2}" height="3.6" rx="1.6" fill="${O}"/>` +
+           `<rect x="${x}" y="${top}" width="${w}" height="${h}" rx="3.2" fill="${palette.accent}" ${L2}/>` +
+           `<rect x="${x + 1.5}" y="${top + h - 1}" width="${w - 3}" height="3" rx="1.5" fill="${O}"/>` +
+           `<circle cx="${cx}" cy="${top + h / 2 + 0.5}" r="${Math.min(w, h) * 0.22}" fill="#fff4c2"/>`;
+  }
+
+  /* ---------- keepers ---------- */
+
+  function fox(o) {
+    const fur = o.fur, cream = o.cream, inner = o.inner;
+    let m = '';
+    // tail (behind everything, curling up on the left, cream tip)
+    m += `<path d="M 22 54 Q 6 54 7 40" fill="none" stroke="${O}" stroke-width="13" stroke-linecap="round"/>`;
+    m += `<path d="M 22 54 Q 6 54 7 40" fill="none" stroke="${fur}" stroke-width="10" stroke-linecap="round"/>`;
+    m += `<circle cx="7" cy="40" r="5" fill="${cream}"/>`;
+    // lantern stick over the shoulder
+    m += `<path d="M 38 46 L 55 14" stroke="${O}" stroke-width="5.5" stroke-linecap="round"/>`;
+    m += `<path d="M 38 46 L 55 14" stroke="#9a6a45" stroke-width="2.5" stroke-linecap="round"/>`;
+    // body + belly
+    m += `<rect x="16" y="40" width="30" height="20" rx="10" fill="${fur}" ${L}/>`;
+    m += `<ellipse cx="32" cy="52" rx="8" ry="5" fill="${cream}"/>`;
+    // ears
+    m += `<path d="M 19 22 L 15 5 L 29 16 Z" fill="${fur}" ${L}/>`;
+    m += `<path d="M 33 16 L 44 4 L 43 21 Z" fill="${fur}" ${L}/>`;
+    m += `<path d="M 20 18 L 18 10 L 25 15 Z" fill="${inner}"/>`;
+    m += `<path d="M 35 14 L 41 9 L 40.5 17 Z" fill="${inner}"/>`;
+    // cheek tufts, then head over them
+    m += `<path d="M 20 31 L 10 35.5 L 20 40 Z" fill="${fur}" ${L}/>`;
+    m += `<path d="M 42 31 L 52 35.5 L 42 40 Z" fill="${fur}" ${L}/>`;
+    m += `<circle cx="31" cy="30" r="15" fill="${fur}" ${L}/>`;
+    if (o.frosted) {
+      m += `<path d="M 18 26 C 19 15, 43 15, 44 26 C 40 22, 37 28, 31 24 C 26 28, 22 22, 18 26 Z" fill="#f4fbff"/>`;
+    }
+    // muzzle
+    m += `<ellipse cx="34" cy="38" rx="9" ry="5.5" fill="${cream}"/>`;
+    // face
+    if (o.frosted) {
+      m += `<path d="M 23 27 l 5 2.5 l -5 2.5" fill="none" ${L2}/>`;
+      m += `<path d="M 41 27 l -5 2.5 l 5 2.5" fill="none" ${L2}/>`;
+      m += `<path d="M 30 40 l 2 -1.6 l 2 1.6 l 2 -1.6 l 2 1.6" fill="none" ${L1}/>`;
+    } else {
+      m += eye(26, 29, 3, 4) + eye(38, 29, 3, 4);
+      m += `<path d="M 32 40 q 3 2.6 6 0" fill="none" ${L1}/>`;
+    }
+    m += `<ellipse cx="35" cy="36" rx="2.4" ry="1.8" fill="${O}"/>`;
+    m += `<ellipse cx="21" cy="35" rx="3" ry="2" fill="#f79c9c" opacity=".75"/>`;
+    m += `<ellipse cx="44" cy="35" rx="2.4" ry="1.8" fill="#f79c9c" opacity=".75"/>`;
+    // hanging lantern
+    m += `<line x1="55" y1="14" x2="55" y2="19" stroke="${O}" stroke-width="2"/>`;
+    m += miniLantern(55, 20, 10, 13);
+    if (o.frosted) {
+      // shiver marks + frost sparkles
+      m += `<path d="M 10 22 q -3 4 0 8 M 6 20 q -3 4 0 8" fill="none" stroke="#dff3ff" stroke-width="2" stroke-linecap="round" opacity=".9"/>`;
+      m += `<path d="M 50 42 q 3 4 0 8" fill="none" stroke="#dff3ff" stroke-width="2" stroke-linecap="round" opacity=".9"/>`;
+      m += star(11, 11, 3.5, '#fff', .95) + star(53, 50, 2.6, '#fff', .9) + star(22, 61, 2.4, '#fff', .9);
+    }
+    return m;
+  }
+
+  function frog(o) {
+    const skin = o.skin, belly = o.belly;
+    let m = '';
+    // lantern on the ground to the right (behind the arm)
+    m += `<path d="M 52.5 37 q 3.5 -7 7 0" fill="none" stroke="${O}" stroke-width="2.2"/>`;
+    m += miniLantern(56, 38, 12, 15);
+    // feet
+    m += `<ellipse cx="17" cy="56" rx="7" ry="4" fill="${skin}" ${L}/>`;
+    m += `<ellipse cx="40" cy="56" rx="7" ry="4" fill="${skin}" ${L}/>`;
+    // body + belly
+    m += `<ellipse cx="29" cy="40" rx="20" ry="17" fill="${skin}" ${L}/>`;
+    m += `<ellipse cx="29" cy="46" rx="12" ry="8" fill="${belly}"/>`;
+    m += `<circle cx="14" cy="34" r="2.2" fill="${o.spot}"/><circle cx="45" cy="38" r="1.8" fill="${o.spot}"/>`;
+    if (o.frosted) {
+      m += `<path d="M 21 28 C 24 21, 34 21, 37 28 C 34 26, 32 30, 29 27 C 26 30, 24 26, 21 28 Z" fill="#f4fbff"/>`;
+    }
+    // arm holding the lantern handle
+    m += `<path d="M 44 42 Q 52 40 55 33" fill="none" stroke="${O}" stroke-width="6" stroke-linecap="round"/>`;
+    m += `<path d="M 44 42 Q 52 40 55 33" fill="none" stroke="${skin}" stroke-width="3" stroke-linecap="round"/>`;
+    m += `<circle cx="55.5" cy="33" r="3" fill="${skin}" ${L2}/>`;
+    // eye bulges
+    m += `<circle cx="19" cy="24" r="8" fill="${skin}" ${L}/>`;
+    m += `<circle cx="39" cy="24" r="8" fill="${skin}" ${L}/>`;
+    if (o.frosted) {
+      m += `<path d="M 15.5 23 l 5 2.5 l -5 2.5" fill="none" ${L2}/>`;
+      m += `<path d="M 42.5 23 l -5 2.5 l 5 2.5" fill="none" ${L2}/>`;
+      m += `<path d="M 22 39 l 2.5 -1.8 l 2.5 1.8 l 2.5 -1.8 l 2.5 1.8 l 2.5 -1.8 l 2.5 1.8" fill="none" ${L1}/>`;
+    } else {
+      m += eye(19.5, 25, 3.4, 4.2) + eye(39.5, 25, 3.4, 4.2);
+      m += `<path d="M 20 37 Q 29 45 38 37" fill="none" ${L2}/>`;
+    }
+    m += `<circle cx="26" cy="33" r="1.1" fill="${O}"/><circle cx="32" cy="33" r="1.1" fill="${O}"/>`;
+    m += `<ellipse cx="14" cy="39" rx="3" ry="2" fill="#f79c9c" opacity=".7"/>`;
+    m += `<ellipse cx="43" cy="42" rx="2.6" ry="1.8" fill="#f79c9c" opacity=".7"/>`;
+    if (o.frosted) {
+      m += `<path d="M 6 30 q -3 4 0 8" fill="none" stroke="#dff3ff" stroke-width="2" stroke-linecap="round" opacity=".9"/>`;
+      m += star(8, 14, 3.5, '#fff', .95) + star(50, 10, 3, '#fff', .9) + star(58, 58, 2.4, '#fff', .9);
+    }
+    return m;
+  }
+
+  /* ---------- wisps ---------- */
+
+  const GHOST = 'M 14 36 C 14 12, 50 12, 50 36 L 50 51 C 47 47, 44 47, 41 52 C 38 47, 35 47, 32 52 C 29 47, 26 47, 23 52 C 20 47, 17 47, 14 51 Z';
+
+  // knitted scarf: band across the neck + a dangling tail
+  function scarf(c, d, y, tail) {
+    const x0 = 12, x1 = 52, len = (tail && tail.len) || 13;
+    let m = '';
+    if (!tail || tail.side !== 'left') {
+      m += `<path d="M ${x1 - 11} ${y + 6} L ${x1 - 7} ${y + len + 4} L ${x1 + 1} ${y + len + 3} L ${x1 - 2} ${y + 5} Z" fill="${c}" ${L2}/>`;
+      m += `<path d="M ${x1 - 6.5} ${y + len + 4} l .8 3 M ${x1 - 3} ${y + len + 3.5} l .8 3" fill="none" ${L1}/>`;
+    } else {
+      m += `<path d="M ${x0 + 3} ${y + 1} L ${x0 - 9} ${y - 6} L ${x0 - 8} ${y} L ${x0 + 4} ${y + 6} Z" fill="${c}" ${L2}/>`;
+      m += `<path d="M ${x0 - 8.5} ${y - 5.5} l -3 1 M ${x0 - 8} ${y - 1.5} l -3 1" fill="none" ${L1}/>`;
+    }
+    m += `<path d="M ${x0} ${y} Q 32 ${y + 6} ${x1} ${y} L ${x1} ${y + 6} Q 32 ${y + 12} ${x0} ${y + 6} Z" fill="${c}" ${L2}/>`;
+    m += `<path d="M ${x0 + 7} ${y + 3.2} h 3 M ${x0 + 14} ${y + 4.8} h 3 M ${x0 + 21} ${y + 5.2} h 3 M ${x0 + 28} ${y + 4} h 3" stroke="${d}" stroke-width="1.6" stroke-linecap="round"/>`;
+    return m;
+  }
+
+  function chill() {
+    let m = '';
+    m += `<path d="${GHOST}" fill="${palette.wisp}" fill-opacity=".93" ${L}/>`;
+    m += `<ellipse cx="24" cy="26" rx="5" ry="3" fill="#fff" opacity=".8" transform="rotate(-30 24 26)"/>`;
+    m += dot(25, 35, 2.8) + dot(39, 35, 2.8);
+    m += `<ellipse cx="19" cy="40" rx="3" ry="2" fill="#ffb3c6" opacity=".8"/><ellipse cx="45" cy="40" rx="3" ry="2" fill="#ffb3c6" opacity=".8"/>`;
+    m += `<path d="M 30 40.5 q 2 2.2 4 0" fill="none" ${L1}/>`;
+    m += scarf('#ff8a80', '#d9534f', 42);
+    return m;
+  }
+
+  function flurry() {
+    let m = '';
+    m += `<path d="M 3 27 h 9 M 1 35 h 12 M 4 43 h 8" fill="none" stroke="#dff3ff" stroke-width="2.6" stroke-linecap="round" opacity=".85"/>`;
+    m += `<g transform="translate(5 0) translate(32 38) rotate(12) scale(.88 1.02) translate(-32 -38)">`;
+    m += `<path d="${GHOST}" fill="${palette.wispFlurry}" fill-opacity=".95" ${L}/>`;
+    m += `<ellipse cx="25" cy="25" rx="5" ry="3" fill="#fff" opacity=".85" transform="rotate(-30 25 25)"/>`;
+    m += dot(28, 34, 2.8) + dot(41, 34, 2.8);
+    m += `<ellipse cx="22" cy="39" rx="3" ry="2" fill="#ffb3c6" opacity=".8"/><ellipse cx="47" cy="39" rx="2.6" ry="1.8" fill="#ffb3c6" opacity=".8"/>`;
+    m += `<circle cx="35" cy="40.5" r="1.7" fill="${O}"/>`;
+    m += scarf('#c9a7f5', '#9b78d6', 42, { side: 'left' });
+    m += `</g>`;
+    return m;
+  }
+
+  function hoar() {
+    let m = '';
+    m += `<g transform="translate(32 37) scale(1.28 1.16) translate(-32 -37)">`;
+    m += `<path d="M 20 25 L 23 10 L 28 23 Z" fill="#f7fcff" ${L2}/>`;
+    m += `<path d="M 29 20 L 33 8 L 38 20 Z" fill="#f7fcff" ${L2}/>`;
+    m += `<path d="M 38 24 L 45 13 L 45 25 Z" fill="#f7fcff" ${L2}/>`;
+    m += `<path d="M 23.3 12 L 24.6 20 M 33.3 10 L 34.6 18 M 44.5 15 L 43 22" fill="none" stroke="#9fd8ff" stroke-width="1.6" stroke-linecap="round"/>`;
+    m += `<path d="${GHOST}" fill="${palette.wispHoar}" ${L}/>`;
+    m += `<ellipse cx="24" cy="26" rx="5" ry="3" fill="#fff" transform="rotate(-30 24 26)"/>`;
+    m += dot(25, 35, 3) + dot(39, 35, 3);
+    m += `<path d="M 20.5 29.6 l 7 1.1 M 43.5 29.6 l -7 1.1" fill="none" ${L2}/>`;
+    m += `<path d="M 29 40.5 q 3 2.4 6 0" fill="none" ${L1}/>`;
+    m += `<ellipse cx="19" cy="40" rx="3" ry="2" fill="#ffb3c6" opacity=".8"/><ellipse cx="45" cy="40" rx="3" ry="2" fill="#ffb3c6" opacity=".8"/>`;
+    m += scarf('#f2c14e', '#d19a2a', 41, { len: 11 });
+    m += `</g>`;
+    return m;
+  }
+
+  function sleet() {
+    const body = 'M 14 36 C 14 12, 50 12, 50 36 L 50 45 C 50 53, 44 54, 44 47 Q 40 50, 37 45 C 37 57, 27 58, 28 45 Q 24 49, 20 46 C 20 52, 14 52, 14 45 Z';
+    const f = palette.wispSleet;
+    let m = '';
+    m += `<path d="${body}" fill="${f}" ${L}/>`;
+    m += `<ellipse cx="24" cy="26" rx="5" ry="3" fill="#fff" opacity=".7" transform="rotate(-30 24 26)"/>`;
+    // droopy half-lidded eyes
+    m += `<circle cx="25" cy="34" r="2.8" fill="${O}"/><circle cx="39" cy="34" r="2.8" fill="${O}"/>`;
+    m += `<path d="M 21.6 34 a 3.4 3.4 0 0 1 6.8 0 Z M 35.6 34 a 3.4 3.4 0 0 1 6.8 0 Z" fill="${f}"/>`;
+    m += `<path d="M 21.5 34 h 7 M 35.5 34 h 7" fill="none" ${L1}/>`;
+    m += `<circle cx="26" cy="35.3" r=".8" fill="#fff"/><circle cx="40" cy="35.3" r=".8" fill="#fff"/>`;
+    m += `<path d="M 29 40.5 q 1.5 -1.6 3 0 t 3 0" fill="none" ${L1}/>`;
+    m += `<ellipse cx="19" cy="39" rx="3" ry="2" fill="#ffb3c6" opacity=".6"/><ellipse cx="45" cy="39" rx="3" ry="2" fill="#ffb3c6" opacity=".6"/>`;
+    m += scarf('#6cc3b5', '#3f9d8f', 41, { len: 10 });
+    m += drop(47, 59, 2.6, '#7fbde8', true) + drop(31, 61, 2.2, '#7fbde8', true);
+    return m;
+  }
+
+  function soakedOverlay() {
+    let m = '';
+    m += `<ellipse cx="32" cy="55" rx="21" ry="5.5" fill="none" stroke="${palette.puddle}" stroke-width="3" opacity=".95"/>`;
+    m += `<ellipse cx="32" cy="55" rx="11" ry="2.8" fill="none" stroke="${palette.puddleLight}" stroke-width="2.4" opacity=".9"/>`;
+    m += drop(13, 20, 3, palette.puddle, true) + drop(52, 15, 2.6, palette.puddle, true) + drop(55, 38, 2.2, palette.puddle, true);
+    m += `<circle cx="12.2" cy="19.6" r=".9" fill="#fff"/><circle cx="51.3" cy="14.6" r=".9" fill="#fff"/>`;
+    return m;
+  }
+
+  /* ---------- plants ---------- */
+
+  function seed() {
+    let m = '';
+    m += `<path d="M 32 34 v -4" fill="none" ${L2}/>`;
+    m += `<path d="M 32 31 C 32 24, 38 22, 42 24 C 40 30, 36 32, 32 31 Z" fill="${palette.leaf}" ${L2}/>`;
+    m += `<circle cx="32" cy="43" r="11" fill="${palette.seed}" ${L}/>`;
+    m += `<path d="M 23 48 Q 32 56 41 48 Q 32 51 23 48 Z" fill="#7d4a28"/>`;
+    m += `<ellipse cx="27.5" cy="38" rx="3.6" ry="2.4" fill="#d9a06c" transform="rotate(-30 27.5 38)"/>`;
+    m += `<path d="M 32 35 q 1.5 3 0 6" fill="none" stroke="#7d4a28" stroke-width="1.6" stroke-linecap="round"/>`;
+    return m;
+  }
+
+  function sprout() {
+    let m = '';
+    m += `<path d="M 32 59 C 32 52, 32 44, 32 34" fill="none" stroke="${O}" stroke-width="6.5" stroke-linecap="round"/>`;
+    m += `<path d="M 32 59 C 32 52, 32 44, 32 34" fill="none" stroke="${palette.stem}" stroke-width="3.2" stroke-linecap="round"/>`;
+    m += `<path d="M 32 45 C 22 45, 14 37, 16 27 C 26 28, 33 35, 32 45 Z" fill="${palette.leaf}" ${L}/>`;
+    m += `<path d="M 32 41 C 42 41, 50 33, 48 22 C 38 23, 31 31, 32 41 Z" fill="${palette.leaf}" ${L}/>`;
+    m += `<path d="M 30 42 C 26 38, 22 34, 19 30 M 34 38 C 38 34, 42 30, 45 25" fill="none" stroke="${palette.stem}" stroke-width="1.8" stroke-linecap="round"/>`;
+    m += `<circle cx="32" cy="32" r="3.2" fill="#c9f5b4" ${L2}/>`;
+    return m;
+  }
+
+  function bloom() {
+    const cx = 32, cy = 26, R = 9.5;
+    let m = glow('bloom-glow', '#ffcc66', cx, cy + 2, 27, .75);
+    // stem + leaves
+    m += `<path d="M 32 40 V 60" fill="none" stroke="${O}" stroke-width="6.5" stroke-linecap="round"/>`;
+    m += `<path d="M 32 40 V 60" fill="none" stroke="${palette.stem}" stroke-width="3.2" stroke-linecap="round"/>`;
+    m += `<path d="M 32 53 C 24 53, 19 47, 20 42 C 27 43, 32 47, 32 53 Z" fill="${palette.leaf}" ${L2}/>`;
+    m += `<path d="M 32 50 C 40 50, 45 44, 44 39 C 37 40, 32 44, 32 50 Z" fill="${palette.leaf}" ${L2}/>`;
+    // petals
+    for (let i = 0; i < 6; i++) {
+      const a = i * 60 - 90;
+      const px = cx + R * Math.cos(a * Math.PI / 180), py = cy + R * Math.sin(a * Math.PI / 180);
+      m += `<ellipse cx="${px.toFixed(2)}" cy="${py.toFixed(2)}" rx="6.6" ry="10.5" transform="rotate(${a + 90} ${px.toFixed(2)} ${py.toFixed(2)})" fill="${palette.bloom}" ${L}/>`;
+    }
+    m += `<circle cx="${cx}" cy="${cy}" r="8.5" fill="${palette.bloomCore}" ${L}/>`;
+    m += `<circle cx="${cx}" cy="${cy}" r="4" fill="#fff8dc"/>`;
+    m += star(9, 12, 3, '#fff4c2') + star(56, 16, 2.6, '#fff4c2') + star(53, 44, 2.2, '#fff4c2');
+    return m;
+  }
+
+  /* ---------- tiles ---------- */
+
+  function puddle() {
+    let m = '';
+    m += `<rect x="4" y="6" width="56" height="52" rx="22" fill="${palette.puddle}" ${L}/>`;
+    m += `<path d="M 16 24 q 8 -6 16 0" fill="none" stroke="${palette.puddleLight}" stroke-width="3" stroke-linecap="round"/>`;
+    m += `<path d="M 30 40 q 8 -6 16 0" fill="none" stroke="${palette.puddleLight}" stroke-width="3" stroke-linecap="round"/>`;
+    m += `<ellipse cx="17" cy="15" rx="5" ry="2.6" fill="#fff" opacity=".55" transform="rotate(-25 17 15)"/>`;
+    return m;
+  }
+
+  function stone() {
+    let m = '';
+    m += `<path d="M 11 48 C 5 43, 8 30, 16 24 C 22 16, 40 13, 50 21 C 59 28, 59 44, 52 50 C 44 57, 19 56, 11 48 Z" fill="${palette.stone}" ${L}/>`;
+    m += `<path d="M 13 46 C 22 54, 44 54, 52 48 C 44 51, 22 51, 13 46 Z" fill="#666b86"/>`;
+    m += `<ellipse cx="25" cy="27" rx="8" ry="4" fill="#b8bdd0" transform="rotate(-22 25 27)"/>`;
+    m += `<path d="M 40 36 l 4 5 l -2 6" fill="none" ${L1}/>`;
+    return m;
+  }
+
+  function frost() {
+    const corner = `<path d="M 0 0 L 24 0 L 0 24 Z" fill="${palette.frost}" opacity=".16"/>` +
+      `<path d="M 1 1 L 24 24 M 7 7 L 13 2.5 M 7 7 L 2.5 13 M 14 14 L 21 9 M 14 14 L 9 21 M 20 20 L 25 17.5 M 20 20 L 17.5 25" fill="none" stroke="#e6f6ff" stroke-width="1.9" stroke-linecap="round" opacity=".8"/>`;
+    let m = `<g opacity=".9">`;
+    m += corner;
+    m += `<g transform="rotate(90 32 32)">${corner}</g>`;
+    m += `<g transform="rotate(180 32 32)">${corner}</g>`;
+    m += `<g transform="rotate(270 32 32)">${corner}</g>`;
+    m += `</g>`;
+    m += star(32, 30, 2.8, '#fff', .7) + `<circle cx="26" cy="38" r="1.2" fill="#fff" opacity=".7"/><circle cx="39" cy="36" r="1" fill="#fff" opacity=".7"/>`;
+    return m;
+  }
+
+  function spawnMark() {
+    let m = '';
+    m += `<circle cx="32" cy="32" r="21" fill="#9fd8ff" opacity=".1"/>`;
+    m += `<circle cx="32" cy="32" r="23" fill="none" stroke="#9fd8ff" stroke-width="3" stroke-dasharray="6 5" stroke-linecap="round"/>`;
+    m += `<path d="M 32 13 V 26 M 26 21 L 32 27 L 38 21" fill="none" stroke="#9fd8ff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+    m += `<g transform="translate(32 42)"><path d="M 0 -8 V 8 M -7 -4 L 7 4 M -7 4 L 7 -4 M 0 -8 l -2.5 2.5 M 0 -8 l 2.5 2.5 M 0 8 l -2.5 -2.5 M 0 8 l 2.5 -2.5" fill="none" stroke="#e6f6ff" stroke-width="2.4" stroke-linecap="round"/></g>`;
+    return m;
+  }
+
+  /* ---------- intents ---------- */
+
+  function intentBreathe() {
+    const puffs = [[11, 32, 4], [21, 32, 6.5], [34, 32, 9.5], [48, 32, 11]];
+    let m = '';
+    m += puffs.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r + 1.6}" fill="${O}"/>`).join('');
+    m += puffs.map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#dff3ff"/>`).join('');
+    m += `<path d="M 54 27 A 6 6 0 1 0 49 37 A 3.2 3.2 0 1 0 51 31" fill="none" stroke="${O}" stroke-width="2.2" stroke-linecap="round"/>`;
+    m += star(21, 32, 2.6, '#7fc4f5') + star(35, 30, 3.2, '#7fc4f5');
+    m += `<circle cx="4" cy="30" r="1.6" fill="#dff3ff"/><circle cx="6" cy="36" r="1.2" fill="#dff3ff"/>`;
+    return m;
+  }
+
+  function intentMove() {
+    let m = '';
+    m += `<path d="M 8 24 H 34 V 12 L 58 32 L 34 52 V 40 H 8 Z" fill="${palette.accent}" stroke="${O}" stroke-width="4" stroke-linejoin="round"/>`;
+    m += `<path d="M 13 29 H 33" fill="none" stroke="#fff3c4" stroke-width="3" stroke-linecap="round"/>`;
+    return m;
+  }
+
+  function intentUnknown() {
+    let m = '';
+    m += `<circle cx="32" cy="32" r="21" fill="#5f5c8f" ${L}/>`;
+    m += `<path d="M 24 26 A 8 8 0 1 1 36 33 Q 32 36.5 32 41" fill="none" stroke="#f4f2ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`;
+    m += `<circle cx="32" cy="48.5" r="3.2" fill="#f4f2ff"/>`;
+    return m;
+  }
+
+  function intentPartner() {
+    let m = '';
+    m += `<circle cx="32" cy="34" r="16" fill="${palette.accent}" opacity=".22"/>`;
+    m += `<circle cx="32" cy="10.5" r="3" fill="none" stroke="${O}" stroke-width="2.4"/>`;
+    m += `<line x1="32" y1="13.5" x2="32" y2="19" stroke="${O}" stroke-width="2.4"/>`;
+    m += `<path d="M 24 22 L 40 22 L 37 17.5 L 27 17.5 Z" fill="${O}"/>`;
+    m += `<rect x="23" y="22" width="18" height="22" rx="5" fill="${palette.accent}" ${L}/>`;
+    m += `<rect x="25" y="43" width="14" height="4" rx="2" fill="${O}"/>`;
+    m += `<path d="M 32 27.5 C 36.5 32, 37.5 35.5, 32 40 C 26.5 35.5, 27.5 32, 32 27.5 Z" fill="#fff4c2"/>`;
+    m += `<path d="M 13 30 l 5 2 M 13 38 l 5 -2 M 51 30 l -5 2 M 51 38 l -5 -2" fill="none" stroke="${palette.accent}" stroke-width="2.6" stroke-linecap="round"/>`;
+    return m;
+  }
+
+  /* ---------- ui ---------- */
+
+  function lantern() {
+    let m = glow('lantern-glow', '#ffcc66', 32, 36, 27, .7);
+    m += `<circle cx="32" cy="8" r="3.5" fill="none" stroke="${O}" stroke-width="2.6"/>`;
+    m += `<line x1="32" y1="11.5" x2="32" y2="17" stroke="${O}" stroke-width="2.6"/>`;
+    m += `<path d="M 21 22 L 43 22 L 39 16 L 25 16 Z" fill="#4a4870" ${L2}/>`;
+    m += `<rect x="20" y="22" width="24" height="26" rx="6" fill="${palette.accent}" ${L}/>`;
+    m += `<path d="M 20 34 H 44" fill="none" stroke="${O}" stroke-width="2"/>`;
+    m += `<path d="M 32 28 C 37.5 33.5, 38.5 38, 32 43.5 C 25.5 38, 26.5 33.5, 32 28 Z" fill="#fff4c2"/>`;
+    m += `<circle cx="32" cy="39.5" r="2.2" fill="${palette.bloom}"/>`;
+    m += `<path d="M 24.5 26.5 v 5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".6"/>`;
+    m += `<path d="M 22 48 L 42 48 L 40 53 L 24 53 Z" fill="#4a4870" ${L2}/>`;
+    m += `<circle cx="32" cy="56" r="2.6" fill="${O}"/>`;
+    return m;
+  }
+
+  function warmth() {
+    let m = '';
+    m += `<path d="M 32 8 C 40 18, 48 24, 48 38 C 48 47, 41 54, 32 54 C 23 54, 16 47, 16 38 C 16 27, 24 22, 26 14 C 28 20, 30 14, 32 8 Z" fill="#ff8c42" ${L}/>`;
+    m += `<path d="M 32 28 C 36 33, 40 36, 40 42 C 40 47, 36 50, 32 50 C 28 50, 24 47, 24 42 C 24 36, 28 33, 32 28 Z" fill="${palette.bloomCore}"/>`;
+    m += `<circle cx="17" cy="14" r="1.8" fill="${palette.accent}"/><circle cx="50" cy="12" r="1.5" fill="${palette.accent}"/><circle cx="53" cy="24" r="1.2" fill="${palette.accent}"/>`;
+    return m;
+  }
+
+  function glowIcon() {
+    let m = '';
+    m += `<path d="M 32 6 C 34 24, 40 30, 58 32 C 40 34, 34 40, 32 58 C 30 40, 24 34, 6 32 C 24 30, 30 24, 32 6 Z" fill="${palette.accent}" ${L}/>`;
+    m += `<circle cx="32" cy="32" r="3.6" fill="#fff8dc"/>`;
+    m += star(51, 12, 3.2, '#fff4c2') + star(13, 51, 2.6, '#fff4c2');
+    return m;
+  }
+
+  function ping() {
+    let m = '';
+    m += `<circle cx="32" cy="32" r="22" fill="none" stroke="${O}" stroke-width="8"/>`;
+    m += `<circle cx="32" cy="32" r="22" fill="none" stroke="${palette.accent}" stroke-width="4.5"/>`;
+    m += `<circle cx="32" cy="32" r="12" fill="none" stroke="${palette.accent}" stroke-width="3" opacity=".7"/>`;
+    m += `<circle cx="32" cy="32" r="4.5" fill="${palette.accent}" ${L2}/>`;
+    return m;
+  }
+
+  /* ---------- assemble ---------- */
+
+  const sprites = {
+    gale: fox({ fur: palette.gale, cream: palette.galeCream, inner: '#f7b7a3' }),
+    gale_frosted: fox({ fur: palette.frostedFur, cream: palette.frostedCream, inner: '#cfe3f7', frosted: true }),
+    rill: frog({ skin: palette.rill, belly: palette.rillBelly, spot: '#5aa858' }),
+    rill_frosted: frog({ skin: palette.frostedFur, belly: palette.frostedCream, spot: '#8fbde0', frosted: true }),
+    chill: chill(),
+    flurry: flurry(),
+    hoar: hoar(),
+    sleet: sleet(),
+    soaked_overlay: soakedOverlay(),
+    seed: seed(),
+    sprout: sprout(),
+    bloom: bloom(),
+    puddle: puddle(),
+    stone: stone(),
+    frost: frost(),
+    spawn_mark: spawnMark(),
+    intent_breathe: intentBreathe(),
+    intent_move: intentMove(),
+    intent_unknown: intentUnknown(),
+    intent_partner: intentPartner(),
+    lantern: lantern(),
+    warmth: warmth(),
+    glow: glowIcon(),
+    ping: ping(),
+  };
+
+  // Gradient ids get a per-instance suffix: identical ids across copies are
+  // legal, but Chrome resolves url(#id) to the FIRST match in the document and
+  // refuses to paint a gradient that lives inside a display:none svg.
+  let instance = 0;
+  const ART = {
+    sprites,
+    palette,
+    svg(key, className) {
+      let inner = sprites[key] || '';
+      if (inner.indexOf('<radialGradient') !== -1) {
+        const n = ++instance;
+        inner = inner
+          .replace(/ id="([\w-]+)"/g, (m, id) => ` id="${id}-${n}"`)
+          .replace(/url\(#([\w-]+)\)/g, (m, id) => `url(#${id}-${n})`);
+      }
+      return `<svg class="sprite ${className || ''}" viewBox="0 0 64 64" aria-hidden="true">${inner}</svg>`;
+    },
+  };
+
+  root.ART = ART;
+  if (typeof module !== 'undefined' && module.exports) module.exports = ART;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/* ---- net.js ---- */
+/* Two Lanterns — browser transport over PeerJS.
+ *
+ * Plain browser JS, no build step. The page must load PeerJS first (global `Peer`):
+ *   https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.5/peerjs.min.js
+ *
+ * API (see DESIGN.md "Networking"):
+ *   const net = TwoLanternsNet.create({
+ *     onStatus(status, detail) {},  // 'idle'|'connecting'|'open'|'reconnecting'|'closed'|'error'
+ *     onMessage(obj) {},            // parsed JSON object from the other side
+ *     onPeerJoined() {},            // host only: guest data channel opened (again after each reconnect)
+ *     onPeerLeft() {},              // host only (optional extra): guest data channel dropped
+ *   });
+ *   await net.host(code);   // rejects with err.code 'id-taken' | 'signal-down' | 'bad-code'
+ *   await net.join(code);   // rejects with err.code 'no-such-room' | 'signal-down' | 'timeout' | 'bad-code'
+ *   net.send(obj);          // true if sent now, false if queued (flushed on open)
+ *   net.isHost; net.code; net.status;
+ *   net.close();            // tear down; no reconnects afterwards
+ *
+ * Extras for tests/debugging: net.conn (current DataConnection), net.peer, net.queued,
+ * TwoLanternsNet.randomCode(), TwoLanternsNet.normaliseCode().
+ */
+(function () {
+  'use strict';
+
+  var ID_PREFIX = 'twolanterns-';
+  var ICE_CONFIG = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:global.stun.twilio.com:3478' },
+    ],
+  };
+
+  var PING_MS = 5000;             // heartbeat send interval
+  var DEAD_MS = 15000;            // silence longer than this => connection considered dropped
+  var DEAD_CHECK_MS = 2500;
+  var JOIN_TIMEOUT_MS = 12000;    // whole join() budget
+  var HOST_TIMEOUT_MS = 15000;    // host() registration budget (rejects 'signal-down')
+  var ATTEMPT_TIMEOUT_MS = 10000; // one reconnect attempt / one incoming channel to open
+  var BACKOFF_MIN_MS = 1000;
+  var BACKOFF_MAX_MS = 8000;
+  var QUEUE_MAX = 1000;
+
+  var SIGNAL_DOWN_TYPES = { network: 1, 'server-error': 1, 'socket-error': 1, 'socket-closed': 1 };
+  // Peer error types that mean "this Peer will not become usable"; anything else is transient/noise.
+  var FATAL_PEER_TYPES = {
+    'unavailable-id': 1, 'invalid-id': 1, 'invalid-key': 1, 'browser-incompatible': 1,
+    'ssl-unavailable': 1, 'disconnected': 1,
+  };
+
+  function log() { console.log.apply(console, ['[net]'].concat(Array.prototype.slice.call(arguments))); }
+  function warn() { console.warn.apply(console, ['[net]'].concat(Array.prototype.slice.call(arguments))); }
+
+  function netError(code, message) {
+    var e = new Error(message || code);
+    e.code = code;
+    return e;
+  }
+
+  function errorFromPeerError(err) {
+    var type = err && err.type;
+    var msg = (err && err.message) || String(err);
+    if (type === 'unavailable-id') return netError('id-taken', 'Room code already in use (' + msg + ')');
+    if (type === 'peer-unavailable') return netError('no-such-room', 'No such room (' + msg + ')');
+    if (SIGNAL_DOWN_TYPES[type]) return netError('signal-down', 'Signaling server unreachable (' + type + ': ' + msg + ')');
+    if (type === 'browser-incompatible') return netError('unsupported', msg);
+    return netError(type || 'unknown', msg);
+  }
+
+  function normaliseCode(input) {
+    var code = String(input == null ? '' : input).trim().toUpperCase();
+    if (!/^[A-Z]{4}$/.test(code)) {
+      throw netError('bad-code', 'Room code must be 4 letters (got "' + input + '")');
+    }
+    return code;
+  }
+
+  function randomCode() {
+    var letters = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; // no I/O — easier to read aloud
+    var out = '';
+    var buf = new Uint8Array(4);
+    if (window.crypto && window.crypto.getRandomValues) window.crypto.getRandomValues(buf);
+    else for (var j = 0; j < 4; j++) buf[j] = Math.floor(Math.random() * 256);
+    for (var i = 0; i < 4; i++) out += letters[buf[i] % letters.length];
+    return out;
+  }
+
+  function create(opts) {
+    opts = opts || {};
+    var handlers = {};
+    ['onStatus', 'onMessage', 'onPeerJoined', 'onPeerLeft'].forEach(function (k) {
+      handlers[k] = typeof opts[k] === 'function' ? opts[k] : null;
+    });
+
+    var status = 'idle';
+    var isHost = false;
+    var code = null;
+    var hostId = null;
+    var started = false;   // host()/join() in progress or succeeded
+    var closed = false;
+    var joined = false;    // guest: first data channel ever opened (drops after this reconnect)
+    var guestJoined = false; // host: a guest is currently attached (for onPeerLeft)
+
+    var peer = null;       // current Peer
+    var conn = null;       // current DataConnection (host: the guest; guest: the host)
+    var queue = [];
+
+    var pingTimer = null, deadTimer = null, lastRecv = 0;
+    var backoffMs = BACKOFF_MIN_MS;
+    var retryTimer = null;     // pending backoff timer (guest retry / host recover)
+    var watchdogTimer = null;  // host: peer.reconnect() must produce an event within ATTEMPT_TIMEOUT_MS
+    var attempting = false;    // guest: an attempt is in flight
+    var attemptNo = 0;
+    var joinPending = null;    // {resolve, reject, timer}
+    var hostPending = null;    // {resolve, reject, timer}
+
+    // ---- helpers --------------------------------------------------------
+
+    function emit(name) {
+      var fn = handlers[name];
+      if (!fn) return;
+      try { fn.apply(null, Array.prototype.slice.call(arguments, 1)); }
+      catch (e) { warn('callback ' + name + ' threw:', e); }
+    }
+
+    function setStatus(s, detail) {
+      if (closed && s !== 'closed') return;
+      var changed = s !== status;
+      status = s;
+      if (changed || detail !== undefined) {
+        log('status:', s, detail !== undefined ? detail : '');
+        emit('onStatus', s, detail);
+      }
+    }
+
+    function isCurrentPeer(p) { return !closed && p !== null && p === peer; }
+
+    function makePeer(id, token) {
+      var options = { config: ICE_CONFIG, debug: 1 };
+      if (token) options.token = token;
+      return id ? new Peer(id, options) : new Peer(options);
+    }
+
+    function destroyPeer(p) {
+      if (!p) return;
+      try { p.destroy(); } catch (e) { warn('peer.destroy() threw:', e); }
+    }
+
+    function dropConn(c) {
+      if (!c) return;
+      try { c.close(); } catch (e) { warn('conn.close() threw:', e); }
+    }
+
+    function rawSend(c, obj) {
+      try { c.send(obj); return true; }
+      catch (e) { warn('send failed:', e && e.message); return false; }
+    }
+
+    function clearRetry() {
+      if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+      if (watchdogTimer) { clearTimeout(watchdogTimer); watchdogTimer = null; }
+    }
+
+    function preflight(inputCode) {
+      if (closed) throw netError('closed', 'net is closed');
+      if (started) throw netError('busy', 'host()/join() already called');
+      if (typeof Peer !== 'function') throw netError('no-peerjs', 'PeerJS global `Peer` not loaded');
+      return normaliseCode(inputCode);
+    }
+
+    // Abandon a failed host()/join(): destroy everything but let the caller try again.
+    function failStart(err) {
+      warn('start failed:', err.code, '-', err.message);
+      clearRetry();
+      attempting = false;
+      var c = conn; conn = null; dropConn(c);
+      var p = peer; peer = null; destroyPeer(p);
+      stopHeartbeat();
+      started = false;
+      setStatus('error', { code: err.code, message: err.message });
+    }
+
+    // ---- queue ----------------------------------------------------------
+
+    function flush() {
+      var c = conn;
+      if (!c || !c.open) return;
+      var n = 0;
+      while (queue.length && c.open) {
+        if (!rawSend(c, queue[0])) break;
+        queue.shift();
+        n++;
+      }
+      if (n) log('flushed', n, 'queued message(s)');
+    }
+
+    function send(obj) {
+      if (closed) { warn('send() after close(); dropped'); return false; }
+      var c = conn;
+      if (c && c.open) {
+        flush();
+        if (queue.length === 0 && rawSend(c, obj)) return true;
+      }
+      if (queue.length >= QUEUE_MAX) { warn('send queue full; dropping oldest'); queue.shift(); }
+      queue.push(obj);
+      return false;
+    }
+
+    // ---- heartbeat ------------------------------------------------------
+
+    function startHeartbeat(c) {
+      stopHeartbeat();
+      lastRecv = Date.now();
+      pingTimer = setInterval(function () {
+        if (conn === c && c.open) rawSend(c, { t: '__ping' });
+      }, PING_MS);
+      deadTimer = setInterval(function () {
+        if (conn !== c) return;
+        var idle = Date.now() - lastRecv;
+        if (idle > DEAD_MS) {
+          warn('no traffic for', idle, 'ms; treating connection as dropped');
+          onConnLost(c, netError('heartbeat', 'No traffic for ' + idle + 'ms'));
+          dropConn(c);
+        }
+      }, DEAD_CHECK_MS);
+    }
+
+    function stopHeartbeat() {
+      if (pingTimer) { clearInterval(pingTimer); pingTimer = null; }
+      if (deadTimer) { clearInterval(deadTimer); deadTimer = null; }
+    }
+
+    // ---- data connection (shared by host & guest) -----------------------
+
+    function wireConn(c) {
+      var openTimer = null;
+      if (!c.open) {
+        openTimer = setTimeout(function () {
+          openTimer = null;
+          if (conn !== c || c.open) return;
+          warn('data channel to', c.peer, 'did not open within', ATTEMPT_TIMEOUT_MS, 'ms');
+          onConnLost(c, netError('timeout', 'Data channel did not open'));
+          dropConn(c);
+        }, ATTEMPT_TIMEOUT_MS);
+      }
+      function clearOpenTimer() { if (openTimer) { clearTimeout(openTimer); openTimer = null; } }
+
+      c.on('open', function () {
+        clearOpenTimer();
+        if (conn !== c) return;
+        onConnOpen(c);
+      });
+      c.on('data', function (d) {
+        if (conn !== c) return;
+        onConnData(c, d);
+      });
+      c.on('close', function () {
+        clearOpenTimer();
+        if (conn !== c) return;
+        onConnLost(c, netError('closed', 'Data channel closed'));
+      });
+      c.on('error', function (err) {
+        clearOpenTimer();
+        if (conn !== c) return;
+        warn('data channel error:', err && err.type, err && err.message);
+        onConnLost(c, netError('conn-error', (err && err.message) || 'Data channel error'));
+        dropConn(c);
+      });
+      c.on('iceStateChanged', function (state) {
+        if (conn !== c) return;
+        if (state === 'disconnected' || state === 'failed') log('ice state:', state);
+      });
+
+      if (c.open) onConnOpen(c);
+    }
+
+    function onConnOpen(c) {
+      log((isHost ? 'host' : 'guest') + ': data channel open with', c.peer);
+      attempting = false;
+      backoffMs = BACKOFF_MIN_MS;
+      clearRetry();
+      startHeartbeat(c);
+      setStatus('open', { role: isHost ? 'host' : 'guest', code: code, peer: c.peer });
+      flush();
+      if (isHost) {
+        guestJoined = true;
+        emit('onPeerJoined');
+      } else {
+        joined = true;
+        finishJoin(null);
+      }
+    }
+
+    function onConnData(c, d) {
+      lastRecv = Date.now();
+      if (d === null || typeof d !== 'object') { warn('ignoring non-object message:', d); return; }
+      if (d.t === '__ping') { rawSend(c, { t: '__pong' }); return; }
+      if (d.t === '__pong') return;
+      emit('onMessage', d);
+    }
+
+    // The current connection is gone (closed, errored, timed out, or heartbeat-dead).
+    function onConnLost(c, err) {
+      if (conn !== c) return;
+      conn = null;
+      stopHeartbeat();
+      attempting = false;
+      log((isHost ? 'host' : 'guest') + ': connection lost -', err.code, '-', err.message);
+      if (closed) return;
+      if (isHost) {
+        if (guestJoined) { guestJoined = false; emit('onPeerLeft'); }
+        // keep listening; the guest will reconnect to us
+      } else if (!joined) {
+        finishJoin(err);
+      } else {
+        scheduleGuestRetry(err);
+      }
+    }
+
+    // ---- host -----------------------------------------------------------
+
+    function host(inputCode) {
+      return new Promise(function (resolve, reject) {
+        try { code = preflight(inputCode); }
+        catch (e) { return reject(e); }
+        started = true;
+        isHost = true;
+        hostId = ID_PREFIX + code;
+        hostPending = {
+          resolve: resolve,
+          reject: reject,
+          timer: setTimeout(function () {
+            finishHost(netError('signal-down', 'Timed out registering with the signaling server'));
+          }, HOST_TIMEOUT_MS),
+        };
+        setStatus('connecting', { role: 'host', code: code });
+        log('host: registering as', hostId);
+        var p = makePeer(hostId);
+        peer = p;
+        attachHostPeer(p);
+      });
+    }
+
+    function finishHost(err) {
+      var hp = hostPending;
+      if (!hp) return;
+      hostPending = null;
+      clearTimeout(hp.timer);
+      if (err) { failStart(err); hp.reject(err); }
+      else hp.resolve();
+    }
+
+    function attachHostPeer(p) {
+      p.on('open', function (id) {
+        if (!isCurrentPeer(p)) return;
+        log('host: registered with signaling as', id);
+        backoffMs = BACKOFF_MIN_MS;
+        clearRetry();
+        setStatus('open', { role: 'host', code: code, listening: true });
+        finishHost(null);
+      });
+      p.on('connection', function (c) {
+        if (!isCurrentPeer(p)) { dropConn(c); return; }
+        acceptGuest(c);
+      });
+      p.on('disconnected', function () {
+        if (!isCurrentPeer(p)) return;
+        if (hostPending) return; // an error handler will settle host() (or the timeout will)
+        warn('host: lost signaling server');
+        scheduleHostRecover('signaling-disconnected');
+      });
+      p.on('close', function () {
+        if (!isCurrentPeer(p)) return;
+        if (hostPending) return;
+        warn('host: peer destroyed by PeerJS');
+        scheduleHostRecover('peer-destroyed');
+      });
+      p.on('error', function (err) {
+        if (!isCurrentPeer(p)) return;
+        var type = err && err.type;
+        warn('host: peer error', type, '-', err && err.message);
+        if (hostPending) {
+          if (type === 'unavailable-id' || SIGNAL_DOWN_TYPES[type] || FATAL_PEER_TYPES[type]) {
+            finishHost(errorFromPeerError(err));
+          }
+          return;
+        }
+        if (type === 'unavailable-id' || SIGNAL_DOWN_TYPES[type]) scheduleHostRecover(type);
+        // 'peer-unavailable' / 'webrtc' on the host are per-connection noise; the conn timers handle them.
+      });
+    }
+
+    function acceptGuest(c) {
+      log('host: incoming connection from', c.peer);
+      var old = conn;
+      conn = c; // set first so the old connection's handlers become no-ops
+      if (old && old !== c) {
+        log('host: replacing previous guest connection');
+        stopHeartbeat();
+        dropConn(old);
+      }
+      wireConn(c);
+    }
+
+    function scheduleHostRecover(reason) {
+      if (closed || !isHost || retryTimer) return;
+      var delay = backoffMs;
+      backoffMs = Math.min(backoffMs * 2, BACKOFF_MAX_MS);
+      attemptNo++;
+      setStatus('reconnecting', { role: 'host', reason: reason, delayMs: delay, attempt: attemptNo });
+      log('host: recovering signaling in', delay, 'ms');
+      retryTimer = setTimeout(function () {
+        retryTimer = null;
+        if (closed) return;
+        hostRecover();
+      }, delay);
+    }
+
+    function hostRecover() {
+      var p = peer;
+      if (p && !p.destroyed) {
+        if (p.open) { setStatus('open', { role: 'host', code: code, listening: true }); return; }
+        if (p.disconnected) {
+          try {
+            log('host: peer.reconnect()');
+            p.reconnect();
+            if (watchdogTimer) clearTimeout(watchdogTimer);
+            watchdogTimer = setTimeout(function () {
+              watchdogTimer = null;
+              if (!isCurrentPeer(p) || p.open) return;
+              warn('host: reconnect() produced nothing; recreating peer');
+              recreateHostPeer();
+            }, ATTEMPT_TIMEOUT_MS);
+            return;
+          } catch (e) {
+            warn('host: reconnect() refused (' + (e && e.message) + '); recreating peer');
+          }
+        } else {
+          return; // still connecting; 'open' or 'disconnected' will follow
+        }
+      }
+      recreateHostPeer();
+    }
+
+    function recreateHostPeer() {
+      var old = peer;
+      peer = null;
+      var token = old && old.options && old.options.token; // same token => server lets us retake the id
+      destroyPeer(old);
+      log('host: creating new peer as', hostId);
+      var p = makePeer(hostId, token);
+      peer = p;
+      attachHostPeer(p);
+    }
+
+    // ---- guest ----------------------------------------------------------
+
+    function join(inputCode) {
+      return new Promise(function (resolve, reject) {
+        try { code = preflight(inputCode); }
+        catch (e) { return reject(e); }
+        started = true;
+        isHost = false;
+        joined = false;
+        hostId = ID_PREFIX + code;
+        joinPending = {
+          resolve: resolve,
+          reject: reject,
+          timer: setTimeout(function () {
+            finishJoin(netError('timeout', 'Timed out joining room ' + code));
+          }, JOIN_TIMEOUT_MS),
+        };
+        setStatus('connecting', { role: 'guest', code: code });
+        guestAttempt();
+      });
+    }
+
+    function finishJoin(err) {
+      var jp = joinPending;
+      if (!jp) return;
+      joinPending = null;
+      clearTimeout(jp.timer);
+      if (err) { failStart(err); jp.reject(err); }
+      else jp.resolve();
+    }
+
+    function attachGuestPeer(p) {
+      p.on('open', function (id) {
+        if (!isCurrentPeer(p)) return;
+        log('guest: registered with signaling as', id);
+      });
+      p.on('disconnected', function () {
+        if (!isCurrentPeer(p)) return;
+        log('guest: signaling disconnected (existing data channel unaffected)');
+      });
+      p.on('close', function () {
+        if (!isCurrentPeer(p)) return;
+        log('guest: peer destroyed by PeerJS');
+      });
+      p.on('error', function (err) {
+        if (!isCurrentPeer(p)) return;
+        var type = err && err.type;
+        warn('guest: peer error', type, '-', err && err.message);
+        if (type === 'peer-unavailable') {
+          var c = conn;
+          if (c && !c.open) {
+            onConnLost(c, netError('no-such-room', 'No room ' + code + ' (host is not registered)'));
+            dropConn(c); // PeerJS leaves the never-opened connection dangling
+          }
+        }
+      });
+    }
+
+    // Make sure we have a Peer that is registered with the signaling server.
+    function ensurePeerOpen(cb) {
+      var p = peer;
+      if (p && !p.destroyed && p.open) return cb(null);
+      if (p && !p.destroyed && p.disconnected) {
+        try { log('guest: peer.reconnect()'); p.reconnect(); }
+        catch (e) { warn('guest: reconnect() refused (' + (e && e.message) + ')'); p = null; }
+      }
+      if (!p || p.destroyed) {
+        var old = peer;
+        peer = null;
+        destroyPeer(old);
+        log('guest: creating peer');
+        p = makePeer(null);
+        peer = p;
+        attachGuestPeer(p);
+      }
+      var done = false;
+      var t = setTimeout(function () {
+        finish(netError('signal-down', 'Timed out reaching the signaling server'));
+      }, ATTEMPT_TIMEOUT_MS);
+      function finish(err) {
+        if (done) return;
+        done = true;
+        clearTimeout(t);
+        try { p.off('open', onOpen); p.off('error', onErr); p.off('disconnected', onDisc); } catch (e) {}
+        cb(err);
+      }
+      function onOpen() { finish(null); }
+      function onErr(err) {
+        var type = err && err.type;
+        if (SIGNAL_DOWN_TYPES[type] || FATAL_PEER_TYPES[type]) finish(errorFromPeerError(err));
+      }
+      function onDisc() { finish(netError('signal-down', 'Lost signaling server while registering')); }
+      p.on('open', onOpen);
+      p.on('error', onErr);
+      p.on('disconnected', onDisc);
+    }
+
+    function guestAttempt() {
+      if (closed || attempting) return;
+      attempting = true;
+      attemptNo++;
+      log('guest: attempt', attemptNo, '->', hostId);
+      ensurePeerOpen(function (err) {
+        if (closed) { attempting = false; return; }
+        if (err) { attempting = false; guestAttemptFailed(err); return; }
+        var c = null;
+        try { c = peer.connect(hostId, { reliable: true, serialization: 'json' }); }
+        catch (e) { warn('guest: connect() threw:', e); }
+        if (!c) { attempting = false; guestAttemptFailed(netError('signal-down', 'peer.connect() refused')); return; }
+        conn = c;
+        wireConn(c);
+      });
+    }
+
+    function guestAttemptFailed(err) {
+      if (closed) return;
+      if (!joined) finishJoin(err);
+      else scheduleGuestRetry(err);
+    }
+
+    function scheduleGuestRetry(err) {
+      if (closed || retryTimer) return;
+      var delay = backoffMs;
+      backoffMs = Math.min(backoffMs * 2, BACKOFF_MAX_MS);
+      setStatus('reconnecting', { role: 'guest', reason: err && (err.code || err.message), delayMs: delay, attempt: attemptNo + 1 });
+      log('guest: retry in', delay, 'ms');
+      retryTimer = setTimeout(function () {
+        retryTimer = null;
+        guestAttempt();
+      }, delay);
+    }
+
+    // ---- close ----------------------------------------------------------
+
+    function close() {
+      if (closed) return;
+      log('close()');
+      closed = true;
+      clearRetry();
+      stopHeartbeat();
+      attempting = false;
+      var c = conn; conn = null; dropConn(c);
+      var p = peer; peer = null; destroyPeer(p);
+      queue.length = 0;
+      if (joinPending) { var jp = joinPending; joinPending = null; clearTimeout(jp.timer); jp.reject(netError('closed', 'closed before join completed')); }
+      if (hostPending) { var hp = hostPending; hostPending = null; clearTimeout(hp.timer); hp.reject(netError('closed', 'closed before host completed')); }
+      status = 'closed';
+      emit('onStatus', 'closed');
+    }
+
+    return {
+      host: host,
+      join: join,
+      send: send,
+      close: close,
+      get isHost() { return isHost; },
+      get code() { return code; },
+      get status() { return status; },
+      // extras (tests / debugging)
+      get conn() { return conn; },
+      get peer() { return peer; },
+      get queued() { return queue.length; },
+      get attempts() { return attemptNo; },
+    };
+  }
+
+  window.TwoLanternsNet = {
+    create: create,
+    randomCode: randomCode,
+    normaliseCode: normaliseCode,
+    ID_PREFIX: ID_PREFIX,
+  };
+})();
+
+</script>
+<script>
+/* ---- app.js ---- */
+/* Two Lanterns — UI, lobby, and lockstep networking. Depends on TL (engine), TLBot, ART, TwoLanternsNet. */
+(function () {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+  const h = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html !== undefined) e.innerHTML = html; return e; };
+  const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const sprite = (key, cls) => ART.svg(key, cls);
+  const KNAME = { gale: 'Gale', rill: 'Rill' };
+  const KSUB = { gale: 'the fox · wind', rill: 'the frog · water' };
+  const LS = { get(k, d) { try { const v = localStorage.getItem('tl.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('tl.' + k, JSON.stringify(v)); } catch (e) {} }, del(k) { try { localStorage.removeItem('tl.' + k); } catch (e) {} } };
+  // Greedy full-information bot win rates (40 seeds): gentle ~78%, standard ~68%, harsh ~58% and falling.
+  const DIFFICULTY = {
+    gentle: { warmth: 6, schedule: [[1, 1, 1, 2, 1, 2], [1, 2, 1, 2, 2, 2], [2, 2, 2, 2, 2, 3], [2, 2, 3, 2, 3, 3], [2, 3, 3, 3, 3, 3]] },
+    standard: {},
+    harsh: { warmth: 4, schedule: [[1, 1, 2, 2, 1, 2], [2, 2, 1, 2, 2, 3], [2, 2, 3, 3, 2, 3], [3, 3, 3, 2, 3, 3], [3, 3, 3, 4, 3, 4]] },
+  };
+
+  // ---------- app state ----------
+  const A = {
+    mode: 'lobby', role: null, isHost: false, solo: false, net: null, code: null, netStatus: 'idle',
+    myName: LS.get('name', ''), names: { gale: '', rill: '' }, ready: { gale: false, rale: false },
+    seed: 0, config: {}, log: [], state: null, prev: null,
+    difficulty: LS.get('difficulty', 'standard'), sharedLanterns: LS.get('sharedLanterns', false),
+    lobby: { view: 'home', hostRole: 'gale', guestReady: false, hostReady: false, guestName: '', error: '' },
+    ui: { sel: null, busy: false, pendingSeq: null, hover: null, queue: [], lastHourShown: null, lastNightShown: null },
+    cseq: 0,
+  };
+  window.__TL = A; // for debugging
+  A._debug = { apply: (a) => applyOrdered(a), propose: (a) => propose(a), render: () => render(), TL, bot: () => TLBot };
+
+  // ---------- toasts / banners ----------
+  function toast(text, cls) { const t = h('div', 'toast ' + (cls || ''), esc(text)); $('#toasts').appendChild(t); setTimeout(() => t.remove(), 3200); }
+  let bannerTimer = null;
+  function banner(html, ms) { const b = $('#banner'); b.innerHTML = html; b.hidden = false; clearTimeout(bannerTimer); bannerTimer = setTimeout(() => { b.hidden = true; }, ms || 1400); }
+
+  // ---------- persistence ----------
+  function persist() {
+    if (A.solo || !A.code) return;
+    if (A.isHost) LS.set('host.' + A.code, { code: A.code, seed: A.seed, config: A.config, log: A.log, names: A.names, role: A.role, t: Date.now() });
+    else LS.set('guest.' + A.code, { code: A.code, role: A.role, name: A.myName, t: Date.now() });
+    LS.set('last', { code: A.code, isHost: A.isHost, t: Date.now() });
+  }
+
+  // ---------- game model ----------
+  function baseConfig() {
+    const d = DIFFICULTY[A.difficulty] || {};
+    return Object.assign({}, d, { sharedLanterns: !!A.sharedLanterns });
+  }
+  function resetGame(seed, config) {
+    A.seed = seed; A.config = config; A.log = [];
+    A.state = TL.newGame(seed, config); A.prev = null;
+    A.ui.sel = null; A.ui.busy = false; A.ui.queue = []; A.ui.lastHourShown = null; A.ui.lastNightShown = null;
+  }
+  function otherRole(r) { return r === 'gale' ? 'rill' : 'gale'; }
+
+  // Apply an action that the host has ordered. Returns error string or null.
+  function applyOrdered(a, opts) {
+    const r = TL.applyAction(A.state, a);
+    if (r.error) return r.error;
+    const before = A.state;
+    A.log.push(a); A.state = r.state;
+    persist();
+    if (A.ui.busy) { A.ui.queue.push({ before, events: r.events, action: a }); }
+    else animateThen(before, r.events, a);
+    return null;
+  }
+  function animateThen(before, events, action) {
+    const big = events.some(e => e.type === 'wispPhase' || e.type === 'night' || e.type === 'dawn');
+    if (!big) { render(); flashEvents(events); afterAction(action); return; }
+    playEvents(before, events, () => { render(); afterAction(action); drainQueue(); });
+  }
+  function drainQueue() {
+    if (A.ui.busy || !A.ui.queue.length) return;
+    const q = A.ui.queue.shift();
+    animateThen(q.before, q.events, q.action);
+  }
+  function afterAction(action) {
+    if (A.solo && A.state.phase === 'act' && action.keeper === A.role && action.k === 'done') soloBotTurn();
+    if (A.solo && A.state.phase === 'draft') soloBotDraft();
+    maybeShowHourBanner();
+  }
+
+  // Player intent → host ordering.
+  function propose(a) {
+    if (A.ui.busy) { toast('One moment…'); return; }
+    const err = TL.validate(A.state, a);
+    if (err) { toast(err, 'bad'); return; }
+    if (A.solo || A.isHost) {
+      applyOrdered(a);
+      if (A.net) A.net.send({ t: 'act', seq: A.log.length, a });
+    } else {
+      A.cseq += 1; A.ui.pendingSeq = A.cseq;
+      A.net.send({ t: 'propose', cseq: A.cseq, a });
+      render();
+      setTimeout(() => { if (A.ui.pendingSeq === a.__cseq) { A.ui.pendingSeq = null; render(); } }, 4000);
+    }
+  }
+
+  // ---------- networking ----------
+  function makeNet() {
+    return TwoLanternsNet.create({
+      onStatus(s, detail) { A.netStatus = s; renderTop(); if (s === 'open' && !A.isHost) { A.net.send({ t: 'hello', name: A.myName, role: A.role }); } if (s === 'reconnecting') toast('Connection dropped, reconnecting…', 'bad'); if (s === 'open' && A.mode === 'game') toast('Connected.'); },
+      onMessage(m) { try { onMsg(m); } catch (e) { console.error(e); } },
+      onPeerJoined() { toast((A.lobby.guestName || 'Your partner') + ' connected.'); sendLobby(); if (A.mode === 'game') sendWelcome(); },
+      onPeerLeft() { toast('Partner disconnected. Waiting for them to come back…', 'bad'); renderTop(); },
+    });
+  }
+  function sendLobby() { if (!A.isHost || !A.net) return; A.net.send({ t: 'lobby', hostName: A.myName, hostRole: A.lobby.hostRole, hostReady: A.lobby.hostReady, difficulty: A.difficulty, sharedLanterns: A.sharedLanterns, started: A.mode === 'game' }); }
+  function sendWelcome() { if (!A.isHost || !A.net) return; A.net.send({ t: 'welcome', seed: A.seed, config: A.config, log: A.log, names: A.names, guestRole: otherRole(A.role) }); }
+  function onMsg(m) {
+    if (A.isHost) {
+      if (m.t === 'hello') { A.lobby.guestName = m.name || 'Partner'; A.names[otherRole(A.lobby.hostRole)] = A.lobby.guestName; sendLobby(); if (A.mode === 'game') { A.names[otherRole(A.role)] = A.lobby.guestName; sendWelcome(); } renderLobby(); render(); return; }
+      if (m.t === 'ready') { A.lobby.guestReady = !!m.ready; renderLobby(); return; }
+      if (m.t === 'propose') {
+        const err = TL.validate(A.state, m.a);
+        if (err) { A.net.send({ t: 'reject', cseq: m.cseq, reason: err }); return; }
+        A.net.send({ t: 'act', seq: A.log.length + 1, a: m.a, cseq: m.cseq });
+        applyOrdered(m.a);
+        return;
+      }
+      if (m.t === 'ping') { showPing(m.x, m.y, otherRole(A.role)); return; }
+      if (m.t === 'resync') { sendWelcome(); return; }
+    } else {
+      if (m.t === 'lobby') {
+        A.names[m.hostRole] = m.hostName; A.role = otherRole(m.hostRole); A.names[A.role] = A.myName;
+        A.lobby.hostRole = m.hostRole; A.lobby.hostReady = !!m.hostReady; A.difficulty = m.difficulty; A.sharedLanterns = !!m.sharedLanterns;
+        if (A.mode === 'lobby') { A.lobby.view = 'room'; renderLobby(); }
+        return;
+      }
+      if (m.t === 'welcome') {
+        A.role = m.guestRole; A.names = m.names; A.names[A.role] = A.myName;
+        try { resetGame(m.seed, m.config); A.state = TL.replay(m.seed, m.config, m.log); A.log = m.log.slice(); }
+        catch (e) { console.error(e); toast('Could not sync with host: ' + e.message, 'bad'); return; }
+        A.ui.pendingSeq = null; enterGame(); render(); maybeShowHourBanner();
+        return;
+      }
+      if (m.t === 'act') {
+        if (m.cseq && m.cseq === A.ui.pendingSeq) A.ui.pendingSeq = null;
+        if (m.seq !== A.log.length + 1) { console.warn('[sync] seq gap', m.seq, A.log.length); A.net.send({ t: 'resync' }); return; }
+        const err = applyOrdered(m.a);
+        if (err) { console.warn('[sync] apply failed', err); A.net.send({ t: 'resync' }); }
+        return;
+      }
+      if (m.t === 'reject') { if (m.cseq === A.ui.pendingSeq) A.ui.pendingSeq = null; toast(m.reason, 'bad'); render(); return; }
+      if (m.t === 'ping') { showPing(m.x, m.y, otherRole(A.role)); return; }
+      if (m.t === 'reset') { resetGame(m.seed, m.config); A.log = []; enterGame(); render(); return; }
+    }
+  }
+
+  // ---------- lobby ----------
+  function randomCode() { const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; let s = ''; for (let i = 0; i < 4; i++) s += L[Math.floor(Math.random() * L.length)]; return s; }
+  function shareLink(code) { const u = new URL(location.href); u.search = ''; u.hash = ''; u.searchParams.set('room', code); return u.toString(); }
+
+  function renderLobby() {
+    const body = $('#lobbyBody'); body.innerHTML = '';
+    const v = A.lobby.view;
+    if (v === 'home') {
+      const f = h('div', 'field'); f.innerHTML = '<label>your name</label>';
+      const inp = h('input'); inp.type = 'text'; inp.placeholder = 'e.g. Shy'; inp.value = A.myName; inp.maxLength = 16;
+      inp.oninput = () => { A.myName = inp.value.trim(); LS.set('name', A.myName); };
+      f.appendChild(inp); body.appendChild(f);
+      const row = h('div', 'row');
+      const bHost = h('button', 'btn big', 'Create a room'); bHost.onclick = () => { if (!A.myName) { inp.focus(); return toast('Tell me your name first.'); } hostRoom(); };
+      const bJoin = h('button', 'btn big ghost', 'Join with a code'); bJoin.onclick = () => { if (!A.myName) { inp.focus(); return toast('Tell me your name first.'); } A.lobby.view = 'join'; renderLobby(); };
+      row.append(bHost, bJoin); body.appendChild(row);
+      const last = LS.get('last', null);
+      if (last && Date.now() - last.t < 6 * 3600e3) {
+        const r = h('div', 'row'); r.style.marginTop = '10px';
+        const b = h('button', 'btn small ghost', (last.isHost ? 'Resume hosting ' : 'Rejoin ') + last.code); b.onclick = () => { if (last.isHost) resumeHost(last.code); else { A.lobby.joinCode = last.code; joinRoom(last.code); } };
+        r.appendChild(b); body.appendChild(r);
+      }
+      body.appendChild(h('div', 'divider', 'or'));
+      const solo = h('div', 'row split');
+      solo.appendChild(h('div', 'hint', 'Practice alone: you play one keeper and a bot plays the other. Good for learning the cards.'));
+      const bSolo = h('button', 'btn small ghost', 'Practice with a bot'); bSolo.onclick = () => { A.lobby.view = 'solo'; renderLobby(); };
+      solo.appendChild(bSolo); body.appendChild(solo);
+      const help = h('p', 'hint'); help.style.marginTop = '18px'; help.innerHTML = 'Two players, two laptops. One of you creates a room and sends the link; the other joins. Talk out loud as much as you like: the game only hides your hands and what each lantern lights.';
+      body.appendChild(help);
+      return;
+    }
+    if (v === 'join') {
+      if (!A.myName) {
+        const nf = h('div', 'field'); nf.innerHTML = '<label>your name</label>';
+        const ni = h('input'); ni.type = 'text'; ni.placeholder = 'e.g. Carolyn'; ni.maxLength = 16; ni.oninput = () => { A.myName = ni.value.trim(); LS.set('name', A.myName); };
+        nf.appendChild(ni); body.appendChild(nf);
+      }
+      const f = h('div', 'field'); f.innerHTML = '<label>room code</label>';
+      const inp = h('input', 'code'); inp.type = 'text'; inp.maxLength = 4; inp.value = A.lobby.joinCode || ''; inp.placeholder = 'MOSS';
+      inp.oninput = () => { A.lobby.joinCode = inp.value.toUpperCase(); };
+      inp.onkeydown = (e) => { if (e.key === 'Enter') joinRoom(inp.value); };
+      f.appendChild(inp); body.appendChild(f);
+      if (A.lobby.error) body.appendChild(h('p', 'hint', '<span style="color:var(--bad)">' + esc(A.lobby.error) + '</span>'));
+      const row = h('div', 'row');
+      const b = h('button', 'btn big', 'Join'); b.onclick = () => { if (!A.myName) return toast('Tell me your name first.'); joinRoom(inp.value); };
+      const back = h('button', 'btn ghost', 'Back'); back.onclick = () => { A.lobby.view = 'home'; A.lobby.error = ''; renderLobby(); };
+      row.append(b, back); body.appendChild(row);
+      setTimeout(() => inp.focus(), 50);
+      return;
+    }
+    if (v === 'connecting') { body.appendChild(h('p', 'hint', esc(A.lobby.msg || 'Connecting…'))); const back = h('button', 'btn ghost small', 'Cancel'); back.onclick = () => { leaveAll(); }; body.appendChild(back); return; }
+    if (v === 'solo') {
+      body.appendChild(h('p', 'hint', 'Choose your keeper. The bot takes the other and acts after you press Done each hour.'));
+      body.appendChild(keeperChoices(A.lobby.hostRole, (r) => { A.lobby.hostRole = r; renderLobby(); }, null));
+      body.appendChild(settingsRow(true));
+      const row = h('div', 'row');
+      const b = h('button', 'btn big', 'Begin the night'); b.onclick = () => startSolo();
+      const back = h('button', 'btn ghost', 'Back'); back.onclick = () => { A.lobby.view = 'home'; renderLobby(); };
+      row.append(b, back); body.appendChild(row);
+      return;
+    }
+    if (v === 'room') {
+      const myRole = A.isHost ? A.lobby.hostRole : otherRole(A.lobby.hostRole);
+      if (A.isHost) {
+        body.appendChild(h('div', 'code-big', esc(A.code)));
+        const sh = h('div', 'share'); sh.innerHTML = `<code>${esc(shareLink(A.code))}</code>`;
+        const cp = h('button', 'btn small ghost', 'copy link'); cp.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(shareLink(A.code)).then(() => toast('Link copied.')); };
+        sh.appendChild(cp); body.appendChild(sh);
+        body.appendChild(h('p', 'hint', 'Send the link (or the code) to your partner. They open it on their laptop and join.'));
+      } else {
+        body.appendChild(h('div', 'code-big', esc(A.code)));
+        body.appendChild(h('p', 'hint', 'Connected to ' + esc(A.names[A.lobby.hostRole] || 'the host') + '. Waiting to begin.'));
+      }
+      const people = h('div', 'lobby-people');
+      const hostRole = A.lobby.hostRole, guestRole = otherRole(hostRole);
+      const hostName = A.isHost ? A.myName : (A.names[hostRole] || 'Host');
+      const guestName = A.isHost ? (A.lobby.guestName || '') : A.myName;
+      people.appendChild(person(hostRole, hostName, A.lobby.hostReady, A.isHost));
+      people.appendChild(person(guestRole, guestName || (A.isHost ? 'waiting for partner…' : ''), A.lobby.guestReady, !A.isHost));
+      body.appendChild(people);
+      if (A.isHost) {
+        body.appendChild(h('p', 'hint', 'Pick your keeper; your partner gets the other. Both of you press Ready.'));
+        body.appendChild(keeperChoices(A.lobby.hostRole, (r) => { A.lobby.hostRole = r; A.names = { gale: '', rill: '' }; A.names[r] = A.myName; A.names[otherRole(r)] = A.lobby.guestName; sendLobby(); renderLobby(); }, null));
+        body.appendChild(settingsRow(false));
+      } else {
+        body.appendChild(h('p', 'hint', `You are <b style="color:var(--${myRole})">${KNAME[myRole]}</b>, ${KSUB[myRole]}. Difficulty: ${esc(A.difficulty)}${A.sharedLanterns ? ' · shared lanterns' : ''}.`));
+      }
+      const row = h('div', 'row split'); row.style.marginTop = '12px';
+      const mine = A.isHost ? A.lobby.hostReady : A.lobby.guestReady;
+      const bReady = h('button', 'btn big ' + (mine ? 'ghost' : ''), mine ? 'Ready ✓ (click to unready)' : 'Ready');
+      bReady.onclick = () => { if (A.isHost) { A.lobby.hostReady = !A.lobby.hostReady; sendLobby(); } else { A.lobby.guestReady = !A.lobby.guestReady; A.net.send({ t: 'ready', ready: A.lobby.guestReady }); } renderLobby(); tryStart(); };
+      const back = h('button', 'btn ghost', 'Leave'); back.onclick = () => leaveAll();
+      row.append(bReady, back); body.appendChild(row);
+      if (A.isHost && A.lobby.hostReady && !A.lobby.guestReady) body.appendChild(h('p', 'hint', 'The night begins when your partner is ready too.'));
+      return;
+    }
+  }
+  function person(role, name, ready, me) {
+    const p = h('div', 'person'); p.innerHTML = sprite(role) + `<div class="who"><b style="color:var(--${role})">${esc(name || '—')}${me ? ' <span>(you)</span>' : ''}</b><span>${KNAME[role]} · ${KSUB[role]}</span></div>`;
+    const d = h('div', 'ready-dot' + (ready ? ' on' : '')); p.appendChild(d); return p;
+  }
+  function keeperChoices(cur, onPick) {
+    const c = h('div', 'choices');
+    for (const r of ['gale', 'rill']) {
+      const b = h('button', 'choice ' + r + (cur === r ? ' on' : ''));
+      b.innerHTML = sprite(r) + `<div><h3>${KNAME[r]}</h3><p>${r === 'gale' ? 'Quick fox. Pushes Chills into stones, scatters seeds, and moves 3.' : 'Patient frog. Makes puddles that grow plants and trap Chills, moves 2.'}</p></div>`;
+      b.onclick = () => onPick(r); c.appendChild(b);
+    }
+    return c;
+  }
+  function settingsRow(solo) {
+    const s = h('div', 'settings');
+    const seg = h('div', 'seg');
+    for (const d of ['gentle', 'standard', 'harsh']) { const b = h('button', A.difficulty === d ? 'on' : '', d); b.onclick = () => { A.difficulty = d; LS.set('difficulty', d); sendLobby(); renderLobby(); }; seg.appendChild(b); }
+    s.appendChild(seg);
+    const lab = h('label', 'check'); const cb = h('input'); cb.type = 'checkbox'; cb.checked = !!A.sharedLanterns; cb.onchange = () => { A.sharedLanterns = cb.checked; LS.set('sharedLanterns', cb.checked); sendLobby(); };
+    lab.appendChild(cb); lab.appendChild(document.createTextNode(' shared lanterns (both see every lit intent)')); s.appendChild(lab);
+    return s;
+  }
+  async function hostRoom() {
+    A.isHost = true; A.solo = false; A.lobby.view = 'connecting'; A.lobby.msg = 'Opening a room…'; renderLobby();
+    A.net = makeNet();
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const code = randomCode();
+      try { await A.net.host(code); A.code = code; break; }
+      catch (e) { if (e.code === 'id-taken') { A.net.close(); A.net = makeNet(); continue; } A.net.close(); A.net = null; A.lobby.view = 'home'; renderLobby(); toast(e.code === 'signal-down' ? 'Could not reach the matchmaking server. Check your connection and try again.' : ('Could not open a room: ' + e.message), 'bad'); return; }
+    }
+    if (!A.code) { A.lobby.view = 'home'; renderLobby(); toast('Could not find a free room code, try again.', 'bad'); return; }
+    A.role = A.lobby.hostRole; A.names[A.role] = A.myName;
+    A.lobby.view = 'room'; A.lobby.hostReady = false; A.lobby.guestReady = false; A.lobby.guestName = '';
+    history.replaceState(null, '', shareLink(A.code));
+    renderLobby(); renderTop();
+  }
+  async function resumeHost(code) {
+    const saved = LS.get('host.' + code, null);
+    if (!saved) return toast('No saved room ' + code, 'bad');
+    A.isHost = true; A.solo = false; A.lobby.view = 'connecting'; A.lobby.msg = 'Reopening room ' + code + '…'; renderLobby();
+    A.net = makeNet();
+    try { await A.net.host(code); } catch (e) { A.net.close(); A.net = null; A.lobby.view = 'home'; renderLobby(); toast('Could not reopen ' + code + ': ' + (e.code || e.message), 'bad'); return; }
+    A.code = code; A.role = saved.role; A.names = saved.names; A.lobby.hostRole = saved.role; A.lobby.guestName = saved.names[otherRole(saved.role)] || '';
+    resetGame(saved.seed, saved.config);
+    try { A.state = TL.replay(saved.seed, saved.config, saved.log); A.log = saved.log.slice(); }
+    catch (e) { toast('Saved game could not be replayed: ' + e.message, 'bad'); A.lobby.view = 'home'; renderLobby(); return; }
+    history.replaceState(null, '', shareLink(A.code));
+    if (A.state.phase === 'lobby') { A.lobby.view = 'room'; renderLobby(); renderTop(); }
+    else { enterGame(); render(); toast('Room reopened. Your partner can rejoin with the same link.'); }
+  }
+  async function joinRoom(codeRaw) {
+    const code = String(codeRaw || '').trim().toUpperCase();
+    if (code.length !== 4) { A.lobby.error = 'Codes are four letters.'; renderLobby(); return; }
+    A.isHost = false; A.solo = false; A.lobby.view = 'connecting'; A.lobby.msg = 'Joining ' + code + '…'; A.lobby.error = ''; renderLobby();
+    A.net = makeNet();
+    try { await A.net.join(code); }
+    catch (e) { A.net.close(); A.net = null; A.lobby.view = 'join'; A.lobby.error = e.code === 'no-such-room' ? 'No room with that code is open right now.' : e.code === 'signal-down' ? 'Could not reach the matchmaking server.' : e.code === 'timeout' ? 'The host did not answer. Ask them to reopen the room.' : e.message; renderLobby(); return; }
+    A.code = code; history.replaceState(null, '', shareLink(code));
+    A.lobby.msg = 'Connected, waiting for the host…'; renderLobby(); renderTop();
+  }
+  function tryStart() {
+    if (!A.isHost || A.mode !== 'lobby') return;
+    if (!(A.lobby.hostReady && A.lobby.guestReady)) return;
+    const seed = (Math.random() * 0xffffffff) >>> 0;
+    resetGame(seed, baseConfig());
+    A.names[A.role] = A.myName; A.names[otherRole(A.role)] = A.lobby.guestName || 'Partner';
+    sendWelcome();
+    enterGame();
+    propose({ k: 'start' });
+  }
+  function startSolo() {
+    A.solo = true; A.isHost = true; A.net = null; A.code = null; A.role = A.lobby.hostRole;
+    A.names[A.role] = A.myName || 'You'; A.names[otherRole(A.role)] = 'Bot ' + KNAME[otherRole(A.role)];
+    resetGame((Math.random() * 0xffffffff) >>> 0, baseConfig());
+    enterGame();
+    propose({ k: 'start' });
+  }
+  function enterGame() {
+    A.mode = 'game'; $('#lobby').hidden = true; $('#game').hidden = false; $('#btnLeave').hidden = false; $('#statusBar').hidden = false;
+    buildBoard(); render();
+  }
+  function leaveAll() {
+    if (A.net) { try { A.net.close(); } catch (e) {} }
+    A.net = null; A.code = null; A.mode = 'lobby'; A.solo = false; A.isHost = false; A.state = null; A.log = [];
+    A.lobby.view = 'home'; A.lobby.hostReady = false; A.lobby.guestReady = false; A.lobby.guestName = ''; A.lobby.error = '';
+    $('#lobby').hidden = false; $('#game').hidden = true; $('#btnLeave').hidden = true; $('#statusBar').hidden = true; $('#modal').hidden = true;
+    history.replaceState(null, '', location.pathname);
+    renderLobby(); renderTop();
+  }
+
+  // ---------- solo bot ----------
+  function soloBotTurn() {
+    const bot = otherRole(A.role);
+    const hourKey = A.state.night + ':' + A.state.hour;
+    const step = () => {
+      if (A.state.phase !== 'act' || A.state.keepers[bot].done) return;
+      if (A.state.night + ':' + A.state.hour !== hourKey) return;
+      if (A.ui.busy) { setTimeout(step, 200); return; }
+      const a = TLBot.chooseAction(A.state, bot, { weights: TLBot.DEFAULT_W });
+      if (!a) return;
+      applyOrdered(a);
+      if (A.state.phase === 'act' && !A.state.keepers[bot].done) setTimeout(step, 550);
+    };
+    setTimeout(step, 500);
+  }
+  function soloBotDraft() {
+    const bot = otherRole(A.role);
+    if (A.state.draft && A.state.draft.picks[bot] === null) setTimeout(() => { if (A.state.draft && A.state.draft.picks[bot] === null) applyOrdered({ k: 'pick', keeper: bot, index: Math.floor(Math.random() * 3) }); }, 900);
+  }
+
+  // ---------- board ----------
+  const tileEls = []; let piecesEl = null;
+  function buildBoard() {
+    const b = $('#board'); b.innerHTML = ''; tileEls.length = 0;
+    const W = 7, H = 6;
+    b.appendChild(h('div', 'coord', ''));
+    for (let x = 0; x < W; x++) b.appendChild(h('div', 'coord', String.fromCharCode(65 + x)));
+    for (let y = 0; y < H; y++) {
+      b.appendChild(h('div', 'coord', String(y + 1)));
+      for (let x = 0; x < W; x++) {
+        const t = h('div', 'tile' + ((x + y) % 2 ? ' alt' : '') + (x === 0 || y === 0 || x === W - 1 || y === H - 1 ? ' edge' : ''));
+        t.dataset.x = x; t.dataset.y = y;
+        t.innerHTML = '<div class="terrain"></div><div class="plant"></div><div class="spawn"></div>';
+        t.onclick = (e) => onTileClick(x, y, e);
+        t.onmouseenter = () => onTileHover(x, y); t.onmouseleave = () => onTileHover(null);
+        t.oncontextmenu = (e) => { e.preventDefault(); cancelSel(); };
+        b.appendChild(t); tileEls.push(t);
+      }
+    }
+    piecesEl = h('div'); piecesEl.id = 'pieces'; b.appendChild(piecesEl);
+    pieceEls.clear();
+  }
+  const pieceEls = new Map();
+  function tileEl(x, y) { return tileEls[y * 7 + x]; }
+  function place(el, x, y) { el.style.transform = `translate(calc(${x} * var(--tile)), calc(${y} * var(--tile)))`; }
+
+  function renderBoard(disp) {
+    const s = disp || A.state; if (!s || !s.tiles.length) return;
+    const me = A.role, them = otherRole(me);
+    const r = TL.lanternRadius(s);
+    const sel = A.ui.sel;
+    const targetTiles = new Set(), moveTiles = new Set(), targetWisps = new Set(), threat = new Set();
+    if (sel && !disp) {
+      if (sel.kind === 'move') for (const t of sel.tiles) moveTiles.add(t.x + ',' + t.y);
+      if (sel.kind === 'card') {
+        if (sel.step === 0) {
+          for (const t of sel.targets) { if (t.wisp !== undefined) targetWisps.add(t.wisp); else if (t.x !== undefined) targetTiles.add(t.x + ',' + t.y); }
+        } else if (sel.step === 1 && sel.card && TL.CARDS[sel.card].target === 'plant-move') {
+          for (const t of sel.targets) if (t.x === sel.first.x && t.y === sel.first.y) targetTiles.add(t.tx + ',' + t.ty);
+        }
+      }
+    }
+    // breath threat tiles from lit intents
+    for (const w of s.wisps) {
+      if (w.hp <= 0 || !w.intent || w.intent.kind !== 'breathe') continue;
+      const vis = TL.intentVisibleTo(s, w, me);
+      if (vis !== 'mine') continue;
+      const dirs = TL.WISP_TYPES[w.type].area ? TL.DIR_LIST : [w.intent.dir];
+      for (const d of dirs) { const x = w.x + TL.DIRS[d][0], y = w.y + TL.DIRS[d][1]; const t = TL.tileAt(s, x, y); if (t && t.plant > 0) threat.add(x + ',' + y); }
+    }
+    for (let y = 0; y < 6; y++) for (let x = 0; x < 7; x++) {
+      const t = s.tiles[y * 7 + x]; const el = tileEl(x, y);
+      el.classList.toggle('puddle', t.terrain === 'puddle'); el.classList.toggle('stone', t.terrain === 'stone'); el.classList.toggle('frost', t.terrain === 'frost');
+      const terr = el.firstChild;
+      const want = t.terrain === 'soil' ? '' : t.terrain;
+      if (terr.dataset.k !== want) { terr.dataset.k = want; terr.innerHTML = want ? sprite(want) : ''; }
+      const pl = el.children[1];
+      const pk = t.plant ? ['', 'seed', 'sprout', 'bloom'][t.plant] : '';
+      if (pl.dataset.k !== pk) { pl.dataset.k = pk; pl.innerHTML = pk ? sprite(pk) : ''; if (pk) { pl.classList.remove('pop'); void pl.offsetWidth; pl.classList.add('pop'); } }
+      const sp = el.children[2];
+      const spawn = s.spawns.find(q => q.x === x && q.y === y);
+      const sk = spawn ? spawn.type : '';
+      if (sp.dataset.k !== sk) { sp.dataset.k = sk; sp.innerHTML = sk ? sprite('spawn_mark') : ''; sp.title = sk ? (TL.WISP_TYPES[sk].name + ' arrives here at dusk') : ''; }
+      let dew = el.querySelector('.dew-tag'); if (t.dew && !dew) { dew = h('div', 'dew-tag', 'dew'); el.appendChild(dew); } else if (!t.dew && dew) dew.remove();
+      const litMine = TL.manhattan(x, y, s.keepers[me].x, s.keepers[me].y) <= r;
+      const litThem = TL.manhattan(x, y, s.keepers[them].x, s.keepers[them].y) <= r;
+      el.classList.toggle('lit-mine', litMine); el.classList.toggle('lit-partner', litThem && !litMine);
+      const k = x + ',' + y;
+      el.classList.toggle('target', targetTiles.has(k) || moveTiles.has(k)); el.classList.toggle('move', moveTiles.has(k));
+      el.classList.toggle('threat', threat.has(k));
+    }
+    // pieces
+    const seen = new Set();
+    for (const id of TL.KEEPER_IDS) {
+      const k = s.keepers[id]; const key = 'k-' + id; seen.add(key);
+      let el = pieceEls.get(key);
+      if (!el) { el = h('div', 'piece keeper ' + id); el.innerHTML = '<div class="body"></div>'; piecesEl.appendChild(el); pieceEls.set(key, el); el.onclick = (e) => onKeeperClick(id, e); }
+      const body = el.firstChild; const sk = id + (k.frosted ? '_frosted' : '');
+      if (body.dataset.k !== sk) { body.dataset.k = sk; body.innerHTML = sprite(sk); }
+      el.classList.toggle('mine', id === me); el.classList.toggle('clickable', id === me && !disp && s.phase === 'act' && !k.moved && !k.done);
+      el.classList.toggle('selected', !!(sel && sel.kind === 'move'));
+      el.title = `${A.names[id] || KNAME[id]} · ${KNAME[id]}`;
+      place(el, k.x, k.y);
+    }
+    for (const w of s.wisps) {
+      if (w.hp <= 0) continue;
+      const key = 'w-' + w.id; seen.add(key);
+      let el = pieceEls.get(key);
+      if (!el) { el = h('div', 'piece wisp'); el.innerHTML = '<div class="body"></div><div class="soak"></div><div class="hp"></div><div class="intent"></div><div class="steps"></div>'; piecesEl.appendChild(el); pieceEls.set(key, el); el.onclick = (e) => onWispClick(w.id, e); el.classList.add('spawnin'); }
+      const body = el.children[0]; if (body.dataset.k !== w.type) { body.dataset.k = w.type; body.innerHTML = sprite(w.type); }
+      el.children[1].innerHTML = w.soaked ? sprite('soaked_overlay') : '';
+      const hp = el.children[2]; const hpk = TL.WISP_TYPES[w.type].hp > 1 ? w.hp : 0; if (hp.dataset.k !== String(hpk)) { hp.dataset.k = String(hpk); hp.innerHTML = hpk ? '<i></i>'.repeat(hpk) : ''; }
+      const vis = TL.intentVisibleTo(s, w, me);
+      const it = w.intent || { kind: 'none' };
+      const intentEl = el.children[3], stepsEl = el.children[4];
+      let ik = '', cls = 'intent', steps = '';
+      if (vis === 'dark') { ik = 'intent_unknown'; cls += ' center'; }
+      else if (vis === 'partner') { ik = 'intent_partner'; cls += ' center'; }
+      else if (it.kind === 'breathe') { ik = 'intent_breathe'; cls += ' ' + it.dir; }
+      else if (it.kind === 'move') { ik = 'intent_move'; cls += ' ' + it.dir; steps = String(it.steps); }
+      if (intentEl.dataset.k !== ik + cls) { intentEl.dataset.k = ik + cls; intentEl.className = cls; intentEl.innerHTML = ik ? sprite(ik) : ''; }
+      stepsEl.textContent = steps; stepsEl.style.display = steps ? '' : 'none';
+      el.title = wispTitle(s, w, vis);
+      el.classList.toggle('target', targetWisps.has(w.id));
+      place(el, w.x, w.y);
+    }
+    for (const [key, el] of pieceEls) { if (!seen.has(key) && !el.classList.contains('ghost') && !el.classList.contains('fx')) { el.classList.add('poof'); pieceEls.delete(key); setTimeout(() => el.remove(), 450); } }
+    // ghosts & arrows are handled by preview/arrows layers
+    renderArrows();
+  }
+  function wispTitle(s, w, vis) {
+    const T = TL.WISP_TYPES[w.type];
+    let t = `${T.name}${T.hp > 1 ? ` (${w.hp} hp)` : ''}${w.soaked ? ', soaked (cannot move)' : ''}. `;
+    if (vis === 'dark') t += 'Outside both lanterns: intent unknown.';
+    else if (vis === 'partner') t += `Inside ${A.names[otherRole(A.role)] || 'your partner'}'s lantern: ask them what it intends.`;
+    else if (w.intent.kind === 'breathe') t += `Will breathe ${w.intent.dir}${T.area ? ' (all four sides)' : ''}.`;
+    else if (w.intent.kind === 'move') t += `Will move ${w.intent.steps} ${w.intent.dir}${w.intent.fickle ? ' (fickle drift)' : ''}.`;
+    else t += 'Will do nothing this hour.';
+    return t;
+  }
+  let arrowsEl = null;
+  function renderArrows() {
+    if (arrowsEl) { arrowsEl.remove(); arrowsEl = null; }
+    const sel = A.ui.sel; if (!sel || sel.kind !== 'card' || A.state.phase !== 'act') return;
+    const c = TL.CARDS[sel.card];
+    let at = null, dirs = null;
+    if (c.target === 'dir') { const k = A.state.keepers[A.role]; at = [k.x, k.y]; dirs = TL.DIR_LIST; }
+    if (c.target === 'wisp-dir' && sel.step === 1) { const w = A.state.wisps.find(w => w.id === sel.first.wisp); if (!w) return; at = [w.x, w.y]; dirs = sel.targets.filter(t => t.wisp === w.id).map(t => t.dir); }
+    if (!at) return;
+    arrowsEl = h('div', 'arrows'); place(arrowsEl, at[0], at[1]);
+    for (const d of TL.DIR_LIST) {
+      const b = h('button', 'arrow ' + d, { N: '↑', E: '→', S: '↓', W: '←' }[d]);
+      b.disabled = !dirs.includes(d);
+      b.onclick = (e) => { e.stopPropagation(); const target = c.target === 'dir' ? { dir: d } : { wisp: sel.first.wisp, dir: d }; playCard(target); };
+      b.onmouseenter = () => previewTarget(c.target === 'dir' ? { dir: d } : { wisp: sel.first.wisp, dir: d }); b.onmouseleave = () => clearPreview();
+      arrowsEl.appendChild(b);
+    }
+    piecesEl.appendChild(arrowsEl);
+  }
+
+  // ---------- preview ----------
+  let previewEls = [];
+  function clearPreview() { for (const e of previewEls) e.remove(); previewEls = []; }
+  function previewTarget(target) {
+    clearPreview();
+    const sel = A.ui.sel; if (!sel || sel.kind !== 'card') return;
+    const a = { k: 'card', keeper: A.role, hand: sel.hand, target };
+    const r = TL.applyAction(A.state, a); if (r.error) return;
+    showDiff(A.state, r.state, r.events);
+  }
+  function previewMove(x, y) { clearPreview(); const g = ghost(A.role, x, y, 'keeper ' + A.role); previewEls.push(g); }
+  function ghost(spriteKey, x, y, cls) { const g = h('div', 'piece ghost ' + (cls || '')); g.innerHTML = '<div class="body">' + sprite(spriteKey) + '</div>'; place(g, x, y); piecesEl.appendChild(g); return g; }
+  function fx(cls, x, y, html) { const f = h('div', 'fx ' + cls, html || ''); place(f, x, y); piecesEl.appendChild(f); return f; }
+  function showDiff(before, after, events) {
+    const bw = new Map(before.wisps.map(w => [w.id, w]));
+    for (const w of after.wisps) {
+      const b = bw.get(w.id); if (!b) continue;
+      if (b.x !== w.x || b.y !== w.y) { previewEls.push(ghost(w.type, w.x, w.y, 'wisp')); }
+      if (w.hp < b.hp) previewEls.push(fx('label', w.x, w.y, '−1'));
+    }
+    for (const e of events) {
+      if (e.type === 'die') previewEls.push(fx('melt', e.x, e.y, 'melts'));
+      if (e.type === 'plant') previewEls.push(ghost(['', 'seed', 'sprout', 'bloom'][e.stage], e.x, e.y));
+      if (e.type === 'grow') previewEls.push(ghost(['', 'seed', 'sprout', 'bloom'][e.stage], e.x, e.y));
+      if (e.type === 'puddle') previewEls.push(ghost('puddle', e.x, e.y));
+      if (e.type === 'hop') previewEls.push(ghost(e.keeper, e.to[0], e.to[1], 'keeper'));
+      if (e.type === 'carry') previewEls.push(fx('label', e.to[0], e.to[1], 'here'));
+      if (e.type === 'calm') previewEls.push(fx('label', e.x, e.y, 'calmed'));
+      if (e.type === 'thaw') previewEls.push(fx('label', e.x, e.y, 'thaws'));
+      if (e.type === 'drain') previewEls.push(fx('label', e.x, e.y, 'drained'));
+    }
+  }
+
+  // ---------- interaction ----------
+  function myKeeper() { return A.state.keepers[A.role]; }
+  function canAct() { return A.mode === 'game' && A.state && A.state.phase === 'act' && !A.ui.busy && A.ui.pendingSeq === null && !myKeeper().done; }
+  function cancelSel() { A.ui.sel = null; clearPreview(); render(); }
+  function selectMove() {
+    if (!canAct() || myKeeper().moved) return;
+    if (A.ui.sel && A.ui.sel.kind === 'move') return cancelSel();
+    A.ui.sel = { kind: 'move', tiles: TL.keeperReach(A.state, myKeeper()) }; clearPreview(); render();
+  }
+  function selectCard(i) {
+    if (!canAct()) return;
+    const k = myKeeper(); if (k.played >= A.state.config.cardsPerHour) return toast('No card plays left this hour.');
+    if (A.ui.sel && A.ui.sel.kind === 'card' && A.ui.sel.hand === i) return cancelSel();
+    const cid = k.hand[i]; const targets = TL.cardTargets(A.state, k, cid);
+    if (!targets.length) return toast('No valid target for ' + TL.CARDS[cid].name + ' right now.');
+    const c = TL.CARDS[cid];
+    if (c.target === 'none') { A.ui.sel = { kind: 'card', hand: i, card: cid, targets, step: 0 }; playCard({}); return; }
+    A.ui.sel = { kind: 'card', hand: i, card: cid, targets, step: 0, first: null }; clearPreview(); render();
+    hint(targetHint(c));
+  }
+  function targetHint(c) {
+    switch (c.target) {
+      case 'dir': return 'Pick a direction.';
+      case 'wisp-adjacent': case 'wisp-range': return 'Click a highlighted Chill.';
+      case 'wisp-dir': return 'Click a Chill, then a direction.';
+      case 'plant-move': return 'Click a plant, then where to carry it.';
+      case 'plant-range': return 'Click a highlighted plant.';
+      default: return 'Click a highlighted tile.';
+    }
+  }
+  function playCard(target) {
+    const sel = A.ui.sel; if (!sel) return;
+    const a = { k: 'card', keeper: A.role, hand: sel.hand, target };
+    A.ui.sel = null; clearPreview();
+    propose(a);
+  }
+  function onTileClick(x, y, e) {
+    if (e && e.shiftKey) { sendPing(x, y); return; }
+    const sel = A.ui.sel; if (!sel || !canAct()) return;
+    if (sel.kind === 'move') { if (sel.tiles.some(t => t.x === x && t.y === y)) { A.ui.sel = null; clearPreview(); propose({ k: 'move', keeper: A.role, x, y }); } return; }
+    if (sel.kind === 'card') {
+      const c = TL.CARDS[sel.card];
+      if (c.target === 'plant-move') {
+        if (sel.step === 0) { if (sel.targets.some(t => t.x === x && t.y === y)) { sel.first = { x, y }; sel.step = 1; render(); hint('Now click where to carry it.'); } return; }
+        const t = sel.targets.find(t => t.x === sel.first.x && t.y === sel.first.y && t.tx === x && t.ty === y); if (t) playCard(t); return;
+      }
+      const t = sel.targets.find(t => t.x === x && t.y === y && t.wisp === undefined); if (t) playCard(t);
+      else { const w = TL.wispAt(A.state, x, y); if (w) onWispClick(w.id, e); }
+    }
+  }
+  function onWispClick(id, e) {
+    if (e) e.stopPropagation();
+    if (e && e.shiftKey) { const w = A.state.wisps.find(w => w.id === id); if (w) sendPing(w.x, w.y); return; }
+    const sel = A.ui.sel; if (!sel || sel.kind !== 'card' || !canAct()) return;
+    const c = TL.CARDS[sel.card];
+    if (c.target === 'wisp-dir') { if (sel.targets.some(t => t.wisp === id)) { sel.first = { wisp: id }; sel.step = 1; render(); hint('Now pick a direction.'); } return; }
+    const t = sel.targets.find(t => t.wisp === id); if (t) playCard(t);
+  }
+  function onKeeperClick(id, e) { if (e) e.stopPropagation(); if (id === A.role) selectMove(); }
+  function onTileHover(x, y) {
+    const sel = A.ui.sel; if (!sel || A.ui.busy) { clearPreview(); return; }
+    if (x === null) { clearPreview(); return; }
+    if (sel.kind === 'move') { if (sel.tiles.some(t => t.x === x && t.y === y)) previewMove(x, y); else clearPreview(); return; }
+    if (sel.kind === 'card') {
+      const c = TL.CARDS[sel.card];
+      let t = null;
+      if (c.target === 'plant-move' && sel.step === 1) t = sel.targets.find(t => t.x === sel.first.x && t.y === sel.first.y && t.tx === x && t.ty === y);
+      else if (c.target === 'wisp-dir') t = null;
+      else { t = sel.targets.find(t => t.x === x && t.y === y && t.wisp === undefined); if (!t) { const w = TL.wispAt(A.state, x, y); if (w) t = sel.targets.find(t => t.wisp === w.id && t.dir === undefined); } }
+      if (t) previewTarget(t); else clearPreview();
+    }
+  }
+  function sendPing(x, y) { showPing(x, y, A.role); if (A.net) A.net.send({ t: 'ping', x, y }); }
+  function showPing(x, y, from) {
+    const f = fx('ping', x, y, sprite('ping')); f.style.filter = from === 'gale' ? 'drop-shadow(0 0 6px var(--gale))' : 'drop-shadow(0 0 6px var(--rill))';
+    setTimeout(() => f.remove(), 1400);
+    const t = tileEl(x, y); t.classList.remove('pinged'); void t.offsetWidth; t.classList.add('pinged');
+    if (from !== A.role) toast(`${A.names[from] || KNAME[from]} points at ${TL.coordName(x, y)}`);
+  }
+  function hint(html) { $('#boardhint').innerHTML = html; }
+  document.addEventListener('keydown', (e) => {
+    if (A.mode !== 'game') return;
+    if (e.key === 'Escape') { cancelSel(); }
+    if (e.key === 'm' || e.key === 'M') selectMove();
+    if (e.key === 'd' || e.key === 'D') { const b = $('#btnDone'); if (b && !b.disabled) b.click(); }
+    if (e.key >= '1' && e.key <= '5') selectCard(parseInt(e.key, 10) - 1);
+  });
+
+  // ---------- panels ----------
+  function render() {
+    if (A.mode !== 'game' || !A.state) return;
+    renderTop(); renderBoard(); renderLeft(); renderRight(); renderModal(); renderHint();
+  }
+  function renderTop() {
+    const s = A.state;
+    $('#brandLantern').innerHTML = $('#brandLantern').innerHTML || sprite('lantern');
+    if (A.mode === 'game' && s) {
+      $('#pillNight').textContent = s.phase === 'lobby' ? 'Getting ready' : s.phase === 'draft' ? `Dawn after night ${s.night}` : s.phase === 'won' ? 'Dawn of the last night' : s.phase === 'lost' ? 'The garden sleeps' : `Night ${s.night} · Hour ${s.hour} of ${s.config.hours}`;
+      const flames = []; for (let i = 0; i < Math.max(s.warmth, s.config.warmth); i++) flames.push(`<span class="flame ${i < s.warmth ? 'on' : ''}">${sprite('warmth')}</span>`);
+      $('#pillWarmth').innerHTML = `<span class="flames">${flames.join('')}</span> ${s.warmth}`;
+      $('#pillGlow').innerHTML = `<span class="ico">${sprite('glow')}</span> ${s.glow}`;
+    }
+    const pr = $('#pillRoom');
+    if (A.code) { pr.hidden = false; pr.textContent = A.code; pr.title = 'Click to copy the invite link'; pr.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(shareLink(A.code)).then(() => toast('Link copied.')); }; } else pr.hidden = true;
+    const pn = $('#pillNet');
+    if (A.net) { pn.hidden = false; const st = A.netStatus; pn.textContent = st === 'open' ? 'connected' : st === 'reconnecting' ? 'reconnecting…' : st === 'connecting' ? 'connecting…' : st; pn.className = 'pill net ' + (st === 'open' ? 'open' : st === 'connecting' || st === 'idle' ? '' : 'bad'); }
+    else if (A.solo) { pn.hidden = false; pn.textContent = 'practice'; pn.className = 'pill net'; } else pn.hidden = true;
+  }
+  function renderLeft() {
+    const s = A.state, k = myKeeper(); const L = $('#left'); L.innerHTML = '';
+    const head = h('div', 'keeper-head ' + A.role); head.innerHTML = `<div class="portrait">${sprite(A.role + (k.frosted ? '_frosted' : ''))}</div><div><div class="name">${esc(A.names[A.role] || KNAME[A.role])}</div><div class="sub">${KNAME[A.role]} · ${KSUB[A.role]} · you</div></div>`;
+    L.appendChild(head);
+    const acting = s.phase === 'act';
+    const st = h('div', 'stat-row');
+    st.innerHTML = `<span class="chip ${!k.moved && acting ? 'on' : ''}">move ${k.moved ? 'used' : 'ready · ' + TL.keeperSpeed(s, k)}</span><span class="chip ${k.played < s.config.cardsPerHour && acting ? 'on' : ''}">cards ${s.config.cardsPerHour - k.played} left</span>${k.done ? '<span class="chip done">done ✓</span>' : ''}${k.frosted ? '<span class="chip frosted">frosted</span>' : ''}`;
+    L.appendChild(st);
+    const act = h('div', 'actions');
+    const bMove = h('button', 'btn ghost move' + (A.ui.sel && A.ui.sel.kind === 'move' ? ' on' : ''), 'Move'); bMove.disabled = !canAct() || k.moved; bMove.onclick = selectMove; bMove.title = 'M';
+    const bDone = h('button', 'btn done', A.ui.pendingSeq ? '…' : 'Done'); bDone.id = 'btnDone'; bDone.disabled = !canAct(); bDone.title = 'D';
+    const nothingLeft = k.moved && k.played >= s.config.cardsPerHour;
+    const nothingUseful = k.played >= s.config.cardsPerHour || k.hand.every(cid => !TL.cardTargets(s, k, cid).length);
+    if (canAct() && (nothingLeft || (k.moved && nothingUseful))) bDone.classList.add('pulse');
+    bDone.onclick = () => { if (!canAct()) return; cancelSel(); propose({ k: 'done', keeper: A.role }); };
+    act.append(bMove, bDone); L.appendChild(act);
+    L.appendChild(h('div', 'section-title', 'hand'));
+    const hand = h('div', 'hand');
+    k.hand.forEach((cid, i) => {
+      const c = TL.CARDS[cid]; const ok = acting && k.played < s.config.cardsPerHour && TL.cardTargets(s, k, cid).length > 0;
+      const el = h('div', 'card ' + c.keeper + (ok && canAct() ? '' : ' disabled') + (A.ui.sel && A.ui.sel.kind === 'card' && A.ui.sel.hand === i ? ' selected' : ''));
+      el.innerHTML = `<div class="title"><span>${esc(c.name)}</span><span class="tag">${c.exhaust ? 'exhaust · ' : ''}${i + 1}</span></div><div class="text">${esc(c.text)}</div>`;
+      el.onclick = () => selectCard(i); hand.appendChild(el);
+    });
+    if (!k.hand.length) hand.appendChild(h('div', 'hint', 'No cards in hand.'));
+    L.appendChild(hand);
+    L.appendChild(h('div', 'deckline', `<span>draw ${k.deck.length}</span><span>discard ${k.discard.length}</span><span>exhausted ${k.exhausted.length}</span>`));
+    if (s.charms.length) {
+      L.appendChild(h('div', 'section-title', 'charms'));
+      const ch = h('div', 'charms'); for (const c of s.charms) ch.appendChild(h('div', 'charm', `<b>${TL.CHARMS[c].name}</b> · ${esc(TL.CHARMS[c].text)}`)); L.appendChild(ch);
+    }
+  }
+  function renderRight() {
+    const s = A.state, them = otherRole(A.role), k = s.keepers[them]; const R = $('#right'); R.innerHTML = '';
+    const head = h('div', 'keeper-head ' + them); head.innerHTML = `<div class="portrait">${sprite(them + (k.frosted ? '_frosted' : ''))}</div><div><div class="name">${esc(A.names[them] || KNAME[them])}</div><div class="sub">${KNAME[them]} · ${KSUB[them]} · partner</div></div>`;
+    R.appendChild(head);
+    const st = h('div', 'stat-row');
+    st.innerHTML = `<span class="chip ${!k.moved ? 'on' : ''}">move ${k.moved ? 'used' : 'ready'}</span><span class="chip ${k.played < s.config.cardsPerHour ? 'on' : ''}">cards ${s.config.cardsPerHour - k.played} left</span>${k.done ? '<span class="chip done">done ✓</span>' : (s.phase === 'act' ? '<span class="chip">thinking…</span>' : '')}${k.frosted ? '<span class="chip frosted">frosted</span>' : ''}`;
+    R.appendChild(st);
+    R.appendChild(h('div', 'section-title', 'hand'));
+    R.appendChild(h('div', 'talk', `<b>${k.hand.length} card${k.hand.length === 1 ? '' : 's'}</b> you can't see. Ask what they can do; tell them what you can.`));
+    if (s.spawns.length && s.phase === 'act') {
+      R.appendChild(h('div', 'section-title', 'arriving at dusk'));
+      const sl = h('div', 'spawnlist');
+      for (const sp of s.spawns) sl.appendChild(h('div', 'sp', `${sprite(sp.type)} ${TL.WISP_TYPES[sp.type].name} at <b>${TL.coordName(sp.x, sp.y)}</b>`));
+      R.appendChild(sl);
+    }
+    R.appendChild(h('div', 'section-title', 'the night so far'));
+    const lg = h('div', 'log');
+    const entries = s.log.slice(-60).reverse();
+    for (const e of entries) lg.appendChild(h('div', e.cls || '', `<span style="color:var(--muted)">${e.night ? 'n' + e.night + 'h' + e.hour : ''}</span> ${esc(e.text)}`));
+    R.appendChild(lg);
+  }
+  function renderHint() {
+    const s = A.state; if (!s) return;
+    if (A.ui.busy) return hint('');
+    if (s.phase !== 'act') return hint('');
+    if (A.ui.pendingSeq) return hint('Sending…');
+    const k = myKeeper(), o = s.keepers[otherRole(A.role)];
+    if (A.ui.sel) { if (A.ui.sel.kind === 'move') return hint(`Click a tile to move <b>${KNAME[A.role]}</b>. Esc to cancel.`); return hint(targetHint(TL.CARDS[A.ui.sel.card]) + ' Esc to cancel.'); }
+    if (k.done && !o.done) return hint(`Waiting for <b>${esc(A.names[otherRole(A.role)] || KNAME[otherRole(A.role)])}</b> to finish the hour.`);
+    if (k.done) return hint('');
+    const parts = [];
+    if (!k.moved) parts.push('move'); if (k.played < s.config.cardsPerHour) parts.push(`play ${s.config.cardsPerHour - k.played} card${s.config.cardsPerHour - k.played > 1 ? 's' : ''}`);
+    hint(parts.length ? `You can ${parts.join(' and ')}. Shift-click a tile to point at it.` : 'Nothing left this hour. Press <b>Done</b> when you are happy.');
+  }
+  function maybeShowHourBanner() {
+    const s = A.state; if (!s) return;
+    if (s.phase === 'act') {
+      const key = s.night + ':' + s.hour;
+      if (A.ui.lastHourShown !== key) { A.ui.lastHourShown = key; if (s.hour === 1) banner(`Night ${s.night}<small>${s.night === 1 ? 'The Chills come from the hedge. Keep the blooms alive until dawn.' : s.night === s.config.nights ? 'The last night. Hold on.' : 'Six hours until dawn.'}</small>`, 2000); else banner(`Hour ${s.hour}<small>${s.config.hours - s.hour} more until dawn</small>`, 900); }
+    }
+  }
+
+  // ---------- modals ----------
+  function renderModal() {
+    const s = A.state; const M = $('#modal'), C = $('#modalCard');
+    if (A.ui.helpOpen) { M.hidden = false; C.innerHTML = helpHtml(); const b = h('button', 'btn', 'Got it'); b.onclick = () => { A.ui.helpOpen = false; renderModal(); }; const act = h('div', 'modal-actions'); act.appendChild(b); C.appendChild(act); return; }
+    if (!s) { M.hidden = true; return; }
+    if (s.phase === 'draft') { M.hidden = false; renderDraft(C); return; }
+    if (s.phase === 'won' || s.phase === 'lost') { M.hidden = false; renderEnd(C); return; }
+    M.hidden = true;
+  }
+  function renderDraft(C) {
+    const s = A.state, d = s.draft; C.innerHTML = '';
+    C.appendChild(h('h2', '', `Dawn after night ${s.night}`));
+    C.appendChild(h('p', 'sub', `${s.lastBlooms} bloom${s.lastBlooms === 1 ? '' : 's'} lit the garden. Glow ${s.glow}, Warmth ${s.warmth}. ${d.carry ? `${d.carry} seed${d.carry > 1 ? 's' : ''} carry to the next garden.` : 'No seeds carry over.'} Each keeper may learn one card, or skip to keep the deck lean. Offers are public: plan together.`));
+    const grid = h('div', 'draft');
+    for (const id of TL.KEEPER_IDS) {
+      const col = h('div', 'col ' + id); col.appendChild(h('h3', '', `${esc(A.names[id] || KNAME[id])} · ${KNAME[id]}${id === A.role ? ' (you)' : ''}`));
+      const offers = h('div', 'offers');
+      const mine = id === A.role; const pick = d.picks[id];
+      d.offers[id].forEach((cid, i) => {
+        const c = TL.CARDS[cid]; const el = h('div', 'card ' + id + (pick === i ? ' picked' : pick !== null && pick !== i ? ' dim' : '') + (mine && pick === null ? '' : ' partner'));
+        el.innerHTML = `<div class="title"><span>${esc(c.name)}</span><span class="tag">${c.exhaust ? 'exhaust' : ''}</span></div><div class="text">${esc(c.text)}</div>`;
+        if (mine && pick === null) el.onclick = () => propose({ k: 'pick', keeper: id, index: i });
+        offers.appendChild(el);
+      });
+      const skip = h('button', 'btn small ghost', pick === -1 ? 'Skipped' : 'Skip');
+      if (mine && pick === null) skip.onclick = () => propose({ k: 'pick', keeper: id, index: -1 }); else skip.disabled = true;
+      if (pick === null && !mine) offers.appendChild(h('div', 'hint', 'choosing…'));
+      offers.appendChild(skip);
+      col.appendChild(offers); grid.appendChild(col);
+    }
+    C.appendChild(grid);
+    if (d.charmOffers) {
+      C.appendChild(h('h3', '', 'A charm for the pair').style && h('div', 'section-title', ''));
+      C.appendChild(h('p', 'sub', `${s.config.charmThreshold}+ blooms survived, so the keepers found a charm. Either of you can choose.`));
+      const co = h('div', 'charm-offers');
+      d.charmOffers.forEach((cid, i) => {
+        const c = TL.CHARMS[cid]; const el = h('div', 'charm-offer' + (d.charmPick === i ? ' picked' : ''));
+        el.innerHTML = `<b>${esc(c.name)}</b><span>${esc(c.text)}</span>`;
+        if (d.charmPick === null) el.onclick = () => propose({ k: 'charm', keeper: A.role, index: i });
+        co.appendChild(el);
+      });
+      C.appendChild(co);
+    }
+    const waiting = [];
+    for (const id of TL.KEEPER_IDS) if (d.picks[id] === null) waiting.push(A.names[id] || KNAME[id]);
+    if (d.charmOffers && d.charmPick === null) waiting.push('the charm');
+    C.appendChild(h('p', 'hint', waiting.length ? 'Waiting for: ' + esc(waiting.join(', ')) : 'Night falls again…'));
+  }
+  function renderEnd(C) {
+    const s = A.state; C.innerHTML = '';
+    C.appendChild(h('h2', '', s.phase === 'won' ? 'Dawn of the last night' : 'The garden sleeps'));
+    C.appendChild(h('p', 'sub', s.phase === 'won' ? 'You kept the garden alive through five nights. The blooms you saved are your Glow.' : `The last warmth went out on night ${s.night}, hour ${s.hour}. The blooms you saved before then still count.`));
+    const sum = h('div', 'summary');
+    sum.innerHTML = `<div class="stat"><b>${s.glow}</b><span>glow</span></div><div class="stat"><b>${s.glowByNight.join(' · ') || '0'}</b><span>by night</span></div><div class="stat"><b>${s.warmth}</b><span>warmth left</span></div><div class="stat"><b>${s.charms.length}</b><span>charms</span></div>`;
+    C.appendChild(sum);
+    const decks = h('div', 'draft');
+    for (const id of TL.KEEPER_IDS) { const col = h('div', 'col ' + id); col.appendChild(h('h3', '', `${esc(A.names[id] || KNAME[id])}'s deck`)); col.appendChild(h('p', 'hint', esc(s.keepers[id].collection.map(c => TL.CARDS[c].name).join(', ')))); decks.appendChild(col); }
+    C.appendChild(decks);
+    const act = h('div', 'modal-actions');
+    if (A.isHost || A.solo) { const b = h('button', 'btn big', 'Play again'); b.onclick = () => { const seed = (Math.random() * 0xffffffff) >>> 0; resetGame(seed, baseConfig()); if (A.net) A.net.send({ t: 'reset', seed, config: A.config }); propose({ k: 'start' }); }; act.appendChild(b); }
+    else act.appendChild(h('span', 'hint', 'The host can start a new run.'));
+    const l = h('button', 'btn ghost', 'Back to lobby'); l.onclick = leaveAll; act.appendChild(l);
+    C.appendChild(act);
+  }
+  function helpHtml() {
+    return `<h2>How to play</h2><p class="sub">Two keepers, one garden, six hours a night for five nights. You win by keeping <b>Warmth</b> above zero until the fifth dawn. Your score is <b>Glow</b>: blooms alive at each dawn.</p>
+    <div class="help">
+      <div><h3>The hour</h3><p>Each hour both keepers act in <b>any order</b>, interleaved however you like: one <b>move</b> and up to <b>two cards</b> each. Press Done when you're finished. Then every Chill does exactly what its intent shows, then dusk: plants beside puddles grow, and marked Chills arrive.</p></div>
+      <div><h3>Chills ${sprite('chill')}</h3><p>They come from the hedge and <b>breathe</b> on plants. A frozen bloom costs 1 Warmth; frozen seeds and sprouts cost nothing but time. Every Chill has 1 hp (Hoar has 2). Push one into stone, a plant, a keeper, another Chill, or the edge and it takes 1 and melts. Push it into a puddle and it's <b>soaked</b>: stuck until pushed out, though it still breathes on anything beside it.</p></div>
+      <div><h3>Intents and lanterns ${sprite('lantern')}</h3><p>Chills decide at the start of the hour and stick to it. ${sprite('intent_move')} moves that many tiles that way; ${sprite('intent_breathe')} breathes on that side. Push a Chill and it still breathes the same direction from its new tile. You see intents only within <b>your</b> lantern (2 tiles). ${sprite('intent_partner')} means your partner can see it: ask. ${sprite('intent_unknown')} is dark: nobody knows. Chills in the dark are a little fickle.</p></div>
+      <div><h3>Growing ${sprite('bloom')}</h3><p>Seed → sprout → bloom. At dusk every plant next to a <b>puddle</b> grows one stage. Gale plants seeds; Rill makes puddles and can hurry growth. Chills walk toward the nearest plant, so a far-off seed is also bait.</p></div>
+      <div><h3>Gale ${sprite('gale')}</h3><p>Moves 3. Pushes, sweeps whole lines, scatters seeds, and can calm a Chill for an hour. Plans the angles: a push only kills if something is behind the Chill.</p></div>
+      <div><h3>Rill ${sprite('rill')}</h3><p>Moves 2, and stepping into a puddle is free. Makes puddles (growth and traps), sprinkles plants, drains puddles to shiver whoever is soaking, and hops between puddles.</p></div>
+      <div><h3>Dusk and dawn</h3><p>Spawn marks ${sprite('spawn_mark')} show where Chills appear at dusk. Standing there only gets you frosted (no move next hour); the Chill squeezes in beside you. At dawn each keeper drafts a card or skips; four or more surviving blooms also earn a shared charm. Up to three blooms carry over as seeds.</p></div>
+      <div><h3>Talking</h3><p>Talk as much as you like. The one house rule that keeps it interesting: describe what you <b>can</b> do, not your exact cards. Shift-click any tile to point at it on both screens. Keys: 1–3 cards, M move, D done, Esc cancel.</p></div>
+    </div>`;
+  }
+  $('#btnHelp').onclick = () => { A.ui.helpOpen = !A.ui.helpOpen; if (A.mode === 'game') renderModal(); else { $('#modal').hidden = !A.ui.helpOpen; if (A.ui.helpOpen) { $('#modalCard').innerHTML = helpHtml(); const b = h('button', 'btn', 'Got it'); b.onclick = () => { A.ui.helpOpen = false; $('#modal').hidden = true; }; const act = h('div', 'modal-actions'); act.appendChild(b); $('#modalCard').appendChild(act); } } };
+  $('#modal').onclick = (e) => { if (e.target === $('#modal') && A.ui.helpOpen) { A.ui.helpOpen = false; if (A.mode === 'game') renderModal(); else $('#modal').hidden = true; } };
+  $('#btnLeave').onclick = () => { if (confirm('Leave this game?')) leaveAll(); };
+
+  // ---------- event playback ----------
+  function flashEvents(events) {
+    for (const e of events) {
+      if (e.type === 'die') { const f = fx('float good', e.x, e.y, 'melt'); setTimeout(() => f.remove(), 1000); }
+      if (e.type === 'hit' && !events.some(d => d.type === 'die' && d.id === e.id)) { const el = pieceEls.get('w-' + e.id); if (el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); } }
+      if (e.type === 'bump') { const el = pieceEls.get('w-' + e.id); if (el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); } }
+      if (e.type === 'calm') { const f = fx('label', e.x, e.y, 'calm'); setTimeout(() => f.remove(), 900); }
+      if (e.type === 'freeze') { tileEl(e.x, e.y).classList.add('flash'); setTimeout(() => tileEl(e.x, e.y).classList.remove('flash'), 700); }
+      if (e.type === 'puddle' || e.type === 'plant' || e.type === 'grow' || e.type === 'thaw' || e.type === 'drain') { const t = tileEl(e.x, e.y); t.classList.remove('flash'); void t.offsetWidth; t.classList.add('flash'); }
+    }
+  }
+  // Step through the end-of-hour events with a display state so the wisp phase reads as a sequence.
+  function playEvents(before, events, done) {
+    A.ui.busy = true; clearPreview(); A.ui.sel = null;
+    const d = TL.cloneState(before);
+    const steps = [];
+    const dur = { walk: 260, slide: 220, breathe: 520, die: 380, freeze: 320, grow: 180, plant: 160, spawn: 260, wispPhase: 350, dawn: 900, night: 600, hour: 10, thaw: 150, frostKeeper: 300, soak: 120, warmth: 200 };
+    for (const e of events) {
+      const ms = dur[e.type] !== undefined ? dur[e.type] : 60;
+      steps.push({ e, ms });
+    }
+    let i = 0;
+    const wispOf = (id) => d.wisps.find(w => w.id === id);
+    const tick = () => {
+      if (i >= steps.length) { A.ui.busy = false; done(); return; }
+      const { e, ms } = steps[i++];
+      switch (e.type) {
+        case 'wispPhase': banner('The Chills stir…', 700); break;
+        case 'walk': case 'slide': { const w = wispOf(e.id); if (w) { w.x = e.to[0]; w.y = e.to[1]; } break; }
+        case 'soak': { const w = wispOf(e.id); if (w) w.soaked = true; break; }
+        case 'breathe': { const x = e.x + TL.DIRS[e.dir][0], y = e.y + TL.DIRS[e.dir][1]; const f = fx('puff', x, y, sprite('intent_breathe')); f.style.transform += ` rotate(${{ N: -90, E: 0, S: 90, W: 180 }[e.dir]}deg)`; setTimeout(() => f.remove(), 700); break; }
+        case 'freeze': { const t = d.tiles[e.y * 7 + e.x]; t.plant = 0; if (t.terrain === 'soil') t.terrain = 'frost'; const f = fx('float', e.x, e.y, e.stage === 3 ? 'bloom lost' : 'frozen'); setTimeout(() => f.remove(), 1000); break; }
+        case 'wither': { const t = d.tiles[e.y * 7 + e.x]; t.plant = e.to; break; }
+        case 'warmth': { const p = $('#pillWarmth'); p.classList.remove('shake'); void p.offsetWidth; p.style.animation = 'shake .4s ease'; setTimeout(() => p.style.animation = '', 450); d.warmth = e.warmth; break; }
+        case 'frostKeeper': { d.keepers[e.keeper].frosted = true; const k = d.keepers[e.keeper]; const f = fx('float', k.x, k.y, 'frosted'); setTimeout(() => f.remove(), 1000); break; }
+        case 'hit': { const el = pieceEls.get('w-' + e.id); if (el) { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); } const w = wispOf(e.id); if (w) w.hp -= e.n; break; }
+        case 'die': { d.wisps = d.wisps.filter(w => w.id !== e.id); const f = fx('float good', e.x, e.y, 'melt'); setTimeout(() => f.remove(), 1000); break; }
+        case 'frost': { d.tiles[e.y * 7 + e.x].terrain = 'frost'; break; }
+        case 'grow': case 'plant': { d.tiles[e.y * 7 + e.x].plant = e.stage; break; }
+        case 'thaw': { d.tiles[e.y * 7 + e.x].terrain = 'soil'; break; }
+        case 'spawn': { d.wisps.push({ id: e.id, type: e.wtype, hp: TL.WISP_TYPES[e.wtype].hp, x: e.x, y: e.y, soaked: false, intent: { kind: 'none' } }); d.spawns = d.spawns.filter(s => !(s.x === e.x && s.y === e.y)); break; }
+        case 'dawn': banner(`Dawn<small>${e.blooms} bloom${e.blooms === 1 ? '' : 's'} lit the garden</small>`, 1200); break;
+        case 'lost': banner('The last warmth is gone', 1200); break;
+        case 'won': banner('You made it to dawn', 1400); break;
+        case 'hour': { // new hour: snap everything to the real state (intents, hands, spawns) and finish
+          A.ui.busy = false; done(); return; }
+        case 'night': { A.ui.busy = false; done(); return; }
+      }
+      renderBoard(d); renderTop();
+      setTimeout(tick, ms);
+    };
+    tick();
+  }
+
+  // ---------- boot ----------
+  function boot() {
+    $('#brandLantern').innerHTML = sprite('lantern');
+    $('#heroArt').innerHTML = sprite('gale') + sprite('bloom', 'bloomy') + sprite('rill');
+    const u = new URL(location.href);
+    const room = u.searchParams.get('room');
+    renderLobby();
+    if (room) {
+      const saved = LS.get('host.' + room.toUpperCase(), null);
+      if (saved) { resumeHost(room.toUpperCase()); return; }
+      A.lobby.joinCode = room.toUpperCase(); A.lobby.view = 'join'; renderLobby();
+      if (A.myName) joinRoom(room);
+    }
+  }
+  boot();
+})();
+
+</script>
+</body>
+</html>
