@@ -354,6 +354,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   const DEFAULT_CONFIG = {
     W: 7, H: 6, nights: 5, hours: 6, warmth: 5, handSize: 3, cardsPerHour: 2,
     lantern: 2, sharedLanterns: false, carryCap: 3, charmThreshold: 4,
+    dawnLowByNight: [2, 3, 4, 5, 6], // at dawn of night n, fewer than this many blooms costs 1 Warmth
     // spawns marked per hour, per night (index 0 = night 1)
     schedule: [
       [1, 1, 1, 2, 1, 2],
@@ -781,6 +782,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
 
   // ---------- hours & nights ----------
   function keeperName(id) { return id === 'gale' ? 'Gale' : 'Rill'; }
+  function dawnNeed(state) { const a = state.config.dawnLowByNight || [0]; return a[Math.min(Math.max(state.night, 1), a.length) - 1]; }
 
   function drawCards(state, k) {
     const size = state.config.handSize;
@@ -826,6 +828,12 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     state.lastBlooms = blooms;
     log(state, `Dawn. ${blooms} bloom${blooms === 1 ? '' : 's'} lit the garden. Glow ${state.glow}.`, 'good');
     emit(state, { type: 'dawn', blooms, glow: state.glow });
+    const dawnLow = dawnNeed(state);
+    if (blooms < dawnLow) {
+      state.warmth -= 1; emit(state, { type: 'warmth', warmth: state.warmth, dawn: 'gutter' });
+      log(state, `Too little light for the hearth: it needed ${dawnLow} blooms. Warmth ${state.warmth}.`, 'bad');
+      if (state.warmth <= 0) { state.phase = 'lost'; log(state, 'The last warmth is gone. The garden sleeps.', 'bad'); emit(state, { type: 'lost' }); return; }
+    }
     if (state.night >= state.config.nights) { state.phase = 'won'; emit(state, { type: 'won' }); return; }
     // draft
     state.phase = 'draft';
@@ -1211,7 +1219,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   return {
     DIRS, DIR_LIST, OPP, KEEPER_IDS, WISP_TYPES, CARDS, CHARMS, STARTERS, CARD_POOLS, DEFAULT_CONFIG, STAGE_NAME,
     newGame, applyAction, validate, legalActions, replay, cardTargets, keeperReach, keeperSpeed, lanternRadius,
-    intentVisibleTo, plants, countBlooms, livingWisps, tileAt, wispAt, keeperAt, coordName, manhattan, cloneState, keeperName,
+    intentVisibleTo, plants, countBlooms, livingWisps, tileAt, wispAt, keeperAt, coordName, manhattan, cloneState, keeperName, dawnNeed,
     rngNext, rngInt, shuffle,
   };
 });
@@ -2517,9 +2525,9 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   const LS = { get(k, d) { try { const v = localStorage.getItem('tl.' + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem('tl.' + k, JSON.stringify(v)); } catch (e) {} }, del(k) { try { localStorage.removeItem('tl.' + k); } catch (e) {} } };
   // Greedy full-information bot win rates (40 seeds): gentle ~78%, standard ~68%, harsh ~58% and falling.
   const DIFFICULTY = {
-    gentle: { warmth: 6, schedule: [[1, 1, 1, 2, 1, 2], [1, 2, 1, 2, 2, 2], [2, 2, 2, 2, 2, 3], [2, 2, 3, 2, 3, 3], [2, 3, 3, 3, 3, 3]] },
+    gentle: { warmth: 6, dawnLowByNight: [1, 2, 3, 3, 4], schedule: [[1, 1, 1, 2, 1, 2], [1, 2, 1, 2, 2, 2], [2, 2, 2, 2, 2, 3], [2, 2, 3, 2, 3, 3], [2, 3, 3, 3, 3, 3]] },
     standard: {},
-    harsh: { warmth: 4, schedule: [[1, 1, 2, 2, 1, 2], [2, 2, 1, 2, 2, 3], [2, 2, 3, 3, 2, 3], [3, 3, 3, 2, 3, 3], [3, 3, 3, 4, 3, 4]] },
+    harsh: { warmth: 4, dawnLowByNight: [2, 4, 4, 5, 6], schedule: [[1, 1, 2, 2, 1, 2], [2, 2, 1, 2, 2, 3], [2, 2, 3, 3, 2, 3], [3, 3, 3, 2, 3, 3], [3, 3, 3, 4, 3, 4]] },
   };
 
   // ---------- app state ----------
@@ -2573,7 +2581,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   }
   function animateThen(before, events, action) {
     const big = events.some(e => e.type === 'wispPhase' || e.type === 'night' || e.type === 'dawn');
-    if (!big) { render(); flashEvents(events); afterAction(action); return; }
+    if (!big) { render(); flashEvents(events); afterAction(action); drainQueue(); return; }
     playEvents(before, events, () => { render(); afterAction(action); drainQueue(); });
   }
   function drainQueue() {
@@ -3131,7 +3139,8 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     const s = A.state;
     $('#brandLantern').innerHTML = $('#brandLantern').innerHTML || sprite('lantern');
     if (A.mode === 'game' && s) {
-      $('#pillNight').textContent = s.phase === 'lobby' ? 'Getting ready' : s.phase === 'draft' ? `Dawn after night ${s.night}` : s.phase === 'won' ? 'Dawn of the last night' : s.phase === 'lost' ? 'The garden sleeps' : `Night ${s.night} · Hour ${s.hour} of ${s.config.hours}`;
+      $('#pillNight').textContent = s.phase === 'lobby' ? 'Getting ready' : s.phase === 'draft' ? `Dawn after night ${s.night}` : s.phase === 'won' ? 'Dawn of the last night' : s.phase === 'lost' ? 'The garden sleeps' : `Night ${s.night} · Hour ${s.hour} of ${s.config.hours} · dawn needs ${TL.dawnNeed(s)} blooms`;
+      $('#pillNight').title = 'At dawn the hearth needs this many blooms, or Warmth drops by one.';
       const flames = []; for (let i = 0; i < Math.max(s.warmth, s.config.warmth); i++) flames.push(`<span class="flame ${i < s.warmth ? 'on' : ''}">${sprite('warmth')}</span>`);
       $('#pillWarmth').innerHTML = `<span class="flames">${flames.join('')}</span> ${s.warmth}`;
       $('#pillGlow').innerHTML = `<span class="ico">${sprite('glow')}</span> ${s.glow}`;
@@ -3289,7 +3298,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       <div><h3>Growing ${sprite('bloom')}</h3><p>Seed → sprout → bloom. At dusk every plant next to a <b>puddle</b> grows one stage. Gale plants seeds; Rill makes puddles and can hurry growth. Chills walk toward the nearest plant, so a far-off seed is also bait.</p></div>
       <div><h3>Gale ${sprite('gale')}</h3><p>Moves 3. Pushes, sweeps whole lines, scatters seeds, and can calm a Chill for an hour. Plans the angles: a push only kills if something is behind the Chill.</p></div>
       <div><h3>Rill ${sprite('rill')}</h3><p>Moves 2, and stepping into a puddle is free. Makes puddles (growth and traps), sprinkles plants, drains puddles to shiver whoever is soaking, and hops between puddles.</p></div>
-      <div><h3>Dusk and dawn</h3><p>Spawn marks ${sprite('spawn_mark')} show where Chills appear at dusk. Standing there only gets you frosted (no move next hour); the Chill squeezes in beside you. At dawn each keeper drafts a card or skips; four or more surviving blooms also earn a shared charm. Up to three blooms carry over as seeds.</p></div>
+      <div><h3>Dusk and dawn</h3><p>Spawn marks ${sprite('spawn_mark')} show where Chills appear at dusk. Standing there only gets you frosted (no move next hour); the Chill squeezes in beside you. At dawn the hearth needs light: <b>night 1 needs 2 blooms, night 2 needs 3, and so on up to 6 on night 5</b>, or Warmth drops by 1. Then each keeper drafts a card or skips; four or more surviving blooms also earn a shared charm, and up to three blooms carry over as seeds.</p></div>
       <div><h3>Talking</h3><p>Talk as much as you like. The one house rule that keeps it interesting: describe what you <b>can</b> do, not your exact cards. Shift-click any tile to point at it on both screens. Keys: 1–3 cards, M move, D done, Esc cancel.</p></div>
     </div>`;
   }
@@ -3338,7 +3347,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
         case 'grow': case 'plant': { d.tiles[e.y * 7 + e.x].plant = e.stage; break; }
         case 'thaw': { d.tiles[e.y * 7 + e.x].terrain = 'soil'; break; }
         case 'spawn': { d.wisps.push({ id: e.id, type: e.wtype, hp: TL.WISP_TYPES[e.wtype].hp, x: e.x, y: e.y, soaked: false, intent: { kind: 'none' } }); d.spawns = d.spawns.filter(s => !(s.x === e.x && s.y === e.y)); break; }
-        case 'dawn': banner(`Dawn<small>${e.blooms} bloom${e.blooms === 1 ? '' : 's'} lit the garden</small>`, 1200); break;
+        case 'dawn': { const need = TL.dawnNeed(before); banner(`Dawn<small>${e.blooms} bloom${e.blooms === 1 ? '' : 's'} lit the garden${e.blooms < need ? ` · the hearth needed ${need}, Warmth −1` : ''}</small>`, 1600); break; }
         case 'lost': banner('The last warmth is gone', 1200); break;
         case 'won': banner('You made it to dawn', 1400); break;
         case 'hour': { // new hour: snap everything to the real state (intents, hands, spawns) and finish
