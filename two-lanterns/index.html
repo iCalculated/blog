@@ -2693,10 +2693,19 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
       body.appendChild(help);
       return;
     }
+    if (v === 'choose') {
+      body.appendChild(h('div', 'code-big', esc(A.lobby.joinCode)));
+      body.appendChild(h('p', 'hint', 'This browser hosted this room before. Are you the host coming back, or a second player on the same machine?'));
+      const row = h('div', 'row');
+      const b1 = h('button', 'btn big', 'Resume hosting'); b1.onclick = () => resumeHost(A.lobby.joinCode);
+      const b2 = h('button', 'btn big ghost', 'Join as the other keeper'); b2.onclick = () => { A.lobby.view = 'join'; renderLobby(); };
+      row.append(b1, b2); body.appendChild(row);
+      return;
+    }
     if (v === 'join') {
-      if (!A.myName) {
+      {
         const nf = h('div', 'field'); nf.innerHTML = '<label>your name</label>';
-        const ni = h('input'); ni.type = 'text'; ni.placeholder = 'e.g. Carolyn'; ni.maxLength = 16; ni.oninput = () => { A.myName = ni.value.trim(); LS.set('name', A.myName); };
+        const ni = h('input'); ni.type = 'text'; ni.placeholder = 'e.g. Carolyn'; ni.maxLength = 16; ni.value = A.myName; ni.oninput = () => { A.myName = ni.value.trim(); LS.set('name', A.myName); };
         nf.appendChild(ni); body.appendChild(nf);
       }
       const f = h('div', 'field'); f.innerHTML = '<label>room code</label>';
@@ -2792,6 +2801,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     if (!A.code) { A.lobby.view = 'home'; renderLobby(); toast('Could not find a free room code, try again.', 'bad'); return; }
     A.role = A.lobby.hostRole; A.names[A.role] = A.myName;
     A.lobby.view = 'room'; A.lobby.hostReady = false; A.lobby.guestReady = false; A.lobby.guestName = '';
+    try { sessionStorage.setItem('tl.hostTab', A.code); } catch (e) {}
     history.replaceState(null, '', shareLink(A.code));
     renderLobby(); renderTop();
   }
@@ -2802,6 +2812,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     A.net = makeNet();
     try { await A.net.host(code); } catch (e) { A.net.close(); A.net = null; A.lobby.view = 'home'; renderLobby(); toast('Could not reopen ' + code + ': ' + (e.code || e.message), 'bad'); return; }
     A.code = code; A.role = saved.role; A.names = saved.names; A.lobby.hostRole = saved.role; A.lobby.guestName = saved.names[otherRole(saved.role)] || '';
+    try { sessionStorage.setItem('tl.hostTab', A.code); } catch (e) {}
     resetGame(saved.seed, saved.config);
     try { A.state = TL.replay(saved.seed, saved.config, saved.log); A.log = saved.log.slice(); }
     catch (e) { toast('Saved game could not be replayed: ' + e.message, 'bad'); A.lobby.view = 'home'; renderLobby(); return; }
@@ -2842,6 +2853,7 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
   }
   function leaveAll() {
     if (A.net) { try { A.net.close(); } catch (e) {} }
+    try { sessionStorage.removeItem('tl.hostTab'); } catch (e) {}
     A.net = null; A.code = null; A.mode = 'lobby'; A.solo = false; A.isHost = false; A.state = null; A.log = [];
     A.lobby.view = 'home'; A.lobby.hostReady = false; A.lobby.guestReady = false; A.lobby.guestName = ''; A.lobby.error = '';
     $('#lobby').hidden = false; $('#game').hidden = true; $('#btnLeave').hidden = true; $('#statusBar').hidden = true; $('#modal').hidden = true;
@@ -3368,9 +3380,12 @@ input.code { font-family: var(--font-title); letter-spacing: 6px; text-transform
     const room = u.searchParams.get('room');
     renderLobby();
     if (room) {
-      const saved = LS.get('host.' + room.toUpperCase(), null);
-      if (saved) { resumeHost(room.toUpperCase()); return; }
-      A.lobby.joinCode = room.toUpperCase(); A.lobby.view = 'join'; renderLobby();
+      const code = room.toUpperCase();
+      const saved = LS.get('host.' + code, null);
+      let mine = false; try { mine = sessionStorage.getItem('tl.hostTab') === code; } catch (e) {}
+      if (saved && mine) { resumeHost(code); return; }
+      if (saved) { A.lobby.joinCode = code; A.lobby.view = 'choose'; renderLobby(); return; }
+      A.lobby.joinCode = code; A.lobby.view = 'join'; renderLobby();
       if (A.myName) joinRoom(room);
     }
   }
