@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>wavefront</title>
+<meta name="description" content="a tank duel against an ai that starts random and learns you by dreaming: model-based rl, entirely on the gpu.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --bg: #161616; --line: #2a2a2a; --ink: #d6d3cd; --dim: #8a8780; --faint: #55534f;
+    --coral: #ff6b57; --cyan: #6be3ff; --violet: #9d7cff; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.5 'IBM Plex Mono', ui-monospace, monospace; }
+  main { display: flex; gap: 20px; padding: 20px 16px; justify-content: center; align-items: flex-start; }
+  .col { display: flex; flex-direction: column; gap: 8px; }
+  #stage { position: relative; width: min(800px, calc(100vw - 360px), calc((100vh - 90px) * 4 / 3)); aspect-ratio: 4 / 3; }
+  canvas#game { width: 100%; height: 100%; display: block; border-radius: 4px; cursor: crosshair; touch-action: none; }
+  .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 10px;
+    text-align: center; background: rgba(22, 22, 22, 0.86); border-radius: 4px; padding: 24px; cursor: pointer; overflow: auto; }
+  .overlay h1 { font-weight: 500; font-size: 30px; margin: 0; letter-spacing: 0.04em; }
+  .overlay p { margin: 0; color: var(--dim); max-width: 54ch; }
+  .overlay .keys { color: var(--ink); } .overlay .go { color: var(--cyan); margin-top: 6px; }
+  .overlay .touch { display: none; }
+  .hidden { display: none !important; }
+  .bars { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; }
+  .energy { height: 6px; background: #222; border-radius: 3px; overflow: hidden; }
+  .energy i { display: block; height: 100%; transition: width 0.15s; }
+  #eP i { background: var(--cyan); } #eA i { background: var(--violet); margin-left: auto; }
+  #score { color: var(--dim); text-align: center; white-space: nowrap; }
+  aside { width: 310px; flex: 0 0 310px; display: flex; flex-direction: column; gap: 14px; }
+  section { border-top: 1px solid var(--line); padding-top: 10px; }
+  h2 { font-size: 11px; font-weight: 500; color: var(--dim); letter-spacing: 0.12em; margin: 0 0 6px; }
+  .row { display: flex; justify-content: space-between; gap: 8px; } .row span:first-child { color: var(--dim); }
+  .num { font-variant-numeric: tabular-nums; }
+  .meter { display: grid; grid-template-columns: 74px 1fr 40px; gap: 8px; align-items: center; }
+  .meter .bar { height: 6px; background: #232323; border-radius: 3px; overflow: hidden; } .meter .bar i { display: block; height: 100%; background: var(--violet); }
+  .note { color: var(--dim); font-size: 12px; margin: 6px 0 0; } .note b { color: var(--ink); font-weight: 400; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; margin-bottom: 8px; } .seg button { flex: 1; }
+  button { font: inherit; color: var(--ink); background: transparent; border: 0; padding: 5px 8px; cursor: pointer; }
+  button:hover { background: #222; } .seg button.on { background: #262626; color: var(--cyan); }
+  .btns { display: flex; gap: 6px; flex-wrap: wrap; } .btns button { border: 1px solid var(--line); border-radius: 4px; }
+  .opps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; } .opps button { border: 1px solid var(--line); border-radius: 4px; padding: 4px 2px; }
+  .opps button.on { background: #262626; color: var(--cyan); border-color: #3a3a3a; }
+  canvas.spark { width: 100%; height: 70px; display: block; margin-top: 6px; }
+  a { color: var(--dim); }
+  @media (max-width: 900px) { main { flex-direction: column; align-items: center; } #stage { width: min(800px, calc(100vw - 32px)); } aside { width: min(800px, 100%); flex-basis: auto; } }
+  @media (pointer: coarse), (max-width: 600px) { #start p { display: none; } #start p.touch { display: block; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="col">
+    <div class="bars"><div class="energy" id="eP"><i style="width:100%"></i></div><div id="score" class="num">round 1</div><div class="energy" id="eA"><i style="width:100%"></i></div></div>
+    <div id="stage">
+      <canvas id="game" width="800" height="600" aria-label="arena"></canvas>
+      <div id="start" class="overlay">
+        <h1>wavefront</h1>
+        <p>the violet tank starts out <b style="color:var(--ink);font-weight:400">knowing nothing</b> but the rules—its moves are random. while you fight, it learns a model of how you play, then dreams hundreds of duels against that model every second and trains on them. the faint lines fanning out ahead of both tanks are what it imagines happens next.</p>
+        <p class="keys">w/s or ↑/↓ drive · a/d or ←/→ turn · mouse aims · click or space fires · p pauses</p>
+        <p>it learns only from you, in this browser. give it a few minutes.</p>
+        <p class="touch">wavefront needs a keyboard and mouse.</p>
+        <button class="go">click to start</button>
+      </div>
+      <div id="paused" class="overlay hidden"><h1>paused</h1><button class="go">click to resume</button></div>
+    </div>
+  </div>
+  <aside>
+    <section style="border-top:0;padding-top:0">
+      <h2>its opponent</h2>
+      <div class="opps" id="opps"><button data-opp="you" class="on">you</button><button data-opp="strafer">strafer</button><button data-opp="dodger">dodger</button><button data-opp="rusher">rusher</button><button data-opp="wanderer">wanderer</button><button data-opp="champion">champion</button><button data-opp="itself">itself</button></div>
+      <p class="note" id="oppNote">you drive the cyan tank.</p>
+      <p class="note">it keeps learning whoever drives the cyan tank. switch mid-game and watch it adapt.</p>
+      <div class="btns" style="margin-top:8px"><button id="forget" title="erase its policy and its model of its opponent; it starts over as a random player and the match restarts at 0–0. your slider settings are kept">reset ai to random</button></div>
+    </section>
+    <section>
+      <h2>is it getting better? · damage per 30 s</h2>
+      <div class="row"><span>it dealt / took (last 30 s)</span><span id="last30" class="num">—</span></div>
+      <canvas class="spark" id="spark" width="600" height="140"></canvas>
+      <p class="note">bars: its damage dealt minus taken in each 30 s of play. above the line, it's winning. a thin line marks a change of opponent.</p>
+    </section>
+    <section>
+      <h2>its model of <span class="oppName">you</span> · prediction accuracy</h2>
+      <div id="acc"></div>
+      <p class="note">every quarter second it writes down your situation and what you did, and trains a small net to predict it. that net is who it fights in its dreams.</p>
+    </section>
+    <section>
+      <h2>its dreams</h2>
+      <div class="row"><span>dreamed play</span><span id="dreamt" class="num">—</span></div>
+      <div class="row"><span>policy updates</span><span id="ppo" class="num">—</span></div>
+      <div class="row"><span>decisiveness</span><span id="decisive" class="num">—</span></div>
+      <p class="note">it trains on 256 dreamed duels at a time, started from moments of your real game and played against its model of you, by reinforcement (ppo), never on your real game directly.</p>
+      <p class="note">what you see: <b>32 futures from right now</b>, each about 1.3 s, refreshed 7× a second—its policy against its model of you, the same way it dreams. cyan paths are you, violet are it. a <b style="color:var(--coral)">coral ring</b> is where it imagines hitting you; a cyan ring, where it imagines you hitting it. these are only drawn, never trained on. the button cycles to the training dreams themselves.</p>
+    </section>
+    <section>
+      <h2>its incentives</h2>
+      <label for="keepW" class="row" style="align-items:center"><span>crowding penalty</span><span id="keepWv" class="num">…</span></label>
+      <input id="keepW" aria-label="crowding penalty" type="range" min="0" max="0.1" step="0.005" style="width:100%;accent-color:var(--violet)">
+      <label for="keepD" class="row" style="align-items:center"><span>personal space</span><span id="keepDv" class="num">…</span></label>
+      <input id="keepD" aria-label="personal space" type="range" min="40" max="450" step="10" style="width:100%;accent-color:var(--violet)">
+      <label for="wallW" class="row" style="align-items:center"><span>wall penalty</span><span id="wallWv" class="num">…</span></label>
+      <input id="wallW" aria-label="wall penalty" type="range" min="0" max="0.05" step="0.005" style="width:100%;accent-color:var(--violet)">
+      <p class="note">small costs in its dreams: every tick it spends inside its personal space around you (growing as it gets closer), and every tick it's pressed against a wall. changes apply to its dreams immediately; its behaviour follows as it retrains (about half a minute). 0 lets it sit on you.</p>
+    </section>
+    <section>
+      <h2>engine</h2>
+      <div class="seg" id="modes"><button data-mode="naive">naive</button><button data-mode="mega" class="on">megakernel</button></div>
+      <div class="row"><span>backend</span><span id="backend" class="num">…</span></div>
+      <div class="row"><span>dispatches / frame</span><span id="disp" class="num">—</span></div>
+      <div class="row"><span>gpu µs / frame</span><span id="gpuUs" class="num">—</span></div>
+      <p class="note">each frame, on the gpu: your tank and its tank, a step of training its model of you, two steps of 256 dreamed duels or two ppo updates; every 8th frame, 32 short futures from now, to draw. only the numbers in this panel come back to the cpu, plus a save of its brain every 15 s.</p>
+      <div class="btns" style="margin-top:8px"><button id="ghosts">show: futures</button></div>
+      <label class="row" style="margin-top:8px;align-items:center"><span>futures brightness</span><span style="display:flex;gap:8px;align-items:center"><input id="alpha" aria-label="futures brightness" type="range" min="0" max="4" step="0.05" style="width:120px;accent-color:var(--violet)"><span id="alphaV" class="num" style="min-width:4ch;text-align:right">×1.0</span></span></label>
+    </section>
+  </aside>
+</main>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
