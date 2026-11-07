@@ -1,7 +1,7 @@
-import { Game } from './shared/tak.js?v=1794090156';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794090156';
-import { rate, themeWeight } from './shared/rating.js?v=1794090156';
-import { NinjaBoard, buildPTN } from './ninja.js?v=1794090156';
+import { Game } from './shared/tak.js?v=1794090440';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794090440';
+import { rate, themeWeight } from './shared/rating.js?v=1794090440';
+import { NinjaBoard, buildPTN } from './ninja.js?v=1794090440';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -43,6 +43,7 @@ let S = null; // current puzzle state
 // ---------- user box ----------
 function renderUser() {
   const box = $('#userbox');
+  store.set('me', me ? { name: me.name } : null);
   if (me) {
     box.innerHTML = `<span class="name">${esc(me.name)}</span>
       <button id="logout" title="Forget this device">Log out</button>`;
@@ -281,13 +282,14 @@ function renderAll(mood) {
   const { p } = S;
   const fb = $('#feedback');
   const myRating = Math.round(me ? me.rating : guest.rating);
+  if (me) store.set('myRating', me.rating);
   const delta = S.delta != null ? `<span class="delta ${S.delta >= 0 ? 'up' : 'down'}">${S.delta >= 0 ? '+' : ''}${Math.round(S.delta)}</span>` : '';
   const playActions = `<div class="actions"><button data-act="hint">Hint</button><button data-act="solution">View solution</button></div>`;
   if (S.status === 'solved') {
     fb.innerHTML = `<div class="icon ${S.viewed ? 'bad' : 'good'}">${S.viewed ? '✗' : '✓'}</div><div class="body">
       <h2>${S.viewed ? 'Solution shown' : session.at(-1)?.win === false ? 'Solved — after a miss' : 'Success!'}</h2>
-      <p>${S.hinted ? 'Hint used — unrated.' : 'Step through the line with ← →.'}</p></div>
-      <div class="actions one"><button class="primary" data-act="next">Continue training <kbd>↵</kbd></button></div>`;
+      <p>${S.hinted ? 'Hint used, so this one was unrated.' : 'Use ← and → to replay the line.'}</p></div>
+      <div class="actions one"><button class="primary" data-act="next">Continue training</button></div>`;
   } else if (S.status === 'retry') {
     fb.innerHTML = `<div class="icon bad">✗</div><div class="body"><h2>That’s not the move!</h2><p>Try something else.</p></div>${playActions}`;
   } else if (S.status === 'viewing') {
@@ -302,7 +304,7 @@ function renderAll(mood) {
   // Session card: your rating (with the latest change beside it) and one chip per puzzle, Lichess-style.
   const last = session.at(-1);
   const sign = (d) => (d >= 0 ? '+' : '−') + Math.abs(Math.round(d));
-  $('#session').innerHTML = `<div class="rating-line"><span class="big">${myRating}</span>${S.status === 'solved' && last?.id === p.id && last.delta != null ? `<span class="delta ${last.delta >= 0 ? 'up' : 'down'}">${sign(last.delta)}</span>` : ''}<span class="label">your rating</span></div>
+  $('#session').innerHTML = `<div><div class="label">Your rating</div><div class="rating-line"><span class="big">${myRating}</span>${S.status === 'solved' && last?.id === p.id && last.delta != null ? `<span class="delta ${last.delta >= 0 ? 'up' : 'down'}">${sign(last.delta)}</span>` : ''}</div></div>
     <div class="streak">${session.map((x) => `<a class="${x.win ? 'w' : 'l'}${x.id === p.id ? ' cur' : ''}" href="#/puzzle/${esc(x.id)}" title="Puzzle #${esc(x.id)}">${x.delta != null ? sign(x.delta) : x.win ? '✓' : '✗'}</a>`).join('')}</div>`;
 
   // Everything about the puzzle itself comes at the end.
@@ -313,10 +315,14 @@ function renderAll(mood) {
     const themes = (p.themes || []).filter((t) => THEMES[t] && THEMES[t].group !== 'Board');
     const m = p.meta || {};
     const player = (c, name, r) => `<div><span class="dot p${c}"></span>${esc(name)}${r ? ` <span class="sub">(${r})</span>` : ''}</div>`;
-    info.innerHTML = `<div><div class="head">Puzzle <a href="#/puzzle/${esc(p.id)}">#${esc(p.id)}</a> · ${p.size}×${p.size}${p.komi ? `, komi ${p.komi}` : ''}</div>
-        <div class="sub">Rating <b class="head">${Math.round(p.rating)}</b> · played ${p.attempts + 1} time${p.attempts ? 's' : ''}</div></div>
-      ${m.white ? `<hr><div><div class="head">From ${p.sourceRef?.startsWith('http') ? `<a href="${esc(p.sourceRef)}" target="_blank" rel="noopener">a PlayTak game</a>` : esc(p.source)}</div>
-        <div class="players">${player(1, m.white, m.ratingWhite)}${player(2, m.black, m.ratingBlack)}</div></div>` : `<hr><div class="sub">Source: ${esc(p.source)}</div>`}
+    const game = p.sourceRef?.startsWith('http') ? `<a href="${esc(p.sourceRef)}" target="_blank" rel="noopener">PlayTak game</a>` : esc(p.source);
+    info.innerHTML = `<dl>
+        <dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}">#${esc(p.id)}</a>, ${p.size}×${p.size}${p.komi ? ` with komi ${p.komi}` : ''}</dd>
+        <dt>Rating</dt><dd>${Math.round(p.rating)}</dd>
+        <dt>Played</dt><dd>${p.attempts + 1} time${p.attempts ? 's' : ''}</dd>
+        <dt>From</dt><dd>${game}</dd>
+      </dl>
+      ${m.white ? `<div class="players">${player(1, m.white, m.ratingWhite)}${player(2, m.black, m.ratingBlack)}</div>` : ''}
       <hr><div>${themes.map((t) => `<a class="tag" href="#/glossary/${t}" title="${esc(THEMES[t].desc)}">${THEMES[t].name}</a>`).join('') || '<span class="sub">No themes</span>'}</div>`;
   }
 
@@ -400,7 +406,7 @@ async function glossaryPage() {
   const t = await api('/api/themes');
   const slug = (w) => w.toLowerCase().replace(/[^a-z]+/g, '-');
   const themeRows = Object.entries(THEMES).filter(([k, v]) => v.group !== 'Board').map(([k, v]) =>
-    `<dt id="${k}">${v.name}</dt><dd>${esc(v.desc)}${t.themes[k] ? ` <a href="#/" class="practice" data-theme="${k}">practice ${t.themes[k]} →</a>` : ''}</dd>`).join('');
+    `<dt id="${k}">${v.name}</dt><dd>${esc(v.desc)}${t.themes[k] ? ` <a href="#/" class="practice" data-theme="${k}">Practice (${t.themes[k].toLocaleString()} puzzles)</a>` : ''}</dd>`).join('');
   $('#view-glossary').innerHTML = `<div class="glossary"><h1>Glossary</h1>
     <h2>Tak basics</h2><dl>${GLOSSARY.map(([w, d]) => `<dt id="${slug(w)}">${w}</dt><dd>${esc(d)}</dd>`).join('')}</dl>
     <h2>Puzzle themes</h2><p class="muted">Every puzzle is tagged automatically from its solution. You can drill one theme from the Theme menu on the puzzle page.</p>
@@ -412,7 +418,7 @@ async function glossaryPage() {
 async function mePage() {
   show('view-me');
   const el = $('#view-me');
-  if (!me) { el.innerHTML = `<h1>History</h1><p>Claim a username (top right) to keep a rating and history across visits. Guest rating: <b>${Math.round(guest.rating)}</b> over ${guest.games} puzzles.</p>`; return; }
+  if (!me) { el.innerHTML = `<h1>History</h1><div class="panel"><p class="flush">Claim a username at the top right to keep your rating and history across visits. As a guest you’re rated <b class="your-rating">${Math.round(guest.rating)}</b> after ${guest.games} puzzle${guest.games === 1 ? '' : 's'}.</p></div>`; return; }
   const { history: h } = await api('/api/history');
   const tok = store.get('token', null);
   // rating chart
@@ -420,7 +426,7 @@ async function mePage() {
   pts.unshift(1500);
   const W = 860, H = 160, lo = Math.min(...pts) - 20, hi = Math.max(...pts) + 20;
   const path = pts.map((v, i) => `${i ? 'L' : 'M'}${(i / Math.max(1, pts.length - 1)) * W},${H - ((v - lo) / (hi - lo)) * H}`).join('');
-  el.innerHTML = `<h1>${esc(me.name)} · ${Math.round(me.rating)}</h1>
+  el.innerHTML = `<h1>${esc(me.name)}</h1><p class="muted">Rating <b class="your-rating">${Math.round(me.rating)}</b></p>
     <p class="muted">${me.games} rated puzzles, ${me.wins} solved first try.${tok ? ` Your login token (paste on another device): <code>${tok}</code>` : ''}</p>
     <div class="chart"><svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"><path d="${path}" fill="none" stroke="#3692e7" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>
     <table class="t"><tr><th>Puzzle</th><th>Result</th><th>Puzzle rating</th><th>Δ</th><th>When</th></tr>
@@ -433,9 +439,10 @@ async function mePage() {
 async function leaderPage() {
   show('view-leaderboard');
   const { leaders } = await api('/api/leaderboard');
-  $('#view-leaderboard').innerHTML = `<h1>Leaderboard</h1><p class="muted">Players with 5+ rated puzzles.</p>
-    <table class="t"><tr><th>#</th><th>Player</th><th>Rating</th><th>Puzzles</th></tr>${leaders.map((l, i) =>
-      `<tr><td>${i + 1}</td><td>${esc(l.name)}</td><td>${Math.round(l.rating)}</td><td>${l.games}</td></tr>`).join('')}</table>`;
+  $('#view-leaderboard').innerHTML = `<h1>Leaderboard</h1><p class="muted">Players with at least 5 rated puzzles.</p>` + (leaders.length
+    ? `<table class="t"><tr><th>#</th><th>Player</th><th>Rating</th><th>Puzzles</th></tr>${leaders.map((l, i) =>
+      `<tr><td>${i + 1}</td><td>${esc(l.name)}</td><td>${Math.round(l.rating)}</td><td>${l.games}</td></tr>`).join('')}</table>`
+    : `<div class="panel"><p class="flush">Nobody has rated 5 puzzles yet. Claim a username and you could be first.</p></div>`);
 }
 
 // Hash routes (#/, #/puzzle/ID, #/glossary[/term], #/me, #/leaderboard) so it works as static files.
@@ -457,6 +464,8 @@ async function route() {
 window.addEventListener('hashchange', route);
 
 (async () => {
+  const cached = store.get('me', null);
+  if (cached && store.get('token', null)) { me = { ...cached, rating: store.get('myRating', 1500), games: 0, wins: 0 }; }
   renderUser();
   // old path-style URLs from the dev server → hash routes
   const old = /^\/(puzzle\/[\w.-]+|glossary|me|leaderboard)$/.exec(location.pathname);
