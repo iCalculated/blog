@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tinue — Tak puzzles</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='2' y='2' width='12' height='12' rx='2' fill='%23b58863'/><circle cx='8' cy='8' r='3.5' fill='%23f4efe6'/></svg>">
+<link rel="stylesheet" href="style.css">
+<meta name="googlebot" content="noindex"><meta name="bingbot" content="noindex">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#/">tinue<span>.</span></a>
+  <nav>
+    <a href="#/" data-nav>Puzzles</a>
+    <a href="#/glossary" data-nav>Glossary</a>
+    <a href="#/me" data-nav>History</a>
+    <a href="#/leaderboard" data-nav>Leaderboard</a>
+  </nav>
+  <div id="userbox" class="userbox"></div>
+</header>
+
+<main id="view-puzzle" class="puzzle-page">
+  <section class="board-col">
+    <div class="board-wrap">
+      <iframe id="ninja" class="ninja" title="Tak board (PTN Ninja)" allow="clipboard-write"></iframe>
+    </div>
+    <div class="under-board">
+      <div class="howto">Click a square to place a flat. For a wall or capstone, click it in the reserve beside the board first. Click a stack to pick it up, then click along a line to drop.</div>
+      <button id="flip" class="ghost" title="Flip board">⇅</button>
+    </div>
+    <div class="credit">Board by <a href="https://ptn.ninja" target="_blank" rel="noopener">PTN Ninja</a>, as on PlayTak.</div>
+  </section>
+
+  <aside class="side">
+    <div class="panel feedback" id="feedback"></div>
+    <div class="panel info" id="info"></div>
+    <div class="panel moves" id="moves"></div>
+    <div class="panel controls">
+      <div class="row">
+        <button id="hint" class="ghost">Hint</button>
+        <button id="solution" class="ghost">View solution</button>
+      </div>
+      <div class="row">
+        <label>Difficulty
+          <select id="difficulty">
+            <option value="easiest">Easiest</option><option value="easier">Easier</option>
+            <option value="normal" selected>Normal</option>
+            <option value="harder">Harder</option><option value="hardest">Hardest</option>
+          </select>
+        </label>
+        <label>Board
+          <select id="size"><option value="">Any</option></select>
+        </label>
+      </div>
+      <div class="row">
+        <label class="grow">Theme <a href="#/glossary" class="small">what do these mean?</a>
+          <select id="theme"></select>
+        </label>
+      </div>
+    </div>
+    <div class="panel session" id="session"></div>
+  </aside>
+</main>
+
+<main id="view-glossary" class="page hidden"></main>
+<main id="view-me" class="page hidden"></main>
+<main id="view-leaderboard" class="page hidden"></main>
+
+<script src="config.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
