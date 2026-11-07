@@ -1,8 +1,9 @@
-import { Game } from './shared/tak.js?v=1794092883';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794092883';
-import { rate, themeWeight } from './shared/rating.js?v=1794092883';
-import { NinjaBoard, buildPTN } from './board.js?v=1794092883';
-import * as engine from './engine.js?v=1794092883';
+import { Game } from './shared/tak.js?v=1794093844';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794093844';
+import { rate, themeWeight } from './shared/rating.js?v=1794093844';
+import { NinjaBoard, buildPTN } from './board.js?v=1794093844';
+import * as engine from './engine.js?v=1794093844';
+import * as tiltak from './tiltak.js?v=1794093844';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -145,9 +146,19 @@ async function runEngine() {
   const at = S.view ?? line.length;
   const key = line.slice(0, at).join(' ');
   if (S.evalKey === key) return;
-  S.evalKey = key; S.eval = { kind: 'thinking' }; renderAll();
-  const res = await engine.analyze({ ...enginePos(S.hist.length ? line.slice(0, at) : line.slice(0, at)), maxPlies: 9 });
-  if (res && S.evalKey === key) { S.eval = res; renderAll(); }
+  const s = S;
+  S.evalKey = key; S.eval = { kind: 'thinking' }; S.tk = null; renderAll();
+  // Positional opinion from Tiltak (sizes 4–6), streamed as it searches; forced wins from our own solver.
+  const g = gameAt(line.slice(0, at));
+  if (tiltak.supports(S.p.size, S.p.komi || 0) && !g.result()) {
+    let lastPaint = 0;
+    tiltak.analyze({ tps: g.toTPS(), size: S.p.size, komi: S.p.komi || 0, ms: 2500, onInfo: (r) => {
+      if (S !== s || S.evalKey !== key) return;
+      S.tk = r; const now = performance.now(); if (now - lastPaint > 150) { lastPaint = now; renderAll(); }
+    } }).then((r) => { if (r && S === s && S.evalKey === key) { S.tk = r; renderAll(); } }).catch(() => {});
+  } else tiltak.stop();
+  const res = await engine.analyze({ ...enginePos(line.slice(0, at)), maxPlies: 9 });
+  if (res && S === s && S.evalKey === key) { S.eval = res; renderAll(); }
 }
 
 // Load a line onto the board and show the position after `idx` plies (no animation).
@@ -160,7 +171,7 @@ async function showLine(line, idx) {
 function boardReady() {}
 
 async function start(p) {
-  engine.interrupt(); // nothing from the previous puzzle should still be thinking
+  engine.interrupt(); tiltak.stop(); // nothing from the previous puzzle should still be thinking
   const g = Game.fromTPS(p.tps, p.komi || 0);
   const hist = p.meta?.history || [];
   const s = S = { p, g, node: p.tree, solver: g.toMove, hist, moves: [], snaps: [g.toTPS()], view: null, status: 'play', resultSent: false, hinted: false, delta: null, busy: true,
@@ -515,7 +526,16 @@ function renderAll(mood) {
       : e.kind === 'win' ? `${side} forces a win in ${Math.ceil(e.plies / 2)}: <span class="pv">${(e.pv || []).map(esc).join(' ')}</span>`
       : e.kind === 'none' ? `${e.exact ? 'No forced win' : 'No forced win found'} for ${side} within ${Math.ceil(e.maxPlies / 2)} moves.${e.threat ? ` ${colorName(3 - e.side)} threatens a road (${esc(e.threat)}).` : ''}`
       : 'Engine unavailable.';
-    engineHtml = `<div class="engine"><span class="engine-label">Engine</span> ${t}</div>`;
+    // Tiltak's opinion: a small bar (White's share) and the favoured side's chance, plus its best line.
+    let tk = '';
+    if (S.tk && e.kind !== 'over') {
+      const pw = Math.max(0, Math.min(1, S.tk.winProb ?? 0.5));
+      const fav = Math.abs(pw - 0.5) < 0.05 ? 'About even' : `${pw > 0.5 ? 'White' : 'Black'} ${Math.round(Math.max(pw, 1 - pw) * 100)}%`;
+      tk = `<div class="tk"><span class="bar" title="White’s chances"><i style="width:${(pw * 100).toFixed(1)}%"></i></span><b>${fav}</b>
+        ${S.tk.pv?.length ? `<span class="pv">${S.tk.pv.slice(0, 6).map(esc).join(' ')}</span>` : ''}</div>`;
+    }
+    engineHtml = `<div class="engine">${tk}<div><span class="engine-label">Solver</span> ${t}</div>
+      <div class="credit">Evaluation by <a href="https://github.com/MortenLohne/tiltak" target="_blank" rel="noopener">Tiltak</a> (GPL), running in your browser.</div></div>`;
   }
   html = `<div class="list">${html || '<span class="muted">Moves appear here.</span>'}</div>${engineHtml}`;
   const mv = $('#moves');

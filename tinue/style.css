@@ -208,3 +208,12 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .moves .engine { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); font: var(--fs-sm)/1.5 "Noto Sans", sans-serif; color: var(--fg); }
 .moves .engine .pv { font-family: var(--mono); color: var(--fg-hi); }
 .moves .mv.me.shown { color: var(--fg); }
+
+/* Tiltak evaluation */
+.moves .engine { display: flex; flex-direction: column; gap: 6px; }
+.moves .tk { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.moves .tk .bar { width: 64px; height: 8px; border-radius: 4px; background: var(--p2); box-shadow: inset 0 0 0 1px #6b655e; overflow: hidden; flex: none; }
+.moves .tk .bar i { display: block; height: 100%; background: var(--p1); transition: width .3s ease; }
+.moves .tk b { color: var(--fg-hi); font-weight: 600; font-variant-numeric: tabular-nums; }
+.moves .engine .credit { font-size: 11px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .moves .tk .bar i { transition: none; } }
