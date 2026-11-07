@@ -1,0 +1,134 @@
+/* tinue board — a light, original re-implementation of PTN Ninja's 2D board (the board PlayTak embeds).
+   Visual/interaction spec, read off PTN Ninja's components (numbers only; no code taken):
+
+   LAYOUT (vertical layout, unplayed pieces on, axisLabelsSmall)
+   - Board = N×N square grid, light board1 / dark board2 checker; a square is light when file and rank
+     parity differ (a1 is dark). Unplayed-pieces tray below the board: board3, height = 1 square,
+     bottom corners rounded 0.35em, where 1em (board font) = min(30px, 4.375% of board width).
+   - Coordinates live inside the edge squares: rank at the top-left of the left column, file at the
+     bottom-right of the bottom row; box 1.5em × 1.5em with font-size min(15% of a square, 15px);
+     text #212121cd on light squares, #fafafacd on dark (chosen by luminance <= .4 of the composited bg).
+
+   PIECES (all lengths in % of a square; 1em on a piece = 1 square)
+   - Flat: 50% × 50% square inset 25%, corner radius 10%, border 1.3% (border-width 1 × .013em).
+     Shadow 0 (.65%+2%) (1.3%+3%) umbra #00000033. Lifted first piece adds 0 .2em .1em umbra.
+   - Wall: 18.75% wide × 50% tall, 40% from the left, radius 27%/10%, rotated -45° (player 1) / +45°
+     (player 2); shadow offset rotated with it (x, y × .78). Walls and caps use the "special" color.
+   - Cap: the flat's 50% box, fully round.
+   - Stacks: each piece 7% higher than the one below. A stack taller than N shows its top N pieces from
+     the base up; the pieces below them ("immovable") become slivers 15% × 8% (radius 15%/30%) stacked
+     7% apart up the right side (x 75%, starting 25% up). Above N+10 pieces the lowest slivers are hidden
+     and the rest shift down. A wall on a stack sits one step (7%) lower.
+   - Selected (carried) pieces are lifted 3 steps (21%) and drawn above everything else.
+   - Tray: each player's unplayed pieces fan along the tray's top row, player 1 from the left edge,
+     player 2 from the right edge, toward a .75-square gap in the middle: piece k of T sits at
+     (N/2 − .875)·(k/(T−1)) squares from its edge, caps outermost, the next piece to be used next to the
+     caps; outer pieces overlap inner ones. A selected tray piece is lifted 21%.
+
+   HIGHLIGHTS (opacity of a full-square overlay)
+   - Last ply, primary color: .4 on the source/placed square, .75 on drop squares (and on a placed one).
+   - highlight([sq]) suggestions, side-to-move road color: .4 (first square .8).
+   - Squares in a move being entered: .5 (the origin, once left, .25). Hover on a valid square: .35
+     (fine pointers only). Flat win: .4 owner's road color on flat-topped squares.
+   - Roads (showRoads): a center block (middle third) plus arms to orthogonal same-colored road pieces
+     and to board edges, in the owner's road color: .2 for connections, .8 for the winning road. A
+     finished road game shows just the winning road (.8) even without showRoads.
+
+   MOTION: transform/opacity/size/color transitions of .3s cubic-bezier(.3,.3,.5,1); no animation on
+   load/goTo/first/last; none at all with prefers-reduced-motion.
+
+   INTERACTION (disableStoneCycling): click empty square = place a flat (cap when out of flats), or the
+   tray-selected type. Tray: click a flat = select it; click the selected flat again = toggle wall;
+   click the selected cap = deselect; click tray background = deselect. Click own stack = lift
+   min(N, height). On the origin: each click drops one back (0 = cancel). Click an orthogonal neighbor
+   (then only further along that line) = carry the hand there and drop 1; click the current square =
+   drop 1 more; click the origin after leaving = cancel. If the next square is blocked the rest drops
+   automatically. A capstone on top of the hand may flatten a wall: the rest drops first, then the cap
+   moves alone. Right click: lift 1 / drop the whole hand / select the tray flat as a wall. Esc cancels.
+   Hover/selected stacks show their height (or pieces in hand / dropped here) on the top piece. */
+
+.tb-host { container-type: inline-size; }
+.tb {
+  --b1: #f0d9b5; --b2: #b58863; --b3: #262421; --pri: #9cb83a;
+  --p1: #f6f1e7; --p1s: #ffffff; --p1b: #8f8473; --p1r: #f6f1e7;
+  --p2: #2f2c29; --p2s: #3d3935; --p2b: #0d0c0b; --p2r: #4a4540;
+  --tl: #fafafacd; --td: #212121cd; --um: #00000033;
+  --dur: .3s; --ease: cubic-bezier(.3, .3, .5, 1);
+  position: relative; width: 100%; font-size: min(30px, 4.375cqw); line-height: 1;
+  user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.tb-board { position: relative; z-index: 1; width: 100%; aspect-ratio: 1; background: var(--b1);
+  display: grid; grid-template-columns: repeat(var(--n), 1fr); grid-template-rows: repeat(var(--n), 1fr); }
+.tb-tray { width: 100%; aspect-ratio: var(--n) / 1; background: var(--b3); border-radius: 0 0 var(--corner, 6px) var(--corner, 6px); }
+
+/* squares */
+.tb-sq { position: relative; font-size: calc(100cqw / var(--n)); }
+.tb-sq.dk { background: var(--b2); }
+.tb-hl, .tb-rd, .tb-rd > i { position: absolute; inset: 0; pointer-events: none; }
+.tb-rd { z-index: 1; }
+.tb-hl { opacity: 0; transition: background-color var(--dur) var(--ease), opacity var(--dur) var(--ease); }
+.tb-cur { background: var(--pri); }
+.tb-pl { background: var(--p1r); }
+.tb.t2 .tb-pl { background: var(--p2r); }
+.tb-sq.c .tb-cur { opacity: .4; }
+.tb-sq.c.cp .tb-cur { opacity: .75; }
+.tb-sq.s .tb-pl { opacity: .4; }
+.tb-sq.s.sp .tb-pl { opacity: .8; }
+.tb-sq.fw .tb-pl { opacity: .4; }
+.tb-sq.fw.o1 .tb-pl { background: var(--p1r); }
+.tb-sq.fw.o2 .tb-pl { background: var(--p2r); }
+.tb-sq.sel .tb-pl { opacity: .5; }
+.tb-sq.sel.selp .tb-pl { opacity: .25; }
+.tb-sq.v { cursor: pointer; }
+@media (pointer: fine) { .tb-sq.v:hover .tb-pl { opacity: .35; } }
+
+/* coordinates */
+.tb-lab { position: absolute; width: 1.5em; height: 1.5em; line-height: 1.5em; text-align: center;
+  font-size: min(.15em, 15px); color: var(--td); pointer-events: none; z-index: 1; }
+.tb-sq.dk .tb-lab { color: var(--tl); }
+.tb-lr { top: 0; left: 0; }
+.tb-lc { bottom: 0; right: 0; }
+
+/* roads: center third plus arms; n/e arms reach a third into the neighbor (or stop at the edge) */
+.tb-rd > i { opacity: 0; background: var(--p1r); transition: opacity var(--dur) cubic-bezier(0, 1, .5, 1); }
+.tb-sq.o2 .tb-rd > i { background: var(--p2r); }
+.tb-rd > .m { inset: 33.33%; }
+.tb-rd > .n { inset: -33.33% 33.33% 66.67%; }
+.tb-rd > .n.x { top: 0; }
+.tb-rd > .e { inset: 33.33% -33.33% 33.33% 66.67%; }
+.tb-rd > .e.x { right: 0; }
+.tb-rd > .s { inset: 66.67% 33.33% 0; }
+.tb-rd > .w { inset: 33.33% 66.67% 33.33% 0; }
+.tb-rd > i.on { opacity: .2; transition-timing-function: cubic-bezier(1, 0, .5, 0); }
+.tb-rd > i.rd { opacity: .8; }
+
+/* pieces: a square-sized box moved by translate (% of a square), the stone inside it */
+.tb-pcs { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.tb-pc { position: absolute; left: 0; bottom: 0; width: calc(100% / var(--n)); aspect-ratio: 1;
+  font-size: calc(100cqw / var(--n)); will-change: transform;
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease); }
+.tb-st {
+  --sw: .013em; --sy: calc(var(--sw) / 2 + .02em); --sb: calc(var(--sw) + .03em);
+  position: absolute; bottom: 0; left: 0; width: 50%; height: 50%; margin: 25%; box-sizing: border-box;
+  border: var(--sw) solid var(--p1b); border-radius: 10%; background: var(--p1);
+  box-shadow: 0 var(--sy) var(--sb) var(--um);
+  transition: var(--dur) var(--ease); transition-property: opacity, transform, width, height, left, border-radius, background-color, box-shadow;
+}
+.tb-st.fs { box-shadow: 0 var(--sy) var(--sb) var(--um), 0 .2em .1em var(--um); }
+.tb-st.p2 { background: var(--p2); border-color: var(--p2b); }
+.tb-st.C { border-radius: 50%; background: var(--p1s); }
+.tb-st.C.p2 { background: var(--p2s); }
+.tb-st.S { width: 18.75%; left: 15%; border-radius: 27% / 10%; background: var(--p1s); transform: rotate(-45deg);
+  box-shadow: calc(var(--sy) * -.78) calc(var(--sy) * .78) var(--sb) var(--um); }
+.tb-st.S.fs { box-shadow: calc(var(--sy) * -.78) calc(var(--sy) * .78) var(--sb) var(--um), -.156em .156em .1em var(--um); }
+.tb-st.S.p2 { background: var(--p2s); transform: rotate(45deg); box-shadow: calc(var(--sy) * .78) calc(var(--sy) * .78) var(--sb) var(--um); }
+.tb-st.S.p2.fs { box-shadow: calc(var(--sy) * .78) calc(var(--sy) * .78) var(--sb) var(--um), .156em .156em .1em var(--um); }
+.tb-st.im { left: 50%; width: 15%; height: 8%; border-radius: 15% / 30%; }
+.tb-st.ov { opacity: 0; }
+.tb-st.pick { pointer-events: auto; cursor: pointer; }
+.tb-cnt { position: absolute; left: 0; right: 0; bottom: 25%; height: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: min(.15em, 15px); color: var(--td); pointer-events: none; }
+.tb-st.p2 + .tb-cnt { color: var(--tl); }
+
+.tb.na *, .tb.na { transition: none !important; }
+@media (prefers-reduced-motion: reduce) { .tb *, .tb { transition: none !important; } }

@@ -57,17 +57,32 @@ kbd { font: 11px var(--mono); color: inherit; opacity: .7; border: 1px solid cur
 .help { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--muted); color: var(--muted); font: 600 10px/1 system-ui, sans-serif; }
 .help:hover { border-color: var(--accent); color: var(--accent); }
 
-/* ---------- header ---------- */
-.top { display: flex; align-items: center; gap: 28px; padding: 0 24px; height: 56px; background: var(--bg2); border-bottom: 1px solid var(--line); }
-.brand { font-size: 22px; font-weight: 700; color: var(--fg-hi); letter-spacing: -.5px; }
-.brand span { color: var(--sq-dark); }
-.top nav { display: flex; gap: 20px; }
-.top nav a { color: var(--fg); text-transform: uppercase; font-size: var(--fs-sm); letter-spacing: .5px; }
+/* ---------- header: logo, plain nav, one quiet control ---------- */
+.top { display: flex; align-items: center; gap: 28px; padding: 0 24px; height: 56px; background: var(--bg2); border-bottom: 1px solid var(--line); font-size: 14px; }
+.brand { display: flex; align-items: center; gap: 8px; color: var(--fg-hi); font-weight: 600; font-size: 18px; letter-spacing: -.2px; }
+.brand .logo { width: 24px; height: 24px; display: block; }
+.top nav { display: flex; gap: 22px; }
+.top nav a { color: var(--muted); }
 .top nav a.on, .top nav a:hover { color: var(--fg-hi); }
-.userbox { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: var(--fs-sm); }
-.userbox .name { color: var(--fg-hi); font-weight: 600; }
-.userbox form { display: flex; gap: 6px; }
-.userbox input { width: 150px; }
+.userbox { margin-left: auto; display: flex; align-items: center; }
+button.link { background: none; border: 0; height: auto; padding: 0; color: var(--muted); font: inherit; font-weight: 400; cursor: pointer; }
+button.link:hover { background: none; color: var(--fg-hi); }
+.menu { position: relative; }
+.menu .name { color: var(--fg-hi); font-weight: 500; padding: 8px 0; }
+.menu .pop { position: absolute; right: 0; top: 100%; min-width: 150px; padding: 6px; background: var(--bg3); border: 1px solid var(--line); border-radius: var(--r-panel); box-shadow: 0 8px 24px rgba(0,0,0,.45); display: none; flex-direction: column; z-index: 20; }
+.menu:hover .pop, .menu:focus-within .pop, .menu.open .pop { display: flex; }
+.menu.click:hover:not(.open) .pop { display: none; }
+.menu .pop > a, .menu .pop > button.link { padding: 8px 10px; border-radius: var(--r-ctl); text-align: left; color: var(--fg); }
+.menu .pop > a:hover, .menu .pop > button.link:hover { background: var(--bg4); color: var(--fg-hi); }
+.menu .pop.wide { width: 280px; padding: 14px; }
+.menu .pop form { display: flex; flex-direction: column; gap: 10px; }
+.menu .pop input { width: 100%; }
+.menu .pop .hint, .menu .pop .confirm p { margin: 0; color: var(--muted); font-size: var(--fs-xs); }
+.menu .pop .hint .link { font-size: inherit; color: var(--accent); }
+.menu .pop .err { margin: 0; color: var(--bad); font-size: var(--fs-xs); }
+.menu .pop .confirm { display: flex; flex-direction: column; gap: 8px; padding: 6px 4px 2px; }
+.menu .pop .confirm.hidden { display: none; }
+button.danger { background: var(--bad-fill); border-color: var(--bad-fill); color: #fff; }
 
 /* ---------- layout ---------- */
 .puzzle-page { display: grid; grid-template-columns: minmax(300px, 640px) minmax(280px, 380px); gap: var(--gap) 24px; justify-content: center; padding: 22px 16px; }
@@ -76,20 +91,9 @@ kbd { font: 11px var(--mono); color: inherit; opacity: .7; border: 1px solid cur
 .panel { background: var(--bg2); border-radius: var(--r-panel); padding: var(--pad); box-shadow: 0 2px 2px rgba(0,0,0,.25); }
 .page { max-width: 900px; margin: 24px auto; padding: 0 16px; }
 
-/* ---------- board (PTN Ninja embed, the viewer PlayTak uses) ---------- */
-/* The iframe is cropped to remove PTN Ninja's built-in inset so the board lines up with the side panels.
-   Until it has loaded and taken our theme it stays invisible over a skeleton board in the same place. */
-.board-wrap { position: relative; overflow: hidden; border-radius: var(--r-panel); background: var(--bg); }
-.ninja { display: block; border: 0; background: var(--bg); width: calc(100% + 68px); margin: -78px -34px -64px; aspect-ratio: 1 / 1.3; opacity: 0; transition: opacity .18s ease; }
-.board-wrap.ready .ninja { opacity: 1; }
-.skeleton-board { position: absolute; inset: 0 0 auto 0; pointer-events: none; transition: opacity .18s ease; }
-.board-wrap.ready .skeleton-board { opacity: 0; }
-.skeleton-board .sk-sq { aspect-ratio: 1; width: 100%;
-  background: repeating-conic-gradient(#2b2926 0 25%, #24221f 0 50%) 0 0 / 40% 40%; }
-.skeleton-board .sk-tray { height: 0; padding-bottom: 17%; background: var(--bg2); }
-@media (max-width: 860px) {
-  .ninja { width: calc(100% + 16px); margin: -8px -8px -56px; }
-}
+/* ---------- board (our own PTN-Ninja-style board: public/board.js + board.css) ---------- */
+.board-wrap { position: relative; }
+.board-host { width: 100%; }
 
 /* ---------- side panels ---------- */
 .feedback { display: flex; gap: 14px; align-items: center; min-height: 96px; }
@@ -144,15 +148,6 @@ a.tag:hover { border-color: var(--accent); color: var(--fg-hi); }
 .session .streak a.cur { box-shadow: 0 0 0 2px var(--fg-hi); }
 .session .streak a:hover { filter: brightness(1.15); }
 
-/* skeleton text bars for panels before data arrives */
-.sk { display: block; height: 12px; border-radius: 4px; background: var(--bg3); }
-.sk + .sk { margin-top: 10px; }
-.sk.w40 { width: 40%; } .sk.w60 { width: 60%; } .sk.w80 { width: 80%; }
-.sk-circle { width: 44px; height: 44px; border-radius: 50%; background: var(--bg3); flex: none; }
-@media (prefers-reduced-motion: no-preference) {
-  .sk, .sk-circle { animation: sk 1.2s ease-in-out infinite alternate; }
-  @keyframes sk { from { opacity: .55; } to { opacity: 1; } }
-}
 
 /* ---------- other pages ---------- */
 h1 { color: var(--fg-hi); font-weight: 500; }
@@ -168,7 +163,6 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 @media (max-width: 860px) {
   .puzzle-page { grid-template-columns: 1fr; padding: 8px; }
   .top { flex-wrap: wrap; gap: 10px 18px; padding: 10px 16px; height: auto; }
-  .userbox { margin-left: 0; width: 100%; }
 }
 @media (max-width: 600px) { .glossary dl { grid-template-columns: 1fr; gap: 2px 0; } .glossary dd { margin-bottom: 10px; } }
 
@@ -192,7 +186,25 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 /* settings */
 .controls { gap: 12px; }
 .theme-desc { margin: -4px 0 0; color: var(--muted); font-size: var(--fs-xs); }
-.sk.btn { height: var(--ctl); margin: 0 !important; }
 .feedback .actions.one { grid-template-columns: 1fr; }
 .flush { margin: 0; }
 .page .panel { margin-top: 8px; }
+
+/* loading: the real panels with dummy values, text masked */
+.is-loading h2, .is-loading p, .is-loading .mv, .is-loading .num, .is-loading .start { color: transparent !important; background: var(--bg3) !important; border-color: transparent !important; border-radius: 4px; }
+.is-loading .icon { background: var(--bg3) !important; border-color: transparent !important; }
+.is-loading button { pointer-events: none; opacity: .5; }
+.is-loading .mv { margin: 1px 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .is-loading h2, .is-loading p, .is-loading .mv, .is-loading .icon { animation: sk 1.2s ease-in-out infinite alternate; }
+}
+
+/* misses, your line, engine */
+.moves .mv.miss { color: var(--bad); text-decoration: line-through; cursor: default; }
+.moves .mv.miss:hover { background: none; }
+.moves .branch { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+.moves .branch-label, .moves .engine-label { font: 600 var(--fs-xs) "Noto Sans", sans-serif; color: var(--muted); margin-right: 6px; }
+.moves .back { font: var(--fs-xs) "Noto Sans", sans-serif; color: var(--accent); margin-left: 8px; }
+.moves .engine { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); font: var(--fs-sm)/1.5 "Noto Sans", sans-serif; color: var(--fg); }
+.moves .engine .pv { font-family: var(--mono); color: var(--fg-hi); }
+.moves .mv.me.shown { color: var(--fg); }
