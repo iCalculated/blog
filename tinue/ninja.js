@@ -19,8 +19,15 @@ const THEME = {
 // PlayTak's embed parameters (playtak-ui src/js/main.js), minus the player-name bar, plus no undo.
 const PARAMS = '&moveNumber=false&unplayedPieces=true&disableStoneCycling=true&showBoardPrefsBtn=false' +
   '&disableNavigation=true&disablePTN=true&disableText=true&flatCounts=false&turnIndicator=false&gameTimer=false' +
-  '&showHeader=false&showEval=false&showRoads=false&stackCounts=false&notifyGame=false&disableUndo=true' +
-  '&theme=' + encodeURIComponent(JSON.stringify(THEME));
+  '&showHeader=false&showEval=false&showRoads=false&stackCounts=false&notifyGame=false&disableUndo=true';
+// The same settings again over postMessage once the board is up. Firefox doesn't reliably apply URL
+// settings (the long theme JSON in the path breaks them), so the message is what actually counts there.
+const UI = {
+  theme: THEME, moveNumber: false, unplayedPieces: true, disableStoneCycling: true, showBoardPrefsBtn: false,
+  disableNavigation: true, disablePTN: true, disableText: true, flatCounts: false, turnIndicator: false,
+  gameTimer: false, showHeader: false, showEval: false, showRoads: false, stackCounts: false, notifyGame: false,
+  disableUndo: true, showPTN: false, showText: false, showControls: false, showScrubber: false, animateBoard: false,
+};
 const ORIGIN = 'https://ptn.ninja';
 
 export class NinjaBoard {
@@ -37,7 +44,10 @@ export class NinjaBoard {
       const { action, value } = e.data || {};
       if (action === 'GAME_STATE') {
         this.state = value;
-        if (this._resolve) { this._resolve(); this._resolve = null; }
+        if (this._resolve) {
+          iframe.contentWindow.postMessage({ action: 'SET_UI', value: UI }, ORIGIN);
+          this._resolve(); this._resolve = null;
+        }
         this.onState?.(value);
       } else if (action === 'INSERT_PLY') this.onMove?.(value);
       else if (action === 'UNHANDLED_KEY') window.dispatchEvent(new KeyboardEvent('keydown', { key: value.key }));
@@ -47,7 +57,14 @@ export class NinjaBoard {
     await this.ready;
     this.iframe.contentWindow.postMessage(value === undefined ? { action } : { action, value }, ORIGIN);
   }
-  load(ptn) { return this.send('SET_CURRENT_PTN', ptn); }
+  // Load a game without PTN Ninja's fly-in animation, then turn animation back on for the moves that follow.
+  async load(ptn) {
+    await this.send('SET_UI', { animateBoard: false });
+    await this.send('SET_CURRENT_PTN', ptn);
+    await this.send('LAST');
+    await new Promise((r) => setTimeout(r, 60));
+    await this.send('SET_UI', { animateBoard: true });
+  }
   append(ply) { return this.send('APPEND_PLY', ply); }
   goTo(plyID) { return this.send('GO_TO_PLY', { plyID, isDone: true }); }
   first() { return this.send('FIRST'); }

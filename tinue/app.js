@@ -103,6 +103,7 @@ async function start(p) {
   const g = Game.fromTPS(p.tps, p.komi || 0);
   const hist = p.meta?.history || [];
   S = { p, g, node: p.tree, solver: g.toMove, hist, moves: [], snaps: [g.toTPS()], view: null, status: 'play', resultSent: false, hinted: false, delta: null, busy: true };
+  renderAll(); // side panel right away; the board iframe may still be loading
   await board.ui({ disableBoard: true, showRoads: false });
   if (hist.length) {
     // Show the game up to just before the opponent's last move, then play that move (Lichess-style).
@@ -302,12 +303,13 @@ function renderAll(mood) {
 
   const done = S.status === 'solved';
   const themes = (p.themes || []).filter((t) => THEMES[t] && THEMES[t].group !== 'Board');
+  // While solving, show only your rating; everything about the puzzle comes at the end.
   $('#info').innerHTML = `<dl>
     <dt>Your rating</dt><dd class="your-rating">${Math.round(me ? me.rating : guest.rating)}${done && delta ? ' ' + delta : ''}</dd>
-    <dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}">#${esc(p.id)}</a> · ${p.size}×${p.size}${p.komi ? `, komi ${p.komi}` : ''}</dd>
-    ${done ? `<dt>Puzzle rating</dt><dd>${Math.round(p.rating)} <span class="muted">· played ${p.attempts + 1}×</span></dd>
-    <dt>Themes</dt><dd>${themes.map((t) => `<a class="tag" href="#/glossary/${t}" title="${esc(THEMES[t].desc)}">${THEMES[t].name}</a>`).join('') || '—'}</dd>` : ''}
-    <dt>Source</dt><dd>${esc(p.source)}${p.meta?.white ? ` · ${esc(p.meta.white)} vs ${esc(p.meta.black)}` : ''}${p.sourceRef?.startsWith('http') ? ` · <a href="${esc(p.sourceRef)}" target="_blank" rel="noopener">game</a>` : ''}</dd>
+    ${done ? `<dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}">#${esc(p.id)}</a> · ${p.size}×${p.size}${p.komi ? `, komi ${p.komi}` : ''}</dd>
+    <dt>Puzzle rating</dt><dd>${Math.round(p.rating)} <span class="muted">· played ${p.attempts + 1}×</span></dd>
+    <dt>Themes</dt><dd>${themes.map((t) => `<a class="tag" href="#/glossary/${t}" title="${esc(THEMES[t].desc)}">${THEMES[t].name}</a>`).join('') || '—'}</dd>
+    <dt>Source</dt><dd>${esc(p.source)}${p.meta?.white ? ` · ${esc(p.meta.white)} vs ${esc(p.meta.black)}` : ''}${p.sourceRef?.startsWith('http') ? ` · <a href="${esc(p.sourceRef)}" target="_blank" rel="noopener">game</a>` : ''}</dd>` : ''}
   </dl>`;
 
   // Move list: the game so far (dim) and then the puzzle. Click any move to see that position.
