@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794095187';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794095187';
-import { rate, themeWeight } from './shared/rating.js?v=1794095187';
-import { NinjaBoard, buildPTN } from './board.js?v=1794095187';
-import * as engine from './engine.js?v=1794095187';
-import * as tiltak from './tiltak.js?v=1794095187';
+import { Game } from './shared/tak.js?v=1794095464';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794095464';
+import { rate, themeWeight } from './shared/rating.js?v=1794095464';
+import { NinjaBoard, buildPTN } from './board.js?v=1794095464';
+import * as engine from './engine.js?v=1794095464';
+import * as tiltak from './tiltak.js?v=1794095464';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -563,8 +563,9 @@ function renderAll(mood) {
   // Keep the current move in view by scrolling the table itself (never the page).
   const sc = mv.querySelector('.mscroll');
   sc.scrollTop = prevScroll; // keep where the reader was, then make sure the current move is visible
-  const cur = sc.querySelector('.mv.cur') || [...sc.querySelectorAll('.mv, .miss')].at(-1);
-  if (cur) {
+  const cur = S.view === 0 ? null : sc.querySelector('.mv.cur') || [...sc.querySelectorAll('.mv, .miss')].at(-1);
+  if (S.view === 0) sc.scrollTop = 0; // the starting position: show the top of the game
+  else if (cur) {
     const top = cur.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
     const rowH = cur.offsetHeight + 8, h = sc.clientHeight;
     if (top < sc.scrollTop || top + rowH > sc.scrollTop + h) sc.scrollTop = Math.max(0, top - h / 2 + rowH / 2);

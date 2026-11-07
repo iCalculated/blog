@@ -2,8 +2,8 @@
 //   refute:  why was a move wrong? Find the opponent's reply after which the attack fails.
 //   analyze: does the side to move have a forced win (road or flats), and how?
 // It's a forced-win prover, not an evaluator: it answers "win in N" or "nothing forced within N".
-import { Game, Solver } from './shared/tak.js?v=1794095187';
-import { shortestTinue } from './shared/pns.js?v=1794095187';
+import { Game, Solver } from './shared/tak.js?v=1794095464';
+import { shortestTinue } from './shared/pns.js?v=1794095464';
 
 function gameFrom({ size, komi, tps, plies }) {
   const g = tps ? Game.fromTPS(tps, komi || 0) : Object.assign(new Game(size), { komi: komi || 0 });
