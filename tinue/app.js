@@ -1,7 +1,7 @@
-import { Game } from './shared/tak.js';
-import { THEMES, GLOSSARY } from './shared/themes.js';
-import { rate, themeWeight } from './shared/rating.js';
-import { NinjaBoard, buildPTN } from './ninja.js';
+import { Game } from './shared/tak.js?v=1794089020';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794089020';
+import { rate, themeWeight } from './shared/rating.js?v=1794089020';
+import { NinjaBoard, buildPTN } from './ninja.js?v=1794089020';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
