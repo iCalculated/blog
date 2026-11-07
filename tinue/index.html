@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tinue — Tak puzzles</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect x='2' y='2' width='12' height='12' rx='2' fill='%23b58863'/><circle cx='8' cy='8' r='3.5' fill='%23f4efe6'/></svg>">
-<link rel="stylesheet" href="style.css?v=1794089020">
+<link rel="stylesheet" href="style.css?v=1794090060">
 <meta name="googlebot" content="noindex"><meta name="bingbot" content="noindex">
 </head>
 <body>
@@ -22,43 +22,35 @@
 
 <main id="view-puzzle" class="puzzle-page">
   <section class="board-col">
-    <div class="board-wrap">
-      <iframe id="ninja" class="ninja" title="Tak board (PTN Ninja)" allow="clipboard-write"></iframe>
-    </div>
-    <div class="under-board">
-      <div class="howto">Click a square to place a flat. For a wall or capstone, click it in the reserve beside the board first. Click a stack to pick it up, then click along a line to drop.</div>
-      <button id="flip" class="ghost" title="Flip board">⇅</button>
+    <div class="board-wrap" id="board-wrap">
+      <div class="skeleton-board" aria-hidden="true"><div class="sk-sq"></div><div class="sk-tray"></div></div>
+      <iframe id="ninja" class="ninja" title="Tak board" allow="clipboard-write"></iframe>
     </div>
   </section>
 
   <aside class="side">
-    <div class="panel feedback" id="feedback"></div>
-    <div class="panel info" id="info"></div>
-    <div class="panel moves" id="moves"></div>
+    <div class="panel feedback" id="feedback"><div class="sk-circle"></div><div class="body"><span class="sk w40"></span><span class="sk w60"></span></div><div class="actions"><span class="sk btn"></span><span class="sk btn"></span></div></div>
+    <div class="panel session" id="session"><span class="sk w40"></span><span class="sk w60"></span></div>
+    <div class="panel moves" id="moves"><span class="sk w80"></span><span class="sk w60"></span></div>
+    <div class="panel puzzle-info hidden" id="info"></div>
     <div class="panel controls">
+      <label class="field"><span>Theme <a href="#/glossary" class="help" title="What do the themes mean?" aria-label="What do the themes mean?">?</a></span>
+        <select id="theme"><option value="">Mix (everything)</option></select>
+      </label>
+      <p class="theme-desc" id="theme-desc">A mix of everything.</p>
       <div class="row">
-        <button id="hint" class="ghost">Hint</button>
-        <button id="solution" class="ghost">View solution</button>
-      </div>
-      <div class="row">
-        <label>Difficulty
+        <label class="field"><span>Difficulty</span>
           <select id="difficulty">
             <option value="easiest">Easiest</option><option value="easier">Easier</option>
             <option value="normal" selected>Normal</option>
             <option value="harder">Harder</option><option value="hardest">Hardest</option>
           </select>
         </label>
-        <label>Board
-          <select id="size"><option value="">Any</option></select>
-        </label>
-      </div>
-      <div class="row">
-        <label class="grow">Theme <a href="#/glossary" class="small">what do these mean?</a>
-          <select id="theme"></select>
+        <label class="field"><span>Board</span>
+          <select id="size"><option value="5">5×5</option></select>
         </label>
       </div>
     </div>
-    <div class="panel session" id="session"></div>
   </aside>
 </main>
 
@@ -66,7 +58,7 @@
 <main id="view-me" class="page hidden"></main>
 <main id="view-leaderboard" class="page hidden"></main>
 
-<script src="config.js?v=1794089020"></script>
-<script type="module" src="app.js?v=1794089020"></script>
+<script src="config.js?v=1794090060"></script>
+<script type="module" src="app.js?v=1794090060"></script>
 </body>
 </html>

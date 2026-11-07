@@ -1,7 +1,7 @@
-import { Game } from './shared/tak.js?v=1794089020';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794089020';
-import { rate, themeWeight } from './shared/rating.js?v=1794089020';
-import { NinjaBoard, buildPTN } from './ninja.js?v=1794089020';
+import { Game } from './shared/tak.js?v=1794090060';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794090060';
+import { rate, themeWeight } from './shared/rating.js?v=1794090060';
+import { NinjaBoard, buildPTN } from './ninja.js?v=1794090060';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -45,7 +45,7 @@ function renderUser() {
   const box = $('#userbox');
   if (me) {
     box.innerHTML = `<span class="name">${esc(me.name)}</span>
-      <button class="ghost" id="logout" title="Forget this device">Log out</button>`;
+      <button id="logout" title="Forget this device">Log out</button>`;
     $('#logout').onclick = async () => {
       if (!confirm('Log out? To get back in on this device you will need your token (History page shows it while logged in).')) return;
       await api('/api/logout', {}); store.set('token', null); me = null; renderUser();
@@ -99,6 +99,9 @@ function currentPTN() {
   return buildPTN({ size: p.size, komi: p.komi, tps: p.tps, moves: S.moves.map((m) => m.ptn), ...names });
 }
 
+// Show the board only after PTN Ninja has loaded the position with our theme (no PlayTak-blue flash).
+function boardReady() { setTimeout(() => $('#board-wrap').classList.add('ready'), 120); }
+
 async function start(p) {
   const g = Game.fromTPS(p.tps, p.komi || 0);
   const hist = p.meta?.history || [];
@@ -110,6 +113,7 @@ async function start(p) {
     const names = p.meta?.white ? { white: p.meta.white, black: p.meta.black } : {};
     await board.load(buildPTN({ size: p.size, komi: p.komi, moves: hist.slice(0, -1), ...names }));
     await board.last();
+    boardReady();
     renderAll();
     setTimeout(async () => {
       if (S?.p !== p) return;
@@ -123,11 +127,11 @@ async function start(p) {
   } else {
     await board.load(currentPTN());
     await board.last();
+    boardReady();
     S.busy = false;
     await board.setPlayer(S.solver);
     await board.ui({ disableBoard: false });
   }
-  if (store.get('flip', false)) board.rotate180();
   renderAll();
 }
 
@@ -276,40 +280,45 @@ function renderAll(mood) {
   if (!S) return;
   const { p } = S;
   const fb = $('#feedback');
+  const myRating = Math.round(me ? me.rating : guest.rating);
   const delta = S.delta != null ? `<span class="delta ${S.delta >= 0 ? 'up' : 'down'}">${S.delta >= 0 ? '+' : ''}${Math.round(S.delta)}</span>` : '';
+  const playActions = `<div class="actions"><button data-act="hint">Hint</button><button data-act="solution">View solution</button></div>`;
   if (S.status === 'solved') {
-    fb.innerHTML = `<div class="icon ${S.viewed ? 'bad' : 'good'}">${S.viewed ? '✗' : '✓'}</div><div>
+    fb.innerHTML = `<div class="icon ${S.viewed ? 'bad' : 'good'}">${S.viewed ? '✗' : '✓'}</div><div class="body">
       <h2>${S.viewed ? 'Solution shown' : session.at(-1)?.win === false ? 'Solved — after a miss' : 'Success!'}</h2>
-      <p>${S.hinted ? 'Hint used — unrated.' : `Rating <b class="your-rating">${Math.round(me ? me.rating : guest.rating)}</b> ${delta}`}</p>
-      <div class="actions"><button class="primary" id="next">Continue training <kbd>↵</kbd></button>
-        ${me ? `<button class="ghost vote ${S.vote === 1 ? 'on' : ''}" data-v="1" title="Good puzzle">👍</button><button class="ghost vote ${S.vote === -1 ? 'on' : ''}" data-v="-1" title="Bad puzzle">👎</button>` : ''}</div></div>`;
-    $('#next').onclick = loadNext;
-    for (const b of fb.querySelectorAll('.vote')) b.onclick = async () => {
-      const v = +b.dataset.v === S.vote ? 0 : +b.dataset.v;
-      const r = await api('/api/vote', { puzzleId: p.id, vote: v });
-      if (!r.error) { S.vote = v; renderAll(); }
-    };
+      <p>${S.hinted ? 'Hint used — unrated.' : 'Step through the line with ← →.'}</p></div>
+      <div class="actions one"><button class="primary" data-act="next">Continue training <kbd>↵</kbd></button></div>`;
   } else if (S.status === 'retry') {
-    fb.innerHTML = `<div class="icon bad">✗</div><div><h2>That’s not the move!</h2><p>Try something else.</p></div>`;
+    fb.innerHTML = `<div class="icon bad">✗</div><div class="body"><h2>That’s not the move!</h2><p>Try something else.</p></div>${playActions}`;
   } else if (S.status === 'viewing') {
-    fb.innerHTML = `<div class="icon bad">…</div><div><h2>Solution</h2><p>Watch the line.</p></div>`;
+    fb.innerHTML = `<div class="icon bad">…</div><div class="body"><h2>Solution</h2><p>Watch the line.</p></div>`;
   } else {
     const good = mood === 'good';
-    fb.innerHTML = `<div class="icon ${good ? 'good' : 'turn p' + S.solver}">${good ? '✓' : ''}</div><div>
+    fb.innerHTML = `<div class="icon ${good ? 'good' : 'turn p' + S.solver}">${good ? '✓' : ''}</div><div class="body">
       <h2>${good ? 'Best move!' : 'Your turn'}</h2>
-      <p>${good ? 'Keep going…' : `You play <b>${colorName(S.solver)}</b>. Find the best move.`}</p></div>`;
+      <p>${good ? 'Keep going…' : `You play ${colorName(S.solver)}`}</p></div>${playActions}`;
   }
 
+  // Session card: your rating (with the latest change beside it) and one chip per puzzle, Lichess-style.
+  const last = session.at(-1);
+  const sign = (d) => (d >= 0 ? '+' : '−') + Math.abs(Math.round(d));
+  $('#session').innerHTML = `<div class="rating-line"><span class="big">${myRating}</span>${S.status === 'solved' && last?.id === p.id && last.delta != null ? `<span class="delta ${last.delta >= 0 ? 'up' : 'down'}">${sign(last.delta)}</span>` : ''}<span class="label">your rating</span></div>
+    <div class="streak">${session.map((x) => `<a class="${x.win ? 'w' : 'l'}${x.id === p.id ? ' cur' : ''}" href="#/puzzle/${esc(x.id)}" title="Puzzle #${esc(x.id)}">${x.delta != null ? sign(x.delta) : x.win ? '✓' : '✗'}</a>`).join('')}</div>`;
+
+  // Everything about the puzzle itself comes at the end.
   const done = S.status === 'solved';
-  const themes = (p.themes || []).filter((t) => THEMES[t] && THEMES[t].group !== 'Board');
-  // While solving, show only your rating; everything about the puzzle comes at the end.
-  $('#info').innerHTML = `<dl>
-    <dt>Your rating</dt><dd class="your-rating">${Math.round(me ? me.rating : guest.rating)}${done && delta ? ' ' + delta : ''}</dd>
-    ${done ? `<dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}">#${esc(p.id)}</a> · ${p.size}×${p.size}${p.komi ? `, komi ${p.komi}` : ''}</dd>
-    <dt>Puzzle rating</dt><dd>${Math.round(p.rating)} <span class="muted">· played ${p.attempts + 1}×</span></dd>
-    <dt>Themes</dt><dd>${themes.map((t) => `<a class="tag" href="#/glossary/${t}" title="${esc(THEMES[t].desc)}">${THEMES[t].name}</a>`).join('') || '—'}</dd>
-    <dt>Source</dt><dd>${esc(p.source)}${p.meta?.white ? ` · ${esc(p.meta.white)} vs ${esc(p.meta.black)}` : ''}${p.sourceRef?.startsWith('http') ? ` · <a href="${esc(p.sourceRef)}" target="_blank" rel="noopener">game</a>` : ''}</dd>` : ''}
-  </dl>`;
+  const info = $('#info');
+  info.classList.toggle('hidden', !done);
+  if (done) {
+    const themes = (p.themes || []).filter((t) => THEMES[t] && THEMES[t].group !== 'Board');
+    const m = p.meta || {};
+    const player = (c, name, r) => `<div><span class="dot p${c}"></span>${esc(name)}${r ? ` <span class="sub">(${r})</span>` : ''}</div>`;
+    info.innerHTML = `<div><div class="head">Puzzle <a href="#/puzzle/${esc(p.id)}">#${esc(p.id)}</a> · ${p.size}×${p.size}${p.komi ? `, komi ${p.komi}` : ''}</div>
+        <div class="sub">Rating <b class="head">${Math.round(p.rating)}</b> · played ${p.attempts + 1} time${p.attempts ? 's' : ''}</div></div>
+      ${m.white ? `<hr><div><div class="head">From ${p.sourceRef?.startsWith('http') ? `<a href="${esc(p.sourceRef)}" target="_blank" rel="noopener">a PlayTak game</a>` : esc(p.source)}</div>
+        <div class="players">${player(1, m.white, m.ratingWhite)}${player(2, m.black, m.ratingBlack)}</div></div>` : `<hr><div class="sub">Source: ${esc(p.source)}</div>`}
+      <hr><div>${themes.map((t) => `<a class="tag" href="#/glossary/${t}" title="${esc(THEMES[t].desc)}">${THEMES[t].name}</a>`).join('') || '<span class="sub">No themes</span>'}</div>`;
+  }
 
   // Move list: the game so far (dim) and then the puzzle. Click any move to see that position.
   const all = [...S.hist.map((m) => ({ ptn: m, past: true })), ...S.moves];
@@ -324,14 +333,11 @@ function renderAll(mood) {
     return `${sep}${num}<span class="${cls}" data-i="${i + 1}">${esc(m.ptn)}</span>`;
   }).join('');
   const mv = $('#moves');
-  mv.innerHTML = (html || '<span class="muted">Moves appear here.</span>') +
-    `<div class="nav"><button class="ghost" data-nav="first" title="Start">⏮</button><button class="ghost" data-nav="prev" title="Back (←)">◀</button><button class="ghost" data-nav="next" title="Forward (→)">▶</button><button class="ghost" data-nav="last" title="Current position">⏭</button>${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
+  mv.innerHTML = `<div class="list">${html || '<span class="muted">Moves appear here.</span>'}</div>` +
+    `<div class="nav"><button data-nav="first" title="Start" aria-label="Start">⏮</button><button data-nav="prev" title="Back (←)" aria-label="Back">◀</button><button data-nav="next" title="Forward (→)" aria-label="Forward">▶</button><button data-nav="last" title="Current position" aria-label="Current position">⏭</button>${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
   const curEl = mv.querySelector('.mv.cur') || mv.querySelector('.mv:last-of-type');
   if (curEl && mv.scrollHeight > mv.clientHeight) curEl.scrollIntoView({ block: 'nearest' });
 
-  $('#hint').disabled = $('#solution').disabled = S.status === 'solved' || S.status === 'viewing';
-  $('#session').innerHTML = `<div class="muted">This session</div><div class="streak">${session.map((s) =>
-    `<a class="${s.win ? 'w' : 'l'}" href="#/puzzle/${esc(s.id)}" title="#${esc(s.id)}${s.delta != null ? ' ' + (s.delta >= 0 ? '+' : '') + Math.round(s.delta) : ''}">${s.win ? '✓' : '✗'}</a>`).join('') || '<span class="muted">—</span>'}</div>`;
 }
 
 $('#moves').addEventListener('click', (e) => {
@@ -344,13 +350,18 @@ $('#moves').addEventListener('click', (e) => {
 });
 
 // ---------- controls ----------
-$('#flip').onclick = () => { store.set('flip', !store.get('flip', false)); board.rotate180(); };
-$('#hint').onclick = showHint;
-$('#solution').onclick = showSolution;
+// buttons inside the feedback card
+$('#feedback').addEventListener('click', async (e) => {
+  const act = e.target.closest('[data-act]')?.dataset.act;
+  if (act === 'hint') return showHint();
+  if (act === 'solution') return showSolution();
+  if (act === 'next') return loadNext();
+});
+const themeDesc = () => { $('#theme-desc').textContent = prefs.theme && THEMES[prefs.theme] ? THEMES[prefs.theme].desc : 'A mix of everything. You don’t know what’s coming, just like in a real game.'; };
 $('#difficulty').value = prefs.difficulty;
 $('#difficulty').onchange = (e) => { prefs.difficulty = e.target.value; store.set('prefs', prefs); };
 $('#size').onchange = (e) => { prefs.size = e.target.value; store.set('prefs', prefs); renderFilters(); loadNext(); };
-$('#theme').onchange = (e) => { prefs.theme = e.target.value; store.set('prefs', prefs); loadNext(); };
+$('#theme').onchange = (e) => { prefs.theme = e.target.value; store.set('prefs', prefs); themeDesc(); loadNext(); };
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || !S) return;
   const total = S.hist.length + S.moves.length, cur = S.view ?? total;
@@ -370,6 +381,7 @@ async function renderFilters() {
   $('#theme').innerHTML = `<option value="">Mix (everything)</option>` + Object.entries(groups).map(([g, ks]) =>
     `<optgroup label="${g}">${ks.map((k) => `<option value="${k}">${THEMES[k].name} (${t.themes[k]})</option>`).join('')}</optgroup>`).join('');
   $('#theme').value = prefs.theme || '';
+  themeDesc();
   return t;
 }
 document.addEventListener('click', (e) => {
@@ -445,6 +457,7 @@ async function route() {
 window.addEventListener('hashchange', route);
 
 (async () => {
+  renderUser();
   // old path-style URLs from the dev server → hash routes
   const old = /^\/(puzzle\/[\w.-]+|glossary|me|leaderboard)$/.exec(location.pathname);
   if (old) history.replaceState(null, '', '/#/' + old[1]);
