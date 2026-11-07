@@ -217,3 +217,24 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .moves .tk b { color: var(--fg-hi); font-weight: 600; font-variant-numeric: tabular-nums; }
 .moves .engine .credit { font-size: 11px; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .moves .tk .bar i { transition: none; } }
+
+/* move table (Lichess-style): fixed height, scrolls inside itself */
+.moves { min-height: 0; max-height: none; overflow: visible; display: flex; flex-direction: column; padding-bottom: 0; }
+.mscroll { height: 200px; overflow-y: auto; margin: -4px -6px 0; padding: 0 6px; scrollbar-width: thin; position: relative; }
+.mtable { display: grid; grid-template-columns: 2.6em 1fr 1fr; align-items: center; font: var(--fs-sm)/1 var(--mono); }
+.mtable .mnum { color: var(--muted); text-align: right; padding-right: 10px; height: 28px; line-height: 28px; background: var(--bg3); border-radius: 4px 0 0 4px; margin-bottom: 2px; }
+.mtable .mcell { height: 28px; display: flex; align-items: center; gap: 6px; padding-left: 4px; margin-bottom: 2px; min-width: 0; overflow: hidden; white-space: nowrap; }
+.mtable .mv { padding: 3px 6px; border-radius: 3px; }
+.mtable .miss { color: var(--bad); text-decoration: line-through; font-size: 12px; opacity: .9; }
+.mtable .dots { color: var(--muted); padding: 0 6px; }
+.mtable .mrow { grid-column: 1 / -1; }
+.mtable .divider { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; color: var(--gold); font: 600 11px/1 "Noto Sans", sans-serif; }
+.mtable .divider::before, .mtable .divider::after { content: ""; flex: 1; border-top: 1px solid currentColor; opacity: .5; }
+.mtable .branch { margin: 2px 0 6px 2.6em; padding: 6px 8px; border-left: 2px solid var(--accent); background: var(--bg3); border-radius: 0 4px 4px 0; line-height: 2; font-size: var(--fs-sm); white-space: normal; }
+.mtable .branch .num { color: var(--muted); margin: 0 2px 0 4px; }
+.moves .nav { position: static; padding: 10px 0 var(--pad); margin-top: 8px; border-top: 1px solid var(--line); }
+@media (max-width: 860px) { .mscroll { height: 150px; } }
+/* placeholder masking for the table */
+.is-loading .mnum, .is-loading .mcell .mv, .is-loading .divider span { color: transparent !important; }
+.is-loading .mcell .mv { background: var(--bg3) !important; }
+.is-loading .divider { color: var(--bg3) !important; }

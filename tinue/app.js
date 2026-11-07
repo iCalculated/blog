@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794093844';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794093844';
-import { rate, themeWeight } from './shared/rating.js?v=1794093844';
-import { NinjaBoard, buildPTN } from './board.js?v=1794093844';
-import * as engine from './engine.js?v=1794093844';
-import * as tiltak from './tiltak.js?v=1794093844';
+import { Game } from './shared/tak.js?v=1794095187';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794095187';
+import { rate, themeWeight } from './shared/rating.js?v=1794095187';
+import { NinjaBoard, buildPTN } from './board.js?v=1794095187';
+import * as engine from './engine.js?v=1794095187';
+import * as tiltak from './tiltak.js?v=1794095187';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -494,30 +494,49 @@ function renderAll(mood) {
       <hr><div>${themes.map((t) => `<a class="tag" href="#/glossary/${t}" title="${esc(THEMES[t].desc)}">${THEMES[t].name}</a>`).join('') || '<span class="sub">No themes</span>'}</div>`;
   }
 
-  // Move list: the game so far (dim), then the puzzle (your misses struck through in red), then your own
-  // line if you're exploring, then the engine's view after the puzzle. Click any move to see that position.
+  // Move list, Lichess-style: a fixed-height scrolling table (number | White | Black). The game so far is
+  // dim, a divider marks where the puzzle starts, your misses sit struck-through in the cell of the move you
+  // were looking for, and your own line is an indented row at its branch point. Click any move to see it.
   const official = officialLine();
   const startPly = S.hist.length ? 0 : Game.fromTPS(p.tps).ply;
-  const numFor = (ply, first) => (ply % 2 === 0 ? `<span class="num">${Math.floor(ply / 2) + 1}.</span>` : first ? `<span class="num">${Math.floor(ply / 2) + 1}…</span>` : '');
   const viewIdx = S.view ?? shownLine().length;
-  const missesAt = (k) => S.misses.filter((x) => x.at === k).map((x) => `<span class="mv miss" title="Not the move">${esc(x.ptn)}</span>`).join('');
-  let html = '';
   const onShared = (i) => !S.onBranch || (S.branch && i + 1 <= S.branch.at); // official moves also on your line
+  const missesAt = (k) => S.misses.filter((x) => x.at === k).map((x) => `<span class="miss" title="Not the move">${esc(x.ptn)}</span>`).join('');
+  const cells = []; // one entry per ply slot: { ply, html }
   official.forEach((m, i) => {
-    const k = i - S.hist.length; // index within the puzzle moves
-    if (k === 0) html += '<span class="start">Puzzle</span>';
+    const k = i - S.hist.length;
     const mvObj = k >= 0 ? S.moves[k] : null;
     const cls = ['mv', k < 0 ? 'past' : mvObj?.shown ? 'me shown' : mvObj?.me ? 'me ok' : 'opp', onShared(i) && i + 1 === viewIdx ? 'cur' : ''].join(' ');
-    html += `${numFor(startPly + i, i === 0)}${k >= 0 ? missesAt(k) : ''}<span class="${cls}" data-i="${i + 1}">${esc(m)}</span>`;
+    cells.push({ ply: startPly + i, i, html: `${k >= 0 ? missesAt(k) : ''}<span class="${cls}" data-i="${i + 1}">${esc(m)}</span>` });
   });
-  if (S.hist.length === official.length && S.moves.length === 0) html += '<span class="start">Puzzle</span>';
-  if (S.misses.some((x) => x.at === S.moves.length)) html += numFor(startPly + official.length, official.length === 0) + missesAt(S.moves.length);
-  if (S.branch) {
+  if (S.misses.some((x) => x.at === S.moves.length)) cells.push({ ply: startPly + official.length, i: official.length, html: missesAt(S.moves.length) });
+  const puzzleFrom = S.hist.length; // index of the first puzzle ply
+  const branchRow = () => {
     const b0 = S.branch.at;
-    html += `<div class="branch"><span class="branch-label">Your line</span>${S.branch.moves.map((m, j) =>
-      `${numFor(startPly + b0 + j, j === 0)}<span class="mv ${S.onBranch && b0 + j + 1 === viewIdx ? 'cur' : ''}" data-b="${b0 + j + 1}">${esc(m)}</span>`).join('')}
-      <button class="link back" data-act2="back">Back to the solution</button></div>`;
+    const moves = S.branch.moves.map((m, j) => {
+      const ply = startPly + b0 + j;
+      const num = ply % 2 === 0 ? `${Math.floor(ply / 2) + 1}.` : j === 0 ? `${Math.floor(ply / 2) + 1}…` : '';
+      return `${num ? `<span class="num">${num}</span>` : ''}<span class="mv ${S.onBranch && b0 + j + 1 === viewIdx ? 'cur' : ''}" data-b="${b0 + j + 1}">${esc(m)}</span>`;
+    }).join(' ');
+    return `<div class="mrow branch"><span class="branch-label">Your line</span> ${moves} <button class="link back" data-act2="back">Back to the solution</button></div>`;
+  };
+  let rows = '';
+  let puzzleMarked = false;
+  for (let c = 0; c < cells.length || (!puzzleMarked && c === 0); ) {
+    const first = cells[c];
+    if (!first) break;
+    const moveNo = Math.floor(first.ply / 2) + 1;
+    const white = first.ply % 2 === 0 ? first : null;
+    const black = white ? (cells[c + 1] && cells[c + 1].ply === first.ply + 1 ? cells[c + 1] : null) : first;
+    const rowStart = white ? white.i : black.i;
+    if (!puzzleMarked && (rowStart >= puzzleFrom || (black && black.i >= puzzleFrom))) { rows += '<div class="mrow divider"><span>Puzzle</span></div>'; puzzleMarked = true; }
+    rows += `<span class="mnum">${moveNo}</span><span class="mcell">${white ? white.html : '<span class="dots">…</span>'}</span><span class="mcell">${black ? black.html : ''}</span>`;
+    const lastI = (black || white).i;
+    if (S.branch && S.branch.at === lastI + 1) rows += branchRow();
+    c += white && black ? 2 : 1;
   }
+  if (!puzzleMarked) rows += '<div class="mrow divider"><span>Puzzle</span></div>';
+  if (S.branch && S.branch.at === 0) rows = branchRow() + rows;
   let engineHtml = '';
   if (S.status === 'solved' && S.eval) {
     const e = S.eval, side = colorName(e.side);
@@ -537,12 +556,19 @@ function renderAll(mood) {
     engineHtml = `<div class="engine">${tk}<div><span class="engine-label">Solver</span> ${t}</div>
       <div class="credit">Evaluation by <a href="https://github.com/MortenLohne/tiltak" target="_blank" rel="noopener">Tiltak</a> (GPL), running in your browser.</div></div>`;
   }
-  html = `<div class="list">${html || '<span class="muted">Moves appear here.</span>'}</div>${engineHtml}`;
   const mv = $('#moves');
-  mv.innerHTML = html +
+  const prevScroll = mv.querySelector('.mscroll')?.scrollTop ?? 0;
+  mv.innerHTML = `<div class="mscroll"><div class="mtable">${rows}</div></div>${engineHtml}` +
     `<div class="nav"><button data-nav="first" title="Start" aria-label="Start">⏮</button><button data-nav="prev" title="Back (←)" aria-label="Back">◀</button><button data-nav="next" title="Forward (→)" aria-label="Forward">▶</button><button data-nav="last" title="Current position" aria-label="Current position">⏭</button>${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
-  const curEl = mv.querySelector('.mv.cur') || mv.querySelector('.mv:last-of-type');
-  if (curEl && mv.scrollHeight > mv.clientHeight) curEl.scrollIntoView({ block: 'nearest' });
+  // Keep the current move in view by scrolling the table itself (never the page).
+  const sc = mv.querySelector('.mscroll');
+  sc.scrollTop = prevScroll; // keep where the reader was, then make sure the current move is visible
+  const cur = sc.querySelector('.mv.cur') || [...sc.querySelectorAll('.mv, .miss')].at(-1);
+  if (cur) {
+    const top = cur.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop;
+    const rowH = cur.offsetHeight + 8, h = sc.clientHeight;
+    if (top < sc.scrollTop || top + rowH > sc.scrollTop + h) sc.scrollTop = Math.max(0, top - h / 2 + rowH / 2);
+  }
 
 }
 
@@ -676,6 +702,7 @@ window.addEventListener('hashchange', route);
   themeDesc();
   renderAll(); // placeholder panels at their final size
   board.load(buildPTN({ size: +(prefs.size || 5) })); // the same board component, empty, until the puzzle arrives
+  requestAnimationFrame(() => document.documentElement.classList.remove('booting')); // reveal once laid out
   // old path-style URLs from the dev server → hash routes
   const old = /^\/(puzzle\/[\w.-]+|glossary|me|leaderboard)$/.exec(location.pathname);
   if (old) history.replaceState(null, '', '/#/' + old[1]);
