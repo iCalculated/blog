@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794095464';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794095464';
-import { rate, themeWeight } from './shared/rating.js?v=1794095464';
-import { NinjaBoard, buildPTN } from './board.js?v=1794095464';
-import * as engine from './engine.js?v=1794095464';
-import * as tiltak from './tiltak.js?v=1794095464';
+import { Game } from './shared/tak.js?v=1794095957';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794095957';
+import { rate, themeWeight } from './shared/rating.js?v=1794095957';
+import { NinjaBoard, buildPTN } from './board.js?v=1794095957';
+import * as engine from './engine.js?v=1794095957';
+import * as tiltak from './tiltak.js?v=1794095957';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -147,18 +147,46 @@ async function runEngine() {
   const key = line.slice(0, at).join(' ');
   if (S.evalKey === key) return;
   const s = S;
-  S.evalKey = key; S.eval = { kind: 'thinking' }; S.tk = null; renderAll();
-  // Positional opinion from Tiltak (sizes 4–6), streamed as it searches; forced wins from our own solver.
+  S.evalKey = key; S.eval = null; S.tk = null;
+  // Tiltak (4×4–6×6) gives the evaluation and line, streamed as it searches. On boards it can't play,
+  // fall back to our own forced-win solver.
   const g = gameAt(line.slice(0, at));
-  if (tiltak.supports(S.p.size, S.p.komi || 0) && !g.result()) {
+  const res0 = g.result();
+  if (res0) { tiltak.stop(); S.eval = { kind: 'over', winner: res0.winner, how: res0.kind }; renderAll(); return; }
+  if (tiltak.supports(S.p.size, S.p.komi || 0)) {
+    S.tk = { thinking: true }; renderAll();
     let lastPaint = 0;
     tiltak.analyze({ tps: g.toTPS(), size: S.p.size, komi: S.p.komi || 0, ms: 2500, onInfo: (r) => {
       if (S !== s || S.evalKey !== key) return;
       S.tk = r; const now = performance.now(); if (now - lastPaint > 150) { lastPaint = now; renderAll(); }
     } }).then((r) => { if (r && S === s && S.evalKey === key) { S.tk = r; renderAll(); } }).catch(() => {});
-  } else tiltak.stop();
+    return;
+  }
+  tiltak.stop();
+  S.eval = { kind: 'thinking' }; renderAll();
   const res = await engine.analyze({ ...enginePos(line.slice(0, at)), maxPlies: 9 });
   if (res && S === s && S.evalKey === key) { S.eval = res; renderAll(); }
+}
+
+// Play the engine's line on the board, up to and including move k (as your line).
+async function playPV(k) {
+  const pv = S.tk?.pv || S.eval?.pv;
+  if (!pv?.length) return;
+  const line = shownLine();
+  const at = S.view ?? line.length;
+  const official = officialLine();
+  const prefix = S.onBranch && S.branch && at > S.branch.at ? S.branch.moves.slice(0, at - S.branch.at) : [];
+  const base = S.onBranch && S.branch ? Math.min(at, S.branch.at) : at;
+  const moves = [...prefix, ...pv.slice(0, k + 1)];
+  // If the engine's line is exactly the solution continuing, just step along the solution.
+  if (!S.onBranch && official.slice(at, at + k + 1).join(' ') === pv.slice(0, k + 1).join(' ')) {
+    const to = at + k + 1;
+    S.view = to >= official.length ? null : to;
+    await showLine(official, to); return afterExplore();
+  }
+  S.branch = { at: base, moves }; S.onBranch = true; S.view = null; S.loadedKey = null;
+  await showLine(shownLine(), shownLine().length);
+  afterExplore();
 }
 
 // Load a line onto the board and show the position after `idx` plies (no animation).
@@ -537,28 +565,34 @@ function renderAll(mood) {
   }
   if (!puzzleMarked) rows += '<div class="mrow divider"><span>Puzzle</span></div>';
   if (S.branch && S.branch.at === 0) rows = branchRow() + rows;
+  // Engine, Lichess-style: one compact line at the top of the panel. Chance bar, who's better, and the
+  // engine's line as clickable moves (click to play it on the board), with a small source tag at the end.
   let engineHtml = '';
-  if (S.status === 'solved' && S.eval) {
-    const e = S.eval, side = colorName(e.side);
-    const t = e.kind === 'thinking' ? 'Thinking…'
-      : e.kind === 'over' ? (e.winner === 0 ? 'Drawn on flats.' : `${colorName(e.winner)} has won${e.how === 'flat' ? ' on flats' : ''}.`)
-      : e.kind === 'win' ? `${side} forces a win in ${Math.ceil(e.plies / 2)}: <span class="pv">${(e.pv || []).map(esc).join(' ')}</span>`
-      : e.kind === 'none' ? `${e.exact ? 'No forced win' : 'No forced win found'} for ${side} within ${Math.ceil(e.maxPlies / 2)} moves.${e.threat ? ` ${colorName(3 - e.side)} threatens a road (${esc(e.threat)}).` : ''}`
-      : 'Engine unavailable.';
-    // Tiltak's opinion: a small bar (White's share) and the favoured side's chance, plus its best line.
-    let tk = '';
-    if (S.tk && e.kind !== 'over') {
-      const pw = Math.max(0, Math.min(1, S.tk.winProb ?? 0.5));
-      const fav = Math.abs(pw - 0.5) < 0.05 ? 'About even' : `${pw > 0.5 ? 'White' : 'Black'} ${Math.round(Math.max(pw, 1 - pw) * 100)}%`;
-      tk = `<div class="tk"><span class="bar" title="White’s chances"><i style="width:${(pw * 100).toFixed(1)}%"></i></span><b>${fav}</b>
-        ${S.tk.pv?.length ? `<span class="pv">${S.tk.pv.slice(0, 6).map(esc).join(' ')}</span>` : ''}</div>`;
+  if (S.status === 'solved' && (S.tk || S.eval)) {
+    const pvHtml = (pv) => (pv || []).slice(0, 8).map((m, k) => `<button class="pvm" data-pv="${k}">${esc(m)}</button>`).join('');
+    let lead = '', pv = '', tag = '';
+    if (S.eval?.kind === 'over') lead = S.eval.winner === 0 ? 'Drawn on flats' : `${colorName(S.eval.winner)} won`;
+    else if (S.tk) {
+      if (S.tk.thinking) lead = '<span class="muted">Thinking…</span>';
+      else {
+        const pw = Math.max(0, Math.min(1, S.tk.winProb ?? 0.5));
+        const fav = Math.abs(pw - 0.5) < 0.05 ? 'Even' : `${pw > 0.5 ? 'White' : 'Black'} ${Math.round(Math.max(pw, 1 - pw) * 100)}%`;
+        lead = `<span class="bar" title="White’s chances"><i style="width:${(pw * 100).toFixed(1)}%"></i></span><b>${fav}</b>`;
+        pv = pvHtml(S.tk.pv);
+      }
+      tag = '<a class="src" href="https://github.com/MortenLohne/tiltak" target="_blank" rel="noopener" title="Evaluation by Tiltak, running in your browser">Tiltak</a>';
+    } else if (S.eval) {
+      const e = S.eval, side = colorName(e.side);
+      lead = e.kind === 'thinking' ? '<span class="muted">Thinking…</span>'
+        : e.kind === 'win' ? `<b>${side} wins in ${Math.ceil(e.plies / 2)}</b>` : `<span class="muted">No forced win for ${side}</span>`;
+      pv = e.kind === 'win' ? pvHtml(e.pv) : '';
+      tag = '<span class="src">solver</span>';
     }
-    engineHtml = `<div class="engine">${tk}<div><span class="engine-label">Solver</span> ${t}</div>
-      <div class="credit">Evaluation by <a href="https://github.com/MortenLohne/tiltak" target="_blank" rel="noopener">Tiltak</a> (GPL), running in your browser.</div></div>`;
+    engineHtml = `<div class="eng">${lead}<span class="pvline">${pv}</span>${tag}</div>`;
   }
   const mv = $('#moves');
   const prevScroll = mv.querySelector('.mscroll')?.scrollTop ?? 0;
-  mv.innerHTML = `<div class="mscroll"><div class="mtable">${rows}</div></div>${engineHtml}` +
+  mv.innerHTML = `${engineHtml}<div class="mscroll"><div class="mtable">${rows}</div></div>` +
     `<div class="nav"><button data-nav="first" title="Start" aria-label="Start">⏮</button><button data-nav="prev" title="Back (←)" aria-label="Back">◀</button><button data-nav="next" title="Forward (→)" aria-label="Forward">▶</button><button data-nav="last" title="Current position" aria-label="Current position">⏭</button>${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
   // Keep the current move in view by scrolling the table itself (never the page).
   const sc = mv.querySelector('.mscroll');
@@ -576,6 +610,8 @@ function renderAll(mood) {
 $('#moves').addEventListener('click', (e) => {
   if (!S || S.placeholder) return;
   if (e.target.closest('[data-act2="back"]')) return backToSolution();
+  const pvb = e.target.closest('[data-pv]');
+  if (pvb) return playPV(+pvb.dataset.pv);
   const m = e.target.closest('[data-i]');
   if (m) return viewPly(+m.dataset.i, false);
   const b = e.target.closest('[data-b]');
