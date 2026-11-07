@@ -276,7 +276,6 @@ function renderAll(mood) {
   if (!S) return;
   const { p } = S;
   const fb = $('#feedback');
-  const movesLeft = Math.ceil(pliesLeft() / 2);
   const delta = S.delta != null ? `<span class="delta ${S.delta >= 0 ? 'up' : 'down'}">${S.delta >= 0 ? '+' : ''}${Math.round(S.delta)}</span>` : '';
   if (S.status === 'solved') {
     fb.innerHTML = `<div class="icon ${S.viewed ? 'bad' : 'good'}">${S.viewed ? '✗' : '✓'}</div><div>
@@ -298,7 +297,7 @@ function renderAll(mood) {
     const good = mood === 'good';
     fb.innerHTML = `<div class="icon ${good ? 'good' : 'turn p' + S.solver}">${good ? '✓' : ''}</div><div>
       <h2>${good ? 'Best move!' : 'Your turn'}</h2>
-      <p>${good ? 'Keep going…' : `Find the win for <b>${colorName(S.solver)}</b> — ${movesLeft === 1 ? 'road this move' : 'in ' + movesLeft + ' moves'}.`}</p></div>`;
+      <p>${good ? 'Keep going…' : `You play <b>${colorName(S.solver)}</b>. Find the best move.`}</p></div>`;
   }
 
   const done = S.status === 'solved';
