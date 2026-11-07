@@ -10,10 +10,18 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const API = (window.TINUE_API || '').replace(/\/$/, '');
 const authHeaders = () => { const t = store.get('token', null); return t ? { authorization: 'Bearer ' + t } : {}; };
 const api = async (path, body) => {
-  const r = await fetch(API + path, body
-    ? { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify(body), credentials: 'include' }
-    : { headers: authHeaders(), credentials: 'include' });
-  return r.json();
+  // If the server can't be reached, say so instead of showing a blank page. (On Shy's tailnet, Chrome asks for
+  // "local network access" before a public page may call crux's private address; that prompt also stalls here.)
+  const slow = setTimeout(() => {
+    const fb = document.querySelector('#feedback');
+    if (fb && !fb.textContent.trim()) fb.innerHTML = '<div><h2>Waiting for the puzzle server…</h2><p>If your browser is asking to allow access to devices on your local network, allow it. Otherwise the server may be down; try again in a bit.</p></div>';
+  }, 4000);
+  try {
+    const r = await fetch(API + path, body
+      ? { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify(body), credentials: 'include' }
+      : { headers: authHeaders(), credentials: 'include' });
+    return await r.json();
+  } finally { clearTimeout(slow); }
 };
 const store = {
   get(k, d) { try { const v = localStorage.getItem('tinue.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
