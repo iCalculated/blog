@@ -207,6 +207,10 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .glossary dd .practice { font-size: var(--fs-xs); margin-left: 8px; }
 .flush { margin: 0; }
 .page .panel { margin-top: 8px; }
+.credits { max-width: 640px; margin: 40px auto 0; padding: 16px 16px 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--fs-xs); line-height: 1.6; text-align: center; text-wrap: balance; }
+.credits p { margin: 0 0 6px; }
+.credits a { color: var(--fg); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 2px; }
+.credits a:hover { color: var(--fg-hi); text-decoration-color: currentColor; }
 .token { display: flex; gap: 8px; margin: -6px 0 16px; max-width: 520px; }
 .token input { flex: 1; min-width: 0; font-family: var(--mono); color: var(--fg); }
 
