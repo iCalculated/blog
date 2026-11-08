@@ -52,7 +52,8 @@
 .tb {
   --b1: #f0d9b5; --b2: #b58863; --b3: #262421; --pri: #9cb83a;
   --p1: #f6f1e7; --p1s: #ffffff; --p1b: #8f8473; --p1r: #f6f1e7;
-  --p2: #2f2c29; --p2s: #3d3935; --p2b: #0d0c0b; --p2r: #4a4540;
+  /* --p2b: black stones' outline is light enough to separate stacked black stones (a near-black one merged them) */
+  --p2: #2f2c29; --p2s: #3d3935; --p2b: #7a7168; --p2r: #4a4540;
   --tl: #fafafacd; --td: #212121cd; --tdk: #1a1a1a; --um: #00000033;
   --dur: .3s; --ease: cubic-bezier(.3, .3, .5, 1);
   position: relative; width: 100%; font-size: min(30px, 4.375cqw); line-height: 1;
