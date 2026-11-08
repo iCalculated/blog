@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794122330';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794122330';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794122330';
-import { Board, buildPTN } from './board.js?v=1794122330';
-import * as engine from './engine.js?v=1794122330';
-import * as tiltak from './tiltak.js?v=1794122330';
+import { Game } from './shared/tak.js?v=1794136257';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794136257';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794136257';
+import { Board, buildPTN } from './board.js?v=1794136257';
+import * as engine from './engine.js?v=1794136257';
+import * as tiltak from './tiltak.js?v=1794136257';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -11,10 +11,10 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 // Auth is a bearer token from localStorage (cross-site cookies get blocked), plus a cookie for same-origin dev.
 const API = (window.TINUE_API || '').replace(/\/$/, '');
 const authHeaders = () => { const t = store.get('token', null); return t ? { authorization: 'Bearer ' + t } : {}; };
-const api = async (path, body) => {
+const api = async (path, body, { quiet = false } = {}) => {
   // If the server can't be reached, say so instead of showing a blank page. (On Shy's tailnet, Chrome asks for
   // "local network access" before a public page may call crux's private address; that prompt also stalls here.)
-  const slow = setTimeout(() => {
+  const slow = quiet ? null : setTimeout(() => {
     notice = { kind: 'wait', title: 'Waiting for the puzzle server…', body: 'If your browser asks to allow access to devices on your local network, allow it. Otherwise the server may be down; try again in a bit.' };
     renderAll();
   }, 4000);
@@ -35,10 +35,11 @@ const api = async (path, body) => {
     let j;
     if (body) j = await once(20000);
     else try { j = await once(8000); } catch { outcome = 'retried'; j = await once(12000); }
-    if (notice?.kind === 'wait' || notice?.kind === 'net') { notice = null; renderAll(); }
+    if (!quiet && (notice?.kind === 'wait' || notice?.kind === 'net')) { notice = null; renderAll(); }
     return j;
   } catch (e) {
     outcome = 'failed';
+    if (quiet) throw e;
     notice = { kind: 'net', title: 'Can’t reach the puzzle server', body: 'Check your connection and reload. If it keeps happening, the server may be down.' };
     renderAll();
     throw e;
@@ -145,13 +146,27 @@ function refreshPage() {
 
 // ---------- puzzle flow ----------
 let loadSeq = 0;
-async function loadNext() {
-  const t = ++loadSeq;
+const nextQuery = () => {
   const q = new URLSearchParams({ difficulty: prefs.difficulty });
   if (prefs.size) q.set('size', prefs.size);
   if (prefs.theme) q.set('theme', prefs.theme);
   if (!me) { q.set('rating', Math.round(guest.rating)); q.set('exclude', [...seenGuest].slice(-200).join(',')); }
-  const { puzzle } = await api('/api/next?' + q);
+  return q.toString();
+};
+// The next puzzle is fetched as soon as this one's result is in, so Continue doesn't wait on the network.
+let prefetched = null; // { key, req }
+const nextKey = () => (me ? 'u:' + me.name : 'g') + '|' + nextQuery();
+function prefetchNext() {
+  const key = nextKey();
+  prefetched = { key, req: api('/api/next?' + nextQuery(), null, { quiet: true }).catch(() => null) };
+}
+async function loadNext() {
+  const t = ++loadSeq;
+  const pre = prefetched?.key === nextKey() ? prefetched.req : null;
+  prefetched = null;
+  let r = pre && (await pre);
+  if (!r?.puzzle || r.puzzle.id === S?.p.id) r = await api('/api/next?' + nextQuery()); // (a "no match" answer is re-asked too)
+  const { puzzle } = r;
   if (t !== loadSeq) return; // a newer request superseded this one
   if (!puzzle) { // nothing to play: clear the old puzzle rather than leave it playable under the new filters
     engine.interrupt(); tiltak.stop();
@@ -394,6 +409,7 @@ async function report(win) {
   }
   session.push({ id: p.id, win, delta: s.delta });
   renderAll();
+  if (S === s) prefetchNext();
 }
 
 function fail() { S.status = 'retry'; report(false); renderAll(); }
@@ -654,6 +670,7 @@ function renderAll(mood) {
         <dt>Played</dt><dd>${p.attempts ? `${p.attempts} time${p.attempts === 1 ? '' : 's'}` : 'Not rated by anyone yet'}</dd>
         <dt>From</dt><dd>${game}</dd>
       </dl>
+      ${p.turn === 1 ? `<div class="sub">Turning point: ${p.pre0 != null && p.pre0 < 0.4 ? 'you were behind' : 'the game was even'} until your opponent’s last move.</div>` : ''}
       ${m.white ? `<div class="players">${player(1, m.white, m.ratingWhite)}${player(2, m.black, m.ratingBlack)}</div>` : ''}
       <hr><div>${themes.map((t) => `<a class="tag" href="#/glossary/${t}" title="${esc(THEMES[t].desc)}">${THEMES[t].name}</a>`).join('') || '<span class="sub">No themes</span>'}</div>`;
   }
@@ -871,7 +888,7 @@ async function route() {
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
   show('view-puzzle');
-  await renderFilters();
+  renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   if (page === 'puzzle' && arg) { if (S?.p.id !== arg) loadById(decodeURIComponent(arg)); }
   else if (S && !S.placeholder && S.status !== 'solved' && matchesFilters(S.p)) history.replaceState(null, '', '#/puzzle/' + S.p.id); // back to the puzzle in progress
   else loadNext();
@@ -889,6 +906,7 @@ window.addEventListener('hashchange', route);
   // old path-style URLs from the dev server → hash routes
   const old = /^\/(puzzle\/[\w.-]+|glossary|me|leaderboard)$/.exec(location.pathname);
   if (old) history.replaceState(null, '', '/#/' + old[1]);
-  const meP = api('/api/me').then((r) => { me = r.user; renderUser(); if (S) renderAll(); });
-  if (!store.get('token', null)) route(); else { await meP; route(); }
+  const meP = api('/api/me').then((r) => { me = r.user; renderUser(); if (S) renderAll(); }).catch(() => {});
+  // With a cached account the puzzle request goes out alongside /api/me (the server knows us by the token).
+  if (!store.get('token', null) || me) route(); else { await meP; route(); }
 })();
