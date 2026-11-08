@@ -18,7 +18,7 @@
 //   winMove(g, color) / threatMoves(g) / defenderMoves(g, attacker) / TinueSearch (low level)
 // result is 'proved' | 'disproved' (no Tak-threat tinue) | 'unknown' (budget). maxNodes counts df-pn
 // MID calls; one node costs roughly 0.2–0.5 ms CPU on 6x6 midgames.
-import { colorOf, typeOf, FLAT, WALL, CAP, DIRS } from './tak.js?v=1794165982';
+import { colorOf, typeOf, FLAT, WALL, CAP, DIRS } from './tak.js?v=1794168310';
 
 const INF = 1e9;
 const DIR_LIST = ['+', '-', '>', '<'];

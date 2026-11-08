@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794165982';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794165982';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794165982';
-import { Board, buildPTN } from './board.js?v=1794165982';
-import * as engine from './engine.js?v=1794165982';
-import * as tiltak from './tiltak.js?v=1794165982';
+import { Game } from './shared/tak.js?v=1794168310';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794168310';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794168310';
+import { Board, buildPTN } from './board.js?v=1794168310';
+import * as engine from './engine.js?v=1794168310';
+import * as tiltak from './tiltak.js?v=1794168310';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -333,7 +333,7 @@ async function restoreBoard() {
   renderAll();
 }
 
-function userMove(ptn) {
+async function userMove(ptn) {
   if (!S || S.placeholder) return; // the board is disabled until a puzzle arrives
   if (S.status === 'solved') return explore(ptn);
   if (!S || S.placeholder || S.busy || S.view != null || !(S.status === 'play' || S.status === 'retry')) { if (S) restoreBoard(); return; }
@@ -350,23 +350,34 @@ function userMove(ptn) {
     correct = true; reply = node[canon]?.r; next = node[canon]?.n;
   }
   // A proven win the puzzle's tree doesn't list is slower (the tree has every win at the minimal depth): not a miss.
-  if (!correct && !res && node && node !== 'win' && slowerWins().includes(canon)) {
-    g.undo(u);
-    S.slower = canon; S.busy = true;
-    renderAll();
-    const s = S;
-    setTimeout(() => { if (S !== s) return; S.busy = false; restoreBoard(); }, 700);
-    return;
-  }
-  S.slower = null;
+  // Precomputed lists (alts at the root, altsAt in 5-ply lines) answer at once. Past the root of a deep (7+ ply)
+  // puzzle nothing is precomputed, so the engine gets ~2.5 s to prove it (same search) before it counts as a miss.
+  // (A 'win' node is a road-in-1: there the slower win is rightly wrong.)
+  const s = S;
   if (!correct) {
     g.undo(u);
     S.busy = true;
+    const plies = [...(S.hist.length ? officialLine() : S.moves.map((m) => m.ptn)), canon];
+    if (!res && node && node !== 'win') {
+      let wins = slowerWins().includes(canon);
+      if (!wins && S.p.plies >= 7 && S.moves.length) {
+        S.slower = null; S.checking = canon;
+        renderAll();
+        wins = await engine.stillWins({ ...enginePos(plies), attacker: S.solver });
+        if (S !== s) return;
+        S.checking = null;
+      }
+      if (wins) {
+        S.slower = canon;
+        renderAll();
+        setTimeout(() => { if (S !== s) return; S.busy = false; restoreBoard(); }, 700);
+        return;
+      }
+    }
+    S.slower = null;
     S.misses.push({ at: S.moves.length, ptn: canon });
     const remaining = pliesLeft();
-    const plies = [...(S.hist.length ? officialLine() : S.moves.map((m) => m.ptn)), canon];
     S.refutation = { miss: canon, kind: 'thinking' };
-    const s = S;
     engine.refute({ ...enginePos(plies), attacker: S.solver, remaining }).then((r) => {
       if (r && S === s && S.refutation?.miss === canon) { S.refutation = { miss: canon, ...r }; renderAll(); }
     });
@@ -374,6 +385,7 @@ function userMove(ptn) {
     setTimeout(() => { if (S !== s) return; S.busy = false; restoreBoard(); }, 700);
     return;
   }
+  S.slower = null;
   S.moves.push({ ptn: canon, me: true }); S.snaps.push(g.toTPS());
   S.refutation = null;
   if (wonNow) return solved();
@@ -381,7 +393,6 @@ function userMove(ptn) {
   S.status = 'play';
   S.busy = true;
   renderAll('good');
-  const s = S;
   setTimeout(async () => {
     if (!reply || S !== s) return;
     g.play(reply);
@@ -636,6 +647,9 @@ function renderAll(mood) {
   if (notice) {
     $('#feedback').classList.remove('is-loading');
     fbHtml = `<div class="icon bad">!</div><div class="body"><h2>${esc(notice.title)}</h2><p>${esc(notice.body)}</p></div>`;
+  } else if (S.checking) {
+    fbHtml = `<div class="icon turn p${S.solver}">…</div><div class="body"><h2>Checking ${esc(S.checking)}</h2>
+      <p>That isn’t the puzzle’s line; checking whether it still forces a win.</p></div>${playActions}`;
   } else if (S.status === 'solved') {
     const title = S.outcome === 'viewed' ? 'Solution shown' : S.outcome === 'miss' ? 'Solved, after a miss' : 'Solved';
     const note = S.casual ? 'You used a hint, so this one didn’t count toward your rating.'

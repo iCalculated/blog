@@ -1,9 +1,10 @@
 // Tactics engine in a Web Worker: our own Tak solver, running locally in the browser.
+//   still:   does a move outside the solution still force a win (just slower)? Proof or 'no'.
 //   refute:  why was a move wrong? Find the opponent's reply after which the attack fails.
 //   analyze: does the side to move have a forced win (road or flats), and how?
 // It's a forced-win prover, not an evaluator: it answers "win in N" or "nothing forced within N".
-import { Game, Solver } from './shared/tak.js?v=1794165982';
-import { shortestTinue } from './shared/pns.js?v=1794165982';
+import { Game, Solver } from './shared/tak.js?v=1794168310';
+import { shortestTinue, TinueSearch } from './shared/pns.js?v=1794168310';
 
 function gameFrom({ size, komi, tps, plies }) {
   const g = tps ? Game.fromTPS(tps, komi || 0) : Object.assign(new Game(size), { komi: komi || 0 });
@@ -65,7 +66,15 @@ function pvFrom(g0, plies) {
 self.onmessage = ({ data }) => {
   const { id, type } = data;
   try {
-    if (type === 'refute') {
+    if (type === 'still') {
+      // Position after the player's off-tree move, defender to move: does the attacker still force a road (at any
+      // length)? df-pn over threat moves, then confirmed with every defender reply considered, so "wins" is a proof.
+      const g = gameFrom(data);
+      if (g.result()) { self.postMessage({ id, kind: 'no' }); return; }
+      const run = (n, full) => { const s = new TinueSearch(g.clone(), { maxNodes: n, fullDefense: full }); s.att = data.attacker; try { return s.solve(Infinity); } catch (e) { if (e.message === 'budget') return null; throw e; } };
+      const won = run(3e4, false) === true && run(3e5, true) === true;
+      self.postMessage({ id, kind: won ? 'wins' : 'no' });
+    } else if (type === 'refute') {
       // Position after the player's wrong move; the defender is to move.
       const g = gameFrom(data);
       const res = g.result();

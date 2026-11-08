@@ -1,4 +1,4 @@
-// Main-thread handle for the tactics engine. One worker per request type ('refute', 'analyze'), so a new
+// Main-thread handle for the tactics engine. One worker per request type ('still', 'refute', 'analyze'), so a new
 // request can kill a stale search of the same type immediately without disturbing the other.
 const workers = {}, pending = {};
 let seq = 0;
@@ -29,5 +29,8 @@ function ask(type, payload) {
 }
 
 export const refute = (pos) => ask('refute', pos);
+// Proof that an off-tree move still wins, or null after `ms` (the search is killed: a miss shouldn't wait long).
+export const stillWins = (pos, ms = 2500) => Promise.race([ask('still', pos), new Promise((r) => setTimeout(r, ms, null))])
+  .then((r) => { stop('still'); return r?.kind === 'wins'; });
 export const analyze = (pos) => ask('analyze', pos);
 export const interrupt = () => { stop('refute'); stop('analyze'); };
