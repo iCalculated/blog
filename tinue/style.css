@@ -256,3 +256,9 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .moves .eng .src { order: 2; }
 .moves .eng .pvline { order: 3; flex-basis: 100%; margin-left: -5px; }
 .moves .eng .pvline:empty { display: none; }
+
+/* history vs puzzle moves (no divider): the game so far is quiet, the puzzle is bright */
+.mtable .mv.past { color: #75726d; }
+.mtable .mv.opp, .mtable .mv.me { color: var(--fg-hi); font-weight: 600; }
+.mtable .mv.me.ok { color: var(--good); }
+.mtable .mv.me.shown { color: var(--fg-hi); }

@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794096029';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794096029';
-import { rate, themeWeight } from './shared/rating.js?v=1794096029';
-import { NinjaBoard, buildPTN } from './board.js?v=1794096029';
-import * as engine from './engine.js?v=1794096029';
-import * as tiltak from './tiltak.js?v=1794096029';
+import { Game } from './shared/tak.js?v=1794096222';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794096222';
+import { rate, themeWeight } from './shared/rating.js?v=1794096222';
+import { NinjaBoard, buildPTN } from './board.js?v=1794096222';
+import * as engine from './engine.js?v=1794096222';
+import * as tiltak from './tiltak.js?v=1794096222';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -158,8 +158,8 @@ async function runEngine() {
     let lastPaint = 0;
     tiltak.analyze({ tps: g.toTPS(), size: S.p.size, komi: S.p.komi || 0, ms: 2500, onInfo: (r) => {
       if (S !== s || S.evalKey !== key) return;
-      S.tk = r; const now = performance.now(); if (now - lastPaint > 150) { lastPaint = now; renderAll(); }
-    } }).then((r) => { if (r && S === s && S.evalKey === key) { S.tk = r; renderAll(); } }).catch(() => {});
+      S.tk = r; const now = performance.now(); if (now - lastPaint > 250) { lastPaint = now; renderEngine(); }
+    } }).then((r) => { if (r && S === s && S.evalKey === key) { S.tk = r; renderEngine(); } }).catch(() => {});
     return;
   }
   tiltak.stop();
@@ -458,6 +458,42 @@ const PLACEHOLDER = {
   p: { id: '', size: 5, themes: [], meta: {}, komi: 0, tps: 'x5/x5/x5/x5/x5 1 1', rating: 0, attempts: 0 },
 };
 
+  // Engine, Lichess-style: one compact line at the top of the panel. Chance bar, who's better, and the
+  // engine's line as clickable moves (click to play it on the board), with a small source tag at the end.
+function engineMarkup() {
+  let engineHtml = '';
+  if (S && S.status === 'solved' && (S.tk || S.eval)) {
+    const pvHtml = (pv) => (pv || []).slice(0, 8).map((m, k) => `<button class="pvm" data-pv="${k}">${esc(m)}</button>`).join('');
+    let lead = '', pv = '', tag = '';
+    if (S.eval?.kind === 'over') lead = S.eval.winner === 0 ? 'Drawn on flats' : `${colorName(S.eval.winner)} won`;
+    else if (S.tk) {
+      if (S.tk.thinking) lead = '<span class="muted">Thinking…</span>';
+      else {
+        const pw = Math.max(0, Math.min(1, S.tk.winProb ?? 0.5));
+        const fav = Math.abs(pw - 0.5) < 0.05 ? 'Even' : `${pw > 0.5 ? 'White' : 'Black'} ${Math.round(Math.max(pw, 1 - pw) * 100)}%`;
+        lead = `<span class="bar" title="White’s chances"><i style="width:${(pw * 100).toFixed(1)}%"></i></span><b>${fav}</b>`;
+        pv = pvHtml(S.tk.pv);
+      }
+      tag = '<a class="src" href="https://github.com/MortenLohne/tiltak" target="_blank" rel="noopener" title="Evaluation by Tiltak, running in your browser">Tiltak</a>';
+    } else if (S.eval) {
+      const e = S.eval, side = colorName(e.side);
+      lead = e.kind === 'thinking' ? '<span class="muted">Thinking…</span>'
+        : e.kind === 'win' ? `<b>${side} wins in ${Math.ceil(e.plies / 2)}</b>` : `<span class="muted">No forced win for ${side}</span>`;
+      pv = e.kind === 'win' ? pvHtml(e.pv) : '';
+      tag = '<span class="src">solver</span>';
+    }
+    engineHtml = `<div class="eng">${lead}<span class="pvline">${pv}</span>${tag}</div>`;
+  }
+  return engineHtml;
+}
+// Update only the engine row (Tiltak streams updates; re-rendering the whole panel would flicker).
+function renderEngine() {
+  const slot = document.querySelector('#moves .eng-slot');
+  if (!slot) return renderAll();
+  const html = engineMarkup();
+  if (slot._html !== html) { slot.innerHTML = html; slot._html = html; }
+}
+
 // ---------- rendering ----------
 function renderAll(mood) {
   if (!S) S = PLACEHOLDER;
@@ -549,50 +585,22 @@ function renderAll(mood) {
     return `<div class="mrow branch"><span class="branch-label">Your line</span> ${moves} <button class="link back" data-act2="back">Back to the solution</button></div>`;
   };
   let rows = '';
-  let puzzleMarked = false;
-  for (let c = 0; c < cells.length || (!puzzleMarked && c === 0); ) {
+  for (let c = 0; c < cells.length; ) {
     const first = cells[c];
     if (!first) break;
     const moveNo = Math.floor(first.ply / 2) + 1;
     const white = first.ply % 2 === 0 ? first : null;
     const black = white ? (cells[c + 1] && cells[c + 1].ply === first.ply + 1 ? cells[c + 1] : null) : first;
-    const rowStart = white ? white.i : black.i;
-    if (!puzzleMarked && (rowStart >= puzzleFrom || (black && black.i >= puzzleFrom))) { rows += '<div class="mrow divider"><span>Puzzle</span></div>'; puzzleMarked = true; }
     rows += `<span class="mnum">${moveNo}</span><span class="mcell">${white ? white.html : '<span class="dots">…</span>'}</span><span class="mcell">${black ? black.html : ''}</span>`;
     const lastI = (black || white).i;
     if (S.branch && S.branch.at === lastI + 1) rows += branchRow();
     c += white && black ? 2 : 1;
   }
-  if (!puzzleMarked) rows += '<div class="mrow divider"><span>Puzzle</span></div>';
   if (S.branch && S.branch.at === 0) rows = branchRow() + rows;
-  // Engine, Lichess-style: one compact line at the top of the panel. Chance bar, who's better, and the
-  // engine's line as clickable moves (click to play it on the board), with a small source tag at the end.
-  let engineHtml = '';
-  if (S.status === 'solved' && (S.tk || S.eval)) {
-    const pvHtml = (pv) => (pv || []).slice(0, 8).map((m, k) => `<button class="pvm" data-pv="${k}">${esc(m)}</button>`).join('');
-    let lead = '', pv = '', tag = '';
-    if (S.eval?.kind === 'over') lead = S.eval.winner === 0 ? 'Drawn on flats' : `${colorName(S.eval.winner)} won`;
-    else if (S.tk) {
-      if (S.tk.thinking) lead = '<span class="muted">Thinking…</span>';
-      else {
-        const pw = Math.max(0, Math.min(1, S.tk.winProb ?? 0.5));
-        const fav = Math.abs(pw - 0.5) < 0.05 ? 'Even' : `${pw > 0.5 ? 'White' : 'Black'} ${Math.round(Math.max(pw, 1 - pw) * 100)}%`;
-        lead = `<span class="bar" title="White’s chances"><i style="width:${(pw * 100).toFixed(1)}%"></i></span><b>${fav}</b>`;
-        pv = pvHtml(S.tk.pv);
-      }
-      tag = '<a class="src" href="https://github.com/MortenLohne/tiltak" target="_blank" rel="noopener" title="Evaluation by Tiltak, running in your browser">Tiltak</a>';
-    } else if (S.eval) {
-      const e = S.eval, side = colorName(e.side);
-      lead = e.kind === 'thinking' ? '<span class="muted">Thinking…</span>'
-        : e.kind === 'win' ? `<b>${side} wins in ${Math.ceil(e.plies / 2)}</b>` : `<span class="muted">No forced win for ${side}</span>`;
-      pv = e.kind === 'win' ? pvHtml(e.pv) : '';
-      tag = '<span class="src">solver</span>';
-    }
-    engineHtml = `<div class="eng">${lead}<span class="pvline">${pv}</span>${tag}</div>`;
-  }
   const mv = $('#moves');
   const prevScroll = mv.querySelector('.mscroll')?.scrollTop ?? 0;
-  mv.innerHTML = `${engineHtml}<div class="mscroll"><div class="mtable">${rows}</div></div>` +
+  const engineHtml = engineMarkup();
+  mv.innerHTML = `<div class="eng-slot">${engineHtml}</div><div class="mscroll"><div class="mtable">${rows}</div></div>` +
     `<div class="nav"><button data-nav="first" title="Start" aria-label="Start">⏮</button><button data-nav="prev" title="Back (←)" aria-label="Back">◀</button><button data-nav="next" title="Forward (→)" aria-label="Forward">▶</button><button data-nav="last" title="Current position" aria-label="Current position">⏭</button>${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
   // Keep the current move in view by scrolling the table itself (never the page).
   const sc = mv.querySelector('.mscroll');
