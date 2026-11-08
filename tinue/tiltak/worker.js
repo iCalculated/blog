@@ -20,7 +20,7 @@
 //   - HalfKomi other than 0 or 4 is accepted by setoption but panics inside the evaluation
 //   - a finished game (road, full board, a player out of pieces) panics the search: no best move at the root
 //   - more pieces than the reserves underflows the reserve counters
-import init, { start_engine } from './tiltak_wasm.js?v=1794136257';
+import init, { start_engine } from './tiltak_wasm.js?v=1794162050';
 
 const SIZES = new Set([4, 5, 6]);
 const HALF_KOMIS = new Set([0, 4]); // the only komi values Tiltak has trained parameters for (0 and 2)

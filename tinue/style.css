@@ -42,6 +42,10 @@ a { color: var(--accent); text-decoration: none; }
 
 /* ---------- controls ---------- */
 button, select, input { font: inherit; font-size: var(--fs-sm); color: var(--fg-hi); height: var(--ctl); border-radius: var(--r-ctl); border: 1px solid var(--line); }
+/* Phones: no double-tap zoom anywhere (quick taps on and around the board kept zooming; pinch-zoom still works), and
+   16px text fields/selects, below which iOS zooms in on focus. */
+html { touch-action: manipulation; }
+@media (pointer: coarse) { select, input { font-size: 16px; } }
 button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 14px; background: var(--bg3); font-weight: 500; cursor: pointer; white-space: nowrap; }
 button:hover { background: var(--bg4); }
 button.primary { background: var(--btn); border-color: var(--btn); color: #fff; font-weight: 600; }

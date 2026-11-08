@@ -1,8 +1,8 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794136257';
-import { parsePTN } from './shared/ptn.js?v=1794136257';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794162050';
+import { parsePTN } from './shared/ptn.js?v=1794162050';
 
 const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
@@ -95,6 +95,25 @@ export class Board {
     this.ready = Promise.resolve();
     this._setup(new Game(5), []);
     el.addEventListener('click', (e) => this._onClick(e, false));
+    // Phones: a tap is handled on touchend, whose default is cancelled. iOS Safari ignores touch-action: manipulation
+    // for a quick second tap on the same spot (taking more stones off a stack) and zooms; cancelling touchend stops
+    // the zoom and the synthetic click, so each tap is handled exactly once. Scrolls (the finger moved) and pinches
+    // (two fingers) are left alone.
+    let t0 = null;
+    el.addEventListener('touchstart', (e) => {
+      const t = e.changedTouches[0];
+      t0 = e.touches.length === 1 ? { x: t.clientX, y: t.clientY } : null;
+    }, { passive: true });
+    el.addEventListener('touchcancel', () => { t0 = null; });
+    el.addEventListener('touchend', (e) => {
+      const t = e.changedTouches[0], s = t0;
+      t0 = null;
+      if (!s || e.touches.length || Math.hypot(t.clientX - s.x, t.clientY - s.y) > 10) return;
+      const target = document.elementFromPoint(t.clientX, t.clientY);
+      if (!target || !el.contains(target)) return;
+      e.preventDefault();
+      this._onClick({ target }, false);
+    }, { passive: false });
     el.addEventListener('contextmenu', (e) => { e.preventDefault(); this._onClick(e, true); });
     el.addEventListener('mouseover', (e) => { const sq = this._sqAt(e); if (sq !== this.hover) { this.hover = sq; this._render(); } });
     el.addEventListener('mouseleave', () => { if (this.hover >= 0) { this.hover = -1; this._render(); } });

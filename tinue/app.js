@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794136257';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794136257';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794136257';
-import { Board, buildPTN } from './board.js?v=1794136257';
-import * as engine from './engine.js?v=1794136257';
-import * as tiltak from './tiltak.js?v=1794136257';
+import { Game } from './shared/tak.js?v=1794162050';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794162050';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794162050';
+import { Board, buildPTN } from './board.js?v=1794162050';
+import * as engine from './engine.js?v=1794162050';
+import * as tiltak from './tiltak.js?v=1794162050';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -14,10 +14,7 @@ const authHeaders = () => { const t = store.get('token', null); return t ? { aut
 const api = async (path, body, { quiet = false } = {}) => {
   // If the server can't be reached, say so instead of showing a blank page. (On Shy's tailnet, Chrome asks for
   // "local network access" before a public page may call crux's private address; that prompt also stalls here.)
-  const slow = quiet ? null : setTimeout(() => {
-    notice = { kind: 'wait', title: 'Waiting for the puzzle server…', body: 'If your browser asks to allow access to devices on your local network, allow it. Otherwise the server may be down; try again in a bit.' };
-    renderAll();
-  }, 4000);
+  const slow = quiet ? null : setTimeout(() => { notice = WAIT_NOTICE; renderAll(); }, 4000);
   const t0 = performance.now();
   let outcome = 'ok';
   // A request stuck on a dead connection (e.g. the tailnet path to crux re-forming after sleep) is abandoned
@@ -56,6 +53,7 @@ const reportSlow = (path, ms, outcome) => {
     if (!navigator.sendBeacon?.(API + '/api/slow', data)) fetch(API + '/api/slow', { method: 'POST', body: data, keepalive: true }).catch(() => {});
   } catch {}
 };
+const WAIT_NOTICE = { kind: 'wait', title: 'Waiting for the puzzle server…', body: 'If your browser asks to allow access to devices on your local network, allow it. Otherwise the server may be down; try again in a bit.' };
 let notice = null; // a message that replaces the turn card: {kind: 'wait' | 'net' | 'none', title, body}
 const store = {
   get(k, d) { try { const v = localStorage.getItem('tinue.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
@@ -164,8 +162,12 @@ async function loadNext() {
   const t = ++loadSeq;
   const pre = prefetched?.key === nextKey() ? prefetched.req : null;
   prefetched = null;
-  let r = pre && (await pre);
-  if (!r?.puzzle || r.puzzle.id === S?.p.id) r = await api('/api/next?' + nextQuery()); // (a "no match" answer is re-asked too)
+  // A prefetch still in flight gets 3 s (it is quiet: no waiting notice), then a normal request takes over.
+  let r = pre && (await Promise.race([pre, new Promise((res) => setTimeout(() => res(null), 3000))]));
+  if (!r?.puzzle || r.puzzle.id === S?.p.id) { // (a "no match" answer is re-asked too)
+    if (pre && !r) { notice = WAIT_NOTICE; renderAll(); }
+    try { r = await api('/api/next?' + nextQuery()); } catch { return; } // api() has shown the error
+  }
   const { puzzle } = r;
   if (t !== loadSeq) return; // a newer request superseded this one
   if (!puzzle) { // nothing to play: clear the old puzzle rather than leave it playable under the new filters
@@ -185,7 +187,7 @@ const matchesFilters = (p) => (!prefs.theme || (p.themes || []).includes(prefs.t
 
 async function loadById(id) {
   const t = ++loadSeq;
-  const { puzzle } = await api('/api/puzzle/' + encodeURIComponent(id));
+  let puzzle; try { ({ puzzle } = await api('/api/puzzle/' + encodeURIComponent(id))); } catch { return; }
   if (t !== loadSeq) return;
   if (puzzle) start(puzzle); else loadNext();
 }
@@ -347,6 +349,16 @@ function userMove(ptn) {
   else if (node !== 'win' && node && Object.prototype.hasOwnProperty.call(node, canon) && !res) {
     correct = true; reply = node[canon]?.r; next = node[canon]?.n;
   }
+  // A proven win the puzzle's tree doesn't list is slower (the tree has every win at the minimal depth): not a miss.
+  if (!correct && !res && node && node !== 'win' && slowerWins().includes(canon)) {
+    g.undo(u);
+    S.slower = canon; S.busy = true;
+    renderAll();
+    const s = S;
+    setTimeout(() => { if (S !== s) return; S.busy = false; restoreBoard(); }, 700);
+    return;
+  }
+  S.slower = null;
   if (!correct) {
     g.undo(u);
     S.busy = true;
@@ -388,15 +400,17 @@ async function report(win) {
   S.casual = S.hinted; // a hint before the result makes the attempt unrated
   const s = S, p = S.p;
   if (me) {
-    if (S.hinted) { await api('/api/result', { puzzleId: p.id, win, casual: true }); s.delta = null; }
-    else {
-      const r = await api('/api/result', { puzzleId: p.id, win, theme: s.theme || undefined });
-      if (r.user) {
-        s.delta = r.rated ? r.userDelta : null;
-        if (r.rated) { p.attempts++; if (r.puzzleRating != null) p.rating = r.puzzleRating; }
-        me = r.user; renderUser();
+    try { // a failed upload (network, server restart) loses this result, not the session
+      if (S.hinted) { await api('/api/result', { puzzleId: p.id, win, casual: true }); s.delta = null; }
+      else {
+        const r = await api('/api/result', { puzzleId: p.id, win, theme: s.theme || undefined });
+        if (r.user) {
+          s.delta = r.rated ? r.userDelta : null;
+          if (r.rated) { p.attempts++; if (r.puzzleRating != null) p.rating = r.puzzleRating; }
+          me = r.user; renderUser();
+        }
       }
-    }
+    } catch { s.delta = null; }
   } else {
     if (!S.hinted && !seenGuest.has(p.id)) {
       // Guests are rated locally only; nothing is sent to the server.
@@ -410,6 +424,12 @@ async function report(win) {
   session.push({ id: p.id, win, delta: s.delta });
   renderAll();
   if (S === s) prefetchNext();
+}
+
+// Proven slower wins at the current attacker node: alts at the root, altsAt[path of moves so far] deeper in.
+function slowerWins() {
+  const key = S.moves.map((m) => m.ptn).join(' ');
+  return (key ? S.p.altsAt?.[key] : S.p.alts) || [];
 }
 
 function fail() { S.status = 'retry'; report(false); renderAll(); }
@@ -623,6 +643,9 @@ function renderAll(mood) {
     fbHtml = `<div class="icon ${S.outcome === 'clean' ? 'good' : 'bad'}">${S.outcome === 'clean' ? '✓' : '✗'}</div><div class="body">
       <h2>${title}</h2><p>${note}</p></div>
       <div class="actions one"><button class="primary" data-act="next">Continue training</button></div>`;
+  } else if (S.status === 'retry' && S.slower) {
+    fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>That wins too, but slower</h2>
+      <p>${esc(S.slower)} also forces a win, but there’s a faster one. This puzzle already counts as a miss; keep trying or view the solution.</p></div>${playActions}`;
   } else if (S.status === 'retry') {
     fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>That’s not the move</h2>
       <p>${refText(S.refutation) || 'Try another move.'} This puzzle now counts as a miss; keep trying or view the solution.</p></div>${playActions}`;
@@ -630,7 +653,9 @@ function renderAll(mood) {
     fbHtml = `<div class="icon bad">…</div><div class="body"><h2>Solution</h2><p>Watch the winning line.</p></div>`;
   } else {
     const good = mood === 'good';
-    fbHtml = `<div class="icon ${good ? 'good' : 'turn p' + S.solver}">${good ? '✓' : ''}</div><div class="body">
+    if (S.slower) fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>That wins too, but slower</h2>
+      <p>${esc(S.slower)} also forces a win, but there’s a faster one. Find it; this doesn’t count as a miss.</p></div>${playActions}`;
+    else fbHtml = `<div class="icon ${good ? 'good' : 'turn p' + S.solver}">${good ? '✓' : ''}</div><div class="body">
       <h2>${good ? 'Best move!' : 'Your turn'}</h2>
       <p>${good ? 'Keep going.' : `You play ${colorName(S.solver)}`}</p></div>${playActions}`;
   }
