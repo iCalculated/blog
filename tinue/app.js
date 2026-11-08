@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794095957';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794095957';
-import { rate, themeWeight } from './shared/rating.js?v=1794095957';
-import { NinjaBoard, buildPTN } from './board.js?v=1794095957';
-import * as engine from './engine.js?v=1794095957';
-import * as tiltak from './tiltak.js?v=1794095957';
+import { Game } from './shared/tak.js?v=1794096029';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794096029';
+import { rate, themeWeight } from './shared/rating.js?v=1794096029';
+import { NinjaBoard, buildPTN } from './board.js?v=1794096029';
+import * as engine from './engine.js?v=1794096029';
+import * as tiltak from './tiltak.js?v=1794096029';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);

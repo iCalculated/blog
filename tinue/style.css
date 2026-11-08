@@ -251,3 +251,8 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .moves .eng .src { margin-left: auto; font-size: 11px; color: var(--muted); align-self: center; white-space: nowrap; }
 .moves .eng a.src:hover { color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .moves .eng .bar i { transition: none; } }
+/* engine: evaluation on the first row, the recommended line underneath */
+.moves .eng { flex-wrap: wrap; row-gap: 6px; }
+.moves .eng .src { order: 2; }
+.moves .eng .pvline { order: 3; flex-basis: 100%; margin-left: -5px; }
+.moves .eng .pvline:empty { display: none; }
