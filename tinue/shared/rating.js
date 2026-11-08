@@ -1,15 +1,12 @@
-// Elo without rating deviation. Both players and puzzles move after each rated (first) attempt.
-// Instead of a deviation, K shrinks with experience: new players/puzzles move fast, veterans slowly.
+// Ratings are Glicko-2 for both players and puzzles (shared/glicko.js), one rating period per attempt.
+// New players start at 1500 ± 250, and puzzles start at their prior ± 250: uncertain ratings move fast,
+// settled ones slowly, and a result from an uncertain player moves a puzzle less.
+// scripts/simulate-glicko.mjs shows why these numbers were picked.
+import { update, cap, blend, PLAYER_START, PUZZLE_RD, provisional } from './glicko.js?v=1794103392';
 
-export const expected = (a, b) => 1 / (1 + 10 ** ((b - a) / 400));
+const CLUELESS_RD = 230;
 
-// Small, steady changes (like Lichess once you're established): K 40 for your first puzzle
-// (±20 against an even puzzle), 20 after 10 puzzles, floor 12 (±6) from ~25 puzzles on.
-export const userK = (games) => Math.max(12, 40 / (1 + games / 10));
-
-// Puzzles start from a heuristic guess, so they need to move early too, but one fluke solve shouldn't
-// swing them much. 32 → 16 after 10 rated attempts → floor 6.
-export const puzzleK = (attempts) => Math.max(6, 32 / (1 + attempts / 10));
+export { PLAYER_START, provisional };
 
 // Lichess "ponder" weights: when you're drilling a theme, the theme name partly gives the answer away,
 // so results move ratings less (more so for wins). Mix/no theme = full weight.
@@ -20,12 +17,19 @@ export function themeWeight(themeKey, themes, win) {
   return t.hint ? (win ? 0.2 : 0.7) : (win ? 0.7 : 0.8);
 }
 
+const asRating = (o, rd) => ({ rating: o.rating, rd: o.rd ?? rd, vol: o.vol ?? PLAYER_START.vol });
+
+// New ratings for a user and a puzzle after one rated first attempt.
 export function rate(user, puzzle, win, weight = 1) {
-  const e = expected(user.rating, puzzle.rating);
+  const u = asRating(user, PLAYER_START.rd), p = asRating(puzzle, PUZZLE_RD);
   const s = win ? 1 : 0;
-  const du = weight * userK(user.games) * (s - e);
-  const dp = weight * puzzleK(puzzle.attempts) * (e - s);
-  return { userDelta: du, puzzleDelta: dp };
+  const nu = blend(u, cap(update(u, p, s)), weight);
+  // Like Lichess, a player whose rating is still a near-total guess (their first puzzle) doesn't move the puzzle.
+  const np = u.rd >= CLUELESS_RD ? p : blend(p, cap(update(p, u, 1 - s)), weight);
+  return { user: nu, puzzle: np, userDelta: nu.rating - u.rating, puzzleDelta: np.rating - p.rating };
 }
+
+// Deviation for a rating that predates Glicko, from how much it has been played.
+export const rdFromCount = (n, start) => Math.max(70, start / Math.sqrt(1 + n / 4));
 
 export const DIFFICULTY = { easiest: -600, easier: -300, normal: 0, harder: 300, hardest: 600 };

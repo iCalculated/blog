@@ -20,7 +20,7 @@
 //   - HalfKomi other than 0 or 4 is accepted by setoption but panics inside the evaluation
 //   - a finished game (road, full board, a player out of pieces) panics the search: no best move at the root
 //   - more pieces than the reserves underflows the reserve counters
-import init, { start_engine } from './tiltak_wasm.js';
+import init, { start_engine } from './tiltak_wasm.js?v=1794103392';
 
 const SIZES = new Set([4, 5, 6]);
 const HALF_KOMIS = new Set([0, 4]); // the only komi values Tiltak has trained parameters for (0 and 2)
@@ -197,7 +197,9 @@ function handle(msg) {
 (async () => {
   const t0 = performance.now();
   // Fetch the bytes ourselves so a server that doesn't label .wasm as application/wasm doesn't matter.
-  const bytes = await (await fetch(new URL('./tiltak_wasm_bg.wasm', import.meta.url))).arrayBuffer();
+  // Same ?v= as this worker's URL, so a new build never pairs fresh glue with a cached wasm.
+  const v = import.meta.url.match(/\?v=[\w.]+/)?.[0] || '';
+  const bytes = await (await fetch(new URL('./tiltak_wasm_bg.wasm' + v, import.meta.url))).arrayBuffer();
   await init({ module_or_path: bytes });
   const ok = new Promise((r) => { teiOk = r; });
   send = start_engine((line) => onLine(line));

@@ -1,23 +1,12 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
-// of the weight. Same interface as NinjaBoard (ninja.js). Rules come from shared/tak.js; the visual and
-// interaction spec is summarized at the top of board.css.
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794096222';
-import { parsePTN } from './shared/ptn.js?v=1794096222';
+// of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
+// board.css (which the page links).
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794103392';
+import { parsePTN } from './shared/ptn.js?v=1794103392';
 
 const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
 const FILES = 'abcdefgh';
-
-let cssReady = null;
-function ensureCSS() {
-  if (cssReady) return cssReady;
-  const href = new URL('./board.css', import.meta.url).href;
-  if ([...document.styleSheets].some((s) => s.href === href)) return (cssReady = Promise.resolve());
-  const link = Object.assign(document.createElement('link'), { rel: 'stylesheet', href });
-  cssReady = new Promise((r) => { link.onload = link.onerror = () => r(); });
-  document.head.append(link);
-  return cssReady;
-}
 
 // ---------- positions with piece identities (so a move can be animated piece by piece) ----------
 // Piece ids: per color, stones 0..F-1 then caps; id = (color-1)*T + k. A position (snapshot) keeps
@@ -99,17 +88,11 @@ function roadOf(g, color) {
 
 export class Board {
   constructor(el, { onMove, onState } = {}) {
-    if (el.tagName === 'IFRAME') { // drop-in for the old <iframe id="ninja"> (its cropping class is not kept)
-      const div = document.createElement('div');
-      div.id = el.id;
-      el.replaceWith(div); el = div;
-    }
     this.el = el; this.onMove = onMove; this.onState = onState;
     el.classList.add('tb-host');
     this.opts = { disableBoard: false, showRoads: false, animateBoard: true };
     this.player = null; this.rot = false; this.sel = null; this.hlSquares = []; this.hover = -1;
-    el.style.visibility = 'hidden'; // until board.css is in (no flash of unstyled board)
-    this.ready = ensureCSS().then(() => { el.style.visibility = ''; });
+    this.ready = Promise.resolve();
     this._setup(new Game(5), []);
     el.addEventListener('click', (e) => this._onClick(e, false));
     el.addEventListener('contextmenu', (e) => { e.preventDefault(); this._onClick(e, true); });
@@ -118,7 +101,7 @@ export class Board {
     window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.sel) this.cancel(); });
   }
 
-  // ---------- public API (same as NinjaBoard) ----------
+  // ---------- public API ----------
   async load(ptn) {
     const { headers, moves } = parsePTN(ptn);
     const komi = +(headers.Komi || 0);
@@ -148,6 +131,14 @@ export class Board {
     this._render();
   }
   async cancel() { this.sel = null; this._render(); }
+  // Play a move given as PTN (typed instead of clicked), exactly as if it had been entered on the board.
+  play(ptn) {
+    if (!this._canInput()) return false;
+    try { stepSnap(this.snaps[this.cur], this.P, ptn); } catch { return false; }
+    this.sel = null;
+    this._commit(ptn);
+    return true;
+  }
   async rotate180() { this.rot = !this.rot; this._build(); this._render(false); }
 
   // ---------- setup / DOM ----------
@@ -165,7 +156,7 @@ export class Board {
 
   _build() {
     const n = this.n;
-    this.el.innerHTML = `<div class="tb" style="--n:${n}"><div class="tb-board"></div><div class="tb-tray"></div></div>`;
+    this.el.innerHTML = `<div class="tb" style="--n:${n}"><div class="tb-board" role="img"></div><div class="tb-tray"></div></div>`;
     this.root = this.el.firstChild;
     this.boardEl = this.root.firstChild; this.trayEl = this.root.lastChild;
     this.sqEls = []; this.cache = new Map();
@@ -361,6 +352,9 @@ export class Board {
     const valid = this._valid(v);
     const res = g.result();
     const roads = this._roads(g, res);
+    const who = (c) => (c === 1 ? 'White' : 'Black');
+    const label = `Tak board, ${res ? (res.winner ? `${who(res.winner)} won` : 'drawn') : `${who(g.toMove)} to move`}. Position: ${g.toTPS()}`;
+    this._set(this.boardEl, 'l', label, (x) => this.boardEl.setAttribute('aria-label', x));
 
     // squares
     const hl = this.cur > 0 ? s.hl : null;
@@ -466,8 +460,6 @@ export class Board {
     return out;
   }
 }
-
-export { Board as NinjaBoard };
 
 // Build a PTN game. `moves` are played from `tps` (or the empty board when tps is null).
 export function buildPTN({ size, komi = 0, tps = null, moves = [], white = 'White', black = 'Black' }) {

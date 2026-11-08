@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794096222';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794096222';
-import { rate, themeWeight } from './shared/rating.js?v=1794096222';
-import { NinjaBoard, buildPTN } from './board.js?v=1794096222';
-import * as engine from './engine.js?v=1794096222';
-import * as tiltak from './tiltak.js?v=1794096222';
+import { Game } from './shared/tak.js?v=1794103392';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794103392';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794103392';
+import { Board, buildPTN } from './board.js?v=1794103392';
+import * as engine from './engine.js?v=1794103392';
+import * as tiltak from './tiltak.js?v=1794103392';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -15,7 +15,7 @@ const api = async (path, body) => {
   // If the server can't be reached, say so instead of showing a blank page. (On Shy's tailnet, Chrome asks for
   // "local network access" before a public page may call crux's private address; that prompt also stalls here.)
   const slow = setTimeout(() => {
-    notice = { title: 'Waiting for the puzzle server…', body: 'If your browser asks to allow access to devices on your local network, allow it. Otherwise the server may be down; try again in a bit.' };
+    notice = { kind: 'wait', title: 'Waiting for the puzzle server…', body: 'If your browser asks to allow access to devices on your local network, allow it. Otherwise the server may be down; try again in a bit.' };
     renderAll();
   }, 4000);
   try {
@@ -23,15 +23,15 @@ const api = async (path, body) => {
       ? { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify(body), credentials: 'include' }
       : { headers: authHeaders(), credentials: 'include' });
     const j = await r.json();
-    if (notice?.title.startsWith('Waiting')) { notice = null; renderAll(); }
+    if (notice?.kind === 'wait' || notice?.kind === 'net') { notice = null; renderAll(); }
     return j;
   } catch (e) {
-    notice = { title: 'Can’t reach the puzzle server', body: 'Check your connection and reload. If it keeps happening, the server may be down.' };
+    notice = { kind: 'net', title: 'Can’t reach the puzzle server', body: 'Check your connection and reload. If it keeps happening, the server may be down.' };
     renderAll();
     throw e;
   } finally { clearTimeout(slow); }
 };
-let notice = null; // a message that replaces the turn card (server waiting / no puzzles)
+let notice = null; // a message that replaces the turn card: {kind: 'wait' | 'net' | 'none', title, body}
 const store = {
   get(k, d) { try { const v = localStorage.getItem('tinue.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('tinue.' + k, JSON.stringify(v)); } catch {} },
@@ -39,6 +39,9 @@ const store = {
 
 let me = null; // server user
 const guest = store.get('guest', { rating: 1500, games: 0 });
+guest.rd ??= rdFromCount(guest.games, PLAYER_START.rd); guest.vol ??= PLAYER_START.vol; // guests from before Glicko
+// "1650?" while a rating is still provisional (high deviation), as on Lichess.
+const fmtRating = (r, prov) => `${Math.round(r)}${prov ? '<span class="prov" title="Provisional: it settles after about 15 rated puzzles">?</span>' : ''}`;
 const prefs = store.get('prefs', {});
 if (!prefs.v2) { prefs.size = '5'; prefs.v2 = true; } // 5×5 by default
 prefs.difficulty ||= 'normal';
@@ -46,7 +49,8 @@ store.set('prefs', prefs);
 const session = []; // {id, win, delta}
 const seenGuest = new Set(store.get('seen', []));
 
-const board = new NinjaBoard($('#ninja'), { onMove: (ptn) => userMove(ptn) });
+const board = new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
+board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
 
 // ---------- user box ----------
@@ -59,11 +63,11 @@ function renderUser() {
       <div class="pop" role="menu"><a href="#/me" role="menuitem">History</a><button class="link" id="logout" role="menuitem">Log out</button>
         <div class="confirm hidden" id="logout-confirm"><p>You’ll need your login token (on your History page) to sign back in on this device.</p><button class="danger" id="logout-yes">Log out</button></div></div></div>`;
     $('#logout').onclick = () => { $('#logout-confirm').classList.remove('hidden'); $('#logout').classList.add('hidden'); };
-    $('#logout-yes').onclick = async () => { await api('/api/logout', {}); store.set('token', null); me = null; renderUser(); renderAll(); };
+    $('#logout-yes').onclick = async () => { await api('/api/logout', {}); store.set('token', null); me = null; session.length = 0; renderUser(); refreshPage(); };
   } else {
     // One quiet button; claiming a name (or pasting a token) happens in a small popover.
-    box.innerHTML = `<div class="menu click"><button class="link name" id="claim-open" aria-haspopup="true">Claim a username</button>
-      <div class="pop wide" role="dialog">
+    box.innerHTML = `<div class="menu click"><button class="link name" id="claim-open" aria-haspopup="dialog" aria-expanded="false">Claim a username</button>
+      <div class="pop wide" role="dialog" aria-label="Claim a username">
         <form id="claim"><label class="field"><span>Username</span><input name="name" id="claim-name" maxlength="20" autocomplete="username" placeholder="2–20 letters, digits, _ or -"></label>
           <button class="primary" type="submit">Claim</button><p class="err hidden" id="claim-err"></p>
           <p class="hint">No password: your browser remembers you. <button type="button" class="link" id="token-open">Have a login token?</button></p></form>
@@ -71,29 +75,49 @@ function renderUser() {
           <button class="primary" type="submit">Sign in</button><p class="err hidden" id="tok-err"></p></form>
       </div></div>`;
     const menu = box.querySelector('.menu');
-    $('#claim-open').onclick = () => { menu.classList.toggle('open'); if (menu.classList.contains('open')) $('#claim-name').focus(); };
+    $('#claim-open').onclick = () => {
+      const open = menu.classList.toggle('open');
+      $('#claim-open').setAttribute('aria-expanded', open);
+      if (!open) return;
+      // always start from the claim form (not a token form left open last time)
+      $('#claim').classList.remove('hidden'); $('#tok').classList.add('hidden');
+      for (const id of ['#claim-err', '#tok-err']) $(id).classList.add('hidden');
+      $('#claim-name').focus();
+    };
     $('#token-open').onclick = () => { $('#claim').classList.add('hidden'); $('#tok').classList.remove('hidden'); $('#tok-in').focus(); };
     const showErr = (id, msg) => { const el = $(id); el.textContent = msg; el.classList.remove('hidden'); };
     $('#claim').onsubmit = async (e) => {
       e.preventDefault();
       const r = await api('/api/register', { name: $('#claim-name').value.trim() });
       if (r.error) return showErr('#claim-err', r.error);
-      me = r.user; store.set('token', r.token); renderUser(); renderAll();
+      me = r.user; store.set('token', r.token); session.length = 0; renderUser(); refreshPage();
     };
     $('#tok').onsubmit = async (e) => {
       e.preventDefault();
       const token = $('#tok-in').value.trim();
       const r = await api('/api/login', { token });
       if (r.error) return showErr('#tok-err', 'That token doesn’t match an account.');
-      me = r.user; store.set('token', token); renderUser(); route();
+      me = r.user; store.set('token', token); session.length = 0; renderUser(); refreshPage();
     };
   }
 }
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') document.querySelector('.menu.open')?.classList.remove('open'); });
+function closeMenu(m, refocus) {
+  m.classList.remove('open');
+  m.querySelector('[aria-expanded]')?.setAttribute('aria-expanded', 'false');
+  if (refocus) m.querySelector('.name')?.focus();
+}
+document.addEventListener('keydown', (e) => {
+  const m = e.key === 'Escape' && document.querySelector('.menu.open');
+  if (m) closeMenu(m, m.contains(document.activeElement));
+});
 document.addEventListener('click', (e) => { // close the claim popover when clicking elsewhere
   const m = document.querySelector('.menu.click.open');
-  if (m && !m.contains(e.target)) m.classList.remove('open');
+  if (m && !m.contains(e.target)) closeMenu(m, false);
 });
+// After signing in or out: re-render whichever page is showing (History shows the account and its token).
+function refreshPage() {
+  if ($('#view-puzzle').classList.contains('hidden')) route(); else renderAll();
+}
 
 // ---------- puzzle flow ----------
 let loadSeq = 0;
@@ -105,11 +129,20 @@ async function loadNext() {
   if (!me) { q.set('rating', Math.round(guest.rating)); q.set('exclude', [...seenGuest].slice(-200).join(',')); }
   const { puzzle } = await api('/api/next?' + q);
   if (t !== loadSeq) return; // a newer request superseded this one
-  if (!puzzle) { notice = { title: 'No puzzles match', body: 'Try another theme, difficulty or board size.' }; renderAll(); return; }
-  notice = null;
+  if (!puzzle) { // nothing to play: clear the old puzzle rather than leave it playable under the new filters
+    engine.interrupt(); tiltak.stop();
+    S = null;
+    notice = { kind: 'none', title: 'No puzzles match', body: 'Try another theme, difficulty or board size.' };
+    history.replaceState(null, '', '#/');
+    await board.ui({ disableBoard: true, showRoads: false });
+    await board.load(buildPTN({ size: +(prefs.size || 5) }));
+    renderAll(); setTitle(); return;
+  }
   history.replaceState(null, '', '#/puzzle/' + puzzle.id);
-  start(puzzle);
+  start(puzzle, prefs.theme);
 }
+// Does the puzzle fit the current Theme / Board filters?
+const matchesFilters = (p) => (!prefs.theme || (p.themes || []).includes(prefs.theme)) && (!prefs.size || String(p.size) === String(prefs.size));
 
 async function loadById(id) {
   const t = ++loadSeq;
@@ -156,15 +189,21 @@ async function runEngine() {
   if (tiltak.supports(S.p.size, S.p.komi || 0)) {
     S.tk = { thinking: true }; renderAll();
     let lastPaint = 0;
+    const live = () => S === s && S.evalKey === key;
+    // If Tiltak can't load or crashes, use the solver instead of thinking forever.
+    const fallback = () => { if (live() && (!S.tk || S.tk.thinking)) { S.tk = null; runSolver(s, key, line.slice(0, at)); } };
     tiltak.analyze({ tps: g.toTPS(), size: S.p.size, komi: S.p.komi || 0, ms: 2500, onInfo: (r) => {
-      if (S !== s || S.evalKey !== key) return;
+      if (!live()) return;
       S.tk = r; const now = performance.now(); if (now - lastPaint > 250) { lastPaint = now; renderEngine(); }
-    } }).then((r) => { if (r && S === s && S.evalKey === key) { S.tk = r; renderEngine(); } }).catch(() => {});
+    } }).then((r) => { if (!live()) return; if (r) { S.tk = r; renderEngine(); } else fallback(); }, fallback);
     return;
   }
   tiltak.stop();
+  runSolver(s, key, line.slice(0, at));
+}
+async function runSolver(s, key, plies) {
   S.eval = { kind: 'thinking' }; renderAll();
-  const res = await engine.analyze({ ...enginePos(line.slice(0, at)), maxPlies: 9 });
+  const res = await engine.analyze({ ...enginePos(plies), maxPlies: 9 });
   if (res && S === s && S.evalKey === key) { S.eval = res; renderAll(); }
 }
 
@@ -196,15 +235,16 @@ async function showLine(line, idx) {
   if (idx >= line.length) await board.last(); else if (idx === 0) await board.first(); else await board.goTo(idx - 1);
 }
 
-function boardReady() {}
-
-async function start(p) {
+async function start(p, theme = '') {
   engine.interrupt(); tiltak.stop(); // nothing from the previous puzzle should still be thinking
   const g = Game.fromTPS(p.tps, p.komi || 0);
   const hist = p.meta?.history || [];
+  // theme: the Theme filter this puzzle was picked with (its result is damped as a themed attempt)
   const s = S = { p, g, node: p.tree, solver: g.toMove, hist, moves: [], snaps: [g.toTPS()], view: null, status: 'play', resultSent: false, hinted: false, delta: null, busy: true,
-        misses: [], outcome: null, branch: null, onBranch: false };
-  renderAll(); // side panel right away; the board iframe may still be loading
+        misses: [], outcome: null, branch: null, onBranch: false, theme: theme && (p.themes || []).includes(theme) ? theme : '' };
+  notice = null;
+  setTitle();
+  renderAll(); // side panel right away
   await board.ui({ disableBoard: true, showRoads: false });
   if (S !== s) return;
   if (hist.length) {
@@ -253,7 +293,8 @@ async function restoreBoard() {
 }
 
 function userMove(ptn) {
-  if (S && !S.placeholder && S.status === 'solved') return explore(ptn);
+  if (!S || S.placeholder) return; // the board is disabled until a puzzle arrives
+  if (S.status === 'solved') return explore(ptn);
   if (!S || S.placeholder || S.busy || S.view != null || !(S.status === 'play' || S.status === 'retry')) { if (S) restoreBoard(); return; }
   const g = S.g;
   let canon;
@@ -310,15 +351,19 @@ async function report(win) {
   if (me) {
     if (S.hinted) { await api('/api/result', { puzzleId: p.id, win, casual: true }); s.delta = null; }
     else {
-      const r = await api('/api/result', { puzzleId: p.id, win, theme: prefs.theme || undefined });
-      if (r.user) { s.delta = r.rated ? r.userDelta : null; if (r.rated) p.attempts++; me = r.user; renderUser(); }
+      const r = await api('/api/result', { puzzleId: p.id, win, theme: s.theme || undefined });
+      if (r.user) {
+        s.delta = r.rated ? r.userDelta : null;
+        if (r.rated) { p.attempts++; if (r.puzzleRating != null) p.rating = r.puzzleRating; }
+        me = r.user; renderUser();
+      }
     }
   } else {
     if (!S.hinted && !seenGuest.has(p.id)) {
-      const { userDelta } = rate(guest, p, win, themeWeight(prefs.theme, THEMES, win));
-      guest.rating += userDelta; guest.games++; S.delta = userDelta;
+      // Guests are rated locally only; nothing is sent to the server.
+      const r = rate(guest, p, win, themeWeight(s.theme, THEMES, win));
+      Object.assign(guest, r.user); guest.games++; S.delta = r.userDelta;
       store.set('guest', guest);
-      api('/api/result', { puzzleId: p.id, win }); // counted as a play, not rated
     }
     seenGuest.add(p.id); store.set('seen', [...seenGuest].slice(-500));
     renderUser();
@@ -365,8 +410,11 @@ async function explore(ptn) {
   }
   S.onBranch = true;
   S.view = null;
-  S.loadedKey = null;
-  await showLine(shownLine(), shownLine().length);
+  const now = shownLine();
+  // The board already shows this line (the move was just made on it): keep it, so the move animates.
+  const bs = board.snaps;
+  if (bs.length === now.length + 1 && board.cur === now.length && bs.at(-1).ptn === canon) S.loadedKey = now.join(' ');
+  else { S.loadedKey = null; await showLine(now, now.length); }
   afterExplore();
 }
 async function afterExplore() {
@@ -452,14 +500,16 @@ async function viewPly(i, branch = S.onBranch) {
 }
 
 // Before a puzzle arrives, render the real panels with dummy values (masked by CSS), so nothing jumps.
+let fbFocus = null; // data-act of the feedback button that had keyboard focus before a re-render
+const finePointer = matchMedia('(pointer: fine)');
 const PLACEHOLDER = {
   placeholder: true, solver: 1, status: 'play', moves: [], view: null, delta: null, misses: [], branch: null, onBranch: false,
   hist: 'a1 e5 c3 b4 d3 c4 b3 d4 e3 a4 c2 e4 b2 a5 d2'.split(' '),
   p: { id: '', size: 5, themes: [], meta: {}, komi: 0, tps: 'x5/x5/x5/x5/x5 1 1', rating: 0, attempts: 0 },
 };
 
-  // Engine, Lichess-style: one compact line at the top of the panel. Chance bar, who's better, and the
-  // engine's line as clickable moves (click to play it on the board), with a small source tag at the end.
+// Engine, Lichess-style: one compact line at the top of the panel. Chance bar, who's better, and the
+// engine's line as clickable moves (click to play it on the board), with a small source tag at the end.
 function engineMarkup() {
   let engineHtml = '';
   if (S && S.status === 'solved' && (S.tk || S.eval)) {
@@ -491,8 +541,19 @@ function renderEngine() {
   const slot = document.querySelector('#moves .eng-slot');
   if (!slot) return renderAll();
   const html = engineMarkup();
-  if (slot._html !== html) { slot.innerHTML = html; slot._html = html; }
+  if (slot._html !== html) { const f = pvFocused(); slot.innerHTML = html; slot._html = html; refocusPV(f); }
 }
+// After clicking a move in the engine line, the line is redrawn for the new position: keep keyboard focus
+// on its first move (Enter again steps further along), or on Forward while the engine is still thinking.
+const pvFocused = () => !!document.activeElement?.closest?.('#moves [data-pv]');
+let pvFollow = false; // focus is parked on Forward until the engine's new line arrives
+const refocusPV = (was) => {
+  const onFwd = !!document.activeElement?.matches?.('#moves [data-step="next"]');
+  const pv0 = $('#moves [data-pv="0"]');
+  if (was && !pvFocused()) { if (pv0) pv0.focus(); else { $('#moves [data-step="next"]')?.focus(); pvFollow = true; } }
+  else if (pvFollow && onFwd && pv0) { pv0.focus(); pvFollow = false; }
+  else if (pvFollow && !onFwd) pvFollow = false;
+};
 
 // ---------- rendering ----------
 function renderAll(mood) {
@@ -501,8 +562,8 @@ function renderAll(mood) {
   for (const id of ['#feedback', '#moves']) $(id).classList.toggle('is-loading', loading);
   const { p } = S;
   const fb = $('#feedback');
-  const myRating = Math.round(me ? me.rating : guest.rating);
-  if (me) store.set('myRating', me.rating);
+  const myRating = fmtRating(me ? me.rating : guest.rating, me ? me.provisional : provisional(guest));
+  if (me) { store.set('myRating', me.rating); store.set('myProv', !!me.provisional); }
   const delta = S.delta != null ? `<span class="delta ${S.delta >= 0 ? 'up' : 'down'}">${S.delta >= 0 ? '+' : ''}${Math.round(S.delta)}</span>` : '';
   const dis = S.placeholder ? ' disabled tabindex="-1"' : '';
   const playActions = `<div class="actions"><button data-act="hint"${dis}>Hint</button><button data-act="solution"${dis}>View solution</button></div>`;
@@ -511,27 +572,42 @@ function renderAll(mood) {
     : r.kind === 'gives-road' ? `After ${esc(r.miss)}, ${other} makes a road with <b>${esc(r.reply)}</b>.`
     : r.kind === 'refuted' ? `After ${esc(r.miss)}, ${other} answers <b>${esc(r.reply)}</b> and ${r.exact ? 'the forced win is gone' : 'the solver finds no forced win'}.`
     : `${esc(r.miss)} doesn’t force the win.`;
+  let fbHtml;
   if (notice) {
     $('#feedback').classList.remove('is-loading');
-    fb.innerHTML = `<div class="icon bad">!</div><div class="body"><h2>${esc(notice.title)}</h2><p>${esc(notice.body)}</p></div>`;
+    fbHtml = `<div class="icon bad">!</div><div class="body"><h2>${esc(notice.title)}</h2><p>${esc(notice.body)}</p></div>`;
   } else if (S.status === 'solved') {
     const title = S.outcome === 'viewed' ? 'Solution shown' : S.outcome === 'miss' ? 'Solved, after a miss' : 'Solved';
     const note = S.casual ? 'You used a hint, so this one didn’t count toward your rating.'
-      : 'Try any move on the board to explore, or step through the line with ← and →.';
-    fb.innerHTML = `<div class="icon ${S.outcome === 'clean' ? 'good' : 'bad'}">${S.outcome === 'clean' ? '✓' : '✗'}</div><div class="body">
+      : `Try any move on the board to explore${finePointer.matches ? ', or step through the line with ← and →' : ''}.`;
+    fbHtml = `<div class="icon ${S.outcome === 'clean' ? 'good' : 'bad'}">${S.outcome === 'clean' ? '✓' : '✗'}</div><div class="body">
       <h2>${title}</h2><p>${note}</p></div>
       <div class="actions one"><button class="primary" data-act="next">Continue training</button></div>`;
   } else if (S.status === 'retry') {
-    fb.innerHTML = `<div class="icon bad">✗</div><div class="body"><h2>That’s not the move</h2>
+    fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>That’s not the move</h2>
       <p>${refText(S.refutation) || 'Try another move.'} This puzzle now counts as a miss; keep trying or view the solution.</p></div>${playActions}`;
   } else if (S.status === 'viewing') {
-    fb.innerHTML = `<div class="icon bad">…</div><div class="body"><h2>Solution</h2><p>Watch the winning line.</p></div>`;
+    fbHtml = `<div class="icon bad">…</div><div class="body"><h2>Solution</h2><p>Watch the winning line.</p></div>`;
   } else {
     const good = mood === 'good';
-    fb.innerHTML = `<div class="icon ${good ? 'good' : 'turn p' + S.solver}">${good ? '✓' : ''}</div><div class="body">
+    fbHtml = `<div class="icon ${good ? 'good' : 'turn p' + S.solver}">${good ? '✓' : ''}</div><div class="body">
       <h2>${good ? 'Best move!' : 'Your turn'}</h2>
       <p>${good ? 'Keep going.' : `You play ${colorName(S.solver)}`}</p></div>${playActions}`;
   }
+  // Only touch the card when it changes (it's a live region), and keep keyboard focus on the equivalent
+  // button when it does (Hint / View solution, then Continue once the puzzle is over).
+  if (fb._html !== fbHtml) {
+    const active = document.activeElement;
+    const ended = !fb._html?.includes('data-act="next"') && fbHtml.includes('data-act="next"');
+    if (fb.contains(active)) fbFocus = active.dataset.act || null;
+    else if (active && active !== document.body) fbFocus = null;
+    fb.innerHTML = fbHtml; fb._html = fbHtml;
+    if (fbFocus && (!document.activeElement || document.activeElement === document.body)) {
+      fb.querySelector(`[data-act="${fbFocus}"]:not(:disabled)`)?.focus() || fb.querySelector('[data-act="next"]')?.focus();
+    }
+    if (ended && active?.id === 'ptn-in') fb.querySelector('[data-act="next"]')?.focus(); // solved by a typed move
+  }
+  $('#ptn-in').disabled = !!(S.placeholder || board.opts.disableBoard);
 
   // Session card: your rating (with the latest change beside it) and one chip per puzzle, Lichess-style.
   const last = session.at(-1);
@@ -592,16 +668,20 @@ function renderAll(mood) {
     const white = first.ply % 2 === 0 ? first : null;
     const black = white ? (cells[c + 1] && cells[c + 1].ply === first.ply + 1 ? cells[c + 1] : null) : first;
     rows += `<span class="mnum">${moveNo}</span><span class="mcell">${white ? white.html : '<span class="dots">…</span>'}</span><span class="mcell">${black ? black.html : ''}</span>`;
-    const lastI = (black || white).i;
-    if (S.branch && S.branch.at === lastI + 1) rows += branchRow();
+    // Your line goes under the row it branches from, including from White's move (replacing Black's reply).
+    if (S.branch && [white, black].some((x) => x && S.branch.at === x.i + 1)) rows += branchRow();
     c += white && black ? 2 : 1;
   }
   if (S.branch && S.branch.at === 0) rows = branchRow() + rows;
   const mv = $('#moves');
   const prevScroll = mv.querySelector('.mscroll')?.scrollTop ?? 0;
   const engineHtml = engineMarkup();
-  mv.innerHTML = `<div class="eng-slot">${engineHtml}</div><div class="mscroll"><div class="mtable">${rows}</div></div>` +
-    `<div class="nav"><button data-nav="first" title="Start" aria-label="Start">⏮</button><button data-nav="prev" title="Back (←)" aria-label="Back">◀</button><button data-nav="next" title="Forward (→)" aria-label="Forward">▶</button><button data-nav="last" title="Current position" aria-label="Current position">⏭</button>${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
+  const navFocus = mv.contains(document.activeElement) ? document.activeElement.dataset.step : null;
+  const pvWas = pvFocused();
+  mv.innerHTML = `<div class="eng-slot">${engineHtml}</div><div class="mscroll" role="group" aria-label="Moves"><div class="mtable">${rows}</div></div>` +
+    `<div class="nav"><button data-step="first" title="Start" aria-label="Start">⏮</button><button data-step="prev" title="Back (←)" aria-label="Back">◀</button><button data-step="next" title="Forward (→)" aria-label="Forward">▶</button><button data-step="last" title="Current position" aria-label="Current position">⏭</button>${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
+  if (navFocus) mv.querySelector(`[data-step="${navFocus}"]`)?.focus();
+  refocusPV(pvWas);
   // Keep the current move in view by scrolling the table itself (never the page).
   const sc = mv.querySelector('.mscroll');
   sc.scrollTop = prevScroll; // keep where the reader was, then make sure the current move is visible
@@ -625,7 +705,7 @@ $('#moves').addEventListener('click', (e) => {
   const b = e.target.closest('[data-b]');
   if (b) return viewPly(+b.dataset.b, true);
   const total = shownLine().length, cur = S.view ?? total;
-  const n = e.target.closest('[data-nav]')?.dataset.nav;
+  const n = e.target.closest('[data-step]')?.dataset.step;
   if (n) viewPly({ first: 0, prev: cur - 1, next: cur + 1, last: total }[n]);
 });
 
@@ -636,7 +716,11 @@ $('#feedback').addEventListener('click', async (e) => {
   const act = e.target.closest('[data-act]')?.dataset.act;
   if (act === 'hint') return showHint();
   if (act === 'solution') return showSolution();
-  if (act === 'next') return loadNext();
+  if (act === 'next') {
+    const kb = e.target.matches(':focus-visible'); // keyboard user: put them back in the move input
+    await loadNext();
+    if (kb) $('#ptn-in')?.focus();
+  }
 });
 const themeDesc = () => { $('#theme-desc').textContent = prefs.theme && THEMES[prefs.theme] ? THEMES[prefs.theme].desc : 'A mix of everything. You don’t know what’s coming, just like in a real game.'; };
 $('#difficulty').value = prefs.difficulty;
@@ -645,13 +729,25 @@ $('#size').onchange = (e) => { prefs.size = e.target.value; store.set('prefs', p
 $('#theme').onchange = (e) => { prefs.theme = e.target.value; store.set('prefs', prefs); themeDesc(); loadNext(); };
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || !S) return;
-  if (S.placeholder) return;
+  if (S.placeholder || $('#view-puzzle').classList.contains('hidden')) return;
   const total = shownLine().length, cur = S.view ?? total;
-  if (e.key === 'Enter' && S.status === 'solved') loadNext();
-  else if (e.key === 'ArrowLeft') viewPly(cur - 1);
+  if (e.key === 'Enter') {
+    // Enter = Continue, unless it's meant for whatever has focus (a button, a link, a field).
+    if (S.status === 'solved' && !e.target.closest?.('a, button, input, select, textarea, [contenteditable]')) loadNext();
+  } else if (e.key === 'ArrowLeft') viewPly(cur - 1);
   else if (e.key === 'ArrowRight') viewPly(cur + 1);
-  else if (e.key === 'Escape') board.cancel();
+  // (Escape cancels a half-entered move: board.js handles it.)
 });
+// Typed moves (keyboard / screen reader): played on the board exactly as if clicked.
+$('#ptn-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const inp = $('#ptn-in'), ptn = inp.value.trim();
+  if (!ptn) return;
+  const ok = board.play(ptn);
+  inp.setAttribute('aria-invalid', ok ? 'false' : 'true');
+  if (ok) inp.value = ''; else inp.select();
+});
+$('#ptn-in').addEventListener('input', (e) => e.target.removeAttribute('aria-invalid'));
 
 async function renderFilters() {
   const t = await api('/api/themes' + (prefs.size ? '?size=' + prefs.size : ''));
@@ -659,27 +755,35 @@ async function renderFilters() {
   sel.innerHTML = '<option value="">Any size</option>' + Object.keys(t.allSizes || t.sizes).sort().map((s) => `<option value="${s}">${s}×${s} (${(t.allSizes || t.sizes)[s]})</option>`).join('');
   sel.value = prefs.size || '';
   const groups = {};
-  for (const [k, v] of Object.entries(THEMES)) if (t.themes[k] && v.group !== 'Board') (groups[v.group] ||= []).push(k);
+  // the chosen theme stays listed even with no puzzles at this size ("Quiet move (0)"), so the select is never blank
+  for (const [k, v] of Object.entries(THEMES)) if ((t.themes[k] || k === prefs.theme) && v.group !== 'Board') (groups[v.group] ||= []).push(k);
   $('#theme').innerHTML = `<option value="">Mix (everything)</option>` + Object.entries(groups).map(([g, ks]) =>
-    `<optgroup label="${g}">${ks.map((k) => `<option value="${k}">${THEMES[k].name} (${t.themes[k]})</option>`).join('')}</optgroup>`).join('');
+    `<optgroup label="${g}">${ks.map((k) => `<option value="${k}">${THEMES[k].name} (${t.themes[k] || 0})</option>`).join('')}</optgroup>`).join('');
   $('#theme').value = prefs.theme || '';
   themeDesc();
   return t;
 }
 document.addEventListener('click', (e) => {
   const a = e.target.closest('[data-theme]');
-  if (a) { e.preventDefault(); prefs.theme = a.dataset.theme; store.set('prefs', prefs); renderFilters(); go('#/'); }
+  // Practice a theme: route() then loads a puzzle with it (the puzzle in progress stays only if it has the theme).
+  if (a) { e.preventDefault(); prefs.theme = a.dataset.theme; store.set('prefs', prefs); go('#/'); }
 });
 
 // ---------- pages ----------
+const TITLES = { 'view-glossary': 'Glossary', 'view-me': 'History', 'view-leaderboard': 'Leaderboard' };
+function setTitle() {
+  const page = ['view-glossary', 'view-me', 'view-leaderboard'].find((v) => !$('#' + v).classList.contains('hidden'));
+  document.title = page ? `${TITLES[page]} — tinue` : S && !S.placeholder ? `Puzzle #${S.p.id} — tinue` : 'tinue — Tak puzzles';
+}
 function show(id) {
   for (const v of ['view-puzzle', 'view-glossary', 'view-me', 'view-leaderboard']) $('#' + v).classList.toggle('hidden', v !== id);
+  setTitle();
   for (const a of document.querySelectorAll('[data-nav]')) a.classList.toggle('on', a.getAttribute('href') === (location.hash.replace(/^(#\/[a-z]*).*$/, '$1') || '#/').replace('#/puzzle', '#/'));
 }
 
 async function glossaryPage() {
   show('view-glossary');
-  const t = await api('/api/themes');
+  const t = await api('/api/themes' + (prefs.size ? '?size=' + prefs.size : '')); // counts for the Board you practice on
   const slug = (w) => w.toLowerCase().replace(/[^a-z]+/g, '-');
   const themeRows = Object.entries(THEMES).filter(([k, v]) => v.group !== 'Board').map(([k, v]) =>
     `<dt id="${k}">${v.name}</dt><dd>${esc(v.desc)}${t.themes[k] ? ` <a href="#/" class="practice" data-theme="${k}">Practice (${t.themes[k].toLocaleString()} puzzles)</a>` : ''}</dd>`).join('');
@@ -694,7 +798,7 @@ async function glossaryPage() {
 async function mePage() {
   show('view-me');
   const el = $('#view-me');
-  if (!me) { el.innerHTML = `<h1>History</h1><div class="panel"><p class="flush">Claim a username at the top right to keep your rating and history across visits. As a guest you’re rated <b class="your-rating">${Math.round(guest.rating)}</b> after ${guest.games} puzzle${guest.games === 1 ? '' : 's'}.</p></div>`; return; }
+  if (!me) { el.innerHTML = `<h1>History</h1><div class="panel"><p class="flush">Claim a username at the top right to keep your rating and history across visits. As a guest you’re rated <b class="your-rating">${fmtRating(guest.rating, provisional(guest))}</b> after ${guest.games} puzzle${guest.games === 1 ? '' : 's'}.</p></div>`; return; }
   const { history: h } = await api('/api/history');
   const tok = store.get('token', null);
   // rating chart
@@ -702,23 +806,33 @@ async function mePage() {
   pts.unshift(1500);
   const W = 860, H = 160, lo = Math.min(...pts) - 20, hi = Math.max(...pts) + 20;
   const path = pts.map((v, i) => `${i ? 'L' : 'M'}${(i / Math.max(1, pts.length - 1)) * W},${H - ((v - lo) / (hi - lo)) * H}`).join('');
-  el.innerHTML = `<h1>${esc(me.name)}</h1><p class="muted">Rating <b class="your-rating">${Math.round(me.rating)}</b></p>
-    <p class="muted">${me.games} rated puzzles, ${me.wins} solved first try.${tok ? ` Your login token (paste on another device): <code>${tok}</code>` : ''}</p>
+  el.innerHTML = `<h1>${esc(me.name)}</h1><p class="muted">Rating <b class="your-rating">${fmtRating(me.rating, me.provisional)}</b></p>
+    <p class="muted">${me.games} rated puzzle${me.games === 1 ? '' : 's'}, ${me.wins} solved first try.${tok ? ' Your login token (paste on another device):' : ''}</p>
+    ${tok ? `<div class="token"><input id="token-out" readonly value="${esc(tok)}" aria-label="Login token"><button id="token-copy">Copy</button></div>` : ''}
     <div class="chart"><svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"><path d="${path}" fill="none" stroke="#3692e7" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>
     <table class="t"><tr><th>Puzzle</th><th>Result</th><th>Puzzle rating</th><th>Δ</th><th>When</th></tr>
-    ${h.map((r) => `<tr><td><a href="#/puzzle/${esc(r.puzzle_id)}">#${esc(r.puzzle_id)}</a> <span class="muted">${r.size}×${r.size}, ${r.plies} ply</span></td>
+    ${h.map((r) => `<tr><td><a href="#/puzzle/${esc(r.puzzle_id)}">#${esc(r.puzzle_id)}</a> <span class="muted">${r.size}×${r.size}, ${r.plies} ${r.plies === 1 ? 'ply' : 'plies'}</span></td>
       <td>${r.win ? '✓' : '✗'}</td><td>${Math.round(r.puzzle_rating)}</td>
       <td>${r.rated ? `<span class="delta ${r.user_delta >= 0 ? 'up' : 'down'}">${r.user_delta >= 0 ? '+' : ''}${Math.round(r.user_delta)}</span>` : '<span class="muted">casual</span>'}</td>
       <td class="muted">${new Date(r.ts).toLocaleString()}</td></tr>`).join('')}</table>`;
+  const out = $('#token-out');
+  if (out) {
+    out.onfocus = () => out.select();
+    $('#token-copy').onclick = async () => {
+      out.select();
+      try { await navigator.clipboard.writeText(tok); } catch { document.execCommand?.('copy'); }
+      $('#token-copy').textContent = 'Copied';
+    };
+  }
 }
 
 async function leaderPage() {
   show('view-leaderboard');
   const { leaders } = await api('/api/leaderboard');
-  $('#view-leaderboard').innerHTML = `<h1>Leaderboard</h1><p class="muted">Players with at least 5 rated puzzles.</p>` + (leaders.length
+  $('#view-leaderboard').innerHTML = `<h1>Leaderboard</h1><p class="muted">Players whose rating has settled (no “?”).</p>` + (leaders.length
     ? `<table class="t"><tr><th>#</th><th>Player</th><th>Rating</th><th>Puzzles</th></tr>${leaders.map((l, i) =>
       `<tr><td>${i + 1}</td><td>${esc(l.name)}</td><td>${Math.round(l.rating)}</td><td>${l.games}</td></tr>`).join('')}</table>`
-    : `<div class="panel"><p class="flush">Nobody has rated 5 puzzles yet. Claim a username and you could be first.</p></div>`);
+    : `<div class="panel"><p class="flush">Nobody has a settled rating yet. It takes about 15 rated puzzles. Claim a username and you could be first.</p></div>`);
 }
 
 // Hash routes (#/, #/puzzle/ID, #/glossary[/term], #/me, #/leaderboard) so it works as static files.
@@ -735,14 +849,14 @@ async function route() {
   show('view-puzzle');
   await renderFilters();
   if (page === 'puzzle' && arg) { if (S?.p.id !== arg) loadById(decodeURIComponent(arg)); }
-  else if (S && !S.placeholder && S.status !== 'solved') history.replaceState(null, '', '#/puzzle/' + S.p.id); // back to the puzzle in progress
+  else if (S && !S.placeholder && S.status !== 'solved' && matchesFilters(S.p)) history.replaceState(null, '', '#/puzzle/' + S.p.id); // back to the puzzle in progress
   else loadNext();
 }
 window.addEventListener('hashchange', route);
 
 (async () => {
   const cached = store.get('me', null);
-  if (cached && store.get('token', null)) { me = { ...cached, rating: store.get('myRating', 1500), games: 0, wins: 0 }; }
+  if (cached && store.get('token', null)) { me = { ...cached, rating: store.get('myRating', 1500), provisional: store.get('myProv', true), games: 0, wins: 0 }; }
   renderUser();
   themeDesc();
   renderAll(); // placeholder panels at their final size

@@ -7,13 +7,13 @@
   --line: #3d3a36;
   --fg: #bababa;
   --fg-hi: #e8e6e3;
-  --muted: #8a8784;
+  --muted: #9a9792;     /* 5.3:1 on panels, 4.65:1 on bg3 */
   --accent: #5aa7f0;    /* links / highlights on dark panels (6:1) */
   --btn: #2a6fc0;       /* primary button fill: white text 5:1 */
   --good-fill: #4e7d1c; /* chip fills: white text ≥4.9:1 */
   --bad-fill: #b53030;
   --good: #7fb83a;      /* text on panels 6.5:1 */
-  --bad: #e0605a;       /* text on panels 4.4:1 */
+  --bad: #ec7a74;       /* text on panels 5.6:1, on bg3 4.9:1 */
   --gold: #d59020;
   --sq-light: #f0d9b5;
   --sq-dark: #b58863;
@@ -38,6 +38,7 @@ html, body { margin: 0; background: var(--bg); color: var(--fg); font: var(--fs)
 a { color: var(--accent); text-decoration: none; }
 .hidden { display: none !important; }
 .muted { color: var(--muted); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* ---------- controls ---------- */
 button, select, input { font: inherit; font-size: var(--fs-sm); color: var(--fg-hi); height: var(--ctl); border-radius: var(--r-ctl); border: 1px solid var(--line); }
@@ -45,12 +46,10 @@ button { display: inline-flex; align-items: center; justify-content: center; gap
 button:hover { background: var(--bg4); }
 button.primary { background: var(--btn); border-color: var(--btn); color: #fff; font-weight: 600; }
 button.primary:hover { filter: brightness(1.1); }
-button.icon { width: var(--ctl); padding: 0; }
 button:disabled { opacity: .4; cursor: default; background: var(--bg3); }
 button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 select, input { background: var(--bg); padding: 0 10px; }
 select { padding-right: 6px; }
-kbd { font: 11px var(--mono); color: inherit; opacity: .7; border: 1px solid currentColor; border-radius: 3px; padding: 0 4px; line-height: 1.4; }
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .field > span { font-size: var(--fs-xs); color: var(--muted); display: flex; align-items: center; gap: 6px; }
 .field select { width: 100%; }
@@ -71,8 +70,8 @@ button.link:hover { background: none; color: var(--fg-hi); }
 .menu .name { color: var(--fg-hi); font-weight: 500; padding: 8px 0; }
 .menu .pop { position: absolute; right: 0; top: 100%; min-width: 150px; padding: 6px; background: var(--bg3); border: 1px solid var(--line); border-radius: var(--r-panel); box-shadow: 0 8px 24px rgba(0,0,0,.45); display: none; flex-direction: column; z-index: 20; }
 .menu:hover .pop, .menu:focus-within .pop, .menu.open .pop { display: flex; }
-.menu.click:hover:not(.open) .pop { display: none; }
-.menu .pop > a, .menu .pop > button.link { padding: 8px 10px; border-radius: var(--r-ctl); text-align: left; color: var(--fg); }
+.menu.click:not(.open) .pop { display: none; } /* the claim popover opens only on click */
+.menu .pop > a, .menu .pop > button.link { padding: 8px 10px; border-radius: var(--r-ctl); justify-content: flex-start; text-align: left; color: var(--fg); }
 .menu .pop > a:hover, .menu .pop > button.link:hover { background: var(--bg4); color: var(--fg-hi); }
 .menu .pop.wide { width: 280px; padding: 14px; }
 .menu .pop form { display: flex; flex-direction: column; gap: 10px; }
@@ -81,7 +80,6 @@ button.link:hover { background: none; color: var(--fg-hi); }
 .menu .pop .hint .link { font-size: inherit; color: var(--accent); }
 .menu .pop .err { margin: 0; color: var(--bad); font-size: var(--fs-xs); }
 .menu .pop .confirm { display: flex; flex-direction: column; gap: 8px; padding: 6px 4px 2px; }
-.menu .pop .confirm.hidden { display: none; }
 button.danger { background: var(--bad-fill); border-color: var(--bad-fill); color: #fff; }
 
 /* ---------- layout ---------- */
@@ -94,51 +92,40 @@ button.danger { background: var(--bad-fill); border-color: var(--bad-fill); colo
 /* ---------- board (our own PTN-Ninja-style board: public/board.js + board.css) ---------- */
 .board-wrap { position: relative; }
 .board-host { width: 100%; }
+/* typed moves for keyboard players: invisible until tabbed to */
+.ptn-in { width: 100%; margin-top: 8px; font-family: var(--mono); }
+.ptn-in:not(:focus) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
+.ptn-in[aria-invalid="true"] { border-color: var(--bad); }
 
 /* ---------- side panels ---------- */
-.feedback { display: flex; gap: 14px; align-items: center; min-height: 96px; }
+/* feedback card carries the puzzle's actions (Hint / View solution, then Continue) */
+.feedback { display: flex; flex-wrap: wrap; align-content: center; gap: 14px; align-items: center; min-height: 96px; }
 .feedback .icon { width: 44px; height: 44px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 22px; font-weight: 700; }
 .feedback .icon.turn { background: var(--p1); border: 2px solid var(--p1-edge); }
 .feedback .icon.turn.p2 { background: var(--p2); border-color: #9a948c; }
 .feedback .icon.good { background: var(--good-fill); color: #fff; }
 .feedback .icon.bad { background: var(--bad-fill); color: #fff; }
+.feedback .body { flex: 1; min-width: 0; }
 .feedback h2 { margin: 0; font-size: var(--fs-lg); color: var(--fg-hi); font-weight: 600; }
 .feedback p { margin: 2px 0 0; color: var(--muted); font-size: var(--fs-sm); }
-.feedback .actions { margin-top: 10px; display: flex; gap: 6px; align-items: center; }
-.feedback .actions .vote { width: var(--ctl); padding: 0; }
-.vote.on { border-color: var(--accent); background: var(--bg4); }
+.feedback .actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; margin-top: 14px; }
+.feedback .actions.one { grid-template-columns: 1fr; }
 
-.info dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; font-size: var(--fs-sm); align-items: baseline; }
-.info dt { color: var(--muted); }
-.info dd { margin: 0; color: var(--fg-hi); min-width: 0; }
 .your-rating { color: var(--gold); font-weight: 700; }
 .tag { display: inline-block; font-size: var(--fs-xs); background: var(--bg3); border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px; margin: 2px 4px 2px 0; color: var(--fg); }
 a.tag:hover { border-color: var(--accent); color: var(--fg-hi); }
 .delta.up { color: var(--good); }
 .delta.down { color: var(--bad); }
 
-.moves { font: var(--fs-sm)/1.7 var(--mono); min-height: 128px; max-height: 260px; overflow-y: auto; padding-bottom: 0; display: flex; flex-direction: column; }
-.moves .list { flex: 1; }
-.moves .mv { display: inline-block; padding: 0 5px; border-radius: 3px; cursor: pointer; }
-.moves .mv:hover { background: var(--bg4); }
-.moves .mv.past { color: var(--muted); }
-.moves .mv.opp { color: var(--fg); }
-.moves .mv.me.ok { color: var(--good); }
-.moves .mv.cur { background: var(--btn); color: #fff !important; }
-.moves .num { color: var(--muted); margin-left: 4px; }
-.moves .start { display: inline-block; font: 600 11px/1 "Noto Sans", sans-serif; color: var(--gold); border: 1px solid currentColor; border-radius: 8px; padding: 2px 7px; margin: 0 6px; vertical-align: 1px; }
-.moves .nav { display: flex; gap: 6px; align-items: center; position: sticky; bottom: 0; background: var(--bg2); padding: 10px 0 var(--pad); margin-top: auto; font-family: inherit; }
-.moves .nav button { width: var(--ctl); padding: 0; }
-.moves .nav .muted { font: var(--fs-xs) "Noto Sans", -apple-system, sans-serif; margin-left: 4px; }
-
-.controls { display: flex; flex-direction: column; gap: 14px; }
+.controls { display: flex; flex-direction: column; gap: 12px; }
 .controls .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.controls .row.one { grid-template-columns: 1fr; }
+.theme-desc { margin: -4px 0 0; color: var(--muted); font-size: var(--fs-xs); }
 
 .session { min-height: 64px; display: flex; flex-direction: column; gap: 10px; }
 .session .label { font-size: var(--fs-xs); color: var(--muted); }
 .session .rating-line { display: flex; align-items: baseline; gap: 10px; margin-top: 2px; }
 .session .big { font-size: 28px; font-weight: 700; color: var(--fg-hi); line-height: 1; font-variant-numeric: tabular-nums; }
+.prov { color: var(--muted); font-weight: 500; margin-left: 1px; cursor: help; }
 .session .delta { font-size: var(--fs); font-weight: 700; font-variant-numeric: tabular-nums; }
 .session .streak { display: flex; flex-wrap: wrap; gap: 4px; }
 .session .streak:empty { display: none; }
@@ -148,6 +135,65 @@ a.tag:hover { border-color: var(--accent); color: var(--fg-hi); }
 .session .streak a.cur { box-shadow: 0 0 0 2px var(--fg-hi); }
 .session .streak a:hover { filter: brightness(1.15); }
 
+/* end-of-puzzle info */
+.puzzle-info { display: flex; flex-direction: column; gap: 12px; font-size: var(--fs-sm); }
+.puzzle-info dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; }
+.puzzle-info dt { color: var(--muted); }
+.puzzle-info dd { margin: 0; color: var(--fg-hi); min-width: 0; }
+.puzzle-info .sub { color: var(--muted); }
+.puzzle-info .players { display: grid; gap: 2px; }
+.puzzle-info .players .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.puzzle-info .players .dot.p1 { background: var(--p1); }
+.puzzle-info .players .dot.p2 { border: 1.5px solid var(--fg); }
+.puzzle-info hr { border: 0; border-top: 1px solid var(--line); margin: 0; width: 100%; }
+
+/* ---------- moves: engine line, move table (Lichess-style: fixed height, scrolls inside itself), nav ---------- */
+.moves { font: var(--fs-sm)/1.7 var(--mono); min-height: 0; padding-bottom: 0; display: flex; flex-direction: column; }
+.moves .branch-label { font: 600 var(--fs-xs) "Noto Sans", sans-serif; color: var(--muted); margin-right: 6px; }
+.moves .back { font: var(--fs-xs) "Noto Sans", sans-serif; color: var(--accent); margin-left: 8px; }
+.moves .nav { display: flex; gap: 6px; align-items: center; padding: 10px 0 var(--pad); margin-top: 8px; border-top: 1px solid var(--line); font-family: inherit; }
+.moves .nav button { width: var(--ctl); padding: 0; }
+.moves .nav .muted { font: var(--fs-xs) "Noto Sans", -apple-system, sans-serif; margin-left: 4px; }
+
+.mscroll { height: 200px; overflow-y: auto; margin: -4px -6px 0; padding: 0 6px; scrollbar-width: thin; position: relative; }
+.mtable { display: grid; grid-template-columns: 2.6em 1fr 1fr; align-items: center; font: var(--fs-sm)/1 var(--mono); }
+.mtable .mnum { color: var(--muted); text-align: right; padding-right: 10px; min-height: 28px; line-height: 28px; align-self: stretch; background: var(--bg3); border-radius: 4px 0 0 4px; margin-bottom: 2px; }
+.mtable .mcell { min-height: 28px; display: flex; align-items: center; flex-wrap: wrap; gap: 2px 6px; padding-left: 4px; margin-bottom: 2px; min-width: 0; }
+.mtable .mv { display: inline-block; padding: 3px 6px; border-radius: 3px; cursor: pointer; overflow-wrap: anywhere; }
+.mtable .mv:hover { background: var(--bg4); }
+.mtable .mv.cur { background: var(--btn); color: #fff !important; }
+/* history vs puzzle moves: the game so far is quiet, the puzzle is bright */
+.mtable .mv.past { color: #8f8c87; } /* 4.6:1 on panels */
+.mtable .mv.opp, .mtable .mv.me { color: var(--fg-hi); font-weight: 600; }
+.mtable .mv.me.ok { color: var(--good); }
+.mtable .mv.me.shown { color: var(--fg-hi); }
+.mtable .miss { color: var(--bad); text-decoration: line-through; font-size: 12px; opacity: .9; }
+.mtable .dots { color: var(--muted); padding: 0 6px; }
+.mtable .mrow { grid-column: 1 / -1; }
+.mtable .branch { margin: 2px 0 6px 2.6em; padding: 6px 8px; border-top: 1px solid var(--line); border-left: 2px solid var(--accent); background: var(--bg3); border-radius: 0 4px 4px 0; line-height: 2; font-size: var(--fs-sm); white-space: normal; }
+.mtable .branch .num { color: var(--muted); margin: 0 2px 0 4px; }
+@media (max-width: 860px) { .mscroll { height: 150px; } }
+
+/* engine line (Lichess-style): bar and who's better, source tag, then the clickable line on its own row.
+   The line's row is always there (even empty) so the panel doesn't jump. */
+.moves .eng { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin: -4px 0 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); min-height: 30px; }
+.moves .eng .bar { width: 46px; height: 8px; border-radius: 4px; background: var(--p2); box-shadow: inset 0 0 0 1px #6b655e; overflow: hidden; flex: none; }
+.moves .eng .bar i { display: block; height: 100%; background: var(--p1); transition: width .3s ease; }
+.moves .eng b { color: var(--fg-hi); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.moves .eng .src { order: 2; margin-left: auto; font-size: 11px; color: var(--muted); align-self: center; white-space: nowrap; }
+.moves .eng a.src:hover { color: var(--accent); }
+.moves .eng .pvline { order: 3; flex: 1 1 100%; min-width: 0; min-height: calc(var(--fs-sm) * 1.3 + 4px); display: flex; flex-wrap: wrap; gap: 2px; margin-left: -5px; }
+.moves .eng .pvm { height: auto; padding: 2px 5px; background: none; border: 0; font: var(--fs-sm)/1.3 var(--mono); color: var(--fg); border-radius: 3px; }
+.moves .eng .pvm:hover { background: var(--bg4); color: var(--fg-hi); }
+@media (prefers-reduced-motion: reduce) { .moves .eng .bar i { transition: none; } }
+
+/* loading: the real panels with dummy values, text masked */
+.is-loading h2, .is-loading p, .is-loading .mv, .is-loading .num { color: transparent !important; background: var(--bg3) !important; border-color: transparent !important; border-radius: 4px; }
+.is-loading .icon { background: var(--bg3) !important; border-color: transparent !important; }
+.is-loading button { pointer-events: none; opacity: .5; }
+.is-loading .mv { margin: 1px 0; }
+.is-loading .mnum, .is-loading .mcell .mv { color: transparent !important; }
+.is-loading .mcell .mv { background: var(--bg3) !important; }
 
 /* ---------- other pages ---------- */
 h1 { color: var(--fg-hi); font-weight: 500; }
@@ -159,106 +205,21 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .glossary dt { color: var(--fg-hi); font-weight: 600; }
 .glossary dd { margin: 0; }
 .glossary dd .practice { font-size: var(--fs-xs); margin-left: 8px; }
+.flush { margin: 0; }
+.page .panel { margin-top: 8px; }
+.token { display: flex; gap: 8px; margin: -6px 0 16px; max-width: 520px; }
+.token input { flex: 1; min-width: 0; font-family: var(--mono); color: var(--fg); }
 
 @media (max-width: 860px) {
   .puzzle-page { grid-template-columns: 1fr; padding: 8px; }
   .top { flex-wrap: wrap; gap: 10px 18px; padding: 10px 16px; height: auto; }
 }
-@media (max-width: 600px) { .glossary dl { grid-template-columns: 1fr; gap: 2px 0; } .glossary dd { margin-bottom: 10px; } }
-
-/* feedback card carries the puzzle's actions (Hint / View solution, then Continue + votes) */
-.feedback { flex-wrap: wrap; align-content: center; }
-.feedback .body { flex: 1; min-width: 0; }
-.feedback .actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
-.feedback .actions.end { grid-template-columns: 1fr auto auto; }
-/* end-of-puzzle info */
-.puzzle-info { display: flex; flex-direction: column; gap: 12px; font-size: var(--fs-sm); }
-.puzzle-info dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; }
-.puzzle-info dt { color: var(--muted); }
-.puzzle-info dd { margin: 0; color: var(--fg-hi); min-width: 0; }
-.puzzle-info .head { color: var(--fg-hi); }
-.puzzle-info .sub { color: var(--muted); }
-.puzzle-info .players { display: grid; gap: 2px; }
-.puzzle-info .players .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
-.puzzle-info .players .dot.p1 { background: var(--p1); }
-.puzzle-info .players .dot.p2 { border: 1.5px solid var(--fg); }
-.puzzle-info hr { border: 0; border-top: 1px solid var(--line); margin: 0; width: 100%; }
-/* settings */
-.controls { gap: 12px; }
-.theme-desc { margin: -4px 0 0; color: var(--muted); font-size: var(--fs-xs); }
-.feedback .actions.one { grid-template-columns: 1fr; }
-.flush { margin: 0; }
-.page .panel { margin-top: 8px; }
-
-/* loading: the real panels with dummy values, text masked */
-.is-loading h2, .is-loading p, .is-loading .mv, .is-loading .num, .is-loading .start { color: transparent !important; background: var(--bg3) !important; border-color: transparent !important; border-radius: 4px; }
-.is-loading .icon { background: var(--bg3) !important; border-color: transparent !important; }
-.is-loading button { pointer-events: none; opacity: .5; }
-.is-loading .mv { margin: 1px 0; }
-@media (prefers-reduced-motion: no-preference) {
-  .is-loading h2, .is-loading p, .is-loading .mv, .is-loading .icon { animation: sk 1.2s ease-in-out infinite alternate; }
+@media (max-width: 600px) {
+  .top nav { order: 3; width: 100%; } /* brand + account on the first row, nav on the second */
+  .glossary dl { grid-template-columns: 1fr; gap: 2px 0; }
+  .glossary dd { margin-bottom: 10px; }
 }
-
-/* misses, your line, engine */
-.moves .mv.miss { color: var(--bad); text-decoration: line-through; cursor: default; }
-.moves .mv.miss:hover { background: none; }
-.moves .branch { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
-.moves .branch-label, .moves .engine-label { font: 600 var(--fs-xs) "Noto Sans", sans-serif; color: var(--muted); margin-right: 6px; }
-.moves .back { font: var(--fs-xs) "Noto Sans", sans-serif; color: var(--accent); margin-left: 8px; }
-.moves .engine { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); font: var(--fs-sm)/1.5 "Noto Sans", sans-serif; color: var(--fg); }
-.moves .engine .pv { font-family: var(--mono); color: var(--fg-hi); }
-.moves .mv.me.shown { color: var(--fg); }
-
-/* Tiltak evaluation */
-.moves .engine { display: flex; flex-direction: column; gap: 6px; }
-.moves .tk { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.moves .tk .bar { width: 64px; height: 8px; border-radius: 4px; background: var(--p2); box-shadow: inset 0 0 0 1px #6b655e; overflow: hidden; flex: none; }
-.moves .tk .bar i { display: block; height: 100%; background: var(--p1); transition: width .3s ease; }
-.moves .tk b { color: var(--fg-hi); font-weight: 600; font-variant-numeric: tabular-nums; }
-.moves .engine .credit { font-size: 11px; color: var(--muted); }
-@media (prefers-reduced-motion: reduce) { .moves .tk .bar i { transition: none; } }
-
-/* move table (Lichess-style): fixed height, scrolls inside itself */
-.moves { min-height: 0; max-height: none; overflow: visible; display: flex; flex-direction: column; padding-bottom: 0; }
-.mscroll { height: 200px; overflow-y: auto; margin: -4px -6px 0; padding: 0 6px; scrollbar-width: thin; position: relative; }
-.mtable { display: grid; grid-template-columns: 2.6em 1fr 1fr; align-items: center; font: var(--fs-sm)/1 var(--mono); }
-.mtable .mnum { color: var(--muted); text-align: right; padding-right: 10px; min-height: 28px; line-height: 28px; align-self: stretch; background: var(--bg3); border-radius: 4px 0 0 4px; margin-bottom: 2px; }
-.mtable .mcell { min-height: 28px; display: flex; align-items: center; flex-wrap: wrap; gap: 2px 6px; padding-left: 4px; margin-bottom: 2px; min-width: 0; }
-.mtable .mv { overflow-wrap: anywhere; }
-.mtable .mv { padding: 3px 6px; border-radius: 3px; }
-.mtable .miss { color: var(--bad); text-decoration: line-through; font-size: 12px; opacity: .9; }
-.mtable .dots { color: var(--muted); padding: 0 6px; }
-.mtable .mrow { grid-column: 1 / -1; }
-.mtable .divider { display: flex; align-items: center; gap: 8px; margin: 4px 0 6px; color: var(--gold); font: 600 11px/1 "Noto Sans", sans-serif; }
-.mtable .divider::before, .mtable .divider::after { content: ""; flex: 1; border-top: 1px solid currentColor; opacity: .5; }
-.mtable .branch { margin: 2px 0 6px 2.6em; padding: 6px 8px; border-left: 2px solid var(--accent); background: var(--bg3); border-radius: 0 4px 4px 0; line-height: 2; font-size: var(--fs-sm); white-space: normal; }
-.mtable .branch .num { color: var(--muted); margin: 0 2px 0 4px; }
-.moves .nav { position: static; padding: 10px 0 var(--pad); margin-top: 8px; border-top: 1px solid var(--line); }
-@media (max-width: 860px) { .mscroll { height: 150px; } }
-/* placeholder masking for the table */
-.is-loading .mnum, .is-loading .mcell .mv, .is-loading .divider span { color: transparent !important; }
-.is-loading .mcell .mv { background: var(--bg3) !important; }
-.is-loading .divider { color: var(--bg3) !important; }
-
-/* engine line (Lichess-style): bar, who's better, clickable line, source tag */
-.moves .eng { display: flex; align-items: center; gap: 8px; margin: -4px 0 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); min-height: 30px; }
-.moves .eng .bar { width: 46px; height: 8px; border-radius: 4px; background: var(--p2); box-shadow: inset 0 0 0 1px #6b655e; overflow: hidden; flex: none; }
-.moves .eng .bar i { display: block; height: 100%; background: var(--p1); transition: width .3s ease; }
-.moves .eng b { color: var(--fg-hi); font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.moves .eng .pvline { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 2px; }
-.moves .eng .pvm { height: auto; padding: 2px 5px; background: none; border: 0; font: var(--fs-sm)/1.3 var(--mono); color: var(--fg); border-radius: 3px; }
-.moves .eng .pvm:hover { background: var(--bg4); color: var(--fg-hi); }
-.moves .eng .src { margin-left: auto; font-size: 11px; color: var(--muted); align-self: center; white-space: nowrap; }
-.moves .eng a.src:hover { color: var(--accent); }
-@media (prefers-reduced-motion: reduce) { .moves .eng .bar i { transition: none; } }
-/* engine: evaluation on the first row, the recommended line underneath */
-.moves .eng { flex-wrap: wrap; row-gap: 6px; }
-.moves .eng .src { order: 2; }
-.moves .eng .pvline { order: 3; flex-basis: 100%; margin-left: -5px; }
-.moves .eng .pvline:empty { display: none; }
-
-/* history vs puzzle moves (no divider): the game so far is quiet, the puzzle is bright */
-.mtable .mv.past { color: #75726d; }
-.mtable .mv.opp, .mtable .mv.me { color: var(--fg-hi); font-weight: 600; }
-.mtable .mv.me.ok { color: var(--good); }
-.mtable .mv.me.shown { color: var(--fg-hi); }
+@media (pointer: coarse) {
+  .top nav a { padding: 6px 0; }
+  .moves .eng .pvm, .moves .eng .pvline { min-height: 32px; }
+}

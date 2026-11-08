@@ -7,8 +7,8 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23262421'/><g fill='%23e8e6e3'><path d='M10 15 A6 6 0 0 1 22 15 Z'/><rect x='5' y='17' width='22' height='4' rx='1.3'/><rect x='5' y='23' width='22' height='4' rx='1.3'/></g></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="board.css?v=1794096222">
-<link rel="stylesheet" href="style.css?v=1794096222">
+<link rel="stylesheet" href="board.css?v=1794103392">
+<link rel="stylesheet" href="style.css?v=1794103392">
 <style>.booting main { visibility: hidden; }</style>
 <script>setTimeout(() => document.documentElement.classList.remove("booting"), 2000);</script>
 <meta name="googlebot" content="noindex"><meta name="bingbot" content="noindex">
@@ -26,14 +26,16 @@
 </header>
 
 <main id="view-puzzle" class="puzzle-page">
+  <h1 class="sr-only">Puzzle</h1>
   <section class="board-col">
-    <div class="board-wrap" id="board-wrap"><div id="ninja" class="board-host"></div></div>
+    <div class="board-wrap" id="board-wrap"><div id="board" class="board-host"></div></div>
+    <form id="ptn-form" class="ptn-form"><input id="ptn-in" class="ptn-in" aria-label="Type a move" placeholder="Type a move, e.g. c3 or 2a1>11" autocomplete="off" autocapitalize="off" spellcheck="false" disabled></form>
   </section>
 
   <aside class="side">
-    <div class="panel feedback" id="feedback"><div class="sk-circle"></div><div class="body"><span class="sk w40"></span><span class="sk w60"></span></div><div class="actions"><span class="sk btn"></span><span class="sk btn"></span></div></div>
-    <div class="panel session" id="session"><span class="sk w40"></span><span class="sk w60"></span></div>
-    <div class="panel moves" id="moves"><span class="sk w80"></span><span class="sk w60"></span></div>
+    <div class="panel feedback" id="feedback" aria-live="polite"></div>
+    <div class="panel session" id="session"></div>
+    <div class="panel moves" id="moves"></div>
     <div class="panel puzzle-info hidden" id="info"></div>
     <div class="panel controls">
       <label class="field"><span>Theme <a href="#/glossary" class="help" title="What do the themes mean?" aria-label="What do the themes mean?">?</a></span>
@@ -60,7 +62,7 @@
 <main id="view-me" class="page hidden"></main>
 <main id="view-leaderboard" class="page hidden"></main>
 
-<script src="config.js?v=1794096222"></script>
-<script type="module" src="app.js?v=1794096222"></script>
+<script src="config.js?v=1794103392"></script>
+<script type="module" src="app.js?v=1794103392"></script>
 </body>
 </html>
