@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794168310';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794168310';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794168310';
-import { Board, buildPTN } from './board.js?v=1794168310';
-import * as engine from './engine.js?v=1794168310';
-import * as tiltak from './tiltak.js?v=1794168310';
+import { Game } from './shared/tak.js?v=1794178081';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794178081';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794178081';
+import { Board, buildPTN } from './board.js?v=1794178081';
+import * as engine from './engine.js?v=1794178081';
+import * as tiltak from './tiltak.js?v=1794178081';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -612,7 +612,7 @@ function renderEngine() {
   const slot = document.querySelector('#moves .eng-slot');
   if (!slot) return renderAll();
   const html = engineMarkup();
-  if (slot._html !== html) { const f = pvFocused(); slot.innerHTML = html; slot._html = html; refocusPV(f); }
+  if (slot._html !== html) { const f = pvFocused(); slot.innerHTML = html; slot._html = html; refocusPV(f); fitDock(); }
 }
 // After clicking a move in the engine line, the line is redrawn for the new position: keep keyboard focus
 // on its first move (Enter again steps further along), or on Forward while the engine is still thinking.
@@ -627,6 +627,31 @@ const refocusPV = (was) => {
 };
 
 // ---------- rendering ----------
+const solvedTitle = () => S.outcome === 'viewed' ? 'Solution shown' : S.outcome === 'miss' ? 'Solved, after a miss' : 'Solved';
+// Review dock (Shy picked it from mockups): on phones in portrait, once the puzzle is over, the result with Next
+// puzzle, Tiltak's line and the step buttons are pinned to the bottom of the screen. It only exists while pinned;
+// everywhere else the move panel keeps its usual order (engine line, moves, steps) and the card keeps the result.
+const DOCK_MQ = matchMedia('(max-width: 860px) and (min-height: 561px)');
+DOCK_MQ.addEventListener?.('change', () => { if (S) renderAll(); });
+// The page reserves the dock's height at its very end (below the footer) and as scroll padding, so nothing
+// ends up stuck under it; and the board shrinks if that's what it takes to keep board + tray above the dock.
+const fitDock = () => {
+  const d = document.querySelector('#moves .dock'), page = $('#view-puzzle'), root = document.documentElement;
+  const pinned = !!d && !page.classList.contains('hidden');
+  const h = pinned ? d.offsetHeight : 0;
+  root.style.setProperty('--dock-h', h + 'px');
+  root.classList.toggle('docked', pinned);
+  const wrap = $('#board-wrap');
+  wrap.style.maxWidth = '';
+  if (pinned && S?.p?.size) {
+    const top = wrap.getBoundingClientRect().top + scrollY, w = wrap.clientWidth;
+    const maxW = Math.max(220, Math.floor((root.clientHeight - h - top - 8) / (1 + 1 / S.p.size))); // tray is 1/n of the board
+    if (maxW < w) wrap.style.maxWidth = maxW + 'px';
+  }
+};
+const dockRO = typeof ResizeObserver === 'function' ? new ResizeObserver(() => fitDock()) : null;
+addEventListener('resize', () => fitDock());
+const nextBtn = () => $('#moves .dock [data-act="next"]') || $('#feedback [data-act="next"]');
 function renderAll(mood) {
   if (!S) S = PLACEHOLDER;
   const loading = !!S.placeholder;
@@ -635,9 +660,9 @@ function renderAll(mood) {
   const fb = $('#feedback');
   const myRating = fmtRating(me ? me.rating : guest.rating, me ? me.provisional : provisional(guest));
   if (me) { store.set('myRating', me.rating); store.set('myProv', !!me.provisional); }
-  const delta = S.delta != null ? `<span class="delta ${S.delta >= 0 ? 'up' : 'down'}">${S.delta >= 0 ? '+' : ''}${Math.round(S.delta)}</span>` : '';
+  const delta = S.delta != null ? `<span class="delta ${S.delta >= 0 ? 'up' : 'down'}">${S.delta >= 0 ? '+' : '−'}${Math.abs(Math.round(S.delta))}</span>` : '';
   const dis = S.placeholder ? ' disabled tabindex="-1"' : '';
-  const playActions = `<div class="actions"><button data-act="hint"${dis}>Hint</button><button data-act="solution"${dis}>View solution</button></div>`;
+  const playActions = `<div class="actions"><button data-act="hint"${dis}>Hint</button><button data-act="solution"${dis} title="View the solution">Solution</button></div>`;
   const other = colorName(3 - S.solver);
   const refText = (r) => !r ? '' : r.kind === 'thinking' ? `Checking why ${esc(r.miss)} fails…`
     : r.kind === 'gives-road' ? `After ${esc(r.miss)}, ${other} makes a road with <b>${esc(r.reply)}</b>.`
@@ -651,12 +676,12 @@ function renderAll(mood) {
     fbHtml = `<div class="icon turn p${S.solver}">…</div><div class="body"><h2>Checking ${esc(S.checking)}</h2>
       <p>That isn’t the puzzle’s line; checking whether it still forces a win.</p></div>${playActions}`;
   } else if (S.status === 'solved') {
-    const title = S.outcome === 'viewed' ? 'Solution shown' : S.outcome === 'miss' ? 'Solved, after a miss' : 'Solved';
+    const title = solvedTitle();
     const note = S.casual ? 'You used a hint, so this one didn’t count toward your rating.'
-      : `Try any move on the board to explore${finePointer.matches ? ', or step through the line with ← and →' : ''}.`;
+      : `Play any move to explore${finePointer.matches ? ', or step through the line with ← and →' : ''}.`;
     fbHtml = `<div class="icon ${S.outcome === 'clean' ? 'good' : 'bad'}">${S.outcome === 'clean' ? '✓' : '✗'}</div><div class="body">
-      <h2>${title}</h2><p>${note}</p></div>
-      <div class="actions one"><button class="primary" data-act="next">Continue training</button></div>`;
+      <h2>${title}<span class="dslot"></span></h2><p>${note}</p></div>
+      <div class="actions"><button class="primary" data-act="next">Next puzzle</button></div>`;
   } else if (S.status === 'retry' && S.slower) {
     fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>That wins too, but slower</h2>
       <p>${esc(S.slower)} also forces a win, but there’s a faster one. This puzzle already counts as a miss; keep trying or view the solution.</p></div>${playActions}`;
@@ -675,6 +700,7 @@ function renderAll(mood) {
   }
   // Only touch the card when it changes (it's a live region), and keep keyboard focus on the equivalent
   // button when it does (Hint / View solution, then Continue once the puzzle is over).
+  let focusNext = false; // focus Next puzzle once the move panel (and the dock's button) is drawn
   if (fb._html !== fbHtml) {
     const active = document.activeElement;
     const ended = !fb._html?.includes('data-act="next"') && fbHtml.includes('data-act="next"');
@@ -682,10 +708,13 @@ function renderAll(mood) {
     else if (active && active !== document.body) fbFocus = null;
     fb.innerHTML = fbHtml; fb._html = fbHtml;
     if (fbFocus && (!document.activeElement || document.activeElement === document.body)) {
-      fb.querySelector(`[data-act="${fbFocus}"]:not(:disabled)`)?.focus() || fb.querySelector('[data-act="next"]')?.focus();
+      const same = fb.querySelector(`[data-act="${fbFocus}"]:not(:disabled)`);
+      if (same && same.offsetParent) same.focus(); else focusNext = true;
     }
-    if (ended && active?.id === 'ptn-in') fb.querySelector('[data-act="next"]')?.focus(); // solved by a typed move
+    if (ended && active?.id === 'ptn-in') focusNext = true; // solved by a typed move
   }
+  const dslot = fb.querySelector('.dslot');
+  if (dslot && dslot._html !== delta) { dslot.innerHTML = delta; dslot._html = delta; }
   $('#ptn-in').disabled = !!(S.placeholder || board.opts.disableBoard);
 
   // Session card: your rating (with the latest change beside it) and one chip per puzzle, Lichess-style.
@@ -696,6 +725,11 @@ function renderAll(mood) {
 
   // Everything about the puzzle itself comes at the end.
   const done = S.status === 'solved';
+  const docked = done && DOCK_MQ.matches;
+  const vp = $('#view-puzzle');
+  vp.classList.toggle('analysis', done); // phones: step buttons only for the review...
+  vp.classList.toggle('peek', !done && S.view != null); // ...or to get back after tapping an earlier move
+  vp.classList.toggle('docked', docked);
   const info = $('#info');
   info.classList.toggle('hidden', !done);
   if (done) {
@@ -756,11 +790,24 @@ function renderAll(mood) {
   const mv = $('#moves');
   const prevScroll = mv.querySelector('.mscroll')?.scrollTop ?? 0;
   const engineHtml = engineMarkup();
-  const navFocus = mv.contains(document.activeElement) ? document.activeElement.dataset.step : null;
+  const fa = mv.contains(document.activeElement) ? document.activeElement : null;
+  const navFocus = fa?.dataset.step ? `[data-step="${fa.dataset.step}"]` : null;
+  const hadNext = document.activeElement?.dataset?.act === 'next'; // the dock's or the card's: keep it across layout flips
   const pvWas = pvFocused();
-  mv.innerHTML = `<div class="eng-slot">${engineHtml}</div><div class="mscroll" role="group" aria-label="Moves"><div class="mtable">${rows}</div></div>` +
-    `<div class="nav"><button data-step="first" title="Start" aria-label="Start">⏮</button><button data-step="prev" title="Back (←)" aria-label="Back">◀</button><button data-step="next" title="Forward (→)" aria-label="Forward">▶</button><button data-step="last" title="Current position" aria-label="Current position">⏭</button>${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
-  if (navFocus) mv.querySelector(`[data-step="${navFocus}"]`)?.focus();
+  const clean = S.outcome === 'clean';
+  // A server notice (slow or unreachable) replaces the result, so a Next puzzle that's waiting doesn't look dead.
+  const dockHead = notice ? `<span class="icon bad" aria-hidden="true">!</span><b>${esc(notice.title)}</b>`
+    : `<span class="icon ${clean ? 'good' : 'bad'}" aria-hidden="true">${clean ? '✓' : '✗'}</span><b>${solvedTitle()}${delta}</b>`;
+  const dockNote = notice ? esc(notice.body) : S.casual ? 'You used a hint, so this one didn’t count.' : '';
+  const engSlot = `<div class="eng-slot">${engineHtml}</div>`;
+  const scroller = `<div class="mscroll" role="group" aria-label="Moves"><div class="mtable">${rows}</div></div>`;
+  const nav = `<div class="nav"><button data-step="first" title="Start" aria-label="Start">⏮</button><button data-step="prev" title="Back (←)" aria-label="Back">◀</button><button data-step="next" title="Forward (→)" aria-label="Forward">▶</button><button data-step="last" title="Current position" aria-label="Current position">⏭</button>${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
+  mv.innerHTML = docked ? scroller + `<div class="dock"><div class="dock-res">${dockHead}<button class="primary" data-act="next">Next puzzle</button>${dockNote ? `<p>${dockNote}</p>` : ''}</div>${engSlot}${nav}</div>`
+    : engSlot + scroller + nav;
+  fitDock();
+  if (dockRO) { dockRO.disconnect(); const d = mv.querySelector('.dock'); if (d) dockRO.observe(d); }
+  if (navFocus) mv.querySelector(navFocus)?.focus();
+  if (focusNext || hadNext) nextBtn()?.focus();
   refocusPV(pvWas);
   // Keep the current move in view by scrolling the table itself (never the page).
   const sc = mv.querySelector('.mscroll');
@@ -784,6 +831,8 @@ $('#moves').addEventListener('click', (e) => {
   if (m) return viewPly(+m.dataset.i, false);
   const b = e.target.closest('[data-b]');
   if (b) return viewPly(+b.dataset.b, true);
+  const nx = e.target.closest('[data-act="next"]'); // the phone dock's Next puzzle
+  if (nx) { const kb = nx.matches(':focus-visible'); return loadNext().then(() => { if (kb) $('#ptn-in')?.focus(); }); }
   const total = shownLine().length, cur = S.view ?? total;
   const n = e.target.closest('[data-step]')?.dataset.step;
   if (n) viewPly({ first: 0, prev: cur - 1, next: cur + 1, last: total }[n]);
@@ -858,6 +907,7 @@ function setTitle() {
 function show(id) {
   for (const v of ['view-puzzle', 'view-glossary', 'view-me', 'view-leaderboard']) $('#' + v).classList.toggle('hidden', v !== id);
   setTitle();
+  fitDock(); // the dock (and the room reserved for it) belongs to the puzzle page only
   for (const a of document.querySelectorAll('[data-nav]')) a.classList.toggle('on', a.getAttribute('href') === (location.hash.replace(/^(#\/[a-z]*).*$/, '$1') || '#/').replace('#/puzzle', '#/'));
 }
 

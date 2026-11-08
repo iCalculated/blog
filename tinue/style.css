@@ -102,18 +102,19 @@ button.danger { background: var(--bad-fill); border-color: var(--bad-fill); colo
 .ptn-in[aria-invalid="true"] { border-color: var(--bad); }
 
 /* ---------- side panels ---------- */
-/* feedback card carries the puzzle's actions (Hint / View solution, then Continue) */
-.feedback { display: flex; flex-wrap: wrap; align-content: center; gap: 14px; align-items: center; min-height: 96px; }
-.feedback .icon { width: 44px; height: 44px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 22px; font-weight: 700; }
+/* feedback card: icon | title | the puzzle's actions (Hint / Solution, then Next puzzle), the explanation underneath */
+.feedback { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "icon title act" "icon text text";
+  column-gap: 12px; row-gap: 2px; align-items: center; }
+.feedback .icon { grid-area: icon; align-self: start; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; font-weight: 700; }
 .feedback .icon.turn { background: var(--p1); border: 2px solid var(--p1-edge); }
 .feedback .icon.turn.p2 { background: var(--p2); border-color: #9a948c; }
 .feedback .icon.good { background: var(--good-fill); color: #fff; }
 .feedback .icon.bad { background: var(--bad-fill); color: #fff; }
-.feedback .body { flex: 1; min-width: 0; }
-.feedback h2 { margin: 0; font-size: var(--fs-lg); color: var(--fg-hi); font-weight: 600; }
-.feedback p { margin: 2px 0 0; color: var(--muted); font-size: var(--fs-sm); }
-.feedback .actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; margin-top: 14px; }
-.feedback .actions.one { grid-template-columns: 1fr; }
+.feedback .body { display: contents; }
+.feedback h2 { grid-area: title; margin: 0; font-size: var(--fs-lg); line-height: 1.25; color: var(--fg-hi); font-weight: 600; }
+.feedback h2 .delta { margin-left: 8px; font-size: var(--fs); font-variant-numeric: tabular-nums; }
+.feedback p { grid-area: text; margin: 0; color: var(--muted); font-size: var(--fs-sm); }
+.feedback .actions { grid-area: act; display: flex; gap: 6px; }
 
 .your-rating { color: var(--gold); font-weight: 700; }
 .tag { display: inline-block; font-size: var(--fs-xs); background: var(--bg3); border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px; margin: 2px 4px 2px 0; color: var(--fg); }
@@ -219,15 +220,50 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .token input { flex: 1; min-width: 0; font-family: var(--mono); color: var(--fg); }
 
 @media (max-width: 860px) {
-  .puzzle-page { grid-template-columns: 1fr; padding: 8px 8px 76px; } /* bottom: room for the sticky move bar */
-  /* One column: the move list sits three panels below the board, so its step buttons are pinned to the bottom of
-     the screen instead (Shy: stepping through why a puzzle went wrong meant scrolling away from the board). */
-  .moves .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; margin: 0; display: grid;
-    grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-    background: var(--bg2); border-top: 1px solid var(--line); box-shadow: 0 -4px 14px rgba(0,0,0,.45); }
-  .moves .nav button { width: auto; height: 44px; font-size: 17px; }
-  .moves .nav .muted { grid-column: 1 / -1; order: -1; text-align: center; margin: -2px 0 0; }
+  .puzzle-page { grid-template-columns: 1fr; padding: 8px 8px 16px; }
+  .puzzle-page:not(.analysis):not(.peek) .moves .nav { display: none; } /* step buttons are for the review */
+  .side { gap: 8px; }
+  .feedback { padding: 10px 12px; column-gap: 10px; }
+  .feedback .icon { width: 34px; height: 34px; font-size: 17px; }
+  .feedback h2 { font-size: 16px; }
+  .feedback .actions button { padding: 0 12px; }
+  .session { min-height: 0; padding: 10px 12px; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+  .session > div:first-child { display: flex; align-items: baseline; gap: 8px; }
+  .session .rating-line { margin: 0; }
+  .session .big { font-size: 20px; }
+  .moves .nav .muted { display: none; } /* the highlighted move already says where you are */
+  .puzzle-page.peek .moves .nav .muted { display: inline; } /* ...except mid-puzzle, where the board is frozen */
   .top { flex-wrap: wrap; gap: 10px 18px; padding: 10px 16px; height: auto; }
+}
+/* Review dock: only rendered on phones in portrait once the puzzle is over (app.js DOCK_MQ, same query). Held
+   sideways, the card and move panel keep their usual places instead: a pinned dock would cover most of the board. */
+@media (max-width: 860px) and (min-height: 561px) {
+  .moves .dock { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; flex-direction: column; gap: 8px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: var(--bg2); border-top: 1px solid var(--line);
+    box-shadow: 0 -4px 14px rgba(0,0,0,.45); }
+  /* room for it at the very end of the page (after the footer), and when the browser scrolls a focused control into view */
+  html.docked { scroll-padding-bottom: calc(var(--dock-h, 0px) + 8px); }
+  html.docked body { padding-bottom: var(--dock-h, 0px); }
+  .board-wrap { margin: 0 auto; } /* app.js narrows it if board + tray wouldn't fit above the dock */
+  .dock-res { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; font-family: "Noto Sans", -apple-system, sans-serif; }
+  .dock-res .icon { width: 26px; height: 26px; flex: none; border-radius: 50%; display: grid; place-items: center; font-size: 14px; font-weight: 700; color: #fff; }
+  .dock-res .icon.good { background: var(--good-fill); }
+  .dock-res .icon.bad { background: var(--bad-fill); }
+  .dock-res b { flex: 1 1 0; min-width: 0; color: var(--fg-hi); font-size: 15px; font-weight: 600; }
+  .dock-res .delta { margin-left: 8px; white-space: nowrap; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .dock-res p { flex-basis: 100%; margin: 0; color: var(--muted); font-size: var(--fs-xs); }
+  .moves .dock .eng { margin: 0; padding: 6px 0 0; border: 0; border-top: 1px solid var(--line); }
+  /* one row for Tiltak's line (scrolls sideways), so the dock, and the board sized above it, never change height */
+  .moves .dock .eng-slot { min-height: 67px; } /* the engine row's height, held before Tiltak's first line */
+  .moves .dock .eng .pvline { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .moves .dock .eng .pvline::-webkit-scrollbar { display: none; }
+  .moves .dock .eng .pvm { flex: none; white-space: nowrap; }
+  .moves .dock .nav { margin: 0; padding: 0; border: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .moves .dock .nav button { width: auto; height: 40px; font-size: 17px; }
+  /* the result lives in the dock, so the card steps aside; it stays for screen readers (it's the live region), minus
+     its Next button so there's one Next puzzle */
+  .puzzle-page.docked #feedback { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .puzzle-page.docked #feedback .actions { display: none; }
 }
 @media (max-width: 600px) {
   .top nav { order: 3; width: 100%; } /* brand + account on the first row, nav on the second */
