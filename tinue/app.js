@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794121741';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794121741';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794121741';
-import { Board, buildPTN } from './board.js?v=1794121741';
-import * as engine from './engine.js?v=1794121741';
-import * as tiltak from './tiltak.js?v=1794121741';
+import { Game } from './shared/tak.js?v=1794122330';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794122330';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794122330';
+import { Board, buildPTN } from './board.js?v=1794122330';
+import * as engine from './engine.js?v=1794122330';
+import * as tiltak from './tiltak.js?v=1794122330';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -18,18 +18,42 @@ const api = async (path, body) => {
     notice = { kind: 'wait', title: 'Waiting for the puzzle server…', body: 'If your browser asks to allow access to devices on your local network, allow it. Otherwise the server may be down; try again in a bit.' };
     renderAll();
   }, 4000);
+  const t0 = performance.now();
+  let outcome = 'ok';
+  // A request stuck on a dead connection (e.g. the tailnet path to crux re-forming after sleep) is abandoned
+  // after a while: reads are retried once, results (POSTs) just get longer before giving up.
+  const once = async (ms) => {
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), ms);
+    try {
+      const r = await fetch(API + path, body
+        ? { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify(body), credentials: 'include', signal: ctl.signal }
+        : { headers: authHeaders(), credentials: 'include', signal: ctl.signal });
+      return await r.json();
+    } finally { clearTimeout(timer); }
+  };
   try {
-    const r = await fetch(API + path, body
-      ? { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify(body), credentials: 'include' }
-      : { headers: authHeaders(), credentials: 'include' });
-    const j = await r.json();
+    let j;
+    if (body) j = await once(20000);
+    else try { j = await once(8000); } catch { outcome = 'retried'; j = await once(12000); }
     if (notice?.kind === 'wait' || notice?.kind === 'net') { notice = null; renderAll(); }
     return j;
   } catch (e) {
+    outcome = 'failed';
     notice = { kind: 'net', title: 'Can’t reach the puzzle server', body: 'Check your connection and reload. If it keeps happening, the server may be down.' };
     renderAll();
     throw e;
-  } finally { clearTimeout(slow); }
+  } finally {
+    clearTimeout(slow);
+    const ms = performance.now() - t0;
+    if ((ms > 2000 || outcome !== 'ok') && path !== '/api/slow') reportSlow(path, ms, outcome);
+  }
+};
+// Tell the server about requests that were slow from here, so its log shows what the network added.
+const reportSlow = (path, ms, outcome) => {
+  try {
+    const data = JSON.stringify({ path: path.split('?')[0], ms, outcome, hidden: document.visibilityState === 'hidden' });
+    if (!navigator.sendBeacon?.(API + '/api/slow', data)) fetch(API + '/api/slow', { method: 'POST', body: data, keepalive: true }).catch(() => {});
+  } catch {}
 };
 let notice = null; // a message that replaces the turn card: {kind: 'wait' | 'net' | 'none', title, body}
 const store = {
