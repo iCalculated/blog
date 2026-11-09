@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794178081';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794178081';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794178081';
-import { Board, buildPTN } from './board.js?v=1794178081';
-import * as engine from './engine.js?v=1794178081';
-import * as tiltak from './tiltak.js?v=1794178081';
+import { Game } from './shared/tak.js?v=1794202589';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794202589';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794202589';
+import { Board, buildPTN } from './board.js?v=1794202589';
+import * as engine from './engine.js?v=1794202589';
+import * as tiltak from './tiltak.js?v=1794202589';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -282,7 +282,8 @@ async function start(p, theme = '') {
   const hist = p.meta?.history || [];
   // theme: the Theme filter this puzzle was picked with (its result is damped as a themed attempt)
   const s = S = { p, g, node: p.tree, solver: g.toMove, hist, moves: [], snaps: [g.toTPS()], view: null, status: 'play', resultSent: false, hinted: false, delta: null, busy: true,
-        misses: [], outcome: null, branch: null, onBranch: false, theme: theme && (p.themes || []).includes(theme) ? theme : '' };
+        misses: [], outcome: null, branch: null, onBranch: false, theme: theme && (p.themes || []).includes(theme) ? theme : '',
+        t0: null, hiddenMs: 0, hiddenAt: null, log: [] };
   notice = null;
   setTitle();
   renderAll(); // side panel right away
@@ -303,6 +304,7 @@ async function start(p, theme = '') {
       S.busy = false;
       await board.setPlayer(S.solver);
       await board.ui({ disableBoard: false });
+      startClock(s);
       renderAll();
     }, 650);
   } else {
@@ -312,9 +314,31 @@ async function start(p, theme = '') {
     S.busy = false;
     await board.setPlayer(S.solver);
     await board.ui({ disableBoard: false });
+    startClock(s);
   }
   renderAll();
 }
+
+// Solve time: milliseconds the puzzle was actually on screen since the board became playable (a hidden tab or another
+// page of the site pauses the clock). Sent with the result for signed-in players, with each of the solver's moves (and
+// any hint or solution view), to calibrate puzzle ratings later.
+const offScreen = () => document.hidden || $('#view-puzzle').classList.contains('hidden');
+function startClock(s) { if (s.t0 == null) { s.t0 = performance.now(); s.hiddenAt = offScreen() ? s.t0 : null; } }
+function elapsed(s = S) {
+  if (s?.t0 == null) return null;
+  const t = performance.now();
+  return Math.round(t - s.t0 - s.hiddenMs - (s.hiddenAt != null ? t - s.hiddenAt : 0));
+}
+// Pause or resume the clock to match whether the puzzle is on screen.
+function syncClock() {
+  if (!S || S.t0 == null) return;
+  const t = performance.now(), off = offScreen();
+  if (off) S.hiddenAt ??= t;
+  else if (S.hiddenAt != null) { S.hiddenMs += t - S.hiddenAt; S.hiddenAt = null; }
+}
+// ms: when the move was made (callers read it before any engine check, which can take seconds).
+const logMove = (k, m, ms = elapsed()) => { if (S && !S.resultSent && S.t0 != null && S.log.length < 64) S.log.push(m ? { m, ms, k } : { ms, k }); };
+document.addEventListener('visibilitychange', syncClock);
 
 const pliesLeft = () => {
   const d = (n) => (n === 'win' ? 1 : n == null ? 0 : 2 + Math.max(...Object.values(n).map((v) => (v ? d(v.n) : 0))));
@@ -341,7 +365,7 @@ async function userMove(ptn) {
   let canon;
   try { canon = g.canon(ptn); } catch { restoreBoard(); return; }
   if (!g.legalMoves().some((m) => g.moveToPTN(m) === canon)) { restoreBoard(); return; }
-  const node = S.node;
+  const node = S.node, tMove = elapsed();
   let correct = false, reply = null, next = null, wonNow = false;
   const u = g.apply(g.parseMove(canon));
   const res = g.result();
@@ -368,6 +392,7 @@ async function userMove(ptn) {
         S.checking = null;
       }
       if (wins) {
+        logMove('slow', canon, tMove);
         S.slower = canon;
         renderAll();
         setTimeout(() => { if (S !== s) return; S.busy = false; restoreBoard(); }, 700);
@@ -375,6 +400,7 @@ async function userMove(ptn) {
       }
     }
     S.slower = null;
+    logMove('miss', canon, tMove); S.decidedMs ??= tMove;
     S.misses.push({ at: S.moves.length, ptn: canon });
     const remaining = pliesLeft();
     S.refutation = { miss: canon, kind: 'thinking' };
@@ -386,6 +412,8 @@ async function userMove(ptn) {
     return;
   }
   S.slower = null;
+  logMove('ok', canon, tMove);
+  if (wonNow) S.decidedMs ??= tMove;
   S.moves.push({ ptn: canon, me: true }); S.snaps.push(g.toTPS());
   S.refutation = null;
   if (wonNow) return solved();
@@ -409,12 +437,12 @@ async function report(win) {
   if (S.resultSent) return;
   S.resultSent = true;
   S.casual = S.hinted; // a hint before the result makes the attempt unrated
-  const s = S, p = S.p;
+  const s = S, p = S.p, timing = { ms: (s.decidedMs ?? elapsed(s)) ?? undefined, log: s.log.length ? s.log : undefined };
   if (me) {
     try { // a failed upload (network, server restart) loses this result, not the session
-      if (S.hinted) { await api('/api/result', { puzzleId: p.id, win, casual: true }); s.delta = null; }
+      if (S.hinted) { await api('/api/result', { puzzleId: p.id, win, casual: true, ...timing }); s.delta = null; }
       else {
-        const r = await api('/api/result', { puzzleId: p.id, win, theme: s.theme || undefined });
+        const r = await api('/api/result', { puzzleId: p.id, win, theme: s.theme || undefined, ...timing });
         if (r.user) {
           s.delta = r.rated ? r.userDelta : null;
           if (r.rated) { p.attempts++; if (r.puzzleRating != null) p.rating = r.puzzleRating; }
@@ -510,7 +538,7 @@ function finisher(g) {
 async function showSolution() {
   if (!S || S.placeholder || S.status === 'solved' || S.status === 'viewing' || S.busy) return;
   const s = S;
-  if (!S.resultSent) report(false);
+  if (!S.resultSent) { S.decidedMs ??= elapsed(); logMove('view', null, S.decidedMs); report(false); }
   S.status = 'viewing';
   await restoreBoard();
   if (S !== s) return;
@@ -544,6 +572,7 @@ function showHint() {
   const g = S.g;
   const mv = S.node === 'win' ? finisher(g) : Object.keys(S.node)[0];
   if (!mv) return;
+  if (!S.hinted) logMove('hint');
   S.hinted = true;
   board.highlight([g.sqName(g.parseMove(mv).sq)]);
   renderAll();
@@ -908,6 +937,7 @@ function show(id) {
   for (const v of ['view-puzzle', 'view-glossary', 'view-me', 'view-leaderboard']) $('#' + v).classList.toggle('hidden', v !== id);
   setTitle();
   fitDock(); // the dock (and the room reserved for it) belongs to the puzzle page only
+  syncClock(); // another page pauses the puzzle's solve-time clock
   for (const a of document.querySelectorAll('[data-nav]')) a.classList.toggle('on', a.getAttribute('href') === (location.hash.replace(/^(#\/[a-z]*).*$/, '$1') || '#/').replace('#/puzzle', '#/'));
 }
 
