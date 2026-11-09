@@ -2,9 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>shy</title>
 <meta name="description" content="shy · alien neuroscientist">
+<meta name="theme-color" content="#161618">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://shydrie.xyz/">
 <meta property="og:title" content="shy">
@@ -16,725 +17,2711 @@
 <meta name="twitter:title" content="shy">
 <meta name="twitter:description" content="shy · alien neuroscientist">
 <meta name="twitter:image" content="https://shydrie.xyz/og-image.jpg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23161618'/%3E%3Ccircle cx='16' cy='16' r='7.5' fill='none' stroke='%233ddbd9' stroke-width='3'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-<script src="palettes.js"></script>
-<style>
-  * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #161616; cursor: crosshair; }
-  /* invisible click targets — JS sets top/left/width/height in buildText() to overlap the bullet rows */
-  .link-zone {
-    position: fixed; top: 50%; left: 50%; transform: translateX(-50%);
-    z-index: 10;
-    display: flex; flex-direction: column; gap: 0;
-    color: transparent;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.78rem; letter-spacing: 0.4em; text-transform: uppercase;
-  }
-  .link-zone a {
-    display: block; flex: 1;
-    color: transparent; text-decoration: none;
-  }
-  .link-zone a:focus-visible { outline: 1px solid #3ddbd9; }
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script>
+// =====================================================================================================
+//  CONFIG — the only part of this file you should need to edit.
+// =====================================================================================================
 
-  /* live config panel — same as the other ASCII pages */
-  .controls {
-    position: fixed; top: 1.6rem; right: 1rem;
-    z-index: 20; width: 300px; max-width: calc(100vw - 2rem);
-    display: none;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 0.66rem; letter-spacing: 0.04em;
-    color: rgba(244, 234, 212, 0.85);
-    background: rgba(22, 22, 22, 0.55);
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    border: 1px solid rgba(190, 149, 255, 0.18);
-    border-radius: 3px;
-    padding: 0.85rem 1rem;
-    pointer-events: auto;
+// AREAS — the cortical map. One area per topic; the order here is the order in the index.
+//   tone   brightness of the tissue in that area (cytoarchitecture: areas look a little different)
+//   tint   null, or a palette role ('stim', 'inh', 'peak', …) the area's light leans toward.
+//   (the first three areas get their own tone; a fourth and later share the last one's look)
+const AREAS = [
+  { id: 'play',      name: 'play',      tone: 1.0,  tint: null },
+  { id: 'machines',  name: 'machines',  tone: 1.0,  tint: 'stim' },
+  { id: 'elsewhere', name: 'elsewhere', tone: 0.8,  tint: 'inh' },
+];
+
+// PROJECTS — each is one labelled neuron living in its area.
+//   last    YYYY-MM-DD it was last worked on. Recency is drawn two ways: hot cells rest brighter and fire
+//           more often, so the brightest cells are what's current (age is measured from the newest date in
+//           this list, so nothing goes cold just because the page sat unedited). null = dim, slow, steady.
+//   href    null = unreleased (shown without a link once found).
+//   silent  [parentA, parentB] makes it a coincidence detector: it never fires on its own, and fires (and
+//           is found, remembered across visits) only when pulses the VISITOR started in both parents reach
+//           it within the coincidence window on two cycles running (the first coincidence only stirs it). Spontaneous or relayed pulses only make it flicker, so it can
+//           never find itself. Put it physically between its parents (the default) so the clue is honest.
+//   wide / tall   position as a fraction of the viewport for landscape / portrait screens. Silent cells
+//           without one sit between their parents. The page snaps each to a real cell nearby.
+//   show    false = hidden by default (flip it in the tune pane, or here).
+const PROJECTS = [
+  { id: 'tinue',        name: 'tinue',        area: 'play',      href: 'https://shydrie.xyz/tinue/',        last: '2026-11-07', line: 'tak puzzles · 14k mined from playtak · glicko ratings', wide: [0.47, 0.25], tall: [0.56, 0.27] },
+  { id: 'two-lanterns', name: 'two lanterns', area: 'play',      href: 'https://shydrie.xyz/two-lanterns/', last: '2026-09-07', line: 'co-op garden tactics across two laptops',              wide: [0.34, 0.50], tall: [0.25, 0.39] },
+  { id: 'spill',        name: 'spill',        area: 'play',      href: 'https://claude.ai/code/artifact/0c5cf2f8-c153-4e75-ba0d-257d400356bf', last: '2026-09-06', line: 'one tap a turn · asymmetric hex', wide: [0.50, 0.73], tall: [0.50, 0.54] },
+  { id: 'wavefront',    name: 'wavefront',    area: 'machines',  href: 'https://shydrie.xyz/wavefront/',    last: '2026-10-25', line: 'tank duel vs opponents trained by rl on the gpu',       wide: [0.71, 0.42], tall: [0.80, 0.42] },
+  { id: 'attractors',   name: 'attractors',   area: 'machines',  href: 'https://shydrie.xyz/attractors/',   last: '2026-05-04', line: 'strange attractors you can steer',                     wide: [0.87, 0.73], tall: [0.81, 0.68] },
+  { id: 'substack',     name: 'substack',     area: 'elsewhere', href: 'https://shydrie.substack.com/',     last: '2026-01-03', line: 'writing',                                              wide: [0.09, 0.35], tall: [0.13, 0.64] },
+  { id: 'family-tree',  name: 'family tree',  area: 'elsewhere', href: 'https://shydrie.xyz/tree/',         last: '2026-05-31', line: 'hyderabad + russian lines',                            wide: [0.19, 0.47], tall: [0.40, 0.74] },
+  { id: 'github',       name: 'github',       area: 'elsewhere', href: 'https://github.com/iCalculated',    last: '2026-11-08', line: 'github.com/iCalculated',                               wide: [0.08, 0.60], tall: [0.13, 0.82] },
+  { id: 'email',        name: 'email',        area: 'elsewhere', href: 'mailto:sasha.hydrie@gmail.com',           last: null,         line: 'sasha.hydrie@gmail.com',                               wide: [0.18, 0.74], tall: [0.40, 0.89] },
+  { id: 'nyx',          name: 'nyx',          area: 'elsewhere', href: 'https://shydrie.xyz/nyx/crons/',          last: null,         line: 'my discord assistant’s cron page', show: false,        wide: [0.06, 0.83], tall: [0.68, 0.92] },
+  { id: 'anthill',      name: 'anthill',      area: 'elsewhere', href: 'https://shydrie.xyz/anthill/',      last: null,         line: 'sf group-house search',            show: false,        wide: [0.22, 0.27], tall: [0.66, 0.82] },
+  // the silent ones (unreleased)
+  { id: 'umbra',      name: 'umbra',      area: 'play',     href: null, last: '2026-09-06', line: 'lantern territory vs an mcts opponent',            silent: ['tinue', 'spill'] },
+  { id: 'freshet',    name: 'freshet',    area: 'play',     href: null, last: '2026-09-06', line: 'root-like · four factions on one delta',           silent: ['spill', 'two-lanterns'] },
+  { id: 'wren',       name: 'wren',       area: 'play',     href: null, last: '2026-09-06', line: 'sealed-bid goofspiel vs a mind that models you',   silent: ['wavefront', 'spill'] },
+  { id: 'copernican', name: 'copernican', area: 'machines', href: null, last: '2026-08-30', line: 'generals.io bot · behaviour cloning + self-play on h100s', silent: ['wavefront', 'tinue'] },
+  { id: 'deflection', name: 'deflection', area: 'machines', href: null, last: '2026-10-24', line: 'bullet hell whose boss learns where you’ll be',     silent: ['wavefront', 'attractors'] },
+];
+
+// RELATIONS — synapses between project cells; each is a real shared idea.  [a, b, weight 0–1, label]
+//   A burst travels down every relation (both ways). Arriving with strength ≥ 0.5 makes the far cell fire
+//   too, so heavy relations chain and light ones only make the far cell's dendrites flicker.
+const RELATIONS = [
+  ['spill',        'umbra',      1.0, 'claiming ground'],
+  ['tinue',        'umbra',      0.9, 'abstract strategy'],
+  ['spill',        'freshet',    1.0, 'its zero-reading companion'],
+  ['two-lanterns', 'freshet',    0.9, 'asymmetric sides'],
+  ['wavefront',    'wren',       0.9, 'opponents that model you'],
+  ['spill',        'wren',       0.8, 'built the same day'],
+  ['wavefront',    'copernican', 0.9, 'trained on the gpu'],
+  ['tinue',        'copernican', 0.8, 'ratings, ladders'],
+  ['wavefront',    'deflection', 1.0, 'grew out of it'],
+  ['attractors',   'deflection', 0.8, 'particles in motion'],
+  ['deflection',   'wren',       0.6, 'it predicts you'],
+  ['two-lanterns', 'spill',      0.7, 'the same weekend'],
+  ['tinue',        'spill',      0.6, 'board games'],
+  ['wavefront',    'attractors', 0.55, 'things that move'],
+];
+
+// VOICES — how a visitor talks to the tissue. Resting the pointer on a cell (or focusing it) for a beat makes it burst every ~1.5 s;
+// clicking / tapping it (or Space on its name) keeps it talking for `sim.latch` seconds after you leave.
+// At most two cells talk at once, so a silent cell is found by choosing the right pair, then watching.
+
+// REWARD — what finding every silent cell unlocks: the network replays the order you found them in,
+// the whole map surfaces for a few seconds, and this line stays under the name from then on.
+const REWARD = {
+  line: 'you found every silent cell.',
+  link: { text: 'tell me how', href: 'mailto:sasha.hydrie@gmail.com?subject=silent%20cells' },   // null for no link
+  replay: true,
+};
+
+// Paste the JSON from the tune pane's "copy config" over DEFAULTS to make it the shipped default.
+const DEFAULTS = {
+  palette: 'oxogold',
+  colors: { bg: '#161618', dim: '#4f3f8f', bright: '#3ddbd9', peak: '#f5f2d9', inh: '#ff7eb6', stim: '#33b1ff', ink: '#f2f4f8', accent: '#f5b43c' },
+  invert: false,
+  image: { exposure: 1, contrast: 1, saturation: 1, grain: 1, areas: 1 },
+  gold: { pulses: 0, sparks: 0, linger: 220, haze: 0, cells: 0 },
+  layers: { neuropil: true, vessels: true, dendrites: true, tdtomato: true, tracts: true, borders: false, outlines: false, nearmiss: false, vignette: true, scan: false, motion: true, flash: true },
+  text: { tagline: true, index: false, contacts: true, areas: false, hint: true, tally: true, whispers: true, relations: false, touchNames: true },
+  instrument: { status: false, acquisition: false, scalebar: false, trace: false, roiIds: false, stimCaption: false, cellPanel: false },
+  sim: { drive: 1, coupling: 1, decay: 1, axonSpeed: 0.55, window: 300, latch: 8, heat: 1, recencyDays: 30, motion: 1 },
+  projects: { tinue: true, wavefront: true, 'two-lanterns': false, spill: true, attractors: true, substack: false, 'family-tree': false, github: false, email: false, nyx: true, anthill: false, umbra: true, freshet: false, wren: true, copernican: true, deflection: false },
+};
+
+// GOLD — where the accent colour appears: the light, not the tissue. Presets for the tune pane.
+const GOLD_PRESETS = {
+  pulses: { pulses: 1, sparks: 0, haze: 0, cells: 0 },
+  sparks: { pulses: 1, sparks: 1, haze: 0, cells: 0 },
+  haze:   { pulses: 1, sparks: 0, haze: 1, cells: 0 },
+  both:   { pulses: 1, sparks: 0.7, haze: 1, cells: 0 },
+  all:    { pulses: 1, sparks: 0, haze: 1, cells: 1 },
+};
+// PALETTES — 'visible' colours: what each level of the image looks like on screen.
+//   dim / bright / peak  the calcium indicator's lookup table, resting → firing → saturated
+//   inh   the second channel (inhibitory cells)   stim  the photostimulation flash
+//   ink / accent   text and links   bg  page   invert  paper mode (light ground, the LUT reads as ink)
+const PALETTES = {
+  gcamp:     { invert: false, colors: { bg: '#08090a', dim: '#12804d', bright: '#24e680', peak: '#b0ffeb', inh: '#cc2185', stim: '#2957ff', ink: '#eef0ea', accent: '#6cf2a8' } },
+  oxogold:   { invert: false, colors: { bg: '#161618', dim: '#4f3f8f', bright: '#3ddbd9', peak: '#f5f2d9', inh: '#ff7eb6', stim: '#33b1ff', ink: '#f2f4f8', accent: '#f5b43c' } },
+  oxocarbon: { invert: false, colors: { bg: '#161618', dim: '#4f3f8f', bright: '#3ddbd9', peak: '#f5f2d9', inh: '#ff7eb6', stim: '#be95ff', ink: '#f2f4f8', accent: '#3ddbd9' } },
+  ember:     { invert: false, colors: { bg: '#0b0706', dim: '#6a1010', bright: '#ff7a1a', peak: '#fff2c2', inh: '#1f8f99', stim: '#6fd4ff', ink: '#f6eee6', accent: '#ffa45c' } },
+  ice:       { invert: false, colors: { bg: '#05080c', dim: '#0b3a5a', bright: '#33bfff', peak: '#e8fbff', inh: '#d9822b', stim: '#c58bff', ink: '#e9f3f7', accent: '#7fd8ff' } },
+  mono:      { invert: false, colors: { bg: '#070707', dim: '#3a3a3a', bright: '#b8b8b8', peak: '#ffffff', inh: '#a3307f', stim: '#4d7dff', ink: '#f0f0f0', accent: '#ffffff' } },
+  cajal:     { invert: true,  colors: { bg: '#efe9dc', dim: '#cfc6b3', bright: '#6e655a', peak: '#16161e', inh: '#b8472e', stim: '#2f55ff', ink: '#1d1b18', accent: '#8a2b1f' } },
+};
+</script>
+<style>
+  :root {
+    --bg: #08090a; --bg-rgb: 8, 9, 10;
+    --ink: #eef0ea; --ink-rgb: 238, 240, 234;
+    --acc: #6cf2a8; --acc-rgb: 108, 242, 168;
+    --stim: #2957ff;
+    --dim: rgba(var(--ink-rgb), 0.64);
+    --faint: rgba(var(--ink-rgb), 0.36);
+    --line: rgba(var(--ink-rgb), 0.16);
+    --chip: rgba(var(--bg-rgb), 0.74);
   }
-  body.show-controls .controls { display: block; }
-  .controls .row { margin-bottom: 0.7rem; }
-  .controls .row:last-child { margin-bottom: 0; }
-  .controls .row label {
-    display: flex; justify-content: space-between;
-    text-transform: uppercase; font-size: 0.6rem;
-    letter-spacing: 0.12em;
-    color: rgba(244, 234, 212, 0.55);
-    margin-bottom: 0.35rem;
+  * { box-sizing: border-box; }
+  html { font-size: 12px; }
+  @media (min-width: 900px) and (pointer: fine) { html { font-size: clamp(12px, 0.95vw, 21px); } }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+  body {
+    color: var(--ink);
+    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 1rem; line-height: 1.45;
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    cursor: crosshair;
+    -webkit-tap-highlight-color: transparent;
   }
-  .controls .row label .v {
-    color: #be95ff; font-weight: 500;
-    text-transform: none; letter-spacing: 0;
+  canvas.scope { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: manipulation; opacity: 0; transition: opacity 0.9s ease-out; }
+  body.live canvas.scope { opacity: 1; }
+  .demo canvas.scope { transition: none; }
+  .still, .still * { transition: none !important; }   /* ?demo=1&t=…: deterministic stills show settled states */
+  #fb { display: none; }
+  body.nogl #gl { display: none; }
+  body.nogl #fb { display: block; }
+  a { color: inherit; }
+  button { font: inherit; color: inherit; }
+
+  /* scrims: just enough to keep words legible */
+  .scrim { position: fixed; pointer-events: none; z-index: 1; }
+  .scrim.tl { left: 0; top: 0; width: var(--hdrW, 460px); height: var(--hdrH, 220px);
+    background: radial-gradient(120% 110% at 0 0, rgba(var(--bg-rgb), 0.9) 0%, rgba(var(--bg-rgb), 0.78) 50%, rgba(var(--bg-rgb), 0) 92%); }
+  .scrim.b { left: 0; right: 0; bottom: 0; height: 120px; display: none;
+    background: linear-gradient(to top, rgba(var(--bg-rgb), 0.8), rgba(var(--bg-rgb), 0)); }
+  .scrim.tr { right: 0; top: 0; width: 470px; height: 130px; display: none;
+    background: radial-gradient(120% 100% at 100% 0, rgba(var(--bg-rgb), 0.82) 0%, rgba(var(--bg-rgb), 0) 70%); }
+  body.i-acquisition .scrim.tr { display: block; }
+  body.i-scalebar .scrim.b, body.i-trace .scrim.b, body.i-stimCaption .scrim.b { display: block; }
+
+  .hud { position: fixed; z-index: 6; text-shadow: 0 0 8px rgba(var(--bg-rgb), 0.9), 0 0 2px rgba(var(--bg-rgb), 0.9); }
+  .hud.tl { left: max(28px, env(safe-area-inset-left)); top: 26px; max-width: calc(100vw - 40px); }
+  .hud.tr { right: 28px; top: 26px; text-align: right; color: var(--dim); font-size: 0.9167rem; pointer-events: none; display: none; }
+  body.i-acquisition .hud.tr { display: block; }
+  .hud.bl { left: 28px; bottom: 22px; color: var(--dim); font-size: 0.9167rem; pointer-events: none;
+    text-shadow: 0 0 10px rgba(var(--bg-rgb), 1), 0 0 4px rgba(var(--bg-rgb), 1), 0 0 1px rgba(var(--bg-rgb), 1); }
+  .hud.br { right: 28px; bottom: 22px; color: var(--dim); font-size: 0.9167rem; text-align: right; pointer-events: none; display: none; }
+  body.i-trace .hud.br { display: block; }
+
+  .rec { color: var(--dim); font-size: 0.9167rem; letter-spacing: 0.06em; display: none; align-items: center; gap: 8px; margin-bottom: 10px; }
+  body.i-status .rec { display: flex; }
+  .rec .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); }
+  body.live .rec .dot { background: var(--inh, #ff6fc0); box-shadow: 0 0 8px var(--inh, #ff6fc0); animation: blink 2s steps(2, jump-none) infinite; }
+  @keyframes blink { 50% { opacity: 0.25; } }
+  h1 { margin: 0 0 2px; font-weight: 400; font-size: 2.8333rem; line-height: 1.05; letter-spacing: -0.01em; color: var(--ink); }
+  .sub { margin: 5px 0 0; font-size: 1.0833rem; color: var(--ink); opacity: 0.86; }
+  .sub .q { color: var(--acc); }
+  body.no-tagline .sub { display: none; }
+
+  .contacts { display: none; margin-top: 9px; font-size: 1.0417rem; gap: 14px; }
+  body.t-contacts .contacts { display: flex; }
+  .contacts a { text-decoration: none; color: var(--ink); opacity: 0.86; border-bottom: 1px solid rgba(var(--acc-rgb), 0.35); }
+  .contacts a:hover, .contacts a:focus-visible { opacity: 1; border-color: var(--acc); outline: none; }
+
+  .row { margin-top: 13px; display: flex; align-items: center; gap: 12px; min-height: 22px; }
+  #ixb { background: transparent; border: 1px solid rgba(var(--ink-rgb), 0.24); border-radius: 2px; padding: 1px 9px 2px; font-size: 0.9167rem; letter-spacing: 0.08em; color: var(--dim); cursor: pointer; }
+  #ixb:hover, #ixb[aria-expanded="true"] { color: var(--ink); border-color: rgba(var(--acc-rgb), 0.6); }
+  #ixb:focus-visible { outline: none; border-color: var(--acc); box-shadow: 0 0 0 2px rgba(var(--acc-rgb), 0.3); color: var(--ink); }
+  body.no-index #ixb { display: none; }
+  #tally { background: none; border: 0; padding: 2px 0; font-size: 0.75rem; letter-spacing: 0.32em; color: var(--acc); cursor: default; opacity: 0.85; }
+  #tally.done { cursor: pointer; }
+  #tally:focus-visible { outline: 1px solid var(--acc); outline-offset: 3px; }
+  body.no-tally #tally { display: none; }
+  #reward { margin: 10px 0 0; font-size: 1rem; color: var(--ink); opacity: 0; transition: opacity 2.4s; }
+  #reward.on { opacity: 0.9; }
+  #reward a { color: var(--acc); text-decoration: none; border-bottom: 1px solid rgba(var(--acc-rgb), 0.4); }
+  #reward a:focus-visible, #reward a:hover { outline: none; border-color: var(--acc); }
+
+  /* the index: the whole field as a plain list */
+  #ix { margin: 12px 0 0 -12px; padding: 10px 14px 10px 12px; max-height: calc(100vh - var(--ixTop, 200px) - 24px); overflow-y: auto; width: max-content; max-width: calc(100vw - 24px);
+    background: rgba(var(--bg-rgb), 0.95); border: 1px solid var(--line); border-radius: 3px; text-shadow: none; }
+  body.ixopen .an, body.map .an, body.finding .an { opacity: 0; }
+  #ix h2 { margin: 10px 0 3px; font-size: 0.8333rem; font-weight: 400; letter-spacing: 0.18em; color: var(--faint); }
+  #ix h2:first-child { margin-top: 0; }
+  #ix .ir { display: grid; grid-template-columns: minmax(130px, auto) auto; gap: 22px; align-items: baseline; padding: 1px 6px 2px; margin-left: -6px;
+    color: var(--ink); text-decoration: none; font-size: 1.0833rem; border: 1px solid transparent; border-radius: 2px; outline: none; }
+  #ix .ir span:last-child { color: var(--faint); font-size: 0.9167rem; }
+  #ix a.ir:hover, #ix .ir.act { border-color: rgba(var(--acc-rgb), 0.4); background: rgba(var(--acc-rgb), 0.06); }
+  #ix a.ir:focus-visible { border-color: var(--acc); box-shadow: 0 0 0 2px rgba(var(--acc-rgb), 0.25); }
+  #ix a.ir b::after { content: ' ↗'; color: var(--acc); font-weight: 400; font-size: 0.9167rem; }
+  #ix b { font-weight: 400; }
+  #ix .u b { color: var(--dim); }
+  #ix .sil { margin-top: 10px; font-size: 0.875rem; color: var(--faint); }
+
+  .hint { transition: opacity 1.6s; opacity: 0.78; }
+  .hint .tch { display: none; }
+  body.touch .hint .ptr { display: none; }
+  body.touch .hint .tch { display: inline; }
+  body.hinted .hint, body.no-hint .hint { opacity: 0; }
+  .hint .clue { display: none; }
+  body.clue .hint { opacity: 0.85; }
+  body.clue .hint .ptr, body.clue .hint .tch { display: none; }
+  body.clue .hint .clue { display: inline; }
+  .scale { display: none; align-items: center; gap: 10px; margin-bottom: 8px; color: var(--ink); opacity: 0.85; }
+  body.i-scalebar .scale { display: flex; }
+  .scale i { display: block; height: 3px; background: var(--ink); }
+  #stimlog { color: var(--stim); opacity: 0; transition: opacity 0.8s; margin-top: 3px; min-height: 1.45em; display: none; }
+  body.i-stimCaption #stimlog { display: block; }
+  #stimlog.on { opacity: 1; transition: none; }
+  .tr div + div { margin-top: 2px; }
+  .tr .big { color: var(--ink); opacity: 0.85; }
+  .br canvas { display: block; margin: 6px 0 0 auto; }
+  .br .lbl { display: flex; justify-content: space-between; gap: 18px; }
+  .br .homeo { margin-top: 4px; color: var(--faint); }
+
+  /* the field: one element per project cell, plus relation names and area names */
+  #field { position: fixed; inset: 0; z-index: 4; pointer-events: none; }
+  body:not(.live) #field { display: none; }
+  .pc { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+  .pc.off { display: none; }
+  .pc .hit { position: absolute; border-radius: 50%; pointer-events: auto; cursor: pointer; }
+  .pc.unknown .hit { cursor: crosshair; }
+  .pc svg { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
+  .pc path { fill: none; vector-effect: non-scaling-stroke; }
+  .pc path.h { stroke: rgba(var(--bg-rgb), 0.7); stroke-width: 3; opacity: 0.85; }
+  .pc path.c { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 2 3; opacity: 0.5; }
+  .pc.unknown svg.ring, body.no-outlines .pc svg.ring { display: none; }
+  .pc.act path.c, .pc.fire path.c { stroke: var(--acc); opacity: 0.95; stroke-dasharray: 4 2.5; }
+  .pc.act path.c, .pc.lat path.c { animation: ants 0.9s linear infinite; }
+  .pc.lat path.c { stroke: var(--acc); opacity: 0.95; stroke-dasharray: 4 2.5; }
+  .pc.lat path.h { opacity: 1; }
+  .pc.act path.h, .pc.fire path.h { opacity: 1; }
+  @keyframes ants { to { stroke-dashoffset: -13; } }
+  .pc svg.subr circle { fill: none; stroke: var(--ink); stroke-width: 1; stroke-dasharray: 1.5 3.5; opacity: 0; }
+  .pc.sub svg.subr circle:not(.fr) { animation: subr 2s ease-out; }
+  .pc.sub2 svg.subr circle:not(.fr) { animation: subr2 2s ease-out; }
+  body.no-nearmiss .pc svg.subr { display: none; }
+  @keyframes subr { 0% { opacity: 0; } 10% { opacity: 0.8; } 100% { opacity: 0; } }
+  @keyframes subr2 { 0% { opacity: 0; } 10% { opacity: 0.8; } 100% { opacity: 0; } }
+  .pc.stir svg.subr circle:not(.fr) { stroke: var(--acc); stroke-dasharray: 2 2.5; stroke-width: 1.3; animation: stirk 2.2s ease-out; }
+  @keyframes stirk { 0% { opacity: 0; } 8% { opacity: 1; } 100% { opacity: 0; } }
+  .pc .lab { position: absolute; top: var(--dy, 0px); left: var(--off, 14px); transform: translateY(-50%); white-space: nowrap;
+    width: max-content; max-width: min(40rem, var(--avail, 76vw));
+    padding: 2px 8px 3px; border: 0; background: none;
+    text-shadow: 0 0 10px rgba(var(--bg-rgb), 1), 0 0 4px rgba(var(--bg-rgb), 1), 0 0 1px rgba(var(--bg-rgb), 1);
+    color: var(--ink); text-decoration: none; font-size: 1.0833rem; line-height: 1.35; outline: none;
+    opacity: 0; pointer-events: none; transition: opacity 0.45s ease-out; }
+  .pc.L .lab { left: auto; right: var(--off, 14px); text-align: right; }
+  .pc .lab b { font-weight: 400; }
+  .pc .lab u { text-decoration: none; color: var(--acc); font-size: 0.9167rem; margin-left: 6px; opacity: 0.85; }
+  .pc .lab small { display: none; font-size: 0.9167rem; color: var(--dim); margin-top: 1px; white-space: normal; }
+  .pc svg.subr circle.fr { stroke: var(--acc); stroke-dasharray: none; stroke-width: 1.2; transform-box: fill-box; transform-origin: center; }
+  .pc.found svg.subr circle.fr { animation: foundring 2.6s cubic-bezier(.2,.7,.3,1); }
+  @keyframes foundring { 0% { opacity: 0.95; transform: scale(0.4); } 100% { opacity: 0; transform: scale(5); } }
+  .pc .lab em { display: block; font-style: normal; font-size: 0.875rem; color: var(--acc); margin-top: 1px; }
+  .pc .lab em:empty { display: none; }
+  .pc .lab i.rid { display: none; font-style: normal; color: var(--acc); opacity: 0.7; font-size: 0.9167rem; margin-right: 7px; }
+  body.i-roiIds .pc .lab i.rid { display: inline; }
+  .pc.whisper .lab { opacity: 0.34; }
+  .pc.tn .lab { opacity: 0.6; pointer-events: auto; }
+  .pc.lat .lab { opacity: 0.92; pointer-events: auto; }
+  .pc.fire .lab { opacity: 0.86; }
+  .pc.near .lab { opacity: 0.8; pointer-events: auto; }
+  body.no-whispers .pc.whisper:not(.near):not(.act):not(.tn):not(.lat) .lab { opacity: 0; }
+  body.map .pc:not(.unknown) .lab { opacity: 0.8; }
+  .pc.act .lab, .pc .lab:focus-visible, .pc.found .lab { opacity: 1; pointer-events: auto; transition-duration: 0.15s; }
+  .pc.act .lab small, .pc .lab:focus-visible small { display: block; }
+  body.finding .pc.act:not(.found) .lab small { display: none; }   /* the find has the floor: a pinned card folds to its name */
+  .pc .lab:focus-visible b { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--acc); }
+  .pc a.lab:hover b { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(var(--acc-rgb), 0.7); }
+  .pc.act, .pc.found, .pc.near, .pc.lat { z-index: 2; }
+  .pc.act { z-index: 3; }
+  .el { position: absolute; left: 0; top: 0; white-space: nowrap; font-size: 0.875rem; color: var(--ink); letter-spacing: 0.02em;
+    opacity: 0; transition: opacity 0.9s ease-in; text-shadow: 0 0 6px rgba(var(--bg-rgb), 1), 0 0 2px rgba(var(--bg-rgb), 1); }
+  .el.on { opacity: 0.62; transition: opacity 0.25s; }
+  body.map .el.k { opacity: 0.5; }
+  body.map .el.k.crowd { opacity: 0; }
+  body.no-relations .el { display: none; }
+  .an { position: absolute; left: 0; top: 0; white-space: nowrap; font-size: 0.875rem; letter-spacing: 0.26em; color: var(--ink); opacity: 0.55;
+    text-shadow: 0 0 8px rgba(var(--bg-rgb), 1), 0 0 3px rgba(var(--bg-rgb), 1), 0 0 1px rgba(var(--bg-rgb), 1); transition: opacity 0.6s; }
+  body.no-areas .an { display: none; }
+
+  #panel { position: fixed; z-index: 7; left: 0; top: 0; width: 264px; padding: 9px 11px 10px;
+    background: rgba(var(--bg-rgb), 0.9); border: 1px solid var(--line); border-radius: 3px;
+    pointer-events: none; opacity: 0; transition: opacity 0.18s; font-size: 0.9167rem; color: var(--dim); }
+  #panel.on { opacity: 1; }
+  .demo #panel { transition: none; }
+  #panel .hd { display: flex; justify-content: space-between; color: var(--ink); font-size: 1rem; }
+  #panel .hd span:last-child { color: var(--acc); }
+  #panel canvas { display: block; margin: 7px 0 5px; width: 100%; height: 70px; }
+  #panel .ft { display: flex; justify-content: space-between; gap: 10px; white-space: nowrap; }
+  #panel .url { color: var(--ink); opacity: 0.8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #panel .ft i { font-style: normal; color: var(--stim); }
+
+  #stimmark { position: fixed; left: 0; top: 0; z-index: 3; pointer-events: none; opacity: 0; width: 0; height: 0; }
+  #stimmark span { position: absolute; left: 0; top: 0; white-space: nowrap; font-size: 0.875rem; color: var(--stim); text-shadow: 0 0 6px #000, 0 0 2px #000; display: none; }
+  body.i-stimCaption #stimmark span { display: block; }
+  #stimmark.go { animation: stimfade 2.4s ease-out forwards; }
+  @keyframes stimfade { 0% { opacity: 0.9; } 35% { opacity: 0.6; } 100% { opacity: 0; } }
+
+  #cursor { position: fixed; left: 0; top: 0; z-index: 30; pointer-events: none; display: none; width: 0; height: 0; }
+  #cursor svg { position: absolute; left: -11px; top: -11px; }
+
+  /* tune pane: hidden from visitors (?tune or ` to open, esc to close) */
+  #tune { position: fixed; z-index: 40; right: 12px; top: 12px; width: 296px; max-height: calc(100vh - 24px); overflow-y: auto; overscroll-behavior: contain;
+    background: rgba(12, 13, 14, 0.94); border: 1px solid rgba(255, 255, 255, 0.13); border-radius: 3px; padding: 8px 12px 12px;
+    color: #d6dad4; font: 11px/1.4 'IBM Plex Mono', ui-monospace, monospace; cursor: auto; text-shadow: none; }
+  #tune[hidden] { display: none; }
+  #tune .th { display: flex; align-items: baseline; gap: 8px; padding-bottom: 4px; }
+  #tune .th b { font-weight: 500; color: #eef0ea; }
+  #tune .th span { color: #7d847d; flex: 1; font-size: 10px; }
+  #tune .x { background: none; border: 0; color: #9aa19a; font-size: 15px; line-height: 1; cursor: pointer; padding: 0 2px; }
+  #tune details { border-top: 1px solid rgba(255, 255, 255, 0.08); }
+  #tune summary { cursor: pointer; padding: 6px 0 5px; color: #8d948d; letter-spacing: 0.14em; font-size: 10px; list-style: none; }
+  #tune summary::-webkit-details-marker { display: none; }
+  #tune summary::before { content: '▸ '; } #tune details[open] summary::before { content: '▾ '; }
+  #tune .r { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 1px 0; }
+  #tune .r.s { grid-template-columns: 92px 1fr 38px; }
+  #tune .r output { text-align: right; color: #9aa19a; }
+  #tune input[type=range] { width: 100%; accent-color: #8fd9b0; height: 14px; margin: 0; }
+  #tune input[type=checkbox] { accent-color: #8fd9b0; margin: 0; }
+  #tune label.c { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 1px 0; cursor: pointer; }
+  #tune .cols { display: grid; grid-template-columns: 1fr 1fr; column-gap: 14px; }
+  #tune .sw { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 14px; margin-top: 4px; }
+  #tune .sw label { display: flex; justify-content: space-between; align-items: center; }
+  #tune input[type=color] { width: 30px; height: 16px; padding: 0; border: 1px solid rgba(255, 255, 255, 0.2); background: none; cursor: pointer; }
+  #tune select { width: 100%; background: #16181a; color: #d6dad4; border: 1px solid rgba(255, 255, 255, 0.18); font: inherit; padding: 2px 4px; }
+  #tune .btns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  #tune .btn { background: transparent; border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 2px; color: #d6dad4; padding: 2px 8px; cursor: pointer; }
+  #tune .btn:hover, #tune .btn:focus-visible { border-color: #8fd9b0; outline: none; }
+  #tune .gp { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 6px; }
+  #tune .gp .btn { padding: 1px 6px; }
+  #tune .note { color: #7d847d; font-size: 10px; margin-top: 4px; }
+  #tune .ft { border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 8px 0 12px; margin: 6px 0 -12px; position: sticky; bottom: -12px; background: rgb(12, 13, 14); }
+  #tune :focus-visible { outline: 1px solid #8fd9b0; outline-offset: 1px; }
+
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (max-width: 700px) {
+    .hud.tl { left: 18px; top: 18px; right: 18px; }
+    h1 { font-size: 2.3333rem; }
+    .row { margin-top: 10px; }
+    .hud.bl { left: 18px; bottom: 16px; right: 18px; }
+    .hud.br, .hud.tr { display: none !important; }
+    #panel { left: 12px; right: 12px; width: auto; transform: none !important; top: auto; bottom: 64px; }
+    .pc .lab { font-size: 1.0417rem; }
+    .pc .lab small { white-space: normal; }
+    #ix .ir { grid-template-columns: minmax(118px, auto) auto; gap: 16px; }
   }
-  .controls input[type="range"] {
-    width: 100%; margin: 0; height: 12px;
-    -webkit-appearance: none; appearance: none;
-    background: transparent;
+  @media (max-width: 420px) {
+    #tune { left: 8px; right: 8px; width: auto; top: auto; bottom: 8px; max-height: 64vh; }
   }
-  .controls input[type="range"]::-webkit-slider-runnable-track {
-    height: 2px; background: rgba(244, 234, 212, 0.22); border-radius: 1px;
+  @media (pointer: coarse) { #ix .ir { padding: 5px 6px 6px; } .pc .lab { padding: 6px 10px 7px; } }
+  @media (prefers-reduced-motion: reduce) {
+    .rec .dot, body.live .rec .dot, .pc.act path.c, .pc.lat path.c, #stimmark.go { animation: none; }
+    .pc.found svg.subr circle.fr { animation: none; }
+    canvas.scope { transition: none; }
   }
-  .controls input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none; appearance: none;
-    width: 10px; height: 10px;
-    background: #be95ff; border: none;
-    border-radius: 50%; margin-top: -4px; cursor: pointer;
-  }
-  .controls input[type="range"]::-moz-range-track {
-    height: 2px; background: rgba(244, 234, 212, 0.22);
-  }
-  .controls input[type="range"]::-moz-range-thumb {
-    width: 10px; height: 10px;
-    background: #be95ff; border: none;
-    border-radius: 50%; cursor: pointer;
-  }
-  .controls .seg-group {
-    display: grid; grid-template-columns: 1fr; gap: 0.2rem;
-    max-height: 26vh; overflow-y: auto; padding-right: 0.1rem;
-  }
-  .controls .seg-group::-webkit-scrollbar { width: 4px; }
-  .controls .seg-group::-webkit-scrollbar-thumb {
-    background: rgba(190, 149, 255, 0.35); border-radius: 2px;
-  }
-  .controls .seg {
-    padding: 0.28rem 0.1rem;
-    font-family: inherit; font-size: 0.54rem;
-    letter-spacing: 0.04em;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    text-align: left;
-    padding-left: 0.45rem;
-    background: transparent;
-    color: rgba(244, 234, 212, 0.55);
-    border: 1px solid rgba(244, 234, 212, 0.18);
-    border-radius: 2px; cursor: pointer;
-    text-transform: uppercase;
-    transition: background 120ms, color 120ms, border-color 120ms;
-  }
-  .controls .seg:hover { color: rgba(244, 234, 212, 0.85); }
-  .controls .seg.on {
-    background: rgba(190, 149, 255, 0.18);
-    color: #be95ff;
-    border-color: rgba(190, 149, 255, 0.55);
-  }
-  body.light-bg .controls {
-    color: rgba(34, 28, 22, 0.86);
-    background: rgba(245, 242, 230, 0.68);
-    border-color: rgba(34, 28, 22, 0.14);
-  }
-  body.light-bg .controls .row label {
-    color: rgba(34, 28, 22, 0.58);
-  }
-  body.light-bg .controls .row label .v,
-  body.light-bg .controls .seg.on {
-    color: #8a2d59;
-  }
-  body.light-bg .controls input[type="range"]::-webkit-slider-runnable-track {
-    background: rgba(34, 28, 22, 0.24);
-  }
-  body.light-bg .controls input[type="range"]::-webkit-slider-thumb {
-    background: #8a2d59;
-  }
-  body.light-bg .controls input[type="range"]::-moz-range-track {
-    background: rgba(34, 28, 22, 0.24);
-  }
-  body.light-bg .controls input[type="range"]::-moz-range-thumb {
-    background: #8a2d59;
-  }
-  body.light-bg .controls .seg {
-    color: rgba(34, 28, 22, 0.58);
-    border-color: rgba(34, 28, 22, 0.16);
-  }
-  body.light-bg .controls .seg:hover {
-    color: rgba(34, 28, 22, 0.86);
-  }
-  body.light-bg .controls .seg.on {
-    background: rgba(138, 45, 89, 0.12);
-    border-color: rgba(138, 45, 89, 0.38);
-  }
-  body.light-bg .controls .seg-group::-webkit-scrollbar-thumb {
-    background: rgba(138, 45, 89, 0.32);
-  }
-  body.light-bg .link-zone a:focus-visible { outline-color: #8a2d59; }
 </style>
 </head>
 <body>
-<div class="link-zone">
-  <a href="https://github.com/iCalculated">github</a>
-  <a href="mailto:sasha@hydrie.xyz">email</a>
-  <a href="https://shydrie.substack.com/">substack</a>
+<canvas id="gl" class="scope" aria-hidden="true"></canvas>
+<canvas id="fb" class="scope" aria-hidden="true"></canvas>
+<div class="scrim tl"></div><div class="scrim tr"></div><div class="scrim b"></div>
+
+<header class="hud tl" id="hdr">
+  <div class="rec" aria-hidden="true"><span class="dot"></span><span id="rec">acquiring · shy_fov03</span></div>
+  <h1>sasha hydrie</h1>
+  <p class="sub"><span class="q">“shy”</span> · alien neuroscientist</p>
+  <nav class="contacts" id="contacts" aria-label="contact"></nav>
+  <div class="row"><button id="ixb" type="button" aria-expanded="false" aria-controls="ix">index</button><button id="tally" type="button" hidden></button></div>
+  <p id="reward" hidden></p>
+  <nav id="ix" aria-label="index of everything" hidden></nav>
+</header>
+
+<div class="hud tr" aria-hidden="true">
+  <div class="big">λ 920 nm · 30.0 Hz · z −212 µm</div>
+  <div id="acq">— × — px · — µm/px</div>
+  <div id="clock">frame 000000 · t 00:00:00.00</div>
 </div>
 
-<div class="controls" id="controls">
-  <div class="row">
-    <label>speed <span class="v" id="v-speed">1.00×</span></label>
-    <input type="range" id="speed" min="0.1" max="2.5" step="0.05" value="1.0">
-  </div>
-  <div class="row">
-    <label>gradations <span class="v" id="v-grad">13</span></label>
-    <input type="range" id="grad" min="2" max="13" step="1" value="13">
-  </div>
-  <div class="row">
-    <label>cell <span class="v" id="v-cell">14 × 22</span></label>
-    <input type="range" id="cell" min="0.6" max="2.0" step="0.05" value="1.0">
-  </div>
-  <div class="row">
-    <label>palette</label>
-    <div class="seg-group" id="palette-buttons"></div>
-  </div>
+<div class="hud bl" aria-hidden="true">
+  <div class="scale"><i id="bar"></i><span>100 µm</span></div>
+  <div class="hint" id="hint"><span class="ptr">click a cell to keep it talking · its name is the link</span><span class="tch">tap a cell to keep it talking · tap its name to visit</span><span class="clue">some cells only fire when two neighbours speak at once</span></div>
+  <div id="stimlog"></div>
 </div>
 
-<script id="vert" type="x-shader/x-vertex">
-  void main() { gl_Position = vec4(position, 1.0); }
-</script>
+<div class="hud br" aria-hidden="true">
+  <div class="lbl"><span>mean ΔF/F · 20 s</span><span id="evts">0 events</span></div>
+  <canvas id="pop" width="240" height="46" style="width:240px;height:46px"></canvas>
+  <div class="homeo" id="homeo">ν — Hz · synaptic scaling ×—</div>
+</div>
 
-<script id="frag" type="x-shader/x-fragment">
-  precision highp float;
-  uniform float uTime;
-  uniform vec2  uResolution;
-  uniform vec2  uMouse;
-  // ring buffer of "drops": each xy = position, z = spawn time
-  #define MAX_DROPS 32
-  uniform vec3  uDrops[MAX_DROPS];
-  uniform sampler2D uAtlas;
-  uniform sampler2D uText;
-  uniform vec2  uTextSize;
-  uniform float uCharCount;
-  uniform float uBrightnessCount;
-  uniform float uGradations;          // ≤ uBrightnessCount; quantizes brightness picks
-  uniform vec2  uCellSize;
-  // palette uniforms — colors come from palettes.js, picked by scheme index in JS
-  uniform vec3  uC1;
-  uniform vec3  uC2;
-  uniform vec3  uC3;
-  uniform vec3  uC4;
-  uniform vec3  uC5;
-  uniform vec3  uBg;
-  uniform vec3  uTearA;     // primary glitch hot color
-  uniform vec3  uTearB;     // chromatic-split partner
-  uniform vec3  uTearBand;  // glitch band tint
-  uniform float uIsOxo;     // 1.0 only when the original oxocarbon scheme is active
-  uniform float uLightBg;   // 1.0 → cream/light bg; suppresses warm cursor block
+<nav id="field" aria-label="projects, as cells"></nav>
 
-  float hash(vec2 p) {
-    p = 50.0 * fract(p * 0.3183099 + vec2(0.71, 0.113));
-    return fract(p.x * p.y * (p.x + p.y));
-  }
-  float noise(vec2 p) {
-    vec2 i = floor(p), f = fract(p);
-    f = f*f*(3.0-2.0*f);
-    return mix(
-      mix(hash(i), hash(i+vec2(1,0)), f.x),
-      mix(hash(i+vec2(0,1)), hash(i+vec2(1,1)), f.x),
-      f.y);
-  }
-  float fbm(vec2 p) {
-    float v = 0.0, a = 0.5;
-    for (int i = 0; i < 4; i++) { v += a*noise(p); p *= 2.0; a *= 0.5; }
-    return v;
-  }
-  vec3 hueRot(vec3 c, float a) {
-    float U = cos(a), W = sin(a);
-    mat3 m = mat3(
-      0.299 + 0.701*U + 0.168*W, 0.587 - 0.587*U + 0.330*W, 0.114 - 0.114*U - 0.497*W,
-      0.299 - 0.299*U - 0.328*W, 0.587 + 0.413*U + 0.035*W, 0.114 - 0.114*U + 0.292*W,
-      0.299 - 0.300*U + 1.250*W, 0.587 - 0.588*U - 1.050*W, 0.114 + 0.886*U - 0.203*W
-    );
-    return clamp(c * m, 0.0, 1.0);
-  }
+<div id="panel" aria-hidden="true">
+  <div class="hd"><span id="pname">roi 01 · github</span><span id="pval">0.00</span></div>
+  <canvas id="ptrace" width="242" height="70"></canvas>
+  <div class="ft"><span class="url" id="purl"></span><span><i>▴</i> holo stim</span></div>
+</div>
 
-  float source(vec2 uvCenter) {
-    vec2 p = (uvCenter - 0.5) * vec2(uResolution.x/uResolution.y, 1.0) * 3.5;
-    float t = uTime * 0.18;
-    float f = fbm(p + vec2(t * 1.3, t * 0.6));
-    f = mix(f, fbm(p * 2.0 + vec2(-t, t * 1.7)), 0.4);
-    vec2 mp = (uMouse - 0.5) * vec2(uResolution.x/uResolution.y, 1.0) * 3.5;
-    float d = distance(p, mp);
-    float spot = exp(-d * 1.4) * 1.4 + exp(-d * 0.55) * 0.22;
-    return f * 0.7 + spot;
-  }
+<div id="stimmark" aria-hidden="true"><span>470 nm · 25 ms</span></div>
+<div id="cursor"><svg width="22" height="22" viewBox="0 0 22 22"><g stroke="#eef0ea" stroke-width="1.2" fill="none"><circle cx="11" cy="11" r="5"/><path d="M11 0v5M11 17v5M0 11h5M17 11h5"/></g></svg></div>
+<aside id="tune" hidden aria-label="tune"></aside>
 
-  void main() {
-    vec2 fragPx = gl_FragCoord.xy;
-    vec2 cellPx = floor(fragPx / uCellSize) * uCellSize;
-    vec2 cellCoord = floor(cellPx / uCellSize);
-    vec2 cellCenterUV = (cellPx + uCellSize * 0.5) / uResolution;
+<p class="sr" id="live" aria-live="polite"></p>
+<p class="sr">sasha hydrie, known as shy — alien neuroscientist. The background is a simulated calcium-imaging recording of a few thousand spiking neurons. Each labelled cell is one of shy's projects, grouped into areas by topic; projects that share an idea are wired together, so making one fire sends a pulse to the others. The index button lists every link.</p>
 
-    // ---------- TEXT OVERRIDE: char index encoded per cell ----------
-    vec2 textUV = (cellCoord + 0.5) / uTextSize;
-    float encoded = texture2D(uText, textUV).r * 255.0;
-    encoded = floor(encoded + 0.5);
-    float textCharIdx = encoded - 1.0;     // -1 if no override
-    bool isText = textCharIdx >= 0.0;
+<script id="cortex">
+// ---- cortex: geometry + spiking network (LIF, slow synapses, depressing E synapses, homeostatic recurrence)
+//      + the project graph: labelled cells, long-range "relation" axons with real conduction delays,
+//        and silent coincidence-detector cells that fire only when both parents' pulses meet ----
+function makeRng(seed) {
+  let s = seed >>> 0;
+  return function () {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
-    // ---------- DROP-BLOOM GLITCH ----------
-    // Each "drop" expands quickly to a small radius, then fades. Stationary
-    // clicks make one drop; dragged clicks lay down many drops along the path.
-    // Cumulative effect is a chain of small, organic blooms.
-    float glitch = 0.0;
-    float glitchSeedSum = 0.0;
-    float aspect = uResolution.x / uResolution.y;
+function buildCortex(P) {
+  const L = P.L, rng = makeRng(P.seed);
+  const gauss = () => { let u = 0, v = 0; while (u === 0) u = rng(); v = rng(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2831853 * v); };
 
-    for (int i = 0; i < MAX_DROPS; i++) {
-      float spawnT = uDrops[i].z;
-      if (spawnT < -0.5) continue;
-      float age = uTime - spawnT;
-      if (age < 0.0 || age > 1.3) continue;
-
-      // grow phase ~0.25s, then hold a moment, then exp fade
-      float grow = clamp(age / 0.25, 0.0, 1.0);
-      float radius = 0.085 * grow;
-      float life;
-      if (age < 0.35) life = 1.0;
-      else            life = exp(-(age - 0.35) * 2.6);
-      if (radius < 0.002) continue;
-
-      float seed = spawnT * 7.13 + float(i) * 0.71;
-
-      vec2 rel = cellCenterUV - uDrops[i].xy;
-      rel.x *= aspect;
-      float d = length(rel);
-      float ang = atan(rel.y, rel.x);
-
-      // tendrils: angle-modulated radius
-      float tendril = noise(vec2(cos(ang * 3.0) * 1.8 + seed,
-                                 sin(ang * 3.0) * 1.8 + age * 1.5)) - 0.5;
-      float orgR = radius * (1.0 + tendril * 0.85);
-
-      // boundary noise
-      float dNoise = (noise(rel * 30.0 + vec2(seed, age * 1.7)) - 0.5) * radius * 0.5;
-      float dEff = d + dNoise;
-
-      float zVal = smoothstep(orgR * 1.1, orgR * 0.2, dEff);
-      float z = zVal * life;
-
-      glitchSeedSum += z * (float(i) * 1.37 + spawnT * 0.7);
-      glitch = max(glitch, z);
-    }
-    glitch = clamp(glitch, 0.0, 1.2);
-
-    // ---------- ROW-TEAR ----------
-    vec2 sampleUV = cellCenterUV;
-    if (glitch > 0.05) {
-      float rowSeed = hash(vec2(
-        floor(cellPx.y / uCellSize.y),
-        floor(uTime * 14.0) + glitchSeedSum
-      ));
-      sampleUV.x += (rowSeed - 0.5) * glitch * 0.18;
-    }
-
-    // ---------- BRIGHTNESS ----------
-    float bAmbient = source(sampleUV);
-    // text cells render at the peak of the ramp (cream/white at the top end of each palette)
-    float b = isText ? 1.0 : bAmbient;
-    b = clamp(b + glitch * 0.4, 0.0, 1.0);
-
-    // ---------- CHARACTER PICK ----------
-    // Background cells choose from the brightness ramp (first N chars).
-    // Text cells use the encoded character directly.
-    float idx;
-    if (isText) {
-      idx = textCharIdx;
-      // occasional flicker scramble inside text for life
-      if (step(0.985, hash(cellPx + floor(uTime * 4.0))) > 0.5) {
-        idx = floor(hash(cellPx + floor(uTime * 25.0)) * uCharCount);
+  // --- vasculature: a few surface vessels (smooth random walks) + penetrating vessel holes
+  const vseg = []; // [x0,y0,x1,y1,r0,r1]
+  function vessel(x, y, ang, r, len, depth) {
+    let a = ang, px = x, py = y, rr = r;
+    const step = 14;
+    for (let s = 0; s < len; s += step) {
+      a += gauss() * 0.10;
+      const nx = px + Math.cos(a) * step, ny = py + Math.sin(a) * step;
+      const nr = Math.max(2.5, rr * (1 - 0.0016 * step));
+      vseg.push([px, py, nx, ny, rr, nr]);
+      if (depth < 2 && rng() < 0.022 && rr > 5) {
+        vessel(nx, ny, a + (rng() < 0.5 ? -1 : 1) * (0.7 + rng() * 0.6), rr * (0.45 + rng() * 0.2), 120 + rng() * 260, depth + 1);
       }
-    } else {
-      float bForChar = b + (hash(cellPx + floor(uTime * 6.0)) - 0.5) * 0.04;
-      bForChar = clamp(bForChar, 0.0, 0.999);
-      // quantize through uGradations, then map onto the brightness ramp
-      float bSnap = floor(bForChar * uGradations) / max(1.0, uGradations - 1.0);
-      bSnap = clamp(bSnap, 0.0, 0.999);
-      idx = floor(bSnap * uBrightnessCount);
+      px = nx; py = ny; rr = nr;
     }
-    if (glitch > 0.15) {
-      idx = floor(hash(cellPx + floor(uTime * 30.0)) * uCharCount);
-    }
-
-    vec2 inCell = (fragPx - cellPx) / uCellSize;
-    float chOff = glitch * 0.18;
-    vec2 atlasUV_g = vec2((idx + inCell.x) / uCharCount, inCell.y);
-    vec2 atlasUV_r = vec2((idx + inCell.x + chOff) / uCharCount, inCell.y);
-    vec2 atlasUV_b = vec2((idx + inCell.x - chOff) / uCharCount, inCell.y);
-    float maskG = texture2D(uAtlas, atlasUV_g).r;
-    float maskR = texture2D(uAtlas, atlasUV_r).r;
-    float maskB = texture2D(uAtlas, atlasUV_b).r;
-    float charMask = max(max(maskR, maskG), maskB);
-
-    // ---------- AMBIENT (5-stop ramp from palette uniforms) ----------
-    vec3 ambient;
-    if      (b < 0.30) ambient = mix(uC1, uC2, smoothstep(0.0,  0.30, b));
-    else if (b < 0.60) ambient = mix(uC2, uC3, smoothstep(0.30, 0.60, b));
-    else if (b < 0.85) ambient = mix(uC3, uC4, smoothstep(0.60, 0.85, b));
-    else               ambient = mix(uC4, uC5, smoothstep(0.85, 1.0, b));
-
-    // ---------- WARM CURSOR ZONE (oxo's signature; only on the original) ----------
-    vec3 charCol = ambient;
-    float warmMix = 0.0;
-    if (uIsOxo > 0.5) {
-      vec2 mp = (uMouse - 0.5) * vec2(uResolution.x/uResolution.y, 1.0) * 3.5;
-      vec2 cellP = (cellCenterUV - 0.5) * vec2(uResolution.x/uResolution.y, 1.0) * 3.5;
-      float dM = distance(cellP, mp);
-      warmMix = exp(-dM * 1.15);
-      vec3 warmDim    = vec3(0.420, 0.300, 0.080);
-      vec3 warmYellow = vec3(0.945, 0.761, 0.106);
-      vec3 warmHot    = vec3(1.000, 0.952, 0.700);
-      vec3 cCyan      = vec3(0.239, 0.859, 0.851);
-      vec3 warm = (b < 0.40)
-        ? mix(warmDim, warmYellow, smoothstep(0.0, 0.4, b))
-        : mix(warmYellow, warmHot, smoothstep(0.4, 1.0, b));
-      charCol = mix(ambient, warm, warmMix);
-      vec3 glowCol = mix(cCyan, warmHot, warmMix);
-      charCol += pow(b, 2.6) * glowCol * 0.55;
-    }
-
-    // bg darkens warmly only when the warm cursor is also active
-    vec3 bg = (uIsOxo > 0.5)
-      ? mix(uBg, vec3(0.110, 0.090, 0.060), warmMix)
-      : uBg;
-    vec3 col = mix(bg, charCol, charMask);
-
-    if (glitch > 0.25) {
-      float band = step(0.82, hash(vec2(
-        floor(cellPx.y / uCellSize.y),
-        floor(uTime * 18.0) + glitchSeedSum
-      )));
-      col += band * uTearBand * glitch * 0.7;
-    }
-
-    // ---------- DISTORTION COLOR (palette-themed tear) ----------
-    if (glitch > 0.05) {
-      vec3 fx = mix(col, uTearA, 0.7);
-      vec3 split = vec3(maskR, maskG, maskB) * 1.4;
-      vec3 splitCol = vec3(uTearA.r * split.r, charCol.g * split.g, uTearB.b * split.b);
-      fx = mix(fx, splitCol, clamp(glitch * 0.7, 0.0, 0.7));
-      col = mix(col, fx, clamp(glitch * 1.1, 0.0, 1.0));
-    }
-
-    col *= 0.92 + 0.08 * sin(fragPx.y * 1.5);
-    vec2 vu = cellCenterUV - 0.5;
-    col *= 1.0 - dot(vu, vu) * 0.42;
-    col = pow(col, vec3(0.94));
-
-    gl_FragColor = vec4(col, 1.0);
   }
-</script>
-
-<script>
-  // ---------- ATLAS ----------
-  // first N chars = brightness ramp; rest = letters/symbols for direct text placement.
-  // '.' as base means every cell shows at least a dot (stippled field).
-  const BRIGHTNESS_CHARS = '.·,:;|/+=*#%@';
-  const EXTRA_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!#$%^&*()-_?:/<> ';
-  // dedupe: '@' '%' '#' '*' already in brightness — drop from extras
-  const dedupedExtras = [...EXTRA_CHARS].filter(c => !BRIGHTNESS_CHARS.includes(c)).join('');
-  const ATLAS = BRIGHTNESS_CHARS + dedupedExtras;
-
-  const cellW = 14, cellH = 22;
-  const atlasCanvas = document.createElement('canvas');
-  atlasCanvas.width = cellW * ATLAS.length;
-  atlasCanvas.height = cellH;
-  const actx = atlasCanvas.getContext('2d');
-  actx.fillStyle = '#000';
-  actx.fillRect(0, 0, atlasCanvas.width, atlasCanvas.height);
-
-  const atlasTexture = new THREE.CanvasTexture(atlasCanvas);
-  atlasTexture.minFilter = THREE.LinearFilter;
-  atlasTexture.magFilter = THREE.LinearFilter;
-
-  // Quick lookup: char → atlas index
-  const charIdx = {};
-  for (let i = 0; i < ATLAS.length; i++) charIdx[ATLAS[i]] = i;
-
-  // ---------- TEXT TEXTURE (cell-resolution; encodes per-cell char index) ----------
-  const textCanvas = document.createElement('canvas');
-  const textTexture = new THREE.CanvasTexture(textCanvas);
-  // flipY=true so canvas-top (where we place row 2 = the GITHUB nav) renders at screen-top
-  textTexture.flipY = true;
-  textTexture.minFilter = THREE.NearestFilter;
-  textTexture.magFilter = THREE.NearestFilter;
-
-  const noText = new URLSearchParams(location.search).get('notext') === '1';
-  function buildText(scale = 1.0) {
-    const dpr = Math.min(devicePixelRatio, 2);
-    const cellWp = cellW * scale * dpr;
-    const cellHp = cellH * scale * dpr;
-    const cellsX = Math.ceil(innerWidth * dpr / cellWp);
-    const cellsY = Math.ceil(innerHeight * dpr / cellHp);
-    textCanvas.width = cellsX;
-    textCanvas.height = cellsY;
-    const ctx = textCanvas.getContext('2d');
-    const img = ctx.createImageData(cellsX, cellsY);
-    // initialize all to 0 (no override)
-    for (let i = 0; i < img.data.length; i += 4) {
-      img.data[i+3] = 255;
+  vessel(-60, L * (0.30 + rng() * 0.15), -0.15 + rng() * 0.3, 13, L * 1.25, 0);
+  vessel(L * (0.55 + rng() * 0.2), -60, 1.57 + (rng() - 0.5) * 0.4, 9, L * 1.2, 0);
+  for (let k = 0; k < 9; k++) { // penetrating vessels (cross-sections)
+    const x = rng() * L, y = rng() * L, r = 4 + rng() * 5, a = rng() * 6.28, e = 1 + rng() * 3;
+    vseg.push([x, y, x + Math.cos(a) * e, y + Math.sin(a) * e, r, r]);
+  }
+  const VR = 2, vw = Math.ceil(L / VR), vgrid = new Float32Array(vw * vw).fill(99);
+  for (let k = 0; k < vseg.length; k++) {
+    const sg = vseg[k], m = Math.max(sg[4], sg[5]) + 14;
+    const x0 = Math.floor((Math.min(sg[0], sg[2]) - m) / VR), x1 = Math.ceil((Math.max(sg[0], sg[2]) + m) / VR);
+    const y0 = Math.floor((Math.min(sg[1], sg[3]) - m) / VR), y1 = Math.ceil((Math.max(sg[1], sg[3]) + m) / VR);
+    const bx = sg[2] - sg[0], by = sg[3] - sg[1], bb = bx * bx + by * by + 1e-9;
+    for (let gy = y0; gy <= y1; gy++) for (let gx = x0; gx <= x1; gx++) {
+      const px = gx * VR - sg[0], py = gy * VR - sg[1];
+      const h = Math.max(0, Math.min(1, (px * bx + py * by) / bb));
+      const dx = px - bx * h, dy = py - by * h;
+      const d = Math.sqrt(dx * dx + dy * dy) - (sg[4] + (sg[5] - sg[4]) * h);
+      const id = (((gx % vw) + vw) % vw) + (((gy % vw) + vw) % vw) * vw;
+      if (d < vgrid[id]) vgrid[id] = d;
     }
-    // ?notext=1 short-circuits all label placement (used for the OG image capture)
-    if (noText) {
-      ctx.putImageData(img, 0, 0);
-      textTexture.needsUpdate = true;
-      return { cellsX, cellsY };
-    }
+  }
+  function vesselDist(x, y) {
+    const gx = ((Math.round(x / VR) % vw) + vw) % vw, gy = ((Math.round(y / VR) % vw) + vw) % vw;
+    return vgrid[gx + gy * vw];
+  }
 
-    function place(str, cx, cy) {
-      for (let i = 0; i < str.length; i++) {
-        const ch = str[i];
-        // spaces leave the cell un-overridden so the shader's noise/wisp shows through
-        if (ch === ' ') continue;
-        const idx = charIdx[ch];
-        if (idx === undefined) continue;
-        const x = cx + i, y = cy;
-        if (x < 0 || x >= cellsX || y < 0 || y >= cellsY) continue;
-        // store atlasIdx + 1 in the red channel (0 = no override)
-        const offset = (y * cellsX + x) * 4;
-        img.data[offset] = idx + 1;
+  // --- somata: dart throwing in a 3D slab with a hash grid
+  const N = P.N, zs = P.zHalf;
+  const X = new Float32Array(N), Y = new Float32Array(N), Z = new Float32Array(N);
+  const G = 20, gw = Math.ceil(L / G); const grid = new Array(gw * gw); for (let i = 0; i < grid.length; i++) grid[i] = [];
+  let n = 0, tries = 0;
+  const md = P.minDist;
+  while (n < N && tries < N * 60) {
+    tries++;
+    const x = rng() * L, y = rng() * L, z = (rng() * 2 - 1) * zs;
+    if (vesselDist(x, y) < 7) continue;
+    const gx = Math.floor(x / G), gy = Math.floor(y / G);
+    let ok = true;
+    for (let dx = -1; dx <= 1 && ok; dx++) for (let dy = -1; dy <= 1 && ok; dy++) {
+      const c = grid[((gx + dx + gw) % gw) + ((gy + dy + gw) % gw) * gw];
+      for (let q = 0; q < c.length; q++) {
+        const j = c[q];
+        let ddx = Math.abs(X[j] - x); if (ddx > L / 2) ddx = L - ddx;
+        let ddy = Math.abs(Y[j] - y); if (ddy > L / 2) ddy = L - ddy;
+        const ddz = Z[j] - z;
+        if (ddx * ddx + ddy * ddy + ddz * ddz < md * md) { ok = false; break; }
       }
     }
-    function placeCentered(str, cy) {
-      place(str, Math.floor((cellsX - str.length) / 2), cy);
-    }
-
-    // ---------- LAYOUT ----------
-    const cy = Math.floor(cellsY / 2);
-
-    // hero — two-line identity, both 20 chars so they center-align column-perfect
-    placeCentered('sasha hydrie aka shy', cy);
-    placeCentered('alien neuroscientist', cy + 1);
-
-    // socials — three rows starting two below the identity, prompt-style with > marker, left-aligned at the same column
-    const navItems = ['> github', '> email', '> substack'];
-    const navMaxLen = Math.max(...navItems.map(s => s.length));
-    const navStartX = Math.floor((cellsX - navMaxLen) / 2);
-    const navStartY = cy + 3;
-    navItems.forEach((s, i) => place(s, navStartX, navStartY + i));
-
-    // ---------- LINK-ZONE OVERLAY (positioned to overlap the bullet rows above) ----------
-    const linkZone = document.querySelector('.link-zone');
-    if (linkZone) {
-      const cellWcss = cellW * scale;
-      const cellHcss = cellH * scale;
-      linkZone.style.top    = (navStartY * cellHcss) + 'px';
-      linkZone.style.left   = (navStartX * cellWcss) + 'px';
-      linkZone.style.width  = (navMaxLen * cellWcss) + 'px';
-      linkZone.style.height = (navItems.length * cellHcss) + 'px';
-      linkZone.style.transform = 'none';
-    }
-
-    ctx.putImageData(img, 0, 0);
-    textTexture.needsUpdate = true;
-    return { cellsX, cellsY };
+    if (!ok) continue;
+    X[n] = x; Y[n] = y; Z[n] = z; grid[gx + gy * gw].push(n); n++;
   }
+  const Nn = n;
+  const inh = new Uint8Array(Nn);   // ~18% inhibitory (labelled tdTomato)
+  for (let i = 0; i < Nn; i++) inh[i] = rng() < P.fracI ? 1 : 0;
 
-  document.fonts.ready.then(() => {
-    actx.fillStyle = '#fff';
-    actx.font = '700 17px "IBM Plex Mono", monospace';
-    actx.textBaseline = 'middle';
-    actx.textAlign = 'center';
-    for (let i = 0; i < ATLAS.length; i++) {
-      actx.fillText(ATLAS[i], i * cellW + cellW / 2, cellH / 2 + 1);
-    }
-    atlasTexture.needsUpdate = true;
-    init();
-  });
-
-  function init() {
-    const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-    const renderer = new THREE.WebGLRenderer({ antialias: false });
-    const dpr = Math.min(devicePixelRatio, 2);
-    renderer.setPixelRatio(dpr);
-    renderer.setSize(innerWidth, innerHeight);
-    document.body.appendChild(renderer.domElement);
-
-    const dims = buildText();
-
-    const MAX_DROPS = 32;
-    const drops = [];
-    for (let i = 0; i < MAX_DROPS; i++) drops.push(new THREE.Vector3(0, 0, -100));
-    let dropWrite = 0;
-    let isHeld = false;
-    let lastDropAt = -1, lastDropX = -1, lastDropY = -1;
-
-    function spawnDrop(px, py, t) {
-      dropWrite = (dropWrite + 1) % MAX_DROPS;
-      drops[dropWrite].set(px, py, t);
-      lastDropAt = t; lastDropX = px; lastDropY = py;
-    }
-
-    const STORE = 'oxo:';
-    let custom = [];
-    try { custom = JSON.parse(localStorage.getItem(STORE + 'custom-palettes') || '[]'); } catch {}
-    const PALETTES = [...window.PALETTES, ...custom];
-    let storedScheme = parseInt(localStorage.getItem(STORE + 'scheme') ?? '0', 10);
-    const params = new URLSearchParams(location.search);
-    document.body.classList.toggle('show-controls', params.get('controls') === '1');
-    const requestedScheme = params.get('p');
-    if (requestedScheme) {
-      const byIndex = Number.parseInt(requestedScheme, 10);
-      const byId = PALETTES.findIndex(p => p.id === requestedScheme);
-      if (byId >= 0) storedScheme = byId;
-      else if (Number.isInteger(byIndex)) storedScheme = byIndex;
-    }
-    if (storedScheme < 0 || storedScheme >= PALETTES.length) storedScheme = 0;
-    const v3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
-
-    const uniforms = {
-      uTime: { value: 0 },
-      uResolution: { value: new THREE.Vector2(innerWidth * dpr, innerHeight * dpr) },
-      uMouse: { value: new THREE.Vector2(0.5, 0.5) },
-      uDrops: { value: drops },
-      uAtlas: { value: atlasTexture },
-      uText: { value: textTexture },
-      uTextSize: { value: new THREE.Vector2(dims.cellsX, dims.cellsY) },
-      uCharCount: { value: ATLAS.length },
-      uBrightnessCount: { value: BRIGHTNESS_CHARS.length },
-      uGradations: { value: BRIGHTNESS_CHARS.length },
-      uCellSize: { value: new THREE.Vector2(cellW * dpr, cellH * dpr) },
-      // palette uniforms — populated by applyPalette()
-      uC1: { value: new THREE.Vector3() },
-      uC2: { value: new THREE.Vector3() },
-      uC3: { value: new THREE.Vector3() },
-      uC4: { value: new THREE.Vector3() },
-      uC5: { value: new THREE.Vector3() },
-      uBg: { value: new THREE.Vector3() },
-      uTearA:    { value: new THREE.Vector3() },
-      uTearB:    { value: new THREE.Vector3() },
-      uTearBand: { value: new THREE.Vector3() },
-      uIsOxo:    { value: 0 },
-      uLightBg:  { value: 0 },
-    };
-    const state = { speed: 1.0, cellScale: 1.0 };
-    const material = new THREE.ShaderMaterial({
-      uniforms,
-      vertexShader: document.getElementById('vert').textContent,
-      fragmentShader: document.getElementById('frag').textContent,
-    });
-    scene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), material));
-
-    let mx = 0.5, my = 0.5, cx = 0.5, cy = 0.5;
-    const t0 = performance.now();
-    addEventListener('pointermove', e => {
-      mx = e.clientX / innerWidth;
-      my = 1 - e.clientY / innerHeight;
-    });
-    addEventListener('pointerdown', e => {
-      // skip drop spawn if click target is a control panel button/slider
-      if (e.target.closest && e.target.closest('#controls')) return;
-      const px = e.clientX / innerWidth;
-      const py = 1 - e.clientY / innerHeight;
-      spawnDrop(px, py, simT);
-      isHeld = true;
-    });
-    function release() { isHeld = false; }
-    addEventListener('pointerup', release);
-    addEventListener('pointercancel', release);
-    addEventListener('pointerleave', release);
-
-    addEventListener('resize', () => {
-      const dpr2 = Math.min(devicePixelRatio, 2);
-      renderer.setSize(innerWidth, innerHeight);
-      uniforms.uResolution.value.set(innerWidth * dpr2, innerHeight * dpr2);
-      uniforms.uCellSize.value.set(cellW * state.cellScale * dpr2, cellH * state.cellScale * dpr2);
-      const d = buildText(state.cellScale);
-      uniforms.uTextSize.value.set(d.cellsX, d.cellsY);
-    });
-
-    // ---------- live config (persisted in localStorage) ----------
-    function bindSlider(id, valId, fmt, onChange) {
-      const slider = document.getElementById(id);
-      const valEl  = document.getElementById(valId);
-      const key = STORE + id;
-      const stored = localStorage.getItem(key);
-      if (stored !== null) slider.value = stored;
-      function update() {
-        const raw = parseFloat(slider.value);
-        valEl.textContent = fmt(raw);
-        onChange(raw);
-        localStorage.setItem(key, slider.value);
-      }
-      slider.addEventListener('input', update);
-      update();
-    }
-    bindSlider('speed', 'v-speed', v => v.toFixed(2) + '×', v => { state.speed = v; });
-    bindSlider('grad',  'v-grad',  v => v.toFixed(0),       v => { uniforms.uGradations.value = v; });
-    bindSlider('cell',  'v-cell',
-      v => `${Math.round(cellW * v)} × ${Math.round(cellH * v)}`,
-      v => {
-        state.cellScale = v;
-        uniforms.uCellSize.value.set(cellW * v * dpr, cellH * v * dpr);
-        const d = buildText(v);
-        uniforms.uTextSize.value.set(d.cellsX, d.cellsY);
-      }
-    );
-
-    // ---------- palette buttons (built from PALETTES) ----------
-    function applyPalette(idx) {
-      const p = PALETTES[idx];
-      uniforms.uC1.value.fromArray(p.ramp[0]);
-      uniforms.uC2.value.fromArray(p.ramp[1]);
-      uniforms.uC3.value.fromArray(p.ramp[2]);
-      uniforms.uC4.value.fromArray(p.ramp[3]);
-      uniforms.uC5.value.fromArray(p.ramp[4]);
-      uniforms.uBg.value.fromArray(p.bg);
-      uniforms.uTearA.value.fromArray(p.tearA);
-      uniforms.uTearB.value.fromArray(p.tearB);
-      uniforms.uTearBand.value.fromArray(p.tearBand);
-      // warm yellow cursor zone fires for oxo and any oxo-* variant
-      uniforms.uIsOxo.value = (p.id === 'oxo' || p.id.startsWith('oxo-')) ? 1 : 0;
-      uniforms.uLightBg.value = p.lightBg ? 1 : 0;
-      document.body.classList.toggle('light-bg', !!p.lightBg);
-      document.body.style.background = p.lightBg
-        ? `rgb(${p.bg.map(c => Math.round(c * 255)).join(',')})`
-        : '#161616';
-    }
-    const buttonHost = document.getElementById('palette-buttons');
-    PALETTES.forEach((p, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'seg' + (i === storedScheme ? ' on' : '');
-      btn.dataset.scheme = i;
-      btn.textContent = p.id;
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('#controls .seg').forEach(x => x.classList.remove('on'));
-        btn.classList.add('on');
-        applyPalette(i);
-        localStorage.setItem(STORE + 'scheme', i);
-      });
-      buttonHost.appendChild(btn);
-    });
-    applyPalette(storedScheme);
-
-    // simulated time scaled by speed slider — replaces the linear (now - t0) version below
-    let simT = 0, lastT = performance.now();
-
-    function loop() {
-      const now = performance.now();
-      const dt = (now - lastT) / 1000;
-      lastT = now;
-      simT += dt * state.speed;
-
-      cx += (mx - cx) * 0.10;
-      cy += (my - cy) * 0.10;
-      uniforms.uMouse.value.set(cx, cy);
-
-      // drops are timestamped in simT so they slow/speed with the speed slider too
-      if (isHeld) {
-        const dx = mx - lastDropX, dy = my - lastDropY;
-        const moved = Math.hypot(dx, dy);
-        if (moved > 0.012 || (simT - lastDropAt) > 0.10) {
-          spawnDrop(mx, my, simT);
+  // --- local connectivity (2D gaussian, torus), CSR
+  const tg = [], wt = [], dl = [], start = new Uint32Array(Nn + 1);
+  const CG = 40, cw = Math.ceil(L / CG); const cgrid = new Array(cw * cw); for (let i = 0; i < cgrid.length; i++) cgrid[i] = [];
+  for (let i = 0; i < Nn; i++) cgrid[(Math.floor(X[i] / CG) % cw) + (Math.floor(Y[i] / CG) % cw) * cw].push(i);
+  for (let i = 0; i < Nn; i++) {
+    start[i] = tg.length;
+    const sig = inh[i] ? P.sigI : P.sigE, pm = inh[i] ? P.pI : P.pE;
+    const R = Math.ceil(3 * sig / CG), gx = Math.floor(X[i] / CG), gy = Math.floor(Y[i] / CG);
+    const i2s = 1 / (2 * sig * sig);
+    for (let dx = -R; dx <= R; dx++) for (let dy = -R; dy <= R; dy++) {
+      const c = cgrid[((gx + dx + cw * 4) % cw) + ((gy + dy + cw * 4) % cw) * cw];
+      for (let q = 0; q < c.length; q++) {
+        const j = c[q]; if (j === i) continue;
+        let ddx = Math.abs(X[j] - X[i]); if (ddx > L / 2) ddx = L - ddx;
+        let ddy = Math.abs(Y[j] - Y[i]); if (ddy > L / 2) ddy = L - ddy;
+        const d2 = ddx * ddx + ddy * ddy;
+        if (d2 > 9 * sig * sig) continue;
+        if (rng() < pm * Math.exp(-d2 * i2s)) {
+          tg.push(j);
+          let w;
+          if (inh[i]) w = -(inh[j] ? P.wII : P.wIE);
+          else w = inh[j] ? P.wEI : P.wEE;
+          wt.push(w * (0.6 + 0.8 * rng()));
+          dl.push(Math.min(255, 1 + Math.round(Math.sqrt(d2 + (Z[j] - Z[i]) * (Z[j] - Z[i])) / P.vCond * (0.85 + 0.3 * rng()))));
         }
       }
-
-      uniforms.uTime.value = simT;
-      renderer.render(scene, camera);
-      requestAnimationFrame(loop);
     }
-    loop();
   }
+  start[Nn] = tg.length;
+  return { L, N: Nn, X, Y, Z, inh, vseg, vgrid, VW: vw, start,
+    tgt: Uint16Array.from(tg), w: Float32Array.from(wt), dly: Uint8Array.from(dl), vesselDist };
+}
+
+function makeNet(cx, P) {
+  const N = cx.N, rng = makeRng(P.seed * 7 + 1);
+  const v = new Float32Array(N), I = new Float32Array(N), A = new Float32Array(N), res = new Float32Array(N);
+  const ref = new Int32Array(N), stim = new Float32Array(N), nextExt = new Float64Array(N), extRate = new Float32Array(N);
+  const cs = new Float32Array(N), cc = new Float32Array(N), decD = new Float32Array(N), tauD = new Float32Array(N), fmax = new Float32Array(N);
+  const decS = new Float32Array(N), kM = new Float32Array(N), refT = new Int32Array(N), dAi = new Float32Array(N), kRi = new Float32Array(N);
+  const mute = new Uint8Array(N);   // a silent (undiscovered) cell: no somatic spikes from the local network
+  const inh = cx.inh, start = cx.start, tgt = cx.tgt, W = cx.w, DL = cx.dly;
+  const ring = new Float32Array(256 * N);
+  const kCr = 1 / P.tauRise, U = P.U;
+  const fk = []; for (let k = 0; k < 6; k++) fk.push([rng() * 6.2832, rng() * 6.2832, 1 + Math.floor(rng() * 3), 1 + Math.floor(rng() * 3)]);
+  const field = (x, y) => { let s = 0; for (const f of fk) s += Math.sin(6.2832 * f[2] * x / cx.L + f[0]) * Math.sin(6.2832 * f[3] * y / cx.L + f[1]); return s / 2.4; };
+  for (let i = 0; i < N; i++) {
+    v[i] = rng() * 0.6; res[i] = Math.max(0.05, Math.min(1, 0.55 + 0.45 * field(cx.X[i], cx.Y[i]) + 0.1 * (rng() - 0.5)));
+    kRi[i] = 1 / (P.tauRec * (0.6 + 0.8 * rng()));
+    tauD[i] = P.tauDecay * (0.7 + 0.6 * rng()); decD[i] = Math.exp(-1 / tauD[i]);
+    fmax[i] = 0.6 + 0.8 * rng();
+    extRate[i] = P.extHz / 1000 * (0.3 + 1.4 * rng());
+    nextExt[i] = -Math.log(1 - rng()) / extRate[i];
+    decS[i] = Math.exp(-1 / (inh[i] ? P.tauSI : P.tauSE));
+    kM[i] = 1 / (inh[i] ? P.tauMI : P.tauME);
+    refT[i] = inh[i] ? 2 : P.refE; dAi[i] = inh[i] ? 0 : P.dA;
+  }
+  const decA = Math.exp(-1 / P.tauA);
+  const spikeCount = new Uint32Array(N), lastSpike = new Float64Array(N).fill(-1e9);
+  const spk = new Int32Array(N + 64);
+  const kExt = P.kExt, gain = { ext: 1, E: P.gE0 };
+  // synaptic scaling: recurrent E gain slowly tracks a target population rate (tau ~40 s)
+  const H = { rate: P.rateT, bin: 0 };
+  const net = {
+    t: 0, v, I, A, res, cs, cc, stim, mute, spikeCount, lastSpike, nspk: 0, forced: new Int32Array(64), nforced: 0, gain, H, homeo: true,
+    step(ms) {
+      for (let s = 0; s < ms; s++) {
+        const t = this.t;
+        let ns = 0;
+        const ge = gain.ext;
+        const ro = (t & 255) * N;
+        for (let i = 0; i < N; i++) {
+          I[i] = I[i] * decS[i] + ring[ro + i]; ring[ro + i] = 0;
+          A[i] *= decA;
+          res[i] += (1 - res[i]) * kRi[i];
+          cs[i] *= decD[i];
+          cc[i] += (cs[i] - cc[i]) * kCr;
+          if (mute[i]) { v[i] = 0; continue; }
+          let vi = v[i];
+          if (t >= nextExt[i]) { vi += kExt; nextExt[i] = t + -Math.log(1 - rng()) / (extRate[i] * ge); }
+          if (ref[i] > 0) { ref[i]--; continue; }
+          vi += kM[i] * (I[i] - A[i] - vi) + stim[i];
+          if (vi >= 1) { vi = 0; ref[i] = refT[i]; A[i] += dAi[i]; spk[ns++] = i; }
+          v[i] = vi;
+        }
+        for (let f = 0; f < this.nforced; f++) { const i = this.forced[f]; v[i] = 0; ref[i] = refT[i]; A[i] += dAi[i]; spk[ns++] = i; }
+        this.nforced = 0;
+        const gE = gain.E;
+        for (let q = 0; q < ns; q++) {
+          const j = spk[q];
+          cs[j] += 1; spikeCount[j]++; lastSpike[j] = t;
+          let eff = 1;
+          if (!inh[j]) { eff = res[j] * gE; res[j] -= U * res[j]; }
+          const e = start[j + 1];
+          for (let k = start[j]; k < e; k++) ring[(((t + DL[k]) & 255) * N) + tgt[k]] += W[k] * eff;
+        }
+        this.nspk += ns;
+        H.bin += ns;
+        this.t = t + 1;
+        if ((t & 63) === 0) for (let i = 0; i < N; i++) { // flush denormals
+          if (I[i] < 1e-9 && I[i] > -1e-9) I[i] = 0;
+          if (A[i] < 1e-9) A[i] = 0;
+          if (v[i] < 1e-9 && v[i] > -1e-9) v[i] = 0;
+          if (cs[i] < 1e-9) cs[i] = 0;
+          if (cc[i] < 1e-9) cc[i] = 0;
+        }
+        if ((t % 100) === 99) { // every 100 ms: rate EMA (~10 s), then multiplicative scaling of recurrent E gain
+          H.rate += (H.bin / N * 10 - H.rate) * 0.01; H.bin = 0;
+          if (this.homeo) gain.E = Math.max(0.5, Math.min(1.4, gain.E * Math.exp(-(H.rate / P.rateT - 1) * 100 / P.tauHomeo)));
+        }
+      }
+    },
+    setDecay(k) { for (let i = 0; i < N; i++) decD[i] = Math.exp(-1 / (tauD[i] * k)); },
+    dff(i) { const c = cc[i]; const cn = Math.pow(c, P.hillN); return fmax[i] * P.Fmax * cn / (cn + P.Kd); },
+    fire(i) { if (this.nforced < 64) this.forced[this.nforced++] = i; }
+  };
+  return net;
+}
+
+const CORTEX_P = {
+  L: 1000, N: 4200, seed: 11, zHalf: 32, minDist: 11.5, fracI: 0.18,
+  sigE: 42, sigI: 30, pE: 0.55, pI: 0.9,
+  wEE: 0.30, wEI: 0.06, wIE: 0.10, wII: 0.04,
+  tauSE: 70, tauSI: 25, tauME: 25, tauMI: 12, refE: 6, tauA: 600, dA: 0.15,
+  tauRec: 2200, vCond: 0.5, U: 0.45, extHz: 32, kExt: 0.25,
+  tauRise: 45, tauDecay: 700, hillN: 2.1, Kd: 5.0, Fmax: 6.0,
+  gE0: 0.88, rateT: 0.45, tauHomeo: 40000,
+};
+
+// ---- sim host: runs in a Worker (or inline, if workers are unavailable); talks in plain messages ----
+function simHost(post) {
+  const FR = 1000 / 30;
+  let P, cx, net, N, cur, prev, view, rcell = new Int32Array(0), coupling = 1;
+  let frameAcc = 0, stimLeft = 0, holoNow = 0;
+  let fPop = [], fRoi = [], fHolo = [];
+  const srng = makeRng(4711);   // light-spot speckle (seeded, so a scripted visit replays the same tissue)
+  const grng = makeRng(90210);  // project-cell spontaneous bursts
+
+  // ---- the project graph. slots = projects; events go back to the page as [type, slot, t, strength, cause, from]
+  //   type 1 burst · 2 subthreshold arrival (dendrites only) · 3 discovered · 4 a silent cell stirred (first coincidence)
+  //   cause 0 spontaneous · 1 evoked (a poke: click, tap, light, a voice starting) · 2 propagated · 3 discovery
+  //         4 a voice talking on (the visitor's held / latched cell, every ~1.5 s)
+  //   Only cause 4 (a voice the visitor is holding) counts toward a silent cell's coincidence.
+  const G = { n: 0, cell: new Int32Array(0), silent: null, found: null, rate: null, par: null, out: [],
+    refU: null, lastB: null, last: null, lastA: null, dca: new Float32Array(0), arr: [], bq: [],
+    win: 300, S: { spont: 0.55, th: 0.5, decay: 0.85 }, voice: [], ev: [] };
+  const voiced = c => c === 1 || c === 4;
+  // two voices entrain, like coupled oscillators: each plans its next burst ~1.5 s out, then leans 55% of the way
+  // toward the other's next burst. Out of step at first, in step within ~2 cycles, and you can watch it happen.
+  const VP = 1500;
+  function voiceNext(v, t) {
+    let nx = t + VP + (grng() - 0.5) * 80;
+    const u = G.voice.find(w => w !== v);
+    if (u && u.started) {
+      let e = u.next - nx; e = ((e % VP) + VP * 1.5) % VP - VP / 2;
+      nx += Math.max(-420, Math.min(420, e * 0.55));
+    }
+    return nx;
+  }
+  function setGraph(m) {
+    for (let p = 0; p < G.n; p++) if (G.cell[p] >= 0) net.mute[G.cell[p]] = 0;
+    const n = m.cell.length;
+    if (n !== G.n) { G.refU = new Float64Array(n); G.lastB = new Float64Array(n).fill(-1e9); G.last = new Float64Array(n * 2).fill(-1e9); G.lastA = new Float32Array(n * 2); G.dca = new Float32Array(n); G.co = new Float64Array(n).fill(-1e9); }
+    G.n = n; G.cell = m.cell; G.silent = m.silent; G.found = m.found; G.rate = m.rate; G.par = m.par; G.win = m.win; if (m.S) G.S = m.S;
+    G.out = []; for (let p = 0; p < n; p++) G.out.push([]);
+    const E = m.edges;
+    for (let k = 0; k + 3 < E.length; k += 4) {
+      const a = E[k] | 0, b = E[k + 1] | 0, w = E[k + 2], d = Math.max(1, Math.round(E[k + 3]));
+      G.out[a].push([b, w, d]); G.out[b].push([a, w, d]);
+    }
+    G.arr = []; G.bq = [];
+    for (let p = 0; p < n; p++) if (G.cell[p] >= 0 && G.silent[p] && !G.found[p]) net.mute[G.cell[p]] = 1;
+  }
+  const isQuiet = p => G.silent[p] && !G.found[p];
+  function gBurst(p, s, cause, from) {
+    const t = net.t;
+    if (G.cell[p] < 0 || isQuiet(p)) return false;
+    // refractory: 1.1 s, but the visitor's own pokes only need the last burst to be 250 ms old
+    if (t < (voiced(cause) ? G.lastB[p] + 250 : G.refU[p])) return false;
+    G.refU[p] = t + 1100; G.lastB[p] = t;
+    const i = G.cell[p], k = s >= 0.9 ? 5 : s >= 0.6 ? 4 : 3;
+    for (let j = 0; j < k; j++) G.bq.push([t + j * 11, i]);
+    G.ev.push([1, p, t, s, cause, from]);
+    const out = G.out[p];
+    for (let k2 = 0; k2 < out.length; k2++) { const q = out[k2][0]; if (G.cell[q] >= 0) G.arr.push([t + out[k2][2], q, s * out[k2][1], p, cause]); }
+    return true;
+  }
+  function gArrive(q, a, from, cause) {
+    const t = net.t;
+    G.dca[q] += a;
+    if (isQuiet(q)) {
+      const k = G.par[q * 2] === from ? 0 : G.par[q * 2 + 1] === from ? 1 : -1;
+      if (k >= 0 && cause === 4 && a >= G.S.th) {
+        // only a voice the visitor is HOLDING counts (cause 4: a latched / dwelt-on cell talking on). The click itself,
+        // relayed and spontaneous pulses never do — so passing clicks can't find a cell; a held pair can.
+        G.last[q * 2 + k] = t; G.lastA[q * 2 + k] = a;
+        const to = G.last[q * 2 + 1 - k];
+        if (t - to <= G.win) {
+          // coincidence. The first one only stirs it (a faint somatic flicker); a second on the very next cycle
+          // wakes it — so the pair has to be held together, not merely passed through on the way somewhere.
+          const dc = t - G.co[q];
+          if (dc > 600 && dc <= 2700) {   // found
+            G.found[q] = 1; net.mute[G.cell[q]] = 0;
+            G.ev.push([3, q, t, 1, 3, from]);
+            gBurst(q, 1, 3, from);
+            return;
+          }
+          if (dc > 2700) {
+            G.co[q] = t;
+            for (let j = 0; j < 3; j++) G.bq.push([t + j * 11, G.cell[q]]);
+            G.ev.push([4, q, t, a, 3, from]);
+            return;
+          }
+        }
+      }
+      G.ev.push([2, q, t, a, voiced(cause) ? k : -2, from]);
+      return;
+    }
+    if (a >= G.S.th) gBurst(q, a * G.S.decay, 2, from);
+  }
+  function gPoke(p) {
+    if (p < 0 || p >= G.n || G.cell[p] < 0) return;
+    if (isQuiet(p)) { G.dca[p] += 0.7; G.ev.push([2, p, net.t, 0.7, -1, -1]); return; }
+    gBurst(p, 1, 1, -1);
+  }
+  function setVoices(list) {
+    // keep each continuing voice's own rhythm; a new one speaks now (or picks up after a poke it just made)
+    const t = net.t, keep = [], add = [];
+    for (const p of list) {
+      if (p < 0 || p >= G.n) continue;
+      const old = G.voice.find(v => v.p === p);
+      if (old) keep.push(old); else add.push(p);
+    }
+    G.voice = keep;
+    for (const p of add) {
+      const v = { p, started: t - G.lastB[p] < 900, next: t };
+      if (v.started) v.next = voiceNext(v, G.lastB[p]);
+      G.voice.push(v);
+    }
+  }
+  function gTick() {
+    const t = net.t;
+    for (let p = 0; p < G.n; p++) {
+      const r = G.rate[p];
+      if (r > 0 && G.cell[p] >= 0 && !isQuiet(p) && grng() < r * 0.001) gBurst(p, G.S.spont, 0, -1);
+    }
+    for (const v of G.voice) if (t >= v.next) {
+      if (isQuiet(v.p)) { v.next = t + 1500; continue; }
+      if (gBurst(v.p, 1, v.started ? 4 : 1, -1)) { v.started = true; v.next = voiceNext(v, t); holoNow = 1; }
+      else v.next = t + 40;
+    }
+    if (G.arr.length) for (let k = G.arr.length - 1; k >= 0; k--) if (G.arr[k][0] <= t) { const a = G.arr[k]; G.arr.splice(k, 1); gArrive(a[1], a[2], a[3], a[4]); }
+    if (G.bq.length) for (let k = G.bq.length - 1; k >= 0; k--) if (G.bq[k][0] <= t) { net.fire(G.bq[k][1]); G.bq.splice(k, 1); }
+    for (let p = 0; p < G.n; p++) G.dca[p] *= 0.99857;   // dendritic calcium, τ ≈ 700 ms
+  }
+
+  function photostim(wx, wy) {
+    // ChR2-like drive: gaussian spot ~110 µm, 25 ms
+    const sig = 34, L = cx.L, X = cx.X, Y = cx.Y;
+    net.stim.fill(0);
+    for (let i = 0; i < N; i++) {
+      let dx = Math.abs(X[i] - wx); if (dx > L / 2) dx = L - dx;
+      let dy = Math.abs(Y[i] - wy); if (dy > L / 2) dy = L - dy;
+      const d2 = dx * dx + dy * dy;
+      if (d2 > 16 * sig * sig) continue;
+      net.stim[i] = 0.2 * Math.exp(-d2 / (2 * sig * sig)) * (0.6 + 0.8 * srng());
+    }
+    stimLeft = 25;
+    // a project cell under the spot is driven like a touch
+    for (let p = 0; p < G.n; p++) {
+      const i = G.cell[p]; if (i < 0) continue;
+      let dx = Math.abs(X[i] - wx); if (dx > L / 2) dx = L - dx;
+      let dy = Math.abs(Y[i] - wy); if (dy > L / 2) dy = L - dy;
+      if (dx * dx + dy * dy < 40 * 40) gPoke(p);
+    }
+  }
+  function snapshot() {
+    prev.set(cur);
+    let s = 0, n = 0;
+    for (let i = 0; i < N; i++) { const d = net.dff(i); cur[i] = d; if (view[i]) { s += d; n++; } }
+    fPop.push(n ? s / n : 0);
+    for (let k = 0; k < rcell.length; k++) fRoi.push(rcell[k] >= 0 ? cur[rcell[k]] : 0);
+    fHolo.push(holoNow); holoNow = 0;
+  }
+  function run(ms) {
+    for (let s = 0; s < ms; s++) {
+      if (stimLeft > 0 && --stimLeft === 0) net.stim.fill(0);
+      if (G.n) gTick();
+      net.step(1);
+      frameAcc += 1; if (frameAcc >= FR) { frameAcc -= FR; snapshot(); }
+    }
+  }
+  function flush() {
+    const m = { t: 'fr', simT: net.t, phase: frameAcc / FR, nF: fPop.length, nR: rcell.length,
+      pop: Float32Array.from(fPop), roi: Float32Array.from(fRoi), holo: Uint8Array.from(fHolo),
+      cur: cur.slice(), prev: prev.slice(), rate: net.H.rate, gE: net.gain.E, pev: G.ev, dca: G.dca.slice() };
+    fPop = []; fRoi = []; fHolo = []; G.ev = [];
+    post(m, [m.pop.buffer, m.roi.buffer, m.holo.buffer, m.cur.buffer, m.prev.buffer, m.dca.buffer]);
+  }
+  return function (m) {
+    if (m.t === 'init') {
+      P = m.P; P.rateT0 = P.rateT; cx = buildCortex(P); net = makeNet(cx, P); N = cx.N;
+      cur = new Float32Array(N); prev = new Float32Array(N); view = new Uint8Array(N).fill(1);
+      const vs = new Float32Array(cx.vseg.length * 6); cx.vseg.forEach((g, k) => vs.set(g, k * 6));
+      const geo = { t: 'geo', N, L: cx.L, X: cx.X.slice(), Y: cx.Y.slice(), Z: cx.Z.slice(), inh: cx.inh.slice(), vseg: vs, vgrid: cx.vgrid, VW: cx.VW };
+      post(geo, [geo.X.buffer, geo.Y.buffer, geo.Z.buffer, geo.inh.buffer, geo.vseg.buffer, geo.vgrid.buffer]);
+      run(m.pre | 0); flush();
+    } else if (!net) return;
+    else if (m.t === 'view') view = m.view;
+    else if (m.t === 'rois') rcell = m.cells;
+    else if (m.t === 'graph') setGraph(m);
+    else if (m.t === 'rates') { if (m.rate.length === G.n) G.rate = m.rate; }
+    else if (m.t === 'params') {
+      net.gain.ext = m.drive;
+      net.gain.E = Math.max(0.5, Math.min(1.4, net.gain.E * m.coupling / coupling)); coupling = m.coupling;
+      P.rateT = P.rateT0 * m.coupling;
+      net.setDecay(m.decay);
+    } else if (m.t === 'run') {
+      if (m.stims) for (const s of m.stims) photostim(s[0], s[1]);
+      if (m.pokes) for (const p of m.pokes) gPoke(p);
+      if (m.voices) setVoices(m.voices);   // after the pokes, so a click doesn't fire twice
+      run(m.ms | 0); flush();
+    }
+  };
+}
+
+if (typeof module !== 'undefined') module.exports = { buildCortex, makeNet, CORTEX_P, makeRng, simHost };
+</script>
+<script>
+function boot() {
+'use strict';
+const BOOT_MS = performance.now();
+const Q = new URLSearchParams(location.search);
+const BENCH = Q.get('bench') === '1';
+const DEMO = Q.get('demo') === '1' || BENCH;
+const DBG = Q.get('debug') === '1';
+const RM = !DEMO && Q.get('motion') !== '1' && !!window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FORCE_FB = Q.get('nogl') === '1';
+const SEEK = DEMO && !BENCH ? Math.min(60, Math.max(0, parseFloat(Q.get('t')) || 0)) : 0;   // ?demo=1&t=5.3: a still of the scripted visit at t
+const FRESH = DEMO || Q.get('fresh') === '1';
+// headless capture runs on virtual time, which never waits for a worker: scripted demos and headless renders step the
+// same sim inline instead. The bench measures the real thing (worker).
+const FORCE_INLINE = Q.get('worker') !== '1' && (Q.get('inline') === '1' || ((DEMO || /HeadlessChrome/.test(navigator.userAgent)) && !BENCH));
+let seeked = false, seekLeft = 0;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+const store = {
+  get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private mode: fine */ } },
+  del(k) { try { localStorage.removeItem(k); } catch (e) { /* fine */ } },
+};
+const TUNE_KEY = 'shy.gcamp2.tune', FOUND_KEY = 'shy.gcamp2.found';
+
+// ---------------------------------------------------------------- config (DEFAULTS ⊕ what the tune pane saved)
+const clone = o => JSON.parse(JSON.stringify(o));
+const SLIDERS = {
+  image: [['exposure', 0.3, 2.5, 0.01], ['contrast', 0.6, 1.7, 0.01], ['saturation', 0, 1.6, 0.01], ['grain', 0, 2, 0.01], ['areas', 0, 2.5, 0.01, 'area tone']],
+  gold: [['pulses', 0, 1, 0.01, 'axon pulses'], ['sparks', 0, 1, 0.01, 'spike sparks'], ['linger', 60, 800, 10, 'spark linger ms'], ['haze', 0, 1, 0.01, 'neuropil haze'], ['cells', 0, 1, 0.01, 'whole cells']],
+  sim: [['drive', 0.4, 1.8, 0.01, 'spont. drive'], ['coupling', 0.5, 1.6, 0.01, 'coupling'], ['decay', 0.4, 2.2, 0.01, 'calcium τ ×'], ['axonSpeed', 0.15, 2, 0.01, 'axon µm/ms'],
+    ['window', 100, 1000, 10, 'coincid. ms'], ['latch', 2, 20, 0.5, 'talk for s'], ['heat', 0, 3, 0.01, 'project heat'], ['recencyDays', 5, 200, 1, 'memory days'], ['motion', 0, 2, 0.01, 'motion']],
+};
+const RANGE = {}; for (const g in SLIDERS) for (const r of SLIDERS[g]) RANGE[g + '.' + r[0]] = [r[1], r[2]];
+// saved / shared config is untrusted: same type as the default, colours must be #rrggbb, numbers stay on their slider
+function mergeInto(a, b, path) {
+  if (!b || typeof b !== 'object') return a;
+  for (const k of Object.keys(b)) {
+    const v = b[k], at = path ? path + '.' + k : k;
+    if (v && typeof v === 'object' && !Array.isArray(v) && a[k] && typeof a[k] === 'object') mergeInto(a[k], v, k);
+    else if (k in a && typeof v === typeof a[k]) {
+      if (typeof v === 'number') { if (isFinite(v)) a[k] = RANGE[at] ? clamp(v, RANGE[at][0], RANGE[at][1]) : v; }
+      else if (typeof v === 'string' && /^#/.test(a[k])) { if (/^#[0-9a-f]{6}$/i.test(v)) a[k] = v; }
+      else a[k] = v;
+    }
+  }
+  return a;
+}
+const BASE = clone(DEFAULTS);
+for (const p of PROJECTS) if (!(p.id in BASE.projects)) BASE.projects[p.id] = p.show !== false;
+const SAVED = DEMO || Q.get('defaults') === '1' ? null : store.get(TUNE_KEY);
+let cfg = mergeInto(clone(BASE), SAVED && SAVED.v === 2 ? SAVED : null);
+if (Q.get('cfg')) { try { mergeInto(cfg, JSON.parse(Q.get('cfg'))); } catch (e) { console.warn('bad ?cfg', e.message); } }   // share a look as a link
+if (Q.get('palette') && PALETTES[Q.get('palette')]) { const pp = PALETTES[Q.get('palette')]; cfg.palette = Q.get('palette'); cfg.colors = clone(pp.colors); cfg.invert = pp.invert; }
+if (Q.get('off')) for (const k of Q.get('off').split(',')) if (k in cfg.layers) cfg.layers[k] = false;   // dev: ?off=dendrites,scan
+function diffCfg(c, b) { const o = {}; for (const k in c) { const v = c[k], d = b[k]; if (v && typeof v === 'object' && d && typeof d === 'object') { const x = diffCfg(v, d); if (Object.keys(x).length) o[k] = x; } else if (v !== d) o[k] = v; } return o; }
+function saveCfg() { if (!DEMO) store.set(TUNE_KEY, Object.assign(diffCfg(cfg, BASE), { v: 2 })); }
+
+// ---------------------------------------------------------------- the work, as slots
+const P = Object.assign({}, CORTEX_P);
+const FR_MS = 1000 / 30, FRAME0 = 4213, HIST = 300, POPH = 600;
+const PUZ = { spont: 0.55, th: 0.5, decay: 0.85 };   // burst strengths: spontaneous / threshold to fire / per-hop decay
+const AREA_IX = {}; AREAS.forEach((a, k) => { AREA_IX[a.id] = k; });
+const SL = PROJECTS.map((p, k) => ({ p, k, id: p.id, silent: Array.isArray(p.silent), par: [-1, -1], on: false, cell: -1, x: 0, y: 0, rp: 8, left: false,
+  el: null, lab: null, hit: null, known: false, found: false, near: false, hist: new Float32Array(HIST), holo: new Uint8Array(HIST), ptr: 0, fill: 0,
+  num: String(k + 1).padStart(2, '0') }));
+const SLID = {}; SL.forEach(s => { SLID[s.id] = s; });
+SL.forEach(s => { if (s.silent) s.par = s.p.silent.map(id => (SLID[id] ? SLID[id].k : -1)); });
+const EDGES = [];
+for (const r of RELATIONS) {
+  const a = SLID[r[0]], b = SLID[r[1]];
+  if (!a || !b || a === b) continue;
+  EDGES.push({ a: a.k, b: b.k, w: clamp(+r[2] || 0.5, 0, 1), label: r[3] || '' });
+}
+SL.forEach(s => { // every silent cell is wired to both of its parents, even if RELATIONS forgot
+  if (!s.silent) return;
+  for (const q of s.par) if (q >= 0 && !EDGES.some(e => (e.a === s.k && e.b === q) || (e.b === s.k && e.a === q))) EDGES.push({ a: q, b: s.k, w: 1, label: '' });
+});
+EDGES.forEach((e, k) => Object.assign(e, { k, on: false, len: 100, delay: 300, el: null, gidx: -1 }));
+const saved = FRESH ? null : store.get(FOUND_KEY);
+let foundOrder = [...new Set((saved && Array.isArray(saved.order) ? saved.order : []).filter(id => typeof id === 'string' && SLID[id] && SLID[id].silent))];
+foundOrder.forEach(id => { SLID[id].found = true; });
+if (Q.get('found')) for (const s of SL) if (s.silent && !s.found && (Q.get('found') === 'all' || Q.get('found').split(',').includes(s.id))) { s.found = true; foundOrder.push(s.id); }
+// the reward is earned, not stored: a stale / corrupt flag, or a silent cell added since, re-opens it
+let rewardDone = !!(saved && saved.done === true) && SL.every(s => !s.silent || !cfg.projects[s.id] || s.found);
+function saveFound() { if (!FRESH) store.set(FOUND_KEY, { order: foundOrder, done: rewardDone }); }
+const quiet = s => s.silent && !s.found;
+
+// heat ∈ [0, 1]: how recently each project was worked on (1 = the newest date in PROJECTS)
+function heats() {
+  const ds = PROJECTS.map(p => (p.last ? Date.parse(p.last) : NaN));
+  const fin = ds.filter(isFinite);
+  const ref = fin.length ? Math.max.apply(null, fin) : Date.now();
+  return ds.map(d => (isFinite(d) ? Math.exp(-Math.max(0, (ref - d) / 864e5) / Math.max(1, cfg.sim.recencyDays)) : 0.12));
+}
+function rates() {
+  // every silent cell you've found makes the whole map a little more talkative
+  const more = 1 + 0.18 * SL.filter(s => s.silent && s.found).length;
+  return heats().map(h => cfg.sim.heat * more * (0.012 + 0.21 * h));   // Hz: ~1 burst / 4.5 s when current, ~1 / 80 s when long cold
+}
+
+// ---------------------------------------------------------------- geometry (arrives from the sim)
+let geoReady = false, N = 0;
+const L = P.L;
+let X, Y, Z, INH, VSEG, VGRID, VW;
+let R, ECC, TH, SEED, F0, TDT, FILL, R0, F00, TDT0, FILL0, dend = [], ND = 0, inView = new Uint8Array(0);
+let dffCur = new Float32Array(0), dffPrev = new Float32Array(0), dispCur = null, dispPrev = null, dcaNow = new Float32Array(0);
+
+// ---------------------------------------------------------------- recording state
+let frameNo = 0, simT = 0, simT0 = -1, scanPhase = 0, simDebt = 0, inflight = false, inflightT = 0;
+let rateNow = P.rateT, gENow = P.gE0, newFrames = false;
+const popHist = new Float32Array(POPH); let popPtr = 0, popFill = 0;
+let events = 0, inEvent = false, popBase = -1;
+const stimVis = { x: -9999, y: -9999, t: -1e9, frame: -99, r0: 0, r1: 0, rad: 56 };
+const stimQ = [], pokeQ = [];
+const pulses = [];   // { e, dir, t0, dur, amp } on sim time (ms)
+const pulseU = new Float32Array(160);
+
+// ---------------------------------------------------------------- the sim (worker, or inline)
+let sim = null;
+function startSim(inline) {
+  const INIT = { t: 'init', P, pre: inline ? 2000 : 4000 };
+  if (!inline && !FORCE_INLINE && window.Worker && window.Blob && window.URL) {
+    try {
+      const src = document.getElementById('cortex').textContent +
+        '\n;(function(){ var h = simHost(function (m, tr) { postMessage(m, tr || []); }); onmessage = function (e) { h(e.data); }; })();';
+      const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+      const w = new Worker(url);
+      w.onmessage = e => onSim(e.data);
+      w.onerror = ev => { if (ev.preventDefault) ev.preventDefault(); console.warn('sim worker failed; running inline', ev.message); w.terminate(); if (!geoReady) startSim(true); };
+      sim = { post: m => w.postMessage(m), kind: 'worker' };
+      sim.post(INIT);
+      return;
+    } catch (e) { console.warn('no worker:', e.message); }
+  }
+  const h = simHost(m => onSim(m));
+  sim = { post: m => h(m), kind: 'inline' };
+  setTimeout(() => sim.post(INIT), 30);
+}
+function postParams() { if (sim && geoReady) sim.post({ t: 'params', drive: cfg.sim.drive, coupling: cfg.sim.coupling, decay: cfg.sim.decay }); }
+
+function onSim(m) {
+  if (m.t === 'geo') { setupGeo(m); return; }
+  if (m.t !== 'fr') return;
+  inflight = false;
+  simT = m.simT; scanPhase = m.phase; rateNow = m.rate; gENow = m.gE;
+  if (simT0 < 0) simT0 = simT;
+  const nR = m.nR, okR = nR === SL.length;
+  for (let f = 0; f < m.nF; f++) {
+    const p = m.pop[f];
+    popHist[popPtr] = p; popPtr = (popPtr + 1) % POPH; popFill = Math.min(POPH, popFill + 1);
+    if (popBase < 0) popBase = p;
+    popBase += (p - popBase) * (p < popBase ? 0.06 : 0.0015);
+    if (!inEvent && p > popBase * 1.7 + 0.06) { inEvent = true; events++; }
+    if (inEvent && p < popBase * 1.25 + 0.03) inEvent = false;
+    if (okR) for (let k = 0; k < nR; k++) {
+      const r = SL[k];
+      r.hist[r.ptr] = m.roi[f * nR + k]; r.holo[r.ptr] = (active === r && m.holo[f]) ? 1 : 0; r.ptr = (r.ptr + 1) % HIST;
+      if (r.fill < HIST) r.fill++;
+    }
+    frameNo++;
+  }
+  if (m.nF) {
+    dffCur = m.cur; dffPrev = m.prev; newFrames = true;
+    if (RM) { // "avg ×16": exponential frame averaging, a real acquisition setting that happens to be calm
+      if (!dispCur) dispCur = dffCur.slice();
+      if (!dispPrev || dispPrev === dispCur || dispPrev.length !== dispCur.length) dispPrev = new Float32Array(dispCur.length);
+      dispPrev.set(dispCur);
+      const a = 1 - Math.pow(1 - 1 / 8, m.nF);
+      for (let i = 0; i < N; i++) dispCur[i] += (dffCur[i] - dispCur[i]) * a;
+    } else { dispCur = dffCur; dispPrev = dffPrev; }
+  }
+  if (m.dca) dcaNow = m.dca;
+  if (m.pev) for (const e of m.pev) onPev(e);
+}
+
+function setupGeo(m) {
+  N = m.N; X = m.X; Y = m.Y; Z = m.Z; INH = m.inh; VSEG = m.vseg; VGRID = m.vgrid; VW = m.VW;
+  const vr = makeRng(91);
+  R = new Float32Array(N); ECC = new Float32Array(N); TH = new Float32Array(N); SEED = new Float32Array(N);
+  F0 = new Float32Array(N); TDT = new Float32Array(N); FILL = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    R[i] = INH[i] ? 4.4 + vr() * 1.2 : 5.0 + vr() * 1.7;
+    ECC[i] = 1.0 + vr() * 0.28; TH[i] = vr() * 6.2832; SEED[i] = vr();
+    F0[i] = 0.22 + 0.5 * Math.pow(vr(), 1.6);
+    TDT[i] = INH[i] ? 0.45 + 0.5 * vr() : 0;
+    FILL[i] = vr() < 0.02 ? 1 : 0;
+    if (FILL[i]) F0[i] *= 1.8;
+  }
+  R0 = R.slice(); F00 = F0.slice(); TDT0 = TDT.slice(); FILL0 = FILL.slice();
+  // dendrites: random-walk processes from cells near the focal plane
+  dend = [];
+  for (let i = 0; i < N; i++) {
+    if (Math.abs(Z[i]) > 12) continue;
+    const nb = 2 + Math.floor(vr() * 3) + (INH[i] ? 1 : 0);
+    for (let b = 0; b < nb; b++) {
+      let a = vr() * 6.2832, px = Math.cos(a) * R[i] * 0.85, py = Math.sin(a) * R[i] * 0.85;
+      let w = 2.1 + vr() * 0.6;
+      const segs = 4 + Math.floor(vr() * 7), st = 4.5 + vr() * 2.5;
+      for (let k = 0; k < segs; k++) {
+        a += (vr() - 0.5) * 0.7;
+        const nx = px + Math.cos(a) * st, ny = py + Math.sin(a) * st, nw = Math.max(0.7, w * 0.86);
+        dend.push(px, py, nx, ny, w, nw, i, (1 - k / segs));
+        px = nx; py = ny; w = nw;
+      }
+    }
+  }
+  ND = dend.length / 8;
+  inView = new Uint8Array(N);
+  dffCur = new Float32Array(N); dffPrev = new Float32Array(N);
+  geoReady = true;
+  try { R2 = buildRenderer(); } catch (e) { console.warn('webgl2 unavailable or failed:', e.message); R2 = null; }
+  if (!R2) FB = buildFallback();
+  document.body.classList.add('live');
+  viewOK = layout();
+  postParams();
+  document.getElementById('rec').textContent = 'live · shy_' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '_fov03';
+}
+
+// ---------------------------------------------------------------- view
+let W = 0, H = 0, S = 1;
+let vw = 1, vh = 1;
+const CEN = [500, 470];
+let acqW = 8, acqH = 8, ACQ_UM = 1, qScale = 1;
+// the image only carries acquisition-grid detail (≤ ~1.7 Mpx), so big retina screens display at 0.8× device px: invisible, ~35% cheaper
+function devScale() { const d = Math.min(2, window.devicePixelRatio || 1); return d * (W * H * d * d > 4.5e6 ? 0.8 : 1) * qScale; }
+function computeView() {
+  W = Math.max(0, window.innerWidth | 0); H = Math.max(0, window.innerHeight | 0);
+  if (W < 1 || H < 1) return false;
+  S = Math.max(W, H) / 950;
+  CEN[1] = H > W * 1.15 ? 405 : 470;
+  vw = W / S; vh = H / S;
+  const ds = devScale();
+  const aw = W * ds * 0.72, ah = H * ds * 0.72;
+  const k = Math.min(1, 1800 / Math.max(aw, ah), Math.sqrt(1.7e6 / (aw * ah)));
+  acqW = Math.max(8, Math.round(aw * k)); acqH = Math.max(8, Math.round(ah * k));
+  ACQ_UM = vw / acqW;
+  for (let i = 0; i < N; i++) {
+    const [x, y] = toScreen(X[i], Y[i]);
+    inView[i] = (x > -10 && y > -10 && x < W + 10 && y < H + 10) ? 1 : 0;
+  }
+  return true;
+}
+function wrapd(d) { return ((d + L * 1.5) % L) - L / 2; }
+function toScreen(x, y) { return [W / 2 + wrapd(x - CEN[0]) * S, H / 2 + wrapd(y - CEN[1]) * S]; }
+function toWorld(px, py) { return [((CEN[0] + (px - W / 2) / S) % L + L) % L, ((CEN[1] + (py - H / 2) / S) % L + L) % L]; }
+const narrow = () => W <= 700;
+const isTall = () => H > W * 1.15;
+
+// ---------------------------------------------------------------- the field: cells, relation names, area names (DOM)
+const field = document.getElementById('field');
+const panel = document.getElementById('panel');
+let active = null, activeVia = '', activeT = 0, pinned = false;
+function roiPath(i, padUm) {
+  const c = Math.cos(TH[i]), s = Math.sin(TH[i]), sd = SEED[i], n = 22;
+  let d = '';
+  for (let k = 0; k < n; k++) {
+    const a = k / n * 6.2832 + sd * 0.7;
+    const rr = R[i] * (1 + 0.065 * Math.sin(2 * a + sd * 6.28) + 0.045 * Math.sin(3 * a + sd * 17) + 0.025 * Math.sin(5 * a + sd * 31)) + padUm;
+    const qx = rr * Math.cos(a) * ECC[i], qy = rr * Math.sin(a);
+    const vx = (c * qx - s * qy) * S, vy = (s * qx + c * qy) * S;
+    d += (k ? 'L' : 'M') + vx.toFixed(1) + ' ' + vy.toFixed(1);
+  }
+  return d + 'Z';
+}
+function buildPc(s) {
+  const el = document.createElement('div');
+  el.className = 'pc off';
+  el.innerHTML = '<svg class="ring" width="1" height="1" aria-hidden="true"><path class="h" d=""/><path class="c" d=""/></svg>' +
+    '<svg class="subr" width="1" height="1" aria-hidden="true"><circle cx="0" cy="0" r="10"/><circle class="fr" cx="0" cy="0" r="10"/></svg><span class="hit" aria-hidden="true"></span>';
+  s.el = el; s.hit = el.querySelector('.hit'); s.hit._slot = s;
+  el.addEventListener('pointerenter', e => { if (e.pointerType !== 'touch' && !DEMO) setActive(s, 'field'); });
+  el.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch' && !DEMO && active === s && !pinned) setActive(null); });
+  field.appendChild(el);
+  makeLab(s);
+}
+function makeLab(s) {
+  if (s.lab) { s.lab.remove(); s.lab = null; }
+  s.known = !quiet(s);
+  s.el.classList.toggle('unknown', !s.known);
+  if (!s.known || !cfg.projects[s.id]) return;
+  const p = s.p, lab = document.createElement(p.href ? 'a' : 'span');
+  lab.className = 'lab';
+  if (p.href) { lab.href = p.href; if (!/^mailto:/.test(p.href)) lab.rel = 'noopener'; }
+  else { lab.tabIndex = 0; lab.setAttribute('role', 'button'); lab.setAttribute('aria-label', p.name + ', unreleased — ' + (p.line || '') + '. press space to make it fire'); }
+  lab.innerHTML = '<i class="rid">roi ' + s.num + '</i><b>' + esc(p.name) + '</b>' + (p.href ? '<u aria-hidden="true">↗</u>' : '') +
+    '<em>' + (s.silent ? '← ' + esc(parentsOf(s)) : '') + '</em><small>' + esc(p.line || '') + (p.href ? '' : ' · unreleased') + '</small>';
+  lab.addEventListener('focus', () => setActive(s, 'focus'));
+  lab.addEventListener('blur', () => { if (active === s && activeVia === 'focus') setActive(null); });
+  // keyboard: Space keeps the focused cell talking (Enter still follows the link)
+  lab.addEventListener('keydown', e => { if (e.key === ' ' || (e.key === 'Enter' && !p.href)) { e.preventDefault(); pokeSlot(s, false, true); } });
+  s.el.appendChild(lab); s.lab = lab;
+  syncTn(s);
+}
+function syncTn(only) {
+  const on = document.body.classList.contains('touch') && !!cfg.text.touchNames;
+  for (const s of only ? [only] : SL) s.el.classList.toggle('tn', on && s.on && s.known);
+}
+SL.forEach(buildPc);
+
+function hdrBox() {
+  // the name, tagline and index row (never the open index list or the reward line: those overlay the field)
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  document.querySelectorAll('#hdr > h1, #hdr > .sub, #hdr > .row, #hdr > .contacts, #hdr > .rec').forEach(e => {
+    const b = e.getBoundingClientRect(); if (!b.width) return;
+    x0 = Math.min(x0, b.left); y0 = Math.min(y0, b.top); x1 = Math.max(x1, b.right); y1 = Math.max(y1, b.bottom);
+  });
+  if (x0 === Infinity) return [0, 0, 0, 0];
+  return [x0 - 12, y0 - 12, Math.max(x1, x0 + 200) + 16, y1 + 34];
+}
+function placeCells() {
+  const tall = isTall(), placed = [], used = new Set();
+  // restore every cell's own look, then dress the chosen ones
+  if (R0) { R.set(R0); F0.set(F00); TDT.set(TDT0); FILL.set(FILL0); }
+  SL.forEach(s => { s.on = !!cfg.projects[s.id]; s.cell = -1; });
+  const order = SL.filter(s => s.on && !s.silent).concat(SL.filter(s => s.on && s.silent));
+  const hb = hdrBox();
+  for (const s of order) {
+    let tx, ty;
+    const pos = tall ? s.p.tall : s.p.wide;
+    if (pos) { tx = pos[0] * W; ty = pos[1] * H; }
+    else if (s.silent) {
+      const A = SL[s.par[0]], B = SL[s.par[1]];
+      if (!A || !B || A.cell < 0 || B.cell < 0) { s.on = false; continue; }   // a silent cell with a hidden parent can't be heard
+      const dx = B.x - A.x, dy = B.y - A.y, side = (s.k & 1) ? 1 : -1;
+      tx = (A.x + B.x) / 2 - dy * 0.07 * side; ty = (A.y + B.y) / 2 + dx * 0.07 * side;
+    } else { tx = W / 2; ty = H / 2; }
+    tx = clamp(tx, 30, W - 30); ty = clamp(ty, 30, H - 30);
+    let best = -1, bd = Infinity, bx = 0, by = 0;
+    for (let i = 0; i < N; i++) {
+      if (!inView[i] || INH[i] || used.has(i) || Math.abs(Z[i]) > 4) continue;
+      const [x, y] = toScreen(X[i], Y[i]);
+      if (x < 22 || y < 22 || x > W - 22 || y > H - 22) continue;
+      if (x > hb[0] && x < hb[2] && y > hb[1] && y < hb[3]) continue;
+      const d = (x - tx) * (x - tx) + (y - ty) * (y - ty);
+      if (d >= bd) continue;
+      let clash = false;
+      for (const q of placed) if ((q.x - x) * (q.x - x) + (q.y - y) * (q.y - y) < 38 * 38) { clash = true; break; }
+      if (clash) continue;
+      bd = d; best = i; bx = x; by = y;
+    }
+    if (best < 0) { s.on = false; continue; }
+    used.add(best); placed.push(s);
+    s.cell = best; s.x = bx; s.y = by;
+    dressCell(s);
+  }
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  SL.forEach(s => {
+    if (!!s.lab !== (s.on && s.known && !!cfg.projects[s.id])) makeLab(s);
+    s.el.classList.toggle('off', !s.on);
+    if (!s.on) { s.el.classList.remove('act', 'near', 'fire', 'whisper', 'found', 'lat'); return; }
+    const paths = s.el.querySelectorAll('svg.ring path');
+    const d = roiPath(s.cell, 3.2); paths[0].setAttribute('d', d); paths[1].setAttribute('d', d);
+    s.el.querySelectorAll('svg.subr circle').forEach(c => c.setAttribute('r', (s.rp + 9).toFixed(1)));
+    const hd = Math.max(2 * s.rp + 14, coarse ? 44 : 30);
+    s.hit.style.width = s.hit.style.height = hd.toFixed(0) + 'px';
+    s.hit.style.left = s.hit.style.top = (-hd / 2).toFixed(0) + 'px';
+    s.el.style.setProperty('--off', (s.rp + 8).toFixed(0) + 'px');
+    s.el.style.transform = 'translate(' + s.x.toFixed(1) + 'px,' + s.y.toFixed(1) + 'px)';
+  });
+  placeLabels(hb); syncTn();
+  if (R2) R2.cells();
+  if (sim) sim.post({ t: 'rois', cells: Int32Array.from(SL.map(s => (s.on ? s.cell : -1))) });
+}
+// a project cell's anatomy: recency is drawn as resting brightness (hot = bright), a silent one is a big quiet pyramid
+function dressCell(s) {
+  const i = s.cell; if (i < 0 || !R0) return;
+  const h = heats()[s.k];
+  if (s.silent) R[i] = R0[i] * 1.26 + 0.4; else R[i] = Math.max(R0[i], 5.2 + 0.9 * h);
+  F0[i] = quiet(s) ? 0.36 : 0.32 + 0.62 * h;
+  TDT[i] = 0; FILL[i] = 0;
+  s.rp = Math.max(7, (R[i] * ECC[i] * 1.12 + 3.2) * S + 1);
+}
+// labels: each opens to the side (and height) where it collides with nothing — other names, somata, the header
+const ovl = (b, q) => Math.max(0, Math.min(b[2], q[2]) - Math.max(b[0], q[0])) * Math.max(0, Math.min(b[3], q[3]) - Math.max(b[1], q[1]));
+// when the whole map surfaces, a relation name that would sit on a cell, a name or the header stays dark
+function crowdRels() {
+  const hb = hdrBox(), lab = SL.filter(s => s.on && s.known && s.box).map(s => s.box), taken = [];
+  EDGES.filter(e => e.on && e.box && e.el).sort((a, b) => b.w - a.w).forEach(e => {
+    const b = e.box;
+    let hit = b[0] < 4 || b[2] > W - 4 || b[1] < 4 || b[3] > H - 4 || ovl(b, hb) > 0;
+    for (const q of lab) if (!hit && ovl(b, q) > 0) hit = true;
+    for (const q of taken) if (!hit && ovl([b[0] - 26, b[1] - 3, b[2] + 26, b[3] + 3], q) > 0) hit = true;   // two names never read as one phrase
+    for (const o of SL) if (!hit && o.on) { const x = clamp(o.x, b[0], b[2]), y = clamp(o.y, b[1], b[3]); if ((x - o.x) ** 2 + (y - o.y) ** 2 < (o.rp + 2) ** 2) hit = true; }
+    e.el.classList.toggle('crowd', hit);
+    if (!hit) taken.push(b);
+  });
+}
+function parentsOf(s) { return s.par.map(q => SL[q]).filter(Boolean).map(q => q.p.name).join(' + '); }
+function placeLabels(hb) {
+  const on = SL.filter(s => s.on);
+  const boxes = [hb];
+  const somata = on.map(s => [s.x, s.y, s.rp + 3]);
+  const rels = EDGES.filter(e => e.on && e.box).map(e => e.box);   // relation names: lighter cost, labels lean away from them
+  // cost of a label box: off-screen ≫ covering a soma > overlapping another name (by area); 0 = free
+  const bad = b => {
+    let c = 0;
+    c += 1e5 * (Math.max(0, 4 - b[0]) + Math.max(0, b[2] - W + 4) + Math.max(0, 4 - b[1]) + Math.max(0, b[3] - H + 4));
+    for (const q of boxes) c += ovl(b, q);
+    for (const q of rels) c += 0.5 * ovl(b, q);
+    for (const o of somata) { const x = clamp(o[0], b[0], b[2]), y = clamp(o[1], b[1], b[3]); if ((x - o[0]) ** 2 + (y - o[1]) ** 2 < o[2] * o[2]) c += 600; }
+    return c;
+  };
+  for (const s of on) {
+    const pref = s.x > W * (narrow() ? 0.55 : 0.64);
+    let side = pref, dy = 0;
+    if (!quiet(s)) {
+      const two = s.silent && s.found, fs = (narrow() ? 12.5 : 13) * REM;
+      const w = Math.max(s.p.name.length * fs * 0.6 + (s.p.href ? 30 : 18), two ? parentsOf(s).length * 6.3 * REM + 34 : 0), h = (two ? 36 : 22) * REM, off = s.rp + 8;
+      const d1 = 14 * REM, d2 = 28 * REM;
+      const tries = [[pref, 0], [pref, -d1], [pref, d1], [!pref, 0], [!pref, -d1], [!pref, d1], [pref, -d2], [pref, d2], [!pref, -d2], [!pref, d2]];
+      let pick = tries[0], best = Infinity;
+      for (const c of tries) {
+        const x0 = c[0] ? s.x - off - w : s.x + off, k = bad([x0, s.y + c[1] - h / 2, x0 + w, s.y + c[1] + h / 2]) + Math.abs(c[1]) * 0.5;
+        if (k < best) { best = k; pick = c; }
+        if (k < 1 + Math.abs(c[1])) break;
+      }
+      side = pick[0]; dy = pick[1];
+      const x0 = side ? s.x - off - w : s.x + off;
+      boxes.push([x0, s.y + dy - h / 2, x0 + w, s.y + dy + h / 2]);
+      s.box = boxes[boxes.length - 1];
+    } else s.box = null;
+    s.left = side;
+    s.el.classList.toggle('L', side);
+    s.el.style.setProperty('--dy', dy + 'px');
+    s.el.style.setProperty('--avail', Math.max(120 * REM, side ? s.x - s.rp - 18 : W - s.x - s.rp - 18).toFixed(0) + 'px');
+  }
+}
+
+// relations: an axon tract per edge (a gentle bezier between the two somata), drawn into the tissue
+let tractData = new Float32Array(0), tractN = 0;
+function buildTracts() {
+  const segs = [];
+  let gi = 0;
+  EDGES.forEach(e => {
+    const A = SL[e.a], B = SL[e.b];
+    e.on = A.on && B.on; e.gidx = -1;
+    if (!e.on) { e.box = null; if (e.el) e.el.classList.add('gone'); return; }
+    e.gidx = gi++;
+    if (gi > 40) { e.on = false; return; }
+    const ax = X[A.cell], ay = Y[A.cell];
+    const dx = wrapd(X[B.cell] - ax), dy = wrapd(Y[B.cell] - ay), ln = Math.hypot(dx, dy) || 1;
+    const nx = -dy / ln, ny = dx / ln, side = ((e.k * 7919) % 2) ? 1 : -1, bow = ln * (0.1 + 0.05 * ((e.k * 31) % 3)) * side;
+    const cxp = dx / 2 + nx * bow, cyp = dy / 2 + ny * bow;
+    const bez = (t) => { const u = 1 - t; return [2 * u * t * cxp + t * t * dx, 2 * u * t * cyp + t * t * dy]; };
+    const n = Math.max(8, Math.ceil(ln / 5));
+    const pts = [];
+    for (let j = 0; j <= n; j++) {
+      const t = j / n; const [px, py] = bez(t);
+      const wob = Math.sin(t * 6.2832 * (2 + e.k % 3) + e.k) * 1.6 * Math.sin(t * 3.1416);
+      pts.push([px + nx * wob, py + ny * wob]);
+    }
+    let tot = 0; const cum = [0];
+    for (let j = 1; j < pts.length; j++) { tot += Math.hypot(pts[j][0] - pts[j - 1][0], pts[j][1] - pts[j - 1][1]); cum.push(tot); }
+    const r0 = R[A.cell] + 1.5, r1 = tot - R[B.cell] - 1.5;
+    for (let j = 0; j < pts.length - 1; j++) {
+      if (cum[j + 1] < r0 || cum[j] > r1) continue;
+      segs.push(pts[j][0], pts[j][1], pts[j + 1][0], pts[j + 1][1], 1.9, e.gidx, cum[j] / tot, cum[j + 1] / tot, ax, ay, tot, (e.k * 0.37) % 1);
+    }
+    e.len = tot; e.delay = tot / Math.max(0.05, cfg.sim.axonSpeed) + 30;
+    // relation name sits beside the curve's midpoint, on its outer side
+    const [mx, my] = bez(0.5), [sx, sy] = toScreen(ax, ay);
+    if (!e.el) { e.el = document.createElement('span'); e.el.className = 'el'; e.el.setAttribute('aria-hidden', 'true'); e.el.textContent = e.label; field.appendChild(e.el); }
+    e.el.classList.remove('gone');
+    // (flips to the inner side if the outer one would run off the screen; hidden if neither fits)
+    const bw = e.label.length * 6.5 * REM + 4, cx0 = sx + mx * S, cy0 = sy + my * S;
+    const at = sd => { const ox = cx0 + nx * sd * 12, oy = cy0 + ny * sd * 12, bx = nx * sd >= 0 ? ox : ox - bw; return { ox, oy, sd, b: [bx, oy - 8 * REM, bx + bw, oy + 8 * REM] }; };
+    const fits = o => o.b[0] >= 4 && o.b[2] <= W - 4 && o.b[1] >= 4 && o.b[3] <= H - 4;
+    let o = at(side); if (!fits(o) && fits(at(-side))) o = at(-side);
+    e.el.style.transform = 'translate(' + o.ox.toFixed(0) + 'px,' + o.oy.toFixed(0) + 'px) translate(' + (nx * o.sd >= 0 ? '0' : '-100%') + ',-50%)';
+    e.el.style.display = e.label && fits(o) ? '' : 'none';
+    e.box = e.label && fits(o) ? o.b : null;
+    e.el.classList.toggle('k', SL[e.a].known && SL[e.b].known);
+  });
+  tractData = Float32Array.from(segs); tractN = segs.length / 12;
+  if (R2) R2.tracts();
+  if (FB) FB.dirty = true;
+}
+function delays() { EDGES.forEach(e => { e.delay = e.len / Math.max(0.05, cfg.sim.axonSpeed) + 30; }); }
+
+// area names: each sits in the emptiest part of its own territory (a cortical map, not a legend)
+const anEls = {};
+function areaOf(x, y) {
+  let d1 = Infinity, a1 = -1;
+  for (const s of SL) { if (!s.on) continue; const d = (s.x - x) ** 2 + (s.y - y) ** 2; if (d < d1) { d1 = d; a1 = AREA_IX[s.p.area]; } }
+  return a1;
+}
+function placeAreaNames() {
+  const hb = hdrBox();
+  const taken = [];
+  AREAS.forEach((A, k) => {
+    let el = anEls[A.id];
+    if (!el) { el = anEls[A.id] = document.createElement('span'); el.className = 'an'; el.setAttribute('aria-hidden', 'true'); el.textContent = A.name; field.appendChild(el); }
+    const mem = SL.filter(s => s.on && AREA_IX[s.p.area] === k);
+    if (!mem.length) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    const cxm = mem.reduce((a, s) => a + s.x, 0) / mem.length, cym = mem.reduce((a, s) => a + s.y, 0) / mem.length;
+    const tw = A.name.length * 9.2 * REM + 8;
+    let best = null, bs = -Infinity;
+    const st = Math.max(14, Math.round(Math.min(W, H) / 40));
+    for (let y = 24; y < H - 18; y += st) for (let x = 18; x < W - tw - 12; x += st) {
+      const mx = x + tw / 2;
+      if (areaOf(mx, y) !== k) continue;
+      if (x + tw > hb[0] && x < hb[2] && y + 10 > hb[1] && y - 10 < hb[3]) continue;
+      let dn = Infinity;
+      for (const s of SL) {
+        if (!s.on) continue;
+        // keep clear of the soma and of where its label would open
+        const lw = s.p.name.length * 8 * REM + 40, lx0 = s.left ? s.x - lw : s.x - 22, lx1 = s.left ? s.x + 22 : s.x + lw;
+        const ly = s.y + (parseFloat(s.el.style.getPropertyValue('--dy')) || 0);
+        const ddx = mx < lx0 - tw / 2 ? lx0 - tw / 2 - mx : mx > lx1 + tw / 2 ? mx - lx1 - tw / 2 : 0, ddy = Math.abs(y - ly);
+        dn = Math.min(dn, Math.hypot(ddx, ddy * 1.6));
+      }
+      for (const t of taken) dn = Math.min(dn, Math.hypot(mx - t[0], y - t[1]) * 0.5);
+      if (y > H - 64 && x < 420) dn -= 60;   // the hint lives bottom-left
+      // as near its area's heart as it can sit without crowding a cell or where its name opens
+      const sc = Math.min(dn, 46) - (dn < 30 ? 300 : 0) - Math.hypot(mx - cxm, y - cym) * 0.55;
+      if (sc > bs) { bs = sc; best = [x, y]; }
+    }
+    if (!best) { el.style.display = 'none'; return; }
+    taken.push([best[0] + tw / 2, best[1]]);
+    el.style.transform = 'translate(' + best[0].toFixed(0) + 'px,' + (best[1] - 7).toFixed(0) + 'px)';
+  });
+}
+
+// ---------------------------------------------------------------- the index, tally, reward
+const ixEl = document.getElementById('ix'), ixb = document.getElementById('ixb'), tallyEl = document.getElementById('tally'), rewardEl = document.getElementById('reward');
+const fmtDate = d => (d ? d.replace(/-/g, '.') : '');
+let ixDirty = false;
+function buildIndex(force) {
+  if (!force && !ixEl.hidden && (ixEl.matches(':hover') || ixEl.contains(document.activeElement))) { ixDirty = true; return; }
+  ixDirty = false;
+  const fr = document.activeElement && document.activeElement.closest ? document.activeElement.closest('#ix .ir') : null, fk = fr ? fr.dataset.k : null;
+  let h = '';
+  AREAS.forEach((A, k) => {
+    const mem = SL.filter(s => (geoReady ? s.on : !!cfg.projects[s.id]) && !quiet(s) && AREA_IX[s.p.area] === k)
+      .sort((a, b) => (b.p.last || '').localeCompare(a.p.last || ''));
+    if (!mem.length) return;
+    h += '<h2>' + esc(A.name) + '</h2>';
+    for (const s of mem) {
+      const p = s.p;
+      if (p.href) h += '<a class="ir" data-k="' + s.k + '" href="' + esc(p.href) + '"' + (/^mailto:/.test(p.href) ? '' : ' rel="noopener"') + '><b>' + esc(p.name) + '</b><span>' + fmtDate(p.last) + '</span></a>';
+      else h += '<div class="ir u" data-k="' + s.k + '"><b>' + esc(p.name) + '</b><span>unreleased</span></div>';
+    }
+  });
+  const sil = SL.filter(s => s.on && s.silent);
+  h += '<div class="sil">brighter cells = worked on more recently<br>wired cells share an idea · names are links</div>';
+  if (foundOrder.length && sil.length) h += '<div class="sil">silent cells · ' + sil.filter(s => s.found).length + ' of ' + sil.length + ' heard</div>';
+  ixEl.innerHTML = h;
+  ixEl.querySelectorAll('.ir').forEach(r => {
+    const s = SL[+r.dataset.k];
+    r.addEventListener('pointerenter', () => setActive(s, 'idx'));
+    r.addEventListener('pointerleave', () => { if (active === s && activeVia === 'idx') setActive(null); });
+    r.addEventListener('focus', () => setActive(s, 'idx'));
+    r.addEventListener('blur', () => { if (active === s && activeVia === 'idx') setActive(null); });
+  });
+  if (fk !== null) { const r = ixEl.querySelector('.ir[data-k="' + fk + '"]'); if (r) r.focus({ preventScroll: true }); }
+  const ct = document.getElementById('contacts');
+  ct.innerHTML = ['github', 'email', 'substack'].filter(id => SLID[id]).map(id => { const p = SLID[id].p; return '<a href="' + esc(p.href) + '"' + (/^mailto:/.test(p.href) ? '' : ' rel="noopener"') + '>' + esc(p.name) + '</a>'; }).join('');
+}
+function setIndex(open) {
+  if (open && pinned) setActive(null);
+  ixEl.hidden = !open; ixb.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (ixDirty) buildIndex(true);
+  document.body.classList.toggle('ixopen', open);
+  sizeScrim();
+}
+ixb.addEventListener('click', () => setIndex(ixEl.hidden));
+ixEl.addEventListener('pointerleave', () => { if (ixDirty) buildIndex(); });
+ixEl.addEventListener('focusout', e => { if (ixDirty && !ixEl.contains(e.relatedTarget)) setTimeout(() => { if (ixDirty) buildIndex(); }, 0); });
+function updateTally() {
+  const sil = SL.filter(s => s.on && s.silent);
+  const n = sil.filter(s => s.found).length;
+  tallyEl.hidden = !(foundOrder.length && sil.length);
+  tallyEl.textContent = sil.map(s => (s.found ? '●' : '○')).join('');
+  tallyEl.setAttribute('aria-label', n + ' of ' + sil.length + ' silent cells found' + (n === sil.length ? ' — replay' : ''));
+  tallyEl.classList.toggle('done', n === sil.length && n > 0);
+  tallyEl.title = n === sil.length ? 'replay' : n + ' / ' + sil.length;
+  if (rewardDone) showRewardLine(false);
+}
+tallyEl.addEventListener('click', () => { if (tallyEl.classList.contains('done')) startReplay(); });
+function showRewardLine(fresh) {
+  rewardEl.innerHTML = esc(REWARD.line || '') + (REWARD.link && REWARD.link.href ? ' <a href="' + esc(REWARD.link.href) + '">' + esc(REWARD.link.text || '→') + '</a>' : '');
+  rewardEl.hidden = false;
+  if (fresh) requestAnimationFrame(() => rewardEl.classList.add('on')); else rewardEl.classList.add('on');
+  sizeScrim();
+}
+
+// ---------------------------------------------------------------- activity → page (events from the sim)
+const timed = new Set();   // elements with classes that expire on the display clock
+function flash(el, cls, dur) { if (!el) return; el.classList.add(cls); el._exp = el._exp || {}; el._exp[cls] = Math.max(el._exp[cls] || 0, nowSec + dur); timed.add(el); }
+function expire() {
+  for (const el of timed) {
+    let any = false;
+    for (const c in el._exp) { if (nowSec >= el._exp[c]) { el.classList.remove(c); delete el._exp[c]; } else any = true; }
+    if (!any) timed.delete(el);
+  }
+}
+function edgeOf(a, b) { return EDGES.find(e => e.on && ((e.a === a && e.b === b) || (e.a === b && e.b === a))); }
+// relation names: only on the edges the visitor's own pulse is travelling, and never more than two at once
+const relOn = [];
+function showRel(e, dur) {
+  if (!e || !e.el || !e.label) return;
+  const k = relOn.indexOf(e); if (k >= 0) relOn.splice(k, 1);
+  relOn.push(e);
+  while (relOn.length > 2) { const o = relOn.shift(); o.el.classList.remove('on'); if (o.el._exp) delete o.el._exp.on; }
+  flash(e.el, 'on', dur);
+}
+function onPev(ev) {
+  const type = ev[0], s = SL[ev[1]], t = ev[2], amp = ev[3], cause = ev[4], from = ev[5];
+  if (!s || !s.on) return;
+  if (type === 1 && (cause === 1 || cause === 4)) s.evokedT = nowSec;
+  if (DBG && type === 1 && (cause === 1 || cause === 4)) console.log('burst', s.id, 'cause', cause, 'sim', t);
+  if (type === 1) {           // a burst: pulses leave down every relation
+    const mine = [];
+    for (const e of EDGES) {
+      if (!e.on || (e.a !== s.k && e.b !== s.k)) continue;
+      const dir = e.a === s.k ? 1 : -1;
+      for (let k = pulses.length - 1; k >= 0; k--) if (pulses[k].e === e && pulses[k].dir === dir) pulses.splice(k, 1);
+      pulses.push({ e, dir, t0: t, dur: e.delay, amp: Math.min(1, amp) });
+      const other = SL[e.a === s.k ? e.b : e.a];
+      if (cause === 1 && other.known && e.label) mine.push(e);
+    }
+    // the visitor's poke names (at most) the two strongest relations it travels
+    mine.sort((a, b) => b.w - a.w).slice(0, 2).forEach(e => showRel(e, e.delay / 1000 + 1.3));
+    if (cause === 0) { if (!inEvent) flash(s.el, 'whisper', 1.7); }
+    else flash(s.el, 'fire', cause === 4 ? 0.9 : cause === 1 ? 1.4 : 2.2);
+    if (active === s && cfg.instrument.cellPanel) drawPanel();
+  } else if (type === 2) {    // a pulse arrived but didn't fire the cell: a silent cell's dendrites flicker
+    if (quiet(s) && amp >= 0.5) {
+      s.el.classList.remove('sub', 'sub2'); void s.el.offsetWidth;
+      s.el.classList.add(s._alt ? 'sub2' : 'sub'); s._alt = !s._alt;
+      // a near miss the visitor caused: after a few with nothing found, one quiet clue (once per visit)
+      if (from >= 0 && SL[from].evokedT > nowSec - 3 && !foundOrder.length) {
+        nearMisses++; missedCells.add(s.k);
+        if (nearMisses >= 4 && nowSec > 8 && !clueShown && cfg.text.hint) { clueShown = true; showClue(11); }
+      }
+    }
+  } else if (type === 4) {    // the right pair met once: the silent soma flickers, and its ring answers in the accent
+    if (quiet(s)) {
+      if (DBG) console.log('stir', s.id, 'at', nowSec.toFixed(2), 'sim', t);
+      s.el.classList.remove('sub', 'sub2', 'stir'); void s.el.offsetWidth; flash(s.el, 'stir', 2.2);
+      if (!foundOrder.length) { nearMisses += 2; missedCells.add(s.k); if (nearMisses >= 4 && nowSec > 8 && !clueShown && cfg.text.hint) { clueShown = true; showClue(11); } }
+    }
+  } else if (type === 3) onFound(s, from);
+}
+const liveEl = document.getElementById('live');
+function say(t) { if (liveEl) { liveEl.textContent = ''; setTimeout(() => { liveEl.textContent = t; }, 60); } }
+function showClue(dur) { flash(document.body, 'clue', dur); say(document.querySelector('#hint .clue').textContent); }
+function onFound(s, from) {
+  if (s.found) return;
+  s.found = true; foundOrder.push(s.id); saveFound();
+  makeLab(s); dressCell(s);
+  if (R2) R2.cells(); if (FB) FB.dirty = true;
+  placeLabels(hdrBox()); crowdRels();
+  flash(s.el, 'found', 7); flash(document.body, 'finding', 7);
+  say('a silent cell woke: ' + s.p.name + ', from ' + parentsOf(s) + '. ' + (s.p.line || '') + ', unreleased.');
+  EDGES.forEach(e => { if (e.el && e.on) e.el.classList.toggle('k', SL[e.a].known && SL[e.b].known); });
+  // name the two wires that just met
+  s.par.forEach(q => showRel(edgeOf(q, s.k), 4));
+  // the first find explains itself (once): this is how the rest are heard
+  if (foundOrder.length === 1 && cfg.text.hint) { clueShown = true; flash(document.body, 'clue', 10); }
+  s.el.classList.remove('stir', 'sub', 'sub2');
+  buildIndex(); updateTally(); postRates();
+  const sil = SL.filter(q => q.on && q.silent);
+  if (DBG) console.log('found', s.id, 'at', nowSec.toFixed(2), sil.map(q => q.id + (q.found ? '+' : '-')).join(' '), 'rewardDone', rewardDone);
+  if (sil.length && sil.every(q => q.found) && !rewardDone) { rewardDone = true; saveFound(); rewardAt = nowSec + 3.2; }
+}
+let rewardAt = -1, replayQ = [], nearMisses = 0, clueShown = false;
+const missedCells = new Set();
+function startReplay() {
+  // replay: the network re-runs the order you found them in (hippocampal-style), and the whole map surfaces
+  const seq = foundOrder.map(id => SLID[id]).filter(s => s && s.on);
+  replayQ = seq.map((s, k) => [nowSec + 0.6 + k * 1.05, s]);
+  flash(document.body, 'map', 0.6 + seq.length * 1.05 + 6);
+  sizeScrim();
+}
+
+// ---------------------------------------------------------------- hover, focus, touch
+function setActive(s, via) {
+  if (active && active !== s) { active.el.classList.remove('act'); const r = ixEl.querySelector('.ir.act'); if (r) r.classList.remove('act'); }
+  const was = active, wasVia = activeVia;
+  active = s && s.on ? s : null; activeVia = active ? via || '' : '';
+  if (active !== was || activeVia !== wasVia) activeT = nowSec;
+  if (!active) pinned = false;
+  if (active) {
+    active.el.classList.add('act');
+    const r = ixEl.querySelector('.ir[data-k="' + active.k + '"]'); if (r) r.classList.add('act');
+    interacted();
+    if (cfg.instrument.cellPanel && active.known) {
+      document.getElementById('pname').textContent = 'roi ' + active.num + ' · ' + active.p.name;
+      document.getElementById('purl').textContent = active.p.href ? active.p.href.replace(/^(https?:\/\/|mailto:)/, '') : 'unreleased';
+      panel.classList.add('on'); sizeTrace(); positionPanel(active); drawPanel();
+    } else panel.classList.remove('on');
+  } else panel.classList.remove('on');
+}
+function positionPanel(r) {
+  if (narrow()) { panel.style.transform = ''; return; }
+  const pw = panel.offsetWidth || 264, ph = panel.offsetHeight || 120;
+  let x = r.left ? r.x - r.rp - 30 - pw - 200 : r.x + r.rp + 30 + 200, y = r.y - ph / 2;
+  if (x < 12 || x + pw > W - 12) { x = clamp(r.x - pw / 2, 12, W - pw - 12); y = r.y + r.rp + 34; if (y + ph > H - 12) y = r.y - r.rp - 34 - ph; }
+  panel.style.transform = 'translate(' + clamp(x, 12, W - pw - 12).toFixed(0) + 'px,' + clamp(y, 12, H - ph - 12).toFixed(0) + 'px)';
+}
+let interactions = 0, hintT = 0;
+function interacted() { if (++interactions >= 3) document.body.classList.add('hinted'); }
+// voices: the hovered / focused cell, plus up to two the visitor clicked to keep talking. At most two speak.
+let latched = [];   // [{ s, until }], newest first
+function latch(s) {
+  if (!s || !s.on || quiet(s)) return;
+  latched = latched.filter(l => l.s !== s);
+  latched.unshift({ s, until: nowSec + cfg.sim.latch });
+  while (latched.length > 2) latched.pop().s.el.classList.remove('lat');
+}
+// a hovered / focused cell speaks only after a beat of attention (a pointer passing by, or Tab held down, says nothing);
+// a click, tap or Space speaks at once. Index rows and touch only point at their cell.
+const DWELL = { field: 0.35, focus: 0.45 };
+function voices() {
+  const v = [];
+  if (active && active.on && !quiet(active) && activeVia in DWELL && nowSec - activeT >= DWELL[activeVia]) v.push(active.k);
+  for (const l of latched) if (v.length < 2 && !v.includes(l.s.k)) v.push(l.s.k);
+  return v;
+}
+function tickVoices() {
+  for (let k = latched.length - 1; k >= 0; k--) if (nowSec >= latched[k].until || !latched[k].s.on) latched.splice(k, 1)[0].s.el.classList.remove('lat');
+  const v = voices();
+  for (const s of SL) { const on = v.includes(s.k) && latched.some(l => l.s === s); if (on !== !!s._lat) { s._lat = on; s.el.classList.toggle('lat', on); } }
+  return v;
+}
+function pokeSlot(s, touch, kb) {
+  if (!s || !s.on) return;
+  pokeQ.push(s.k);
+  stimVis.x = s.x; stimVis.y = s.y; stimVis.t = nowSec; stimVis.rad = 22; stimVis.frame = -99;
+  latch(s);
+  if (touch) { setActive(s, 'touch'); pinned = true; }
+  interacted();
+}
+let ptr = null, ptrMoved = false;
+window.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') { ptr = [e.clientX, e.clientY]; ptrMoved = true; } }, { passive: true });
+window.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'touch' && !document.body.classList.contains('touch')) { document.body.classList.add('touch'); syncTn(); }
+  if (DEMO) return;
+  if (e.button !== undefined && e.button !== 0) return;
+  const t = e.target;
+  const hit = t.closest && t.closest('.hit');
+  if (hit && hit._slot) { pokeSlot(hit._slot, e.pointerType !== 'mouse'); return; }
+  if (t.closest && t.closest('a,button,input,select,label,summary,#tune,#ix,.lab')) return;
+  if (pinned) setActive(null);
+  stimAt(e.clientX, e.clientY, nowSec);
+  interacted();
+}, { passive: true });
+function nearUpdate() {
+  if (!ptrMoved || !ptr) return; ptrMoved = false;
+  for (const s of SL) {
+    const nr = s.on && s.known && (s.x - ptr[0]) ** 2 + (s.y - ptr[1]) ** 2 < 85 * 85;
+    if (nr !== s.near) { s.near = nr; s.el.classList.toggle('near', nr); }
+  }
+}
+
+// ---------------------------------------------------------------- 2D instrument canvases (off unless asked for)
+const popC = document.getElementById('pop'), popX = popC.getContext('2d');
+const trC = document.getElementById('ptrace'), trX = trC.getContext('2d');
+const DPR2 = () => Math.min(2, window.devicePixelRatio || 1);
+const popD = DPR2(); popC.width = Math.round(240 * popD); popC.height = Math.round(46 * popD);
+let trD = DPR2();
+function sizeTrace() {
+  trD = DPR2();
+  const w = Math.max(120, trC.clientWidth || 242);
+  const tw = Math.round(w * trD), th = Math.round(70 * trD);
+  if (trC.width !== tw || trC.height !== th) { trC.width = tw; trC.height = th; }
+}
+function drawPop() {
+  const w = popC.width, h = popC.height, ctx = popX;
+  ctx.clearRect(0, 0, w, h);
+  const comp = v => 1 - Math.exp(-v / 0.7);
+  ctx.strokeStyle = 'rgba(' + cssRGB(cfg.colors.ink) + ',0.14)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, h - 0.5); ctx.lineTo(w, h - 0.5); ctx.stroke();
+  ctx.strokeStyle = cfg.colors.accent; ctx.lineWidth = 1.2 * popD; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  const n = popFill;
+  for (let k = 0; k < n; k++) {
+    const v = popHist[(popPtr - n + k + POPH) % POPH];
+    const x = w - (n - 1 - k) / (POPH - 1) * w, y = h - 2 - comp(v) * (h - 6);
+    k ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.stroke();
+  document.getElementById('evts').textContent = events + (events === 1 ? ' event' : ' events');
+  document.getElementById('homeo').textContent = 'ν ' + rateNow.toFixed(2) + ' Hz · synaptic scaling ×' + gENow.toFixed(2);
+}
+function drawPanel() {
+  const r = active; if (!r) return;
+  const w = trC.width, h = trC.height, ctx = trX, d = trD;
+  ctx.clearRect(0, 0, w, h);
+  let mx = 1.0; for (let k = 0; k < HIST; k++) mx = Math.max(mx, r.hist[k]);
+  const y0 = h - 9 * d, sc = (h - 17 * d) / mx;
+  ctx.strokeStyle = 'rgba(' + cssRGB(cfg.colors.ink) + ',0.45)'; ctx.lineWidth = d;
+  const xs = w - 2 * d, onesec = Math.min(w / 10, 24 * d);
+  ctx.beginPath(); ctx.moveTo(xs - onesec, h - 1.5 * d); ctx.lineTo(xs, h - 1.5 * d); ctx.lineTo(xs, h - 1.5 * d - 0.5 * sc); ctx.stroke();
+  const ww = w - onesec - 10 * d;
+  ctx.fillStyle = cfg.colors.stim;
+  for (let k = 0; k < HIST; k++) if (r.holo[(r.ptr + k) % HIST]) {
+    const x = k / (HIST - 1) * ww;
+    ctx.beginPath(); ctx.moveTo(x, y0 + 2 * d); ctx.lineTo(x - 3 * d, y0 + 7 * d); ctx.lineTo(x + 3 * d, y0 + 7 * d); ctx.fill();
+  }
+  ctx.strokeStyle = cfg.colors.accent; ctx.lineWidth = 1.3 * d; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  const n = r.fill;
+  for (let k = HIST - n; k < HIST; k++) {
+    const v = r.hist[(r.ptr + k) % HIST];
+    const x = k / (HIST - 1) * ww, y = y0 - v * sc;
+    k > HIST - n ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.stroke();
+  document.getElementById('pval').textContent = 'ΔF/F ' + r.hist[(r.ptr + HIST - 1) % HIST].toFixed(2);
+}
+
+// ---------------------------------------------------------------- HUD text
+const elClock = document.getElementById('clock'), elAcq = document.getElementById('acq'), elBar = document.getElementById('bar');
+const elStim = document.getElementById('stimlog');
+function pad(n, k) { return String(n).padStart(k, '0'); }
+function updateClock() {
+  const f = FRAME0 + frameNo, t = f / 30;
+  const hh = Math.floor(t / 3600), mm = Math.floor(t / 60) % 60, ss = t % 60;
+  elClock.textContent = 'frame ' + pad(f, 6) + ' · t ' + pad(hh, 2) + ':' + pad(mm, 2) + ':' + (ss < 10 ? '0' : '') + ss.toFixed(2);
+}
+function sizeScrim() {
+  const b = document.getElementById('hdr').getBoundingClientRect();
+  const de = document.documentElement.style;
+  de.setProperty('--hdrH', Math.round(b.bottom + 70) + 'px');
+  de.setProperty('--hdrW', Math.round(Math.min(window.innerWidth, Math.max(420, b.right + 150))) + 'px');
+  de.setProperty('--ixTop', Math.round(ixEl.hidden ? 200 : ixEl.getBoundingClientRect().top) + 'px');
+}
+function updateStatic() {
+  if (FB && !R2) elAcq.textContent = 'widefield fallback · no float targets';
+  else elAcq.textContent = acqW + ' × ' + acqH + ' px · ' + ACQ_UM.toFixed(2) + ' µm/px' + (RM ? ' · avg ×16' : ' · 25× 1.05 na');
+  elBar.style.width = (100 * S).toFixed(1) + 'px';
+  if (matchMedia('(hover: none)').matches) document.body.classList.add('touch');
+  syncTn();
+  sizeScrim();
+}
+let stimLogT = 0;
+function logStim(wx, wy) {
+  elStim.textContent = 'stim 470 nm · 25 ms · ø 110 µm @ ' + Math.round(wx) + ', ' + Math.round(wy) + ' µm';
+  elStim.classList.add('on'); stimLogT = nowSec;
+}
+
+// ---------------------------------------------------------------- colours
+function hexRGB(h) { const n = parseInt(String(h).replace('#', '').padEnd(6, '0').slice(0, 6), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; }
+function cssRGB(h) { return hexRGB(h).map(v => Math.round(v * 255)).join(', '); }
+function applyColors() {
+  const c = cfg.colors, st = document.documentElement.style;
+  st.setProperty('--bg', c.bg); st.setProperty('--bg-rgb', cssRGB(c.bg));
+  st.setProperty('--ink', c.ink); st.setProperty('--ink-rgb', cssRGB(c.ink));
+  st.setProperty('--acc', c.accent); st.setProperty('--acc-rgb', cssRGB(c.accent));
+  st.setProperty('--stim', c.stim); st.setProperty('--inh', c.inh);
+  const m = document.querySelector('meta[name=theme-color]'); if (m) m.setAttribute('content', c.bg);
+  // the shader adds light: on a dark ground it gets the visible colours; in paper mode it subtracts (ground − visible)
+  const bg = hexRGB(c.bg), inv = !!cfg.invert;
+  const v = k => { const x = hexRGB(c[k]); return inv ? [bg[0] - x[0], bg[1] - x[1], bg[2] - x[2]] : x; };
+  GLC.bg = bg; GLC.inv = inv ? 1 : 0;
+  GLC.c1 = v('dim'); GLC.c2 = v('bright'); GLC.c3 = v('peak'); GLC.cm = v('inh'); GLC.cs = v('stim'); GLC.cb = v('ink'); GLC.ca = v('accent');
+  areaTones();
+  if (FB) FB.dirty = true;
+}
+function areaTones() {
+  // an area's tone: brightness × a lean toward one palette colour's hue (luminance-normalised), scaled by image.areas
+  const amt = cfg.image.areas;
+  for (let k = 0; k < 4; k++) {
+    const A = AREAS[Math.min(k, AREAS.length - 1)] || {};
+    const tone = 1 + ((A.tone == null ? 1 : A.tone) - 1) * amt;
+    let hv = [1, 1, 1];
+    if (A.tint && cfg.colors[A.tint]) {
+      const c = hexRGB(cfg.colors[A.tint]), l = Math.max(0.05, 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]);
+      const m = Math.min(0.22 * amt, 0.9);
+      hv = c.map(x => 1 + (Math.min(x / l, 3) - 1) * m);
+    }
+    GLC.at.set(hv.map(x => Math.max(0, x * tone)), k * 3);
+  }
+}
+const GLC = { bg: [0, 0, 0], inv: 0, c1: [0, 0, 0], c2: [0, 0, 0], c3: [0, 0, 0], cm: [0, 0, 0], cs: [0, 0, 0], cb: [1, 1, 1], ca: [1, 0.7, 0.2], at: new Float32Array(12).fill(1) };
+
+// ---------------------------------------------------------------- WebGL2 scope
+if (DEMO) document.body.classList.add('demo');
+if (SEEK) document.body.classList.add('still');
+const glC = document.getElementById('gl'), fbC = document.getElementById('fb');
+let glHooked = false;
+function initGL() {
+  if (FORCE_FB) return null;
+  let g;
+  try { g = glC.getContext('webgl2', { antialias: false, alpha: false, depth: false, stencil: false, premultipliedAlpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: BENCH }); } catch (e) { g = null; }
+  if (!g || g.isContextLost()) return null;
+  if (!g.getExtension('EXT_color_buffer_float') && !g.getExtension('EXT_color_buffer_half_float')) return null;
+  if (!glHooked) {
+    glHooked = true;
+    glC.addEventListener('webglcontextlost', ev => { ev.preventDefault(); R2 = null; FB = buildFallback(); viewOK = false; });
+    glC.addEventListener('webglcontextrestored', () => {
+      try { R2 = buildRenderer(); } catch (e) { R2 = null; }
+      if (R2) { document.body.classList.remove('nogl'); FB = null; viewOK = false; }
+    });
+  }
+  const VS_FULL = `#version 300 es
+  void main(){ vec2 v = vec2(float((gl_VertexID<<1)&2), float(gl_VertexID&2)); gl_Position = vec4(v*2.-1.,0.,1.); }`;
+  const NOISE = `
+  float h21(vec2 p){ p = fract(p*vec2(233.34, 851.73)); p += dot(p, p+23.45); return fract(p.x*p.y); }
+  float h31(vec3 p){ p = fract(p*vec3(.1031,.1030,.0973)); p += dot(p, p.yzx+33.33); return fract((p.x+p.y)*p.z); }
+  float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3.-2.*f);
+    return mix(mix(h21(i), h21(i+vec2(1,0)), f.x), mix(h21(i+vec2(0,1)), h21(i+vec2(1,1)), f.x), f.y); }`;
+  const VIEW = `
+  uniform vec2 u_cen; uniform vec2 u_view; uniform float u_L; uniform float u_zf;
+  vec2 wrapd(vec2 d){ return mod(d + .5*u_L, u_L) - .5*u_L; }
+  vec4 toClip(vec2 d){ vec2 uv = d/u_view + .5; return vec4(uv.x*2.-1., 1.-uv.y*2., 0., 1.); }`;
+  const SCAN = `uniform float u_scan; uniform float u_tH;
+  float pickDff(vec2 d){ return (1. - gl_FragCoord.y/u_tH) < u_scan ? d.x : d.y; }`;
+
+  const VS_SOMA = `#version 300 es
+  precision highp float; precision highp int;
+  layout(location=0) in vec2 a_c; layout(location=1) in vec3 a_pos; layout(location=2) in vec4 a_shape; layout(location=3) in vec4 a_lab;
+  uniform sampler2D u_state; ${VIEW}
+  uniform float u_spl; uniform sampler2D u_spark;
+  out vec2 v_p; flat out vec4 v_shape; flat out vec4 v_lab; flat out vec4 v_opt; flat out vec3 v_dff; flat out float v_spk;
+  void main(){
+    vec2 d = wrapd(a_pos.xy - u_cen);
+    float dz = abs(a_pos.z - u_zf);
+    float blur = .55 + dz*.2;
+    float att = 1./(1. + dz*dz/110.);
+    float ext = u_spl > 0. ? 90. : a_shape.x*a_shape.y*1.25 + blur*2.6 + 1.;
+    int idx = int(a_lab.w + .5);
+    vec4 st = texelFetch(u_state, ivec2(idx & 63, idx >> 6), 0);
+    if (u_spl > 0. && max(st.x, st.y) < .04) ext = 0.;   // the neuropil glow only needs cells that are actually lit
+    v_p = a_c*ext;
+    gl_Position = toClip(d + v_p);
+    v_shape = a_shape; v_lab = a_lab; v_opt = vec4(blur, att, 0., 0.); v_dff = st.xyz;
+    v_spk = texelFetch(u_spark, ivec2(idx & 63, idx >> 6), 0).r;
+  }`;
+  const FS_SOMA = `#version 300 es
+  precision highp float;
+  in vec2 v_p; flat in vec4 v_shape; flat in vec4 v_lab; flat in vec4 v_opt; flat in vec3 v_dff; flat in float v_spk;
+  uniform float u_gc; uniform float u_gs;
+  ${SCAN}
+  out vec4 o;
+  void main(){
+    float Rr = v_shape.x, ecc = v_shape.y, th = v_shape.z, sd = v_shape.w;
+    float c = cos(th), s = sin(th);
+    vec2 q = mat2(c, -s, s, c)*v_p; q.x /= ecc;
+    float a = atan(q.y, q.x);
+    float rr = Rr*(1. + .065*sin(2.*a + sd*6.28) + .045*sin(3.*a + sd*17.) + .025*sin(5.*a + sd*31.));
+    float blur = v_opt.x, att = v_opt.y;
+    float dd = length(q) - rr;
+    float body = 1. - smoothstep(-blur, blur, dd);
+    vec2 no = vec2(cos(sd*40.), sin(sd*40.))*Rr*.13;
+    float dn = length(q - no) - Rr*.6;
+    float nuc = 1. - smoothstep(-blur*1.2, blur*1.2, dn);
+    float dff = pickDff(v_dff.xy) + .9*v_dff.z;
+    float filled = v_lab.z;
+    float excl = mix(.88 - .25*clamp(dff/6., 0., 1.), .12, filled);
+    float rim = exp(-dd*dd/(2.*max(blur*blur, .8)))*.25;
+    float sh = v_lab.x*(body*(1. - excl*nuc) + rim*body)*att;
+    float g = sh*(1. + dff);
+    float r = v_lab.y*body*(1. - .2*nuc)*att*.85;
+    o = vec4(g, r, sh*(u_gc*max(dff, 0.) + u_gs*(1. + dff)*v_spk), 1.);
+  }`;
+  const FS_SPLAT = `#version 300 es
+  precision highp float;
+  in vec2 v_p; flat in vec4 v_shape; flat in vec4 v_lab; flat in vec4 v_opt; flat in vec3 v_dff;
+  ${SCAN}
+  out vec4 o;
+  void main(){ float g = exp(-dot(v_p, v_p)/(2.*30.*30.)); o = vec4(g*pickDff(v_dff.xy)*.022, 0., 0., 1.); }`;
+
+  const VS_DEND = `#version 300 es
+  precision highp float; precision highp int;
+  layout(location=0) in vec2 a_c; layout(location=1) in vec4 a_seg; layout(location=2) in vec4 a_w; layout(location=3) in vec4 a_soma;
+  uniform sampler2D u_state; uniform sampler2D u_spark; ${VIEW}
+  out vec2 v_p; flat out vec4 v_seg; flat out vec4 v_w; flat out vec2 v_x; flat out vec3 v_dff; flat out float v_spk;
+  void main(){
+    vec2 base = wrapd(a_soma.xy - u_cen);
+    float dz = abs(a_soma.z - u_zf + a_w.w*3.);
+    float blur = .5 + dz*.22;
+    vec2 p0 = a_seg.xy, p1 = a_seg.zw;
+    vec2 mn = min(p0, p1) - (a_w.x + blur*2.5 + 1.), mx = max(p0, p1) + (a_w.x + blur*2.5 + 1.);
+    vec2 lp = mix(mn, mx, a_c*.5 + .5);
+    v_p = lp;
+    gl_Position = toClip(base + lp);
+    int idx = int(a_w.z + .5);
+    vec4 st = texelFetch(u_state, ivec2(idx & 63, idx >> 6), 0);
+    v_seg = a_seg; v_w = a_w; v_x = vec2(blur, 1./(1. + dz*dz/110.));
+    v_dff = st.xyz;
+    v_spk = texelFetch(u_spark, ivec2(idx & 63, idx >> 6), 0).r;
+    v_w.w = a_soma.w*st.w;
+  }`;
+  const FS_DEND = `#version 300 es
+  precision highp float;
+  in vec2 v_p; flat in vec4 v_seg; flat in vec4 v_w; flat in vec2 v_x; flat in vec3 v_dff; flat in float v_spk;
+  uniform float u_gc; uniform float u_gs;
+  ${SCAN}
+  out vec4 o;
+  void main(){
+    vec2 pa = v_p - v_seg.xy, ba = v_seg.zw - v_seg.xy;
+    float h = clamp(dot(pa, ba)/dot(ba, ba), 0., 1.);
+    float d = length(pa - ba*h);
+    float w = mix(v_w.x, v_w.y, h)*.5;
+    float s = max(w, v_x.x);
+    float prof = exp(-d*d/(2.*s*s))*(w/s);
+    // dendritic calcium follows the soma (bAPs); a silent cell's dendrites also light on their own (NMDA spikes)
+    float act = max(pickDff(v_dff.xy), v_dff.z*10.);
+    float base = v_w.w*.42*prof*v_x.y;
+    o = vec4(base*(1. + .85*act), 0., base*(u_gc*.85*max(act, 0.) + u_gs*(1. + .85*act)*v_spk), 1.);
+  }`;
+
+  // relation tracts: long beaded axons; a spike's calcium wave runs along them at the conduction speed
+  const VS_AX = `#version 300 es
+  precision highp float; precision highp int;
+  layout(location=0) in vec2 a_c; layout(location=1) in vec4 a_seg; layout(location=2) in vec4 a_w; layout(location=3) in vec4 a_b;
+  uniform vec4 u_pulse[40]; ${VIEW}
+  out vec2 v_p; flat out vec4 v_seg; flat out vec4 v_w; flat out vec4 v_pu; flat out vec2 v_x;
+  void main(){
+    vec2 base = wrapd(a_b.xy - u_cen);
+    vec2 p0 = a_seg.xy, p1 = a_seg.zw;
+    vec2 mn = min(p0, p1) - (a_w.x + 11.), mx = max(p0, p1) + (a_w.x + 11.);
+    vec2 lp = mix(mn, mx, a_c*.5 + .5);
+    v_p = lp;
+    gl_Position = toClip(base + lp);
+    v_seg = a_seg; v_w = a_w; v_pu = u_pulse[int(a_w.y + .5)]; v_x = a_b.zw;
+  }`;
+  const FS_AX = `#version 300 es
+  precision highp float;
+  in vec2 v_p; flat in vec4 v_seg; flat in vec4 v_w; flat in vec4 v_pu; flat in vec2 v_x;
+  uniform float u_rest; uniform float u_trail; uniform float u_gp;
+  out vec4 o;
+  void main(){
+    vec2 pa = v_p - v_seg.xy, ba = v_seg.zw - v_seg.xy;
+    float h = clamp(dot(pa, ba)/max(dot(ba, ba), 1e-4), 0., 1.);
+    float d = length(pa - ba*h);
+    float w = v_w.x*.5, s = max(w, .7);
+    float prof = exp(-d*d/(2.*s*s))*(w/s);
+    float u = mix(v_w.z, v_w.w, h), len = v_x.x;
+    float bead = .45 + 1.1*smoothstep(.6, .95, fract(u*len/6.3 + v_x.y));
+    float glow = 0., halo = 0.;
+    // the spike's calcium wave: a bright head, a decaying wake behind it, a soft bloom around the head
+    if (v_pu.y > 0.) { float db = (v_pu.x - u)*len; glow += v_pu.y*(db >= 0. ? exp(-db/u_trail) : exp(-db*db/18.)); halo += v_pu.y*exp(-db*db/90.); }
+    if (v_pu.w > 0.) { float db = (v_pu.z - (1. - u))*len; glow += v_pu.w*(db >= 0. ? exp(-db/u_trail) : exp(-db*db/18.)); halo += v_pu.w*exp(-db*db/90.); }
+    float wide = exp(-d*d/(2.*16.));
+    float sp = prof*7.*glow*(.7 + .3*bead) + wide*halo*.55;
+    o = vec4(prof*bead*u_rest + sp, 0., sp*u_gp, 1.);
+  }`;
+
+  const FS_NP = `#version 300 es
+  precision highp float;
+  uniform sampler2D u_ves; ${VIEW}
+  uniform vec2 u_acq; uniform float u_npOn; uniform float u_vesOn;
+  out vec4 o;
+  ${NOISE}
+  float fibers(vec2 p){
+    float a = vn(p/170.)*6.2832 + vn(p/55. + 7.)*1.3;
+    vec2 dir = vec2(cos(a), sin(a));
+    vec2 uv = vec2(dot(p, dir), dot(p, vec2(-dir.y, dir.x)));
+    float f = vn(uv*vec2(.09, .75));
+    f = f*.6 + vn(uv*vec2(.2, 1.6) + 3.)*.4;
+    return f;
+  }
+  float puncta(vec2 p){
+    vec2 cell = floor(p/5.); vec2 f = p/5. - cell;
+    float v = 0.;
+    for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+      vec2 c = cell + vec2(i, j);
+      float h = h21(mod(c, 200.));
+      vec2 pt = vec2(h21(mod(c, 200.) + 4.1), h21(mod(c, 200.) + 9.7)) + vec2(i, j);
+      float dd = length(f - pt)*5.;
+      v += step(.72, h)*exp(-dd*dd/1.6)*(h - .7)*3.3;
+    }
+    return v;
+  }
+  void main(){
+    vec2 uv = gl_FragCoord.xy/u_acq;
+    vec2 p = u_cen + (vec2(uv.x, 1. - uv.y) - .5)*u_view;
+    p = mod(p, u_L);
+    float vd = texture(u_ves, p/u_L).r;
+    float lumen = smoothstep(1.2, -1.2, vd)*u_vesOn;
+    float wall = exp(-pow((vd - .6)/1.3, 2.))*u_vesOn;
+    float fb = fibers(p);
+    float pn = puncta(p);
+    float base = (.05 + .06*fb + .12*pn + .035*vn(p*.9))*mix(.25, 1., u_npOn);
+    float r = (.03 + .03*fb + .04*pn*step(.5, vn(p*.05 + 2.)))*mix(.2, 1., u_npOn);
+    o = vec4(base, r, lumen, wall);
+  }`;
+
+  const FS_FLUO = `#version 300 es
+  precision highp float;
+  uniform sampler2D u_anat; uniform sampler2D u_act; uniform vec2 u_acq; uniform vec2 u_jit; uniform float u_npOn; uniform float u_gh;
+  out vec4 o;
+  void main(){
+    vec2 uv = gl_FragCoord.xy/u_acq;
+    vec4 a = texture(u_anat, uv + u_jit);
+    float act = texture(u_act, uv).r; act = act/(1. + .6*act);
+    float open = 1. - a.z;
+    float g = a.x*(1. + 1.8*act*u_npOn)*open + a.w*.03;
+    float r = a.y*open + a.w*.05;
+    o = vec4(g, r, a.x*1.8*act*u_npOn*open*u_gh, 1.);
+  }`;
+
+  const FS_ACQ = `#version 300 es
+  precision highp float;
+  uniform sampler2D u_fluo; uniform vec2 u_acq; uniform float u_frame; uniform float u_scan;
+  uniform float u_phase; uniform float u_noise; uniform float u_flick;
+  out vec4 o;
+  ${NOISE}
+  vec2 gauss2(vec3 s){ float u1 = max(h31(s), 1e-4), u2 = h31(s + 17.17); float r = sqrt(-2.*log(u1)); return r*vec2(cos(6.2832*u2), sin(6.2832*u2)); }
+  void main(){
+    vec2 ip = floor(gl_FragCoord.xy);
+    float row = u_acq.y - 1. - ip.y;
+    float rf = row/u_acq.y;
+    float sh = (mod(row, 2.) - .5)*u_phase;   // bidirectional resonant scan: alternate lines land a fraction of a pixel off
+    vec3 s3 = texture(u_fluo, (ip + vec2(sh + .5, .5))/u_acq).rgb;
+    vec2 s = s3.xy;
+    float k = clamp(s3.z/max(s3.x, 1e-3), 0., 1.);
+    float fr = rf < u_scan ? u_frame : u_frame - 1.;
+    s *= 1. + u_flick*(h21(vec2(row, mod(fr, 997.))) - .5);
+    const float PH = 20.;
+    vec2 lam = s*PH;
+    vec2 n = (lam + u_noise*sqrt(lam + .3)*gauss2(vec3(ip, fr)))/PH;
+    o = vec4(max(n, 0.), k, 1.);
+  }`;
+
+  const FS_DISP = `#version 300 es
+  precision highp float;
+  uniform sampler2D u_img; uniform vec2 u_dev;
+  uniform vec3 u_stim; uniform float u_stimR; uniform float u_expo; uniform float u_t;
+  uniform vec3 u_c1; uniform vec3 u_c2; uniform vec3 u_c3; uniform vec3 u_cm; uniform vec3 u_cs; uniform vec3 u_cb; uniform vec3 u_bg; uniform vec3 u_ca;
+  uniform float u_inv; uniform float u_tdt; uniform float u_vig; uniform float u_con; uniform float u_sat; uniform float u_bord; uniform float u_dimmap; uniform float u_dpr;
+  uniform sampler2D u_bmask; uniform vec3 u_at[4]; uniform float u_atOn;
+  out vec4 o;
+  ${NOISE}
+  vec3 lutG(float x){
+    x = 1. - exp(-x*1.2);
+    return u_c1*smoothstep(0., .55, x) + (u_c2 - u_c1)*smoothstep(.28, .82, x) + (u_c3 - u_c2)*smoothstep(.6, 1., x);
+  }
+  vec3 lutS(float x, vec3 gc){
+    float L = dot(gc, vec3(.2126, .7152, .0722));
+    vec3 a = u_ca*(L/max(dot(u_ca, vec3(.2126, .7152, .0722)), .05));
+    return mix(a, gc, smoothstep(.72, 1., 1. - exp(-x*1.2)));
+  }
+  vec3 lutM(float x){ x = 1. - exp(-x*1.7); return u_cm*(.85*x + .15*smoothstep(.5, 1., x)); }
+  float border(vec2 fc, vec2 uv){
+    // the area map is baked once per layout (u_bmask); here it only gets its dotted texture
+    float line = texture(u_bmask, uv).r;
+    vec2 g = fract(fc/u_dpr/4.5) - .5;
+    return line*(1. - smoothstep(.2, .34, length(g)));
+  }
+  void main(){
+    vec2 uv = gl_FragCoord.xy/u_dev;
+    vec3 im = texture(u_img, uv).rgb;
+    vec2 acc = im.xy*u_expo;
+    vec3 gc = lutG(acc.x);
+    gc = mix(gc, lutS(acc.x, gc), smoothstep(.1, .5, im.z));
+    vec3 col = gc + lutM(acc.y*u_tdt);
+    vec2 q = uv*2. - 1.;
+    float se = pow(pow(abs(q.x), 6.) + pow(abs(q.y), 6.), 1./6.);
+    float vig = mix(1., smoothstep(1.28, .5, se), u_vig);
+    float dwell = 1./sqrt(max(1. - pow(q.x*.93, 2.), .12));
+    col *= vig*(.93 + .07*mix(1., dwell, u_vig));
+    float dd = length(gl_FragCoord.xy - u_stim.xy)/u_stimR;
+    float age = u_stim.z;
+    float glow = exp(-age/.09)*exp(-dd*dd*1.2) + .25*exp(-age/.5)*exp(-dd*dd*.35)*step(.0, age);
+    col += u_cs*glow*.8;
+    col *= u_dimmap;
+    if (u_atOn > 0.) {   // each cortical area has its own tone
+      vec4 am = texture(u_bmask, uv);
+      vec3 tone = am.y*u_at[0] + am.z*u_at[1] + am.w*u_at[2] + max(0., 1. - am.y - am.z - am.w)*u_at[3];
+      col *= tone;
+    }
+    if (u_bord > 0.) col += u_cb*border(gl_FragCoord.xy, uv)*.34*u_bord;
+    col = u_inv > .5 ? u_bg - col : col + u_bg*.45;
+    col = max(col, 0.);
+    float l = dot(col, vec3(.2126, .7152, .0722));
+    col = max(mix(vec3(l), col, u_sat), 0.);
+    col = .22*pow(col/.22, vec3(u_con));
+    col += (h21(gl_FragCoord.xy + fract(u_t*7.13)*61.) - .5)/255.;
+    o = vec4(col, 1.);
+  }`;
+  const FS_AREA = `#version 300 es
+  precision highp float;
+  uniform vec2 u_sz; uniform vec2 u_css; uniform vec3 u_pc[24]; uniform int u_npc;
+  out vec4 o;
+  ${NOISE}
+  void main(){
+    // cortical-area borders: voronoi over the project cells grouped by area, warped so they read as anatomy
+    vec2 p = gl_FragCoord.xy/u_sz*u_css;
+    vec2 wp = p + (vec2(vn(p/110.), vn(p/110. + 7.3)) - .5)*44.;
+    float d1 = 1e9, a1 = -1.;
+    float da[4]; da[0] = 1e9; da[1] = 1e9; da[2] = 1e9; da[3] = 1e9;
+    for (int k = 0; k < 24; k++) { if (k >= u_npc) break; float d = length(wp - u_pc[k].xy); if (d < d1) { d1 = d; a1 = u_pc[k].z; }
+      int ai = min(int(u_pc[k].z + .5), 3); da[ai] = min(da[ai], d); }
+    float d2 = 1e9;
+    for (int k = 0; k < 24; k++) { if (k >= u_npc) break; if (abs(u_pc[k].z - a1) < .5) continue; d2 = min(d2, length(wp - u_pc[k].xy)); }
+    float bd = (d2 - d1)*.5;
+    float line = 1. - smoothstep(.6, 1.5, bd);
+    // soft membership in each area (for its tone): a narrow blend across the border, crisp everywhere else
+    vec4 w = vec4(exp(-(da[0] - d1)/22.), exp(-(da[1] - d1)/22.), exp(-(da[2] - d1)/22.), exp(-(da[3] - d1)/22.));
+    w /= max(dot(w, vec4(1.)), 1e-4);
+    o = vec4(u_npc > 1 ? line*(1. - smoothstep(300., 520., d1)) : 0., w.x, w.y, w.z);
+  }`;
+  return { g, VS_FULL, VS_SOMA, FS_SOMA, FS_SPLAT, VS_DEND, FS_DEND, VS_AX, FS_AX, FS_NP, FS_FLUO, FS_ACQ, FS_DISP, FS_AREA };
+}
+
+// ---------------------------------------------------------------- GL plumbing
+let R2 = null;
+function buildRenderer() {
+  const Xg = initGL(); if (!Xg) return null;
+  const g = Xg.g;
+  function sh(type, src) {
+    const s = g.createShader(type); g.shaderSource(s, src); g.compileShader(s);
+    if (!g.getShaderParameter(s, g.COMPILE_STATUS)) throw new Error(g.getShaderInfoLog(s) + '\n' + src.split('\n').slice(0, 4).join('\n'));
+    return s;
+  }
+  function prog(vs, fs) {
+    const p = g.createProgram(); g.attachShader(p, sh(g.VERTEX_SHADER, vs)); g.attachShader(p, sh(g.FRAGMENT_SHADER, fs)); g.linkProgram(p);
+    if (!g.getProgramParameter(p, g.LINK_STATUS)) throw new Error(g.getProgramInfoLog(p));
+    const u = {}; const n = g.getProgramParameter(p, g.ACTIVE_UNIFORMS);
+    for (let k = 0; k < n; k++) { const inf = g.getActiveUniform(p, k); u[inf.name.replace(/\[0\]$/, '')] = g.getUniformLocation(p, inf.name); }
+    return { p, u };
+  }
+  const P_SOMA = prog(Xg.VS_SOMA, Xg.FS_SOMA), P_SPLAT = prog(Xg.VS_SOMA, Xg.FS_SPLAT), P_DEND = prog(Xg.VS_DEND, Xg.FS_DEND), P_AX = prog(Xg.VS_AX, Xg.FS_AX);
+  const P_AREA = prog(Xg.VS_FULL, Xg.FS_AREA);
+  const P_NP = prog(Xg.VS_FULL, Xg.FS_NP), P_FLUO = prog(Xg.VS_FULL, Xg.FS_FLUO), P_ACQ = prog(Xg.VS_FULL, Xg.FS_ACQ), P_DISP = prog(Xg.VS_FULL, Xg.FS_DISP);
+
+  const quad = g.createBuffer(); g.bindBuffer(g.ARRAY_BUFFER, quad); g.bufferData(g.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), g.STATIC_DRAW);
+  const sd = new Float32Array(N * 11);
+  const sbuf = g.createBuffer();
+  function cells() {
+    for (let i = 0; i < N; i++) { const o = i * 11; sd[o] = X[i]; sd[o + 1] = Y[i]; sd[o + 2] = Z[i]; sd[o + 3] = R[i]; sd[o + 4] = ECC[i]; sd[o + 5] = TH[i]; sd[o + 6] = SEED[i]; sd[o + 7] = F0[i]; sd[o + 8] = TDT[i]; sd[o + 9] = FILL[i]; sd[o + 10] = i; }
+    g.bindBuffer(g.ARRAY_BUFFER, sbuf); g.bufferData(g.ARRAY_BUFFER, sd, g.STATIC_DRAW);
+  }
+  cells();
+  const vaoS = g.createVertexArray(); g.bindVertexArray(vaoS);
+  g.bindBuffer(g.ARRAY_BUFFER, quad); g.enableVertexAttribArray(0); g.vertexAttribPointer(0, 2, g.FLOAT, false, 0, 0);
+  g.bindBuffer(g.ARRAY_BUFFER, sbuf);
+  for (const [loc, n, off] of [[1, 3, 0], [2, 4, 3], [3, 4, 7]]) { g.enableVertexAttribArray(loc); g.vertexAttribPointer(loc, n, g.FLOAT, false, 44, off * 4); g.vertexAttribDivisor(loc, 1); }
+  const dd = new Float32Array(ND * 12);
+  for (let k = 0; k < ND; k++) {
+    const b = k * 8, i = dend[b + 6];
+    dd.set([dend[b], dend[b + 1], dend[b + 2], dend[b + 3], dend[b + 4], dend[b + 5], i, (1 - dend[b + 7]) * (SEED[i] > 0.5 ? 1 : -1),
+      X[i], Y[i], Z[i], F00[i] * (0.35 + 0.65 * dend[b + 7])], k * 12);
+  }
+  const dbuf = g.createBuffer(); g.bindBuffer(g.ARRAY_BUFFER, dbuf); g.bufferData(g.ARRAY_BUFFER, dd, g.STATIC_DRAW);
+  const vaoD = g.createVertexArray(); g.bindVertexArray(vaoD);
+  g.bindBuffer(g.ARRAY_BUFFER, quad); g.enableVertexAttribArray(0); g.vertexAttribPointer(0, 2, g.FLOAT, false, 0, 0);
+  g.bindBuffer(g.ARRAY_BUFFER, dbuf);
+  for (let a = 1; a <= 3; a++) { g.enableVertexAttribArray(a); g.vertexAttribPointer(a, 4, g.FLOAT, false, 48, (a - 1) * 16); g.vertexAttribDivisor(a, 1); }
+  const abuf = g.createBuffer();
+  const vaoA = g.createVertexArray(); g.bindVertexArray(vaoA);
+  g.bindBuffer(g.ARRAY_BUFFER, quad); g.enableVertexAttribArray(0); g.vertexAttribPointer(0, 2, g.FLOAT, false, 0, 0);
+  g.bindBuffer(g.ARRAY_BUFFER, abuf); g.bufferData(g.ARRAY_BUFFER, 48, g.STATIC_DRAW);
+  for (let a = 1; a <= 3; a++) { g.enableVertexAttribArray(a); g.vertexAttribPointer(a, 4, g.FLOAT, false, 48, (a - 1) * 16); g.vertexAttribDivisor(a, 1); }
+  function tracts() { g.bindBuffer(g.ARRAY_BUFFER, abuf); g.bufferData(g.ARRAY_BUFFER, tractN ? tractData : new Float32Array(12), g.STATIC_DRAW); }
+  const vaoF = g.createVertexArray();
+  g.bindVertexArray(null);
+
+  const SW = 64, SH = Math.ceil(N / SW);
+  const stateData = new Float32Array(SW * SH * 4);
+  const texState = g.createTexture(); g.bindTexture(g.TEXTURE_2D, texState);
+  g.texImage2D(g.TEXTURE_2D, 0, g.RGBA32F, SW, SH, 0, g.RGBA, g.FLOAT, stateData);
+  g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.NEAREST); g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.NEAREST);
+  const sparkData = new Float32Array(SW * SH); let sparkT = -1;
+  const texSpark = g.createTexture(); g.bindTexture(g.TEXTURE_2D, texSpark);
+  g.texImage2D(g.TEXTURE_2D, 0, g.R32F, SW, SH, 0, g.RED, g.FLOAT, sparkData);
+  g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.NEAREST); g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.NEAREST);
+  const vdat = new Uint16Array(VW * VW);
+  const f2h = (() => { const f = new Float32Array(1), u = new Uint32Array(f.buffer); return v => { f[0] = v; const x = u[0]; const s = (x >> 16) & 0x8000; const e = ((x >> 23) & 0xff) - 112; const m = x & 0x7fffff; if (e <= 0) return s; if (e >= 31) return s | 0x7bff; return s | (e << 10) | (m >> 13); }; })();
+  for (let k = 0; k < VW * VW; k++) vdat[k] = f2h(Math.min(60, VGRID[k]));
+  const texVes = g.createTexture(); g.bindTexture(g.TEXTURE_2D, texVes);
+  g.texImage2D(g.TEXTURE_2D, 0, g.R16F, VW, VW, 0, g.RED, g.HALF_FLOAT, vdat);
+  g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR); g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
+  g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, g.REPEAT); g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.REPEAT);
+
+  function target(w, h) {
+    const t = g.createTexture(); g.bindTexture(g.TEXTURE_2D, t);
+    g.texImage2D(g.TEXTURE_2D, 0, g.RGBA16F, w, h, 0, g.RGBA, g.HALF_FLOAT, null);
+    g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MIN_FILTER, g.LINEAR); g.texParameteri(g.TEXTURE_2D, g.TEXTURE_MAG_FILTER, g.LINEAR);
+    g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_S, g.CLAMP_TO_EDGE); g.texParameteri(g.TEXTURE_2D, g.TEXTURE_WRAP_T, g.CLAMP_TO_EDGE);
+    const f = g.createFramebuffer(); g.bindFramebuffer(g.FRAMEBUFFER, f);
+    g.framebufferTexture2D(g.FRAMEBUFFER, g.COLOR_ATTACHMENT0, g.TEXTURE_2D, t, 0);
+    const ok = g.checkFramebufferStatus(g.FRAMEBUFFER) === g.FRAMEBUFFER_COMPLETE;
+    g.bindFramebuffer(g.FRAMEBUFFER, null);
+    if (!ok) throw new Error('fbo incomplete');
+    return { t, f, w, h };
+  }
+  function drop(T) { if (T) { g.deleteTexture(T.t); g.deleteFramebuffer(T.f); } }
+  let T_anat = null, T_act = null, T_fluo = null, T_acq = null, T_area = null, devW = 1, devH = 1, lastScope = -1e9, lastDim = -1;
+  const pcU = new Float32Array(72);
+  function areas() {
+    // bake the area-border mask at css resolution (once per layout, not per frame)
+    if (!T_area) return;
+    let np = 0;
+    for (const s of SL) { if (!s.on || np >= 24) continue; pcU[np * 3] = s.x; pcU[np * 3 + 1] = H - s.y; pcU[np * 3 + 2] = AREA_IX[s.p.area] || 0; np++; }
+    g.bindFramebuffer(g.FRAMEBUFFER, T_area.f); g.viewport(0, 0, T_area.w, T_area.h); g.disable(g.BLEND);
+    g.useProgram(P_AREA.p); const u = P_AREA.u;
+    g.uniform2f(u.u_sz, T_area.w, T_area.h); g.uniform2f(u.u_css, W, H);
+    g.uniform3fv(u.u_pc, pcU); g.uniform1i(u.u_npc, np);
+    g.bindVertexArray(vaoF); g.drawArrays(g.TRIANGLES, 0, 3);
+    g.bindFramebuffer(g.FRAMEBUFFER, null);
+  }
+
+  function setView(u) {
+    g.uniform2f(u.u_cen, CEN[0] + jit[0], CEN[1] + jit[1]);
+    g.uniform2f(u.u_view, vw, vh); g.uniform1f(u.u_L, L);
+    if (u.u_zf) g.uniform1f(u.u_zf, zf);
+  }
+  function resize() {
+    const ds = devScale();
+    devW = Math.max(1, Math.round(W * ds)); devH = Math.max(1, Math.round(H * ds));
+    glC.width = devW; glC.height = devH;
+    drop(T_anat); drop(T_act); drop(T_fluo); drop(T_acq); drop(T_area);
+    T_anat = target(acqW, acqH); T_fluo = target(acqW, acqH); T_acq = target(acqW, acqH);
+    T_area = target(Math.max(1, W), Math.max(1, H));
+    areas();
+    lastScope = -1e9;   // fresh targets: the scope must re-acquire before the next display
+    T_act = target(Math.max(1, acqW >> 2), Math.max(1, acqH >> 2));
+    g.bindFramebuffer(g.FRAMEBUFFER, T_anat.f); g.viewport(0, 0, acqW, acqH); g.disable(g.BLEND);
+    g.useProgram(P_NP.p); const u = P_NP.u;
+    g.uniform2f(u.u_cen, CEN[0], CEN[1]); g.uniform2f(u.u_view, vw, vh); g.uniform1f(u.u_L, L);
+    g.uniform2f(u.u_acq, acqW, acqH); g.uniform1f(u.u_npOn, cfg.layers.neuropil ? 1 : 0); g.uniform1f(u.u_vesOn, cfg.layers.vessels ? 1 : 0);
+    g.activeTexture(g.TEXTURE1); g.bindTexture(g.TEXTURE_2D, texVes); g.uniform1i(u.u_ves, 1);
+    g.bindVertexArray(vaoF); g.drawArrays(g.TRIANGLES, 0, 3);
+    g.bindFramebuffer(g.FRAMEBUFFER, null);
+  }
+  function upload() {
+    const a = dispCur || dffCur, b = dispPrev || dffPrev;
+    for (let i = 0; i < N; i++) { stateData[i * 4] = a[i]; stateData[i * 4 + 1] = b[i]; stateData[i * 4 + 2] = 0; stateData[i * 4 + 3] = 1; }
+    for (let k = 0; k < SL.length; k++) {
+      const s = SL[k]; if (!s.on || s.cell < 0) continue;
+      stateData[s.cell * 4 + 2] = k < dcaNow.length ? dcaNow[k] : 0;
+      stateData[s.cell * 4 + 3] = s.silent ? 2.0 : 1.3;   // dendritic arbor gain: project cells a little fuller, silent ones a big quiet pyramid
+    }
+    g.bindTexture(g.TEXTURE_2D, texState);
+    g.texSubImage2D(g.TEXTURE_2D, 0, 0, 0, SW, SH, g.RGBA, g.FLOAT, stateData);
+    if (cfg.gold.sparks > 0) {   // a spike's onset (ΔF/F rising since the last frame) lights a spark that fades over 'linger'
+      const dt = sparkT < 0 ? 0 : Math.max(0, nowSec - sparkT), fade = Math.exp(-dt * 1000 / cfg.gold.linger);
+      for (let i = 0; i < N; i++) sparkData[i] = Math.max(sparkData[i] * fade, Math.min(1, Math.max(0, a[i] - b[i]) * 2.2));
+      g.bindTexture(g.TEXTURE_2D, texSpark);
+      g.texSubImage2D(g.TEXTURE_2D, 0, 0, 0, SW, SH, g.RED, g.FLOAT, sparkData);
+      sparkT = nowSec;
+    } else if (sparkT >= 0) {
+      sparkData.fill(0); sparkT = -1;
+      g.bindTexture(g.TEXTURE_2D, texSpark); g.texSubImage2D(g.TEXTURE_2D, 0, 0, 0, SW, SH, g.RED, g.FLOAT, sparkData);
+    }
+  }
+  function draw(tSec, scan, mask) {
+    const Ly = cfg.layers, M = mask == null ? 255 : mask;
+    // the microscope acquires at 30 Hz: passes 1–3 (the scope image) only re-render at that rate;
+    // the display pass (grade, stim flash, borders) runs every frame. Halves GPU work at 60 Hz, quarters it at 120.
+    const scope = mask != null || tSec - lastScope >= 1 / 30 - 0.004 || tSec < lastScope;
+    if (scope) { lastScope = tSec;
+    // 1. neuropil activity: blurred population ΔF/F
+    g.bindFramebuffer(g.FRAMEBUFFER, T_act.f); g.viewport(0, 0, T_act.w, T_act.h);
+    g.clearColor(0, 0, 0, 1); g.clear(g.COLOR_BUFFER_BIT);
+    g.enable(g.BLEND); g.blendFunc(g.ONE, g.ONE);
+    g.useProgram(P_SPLAT.p); setView(P_SPLAT.u); g.uniform1f(P_SPLAT.u.u_spl, 1);
+    g.uniform1f(P_SPLAT.u.u_scan, scan); g.uniform1f(P_SPLAT.u.u_tH, T_act.h);
+    g.activeTexture(g.TEXTURE7); g.bindTexture(g.TEXTURE_2D, texSpark); if (P_SPLAT.u.u_spark) g.uniform1i(P_SPLAT.u.u_spark, 7);
+    g.activeTexture(g.TEXTURE0); g.bindTexture(g.TEXTURE_2D, texState); g.uniform1i(P_SPLAT.u.u_state, 0);
+    if (M & 1) { g.bindVertexArray(vaoS); g.drawArraysInstanced(g.TRIANGLE_STRIP, 0, 4, N); }
+    // 2. fluorescence (acquisition grid)
+    g.bindFramebuffer(g.FRAMEBUFFER, T_fluo.f); g.viewport(0, 0, acqW, acqH);
+    g.disable(g.BLEND);
+    g.useProgram(P_FLUO.p); const uf = P_FLUO.u;
+    g.uniform2f(uf.u_jit, jit[0] / vw, -jit[1] / vh);
+    g.uniform2f(uf.u_acq, acqW, acqH); g.uniform1f(uf.u_npOn, Ly.neuropil ? 1 : 0); g.uniform1f(uf.u_gh, cfg.gold.haze);
+    g.activeTexture(g.TEXTURE2); g.bindTexture(g.TEXTURE_2D, T_anat.t); g.uniform1i(uf.u_anat, 2);
+    g.activeTexture(g.TEXTURE3); g.bindTexture(g.TEXTURE_2D, T_act.t); g.uniform1i(uf.u_act, 3);
+    if (M & 2) { g.bindVertexArray(vaoF); g.drawArrays(g.TRIANGLES, 0, 3); }
+    g.enable(g.BLEND); g.blendFunc(g.ONE, g.ONE);
+    g.activeTexture(g.TEXTURE7); g.bindTexture(g.TEXTURE_2D, texSpark);
+    g.activeTexture(g.TEXTURE0); g.bindTexture(g.TEXTURE_2D, texState);
+    const gs = cfg.gold.sparks, gc = cfg.gold.cells;
+    if (Ly.dendrites && (M & 4)) {
+      g.useProgram(P_DEND.p); setView(P_DEND.u); g.uniform1i(P_DEND.u.u_state, 0);
+      g.uniform1i(P_DEND.u.u_spark, 7); g.uniform1f(P_DEND.u.u_gc, gc); g.uniform1f(P_DEND.u.u_gs, gs);
+      g.uniform1f(P_DEND.u.u_scan, scan); g.uniform1f(P_DEND.u.u_tH, acqH);
+      g.bindVertexArray(vaoD); g.drawArraysInstanced(g.TRIANGLE_STRIP, 0, 4, ND);
+    }
+    if (tractN && (M & 8)) {
+      g.useProgram(P_AX.p); setView(P_AX.u);
+      g.uniform4fv(P_AX.u.u_pulse, pulseU);
+      g.uniform1f(P_AX.u.u_rest, Ly.tracts ? 0.28 : 0); g.uniform1f(P_AX.u.u_trail, 60); g.uniform1f(P_AX.u.u_gp, cfg.gold.pulses);
+      g.bindVertexArray(vaoA); g.drawArraysInstanced(g.TRIANGLE_STRIP, 0, 4, tractN);
+    }
+    g.useProgram(P_SOMA.p); setView(P_SOMA.u); g.uniform1i(P_SOMA.u.u_state, 0); g.uniform1f(P_SOMA.u.u_spl, 0);
+    g.uniform1i(P_SOMA.u.u_spark, 7); g.uniform1f(P_SOMA.u.u_gc, gc); g.uniform1f(P_SOMA.u.u_gs, gs);
+    g.uniform1f(P_SOMA.u.u_scan, scan); g.uniform1f(P_SOMA.u.u_tH, acqH);
+    if (M & 16) { g.bindVertexArray(vaoS); g.drawArraysInstanced(g.TRIANGLE_STRIP, 0, 4, N); }
+    g.disable(g.BLEND);
+    // 3. acquisition: photon noise, resonant line phase, PMT artifact
+    g.bindFramebuffer(g.FRAMEBUFFER, T_acq.f); g.viewport(0, 0, acqW, acqH);
+    g.useProgram(P_ACQ.p); const ua = P_ACQ.u;
+    g.activeTexture(g.TEXTURE4); g.bindTexture(g.TEXTURE_2D, T_fluo.t); g.uniform1i(ua.u_fluo, 4);
+    g.uniform2f(ua.u_acq, acqW, acqH); g.uniform1f(ua.u_frame, (FRAME0 + frameNo) % 4096); g.uniform1f(ua.u_scan, scan);
+    const scanOn = Ly.scan && !RM;
+    g.uniform1f(ua.u_phase, scanOn ? 0.42 : 0); g.uniform1f(ua.u_noise, (RM ? 0.3 : 1.15) * cfg.image.grain); g.uniform1f(ua.u_flick, scanOn ? 0.045 : 0);   // photon noise is the grain (its own slider), not a scan artifact
+    if (M & 32) { g.bindVertexArray(vaoF); g.drawArrays(g.TRIANGLES, 0, 3); }
+    }
+    // 4. display: palette, grade, area borders. Its inputs only change when the scope re-acquires (30 Hz), during
+    // a light flash, or while the map dims, so on 60/120 Hz screens most frames skip it (the canvas keeps its image).
+    const glow = tSec - stimVis.t < 1.6 && tSec >= stimVis.t;
+    if (!scope && !glow && Math.abs(mapDim - lastDim) < 1e-3 && mask == null) return;
+    lastDim = mapDim;
+    g.bindFramebuffer(g.FRAMEBUFFER, null); g.viewport(0, 0, devW, devH);
+    g.useProgram(P_DISP.p); const ud = P_DISP.u;
+    g.activeTexture(g.TEXTURE5); g.bindTexture(g.TEXTURE_2D, T_acq.t); g.uniform1i(ud.u_img, 5);
+    g.uniform2f(ud.u_dev, devW, devH);
+    const sx = stimVis.x / W * devW, sy = devH - stimVis.y / H * devH;
+    g.uniform3f(ud.u_stim, sx, sy, Ly.flash ? Math.max(0, tSec - stimVis.t) : 99);   // 99 s: no flash
+    g.uniform1f(ud.u_stimR, stimVis.rad * S * devW / W);
+    g.uniform1f(ud.u_expo, EXPO * cfg.image.exposure); g.uniform1f(ud.u_t, tSec);
+    g.uniform3fv(ud.u_c1, GLC.c1); g.uniform3fv(ud.u_c2, GLC.c2); g.uniform3fv(ud.u_c3, GLC.c3);
+    g.uniform3fv(ud.u_cm, GLC.cm); g.uniform3fv(ud.u_cs, GLC.cs); g.uniform3fv(ud.u_cb, GLC.cb); g.uniform3fv(ud.u_bg, GLC.bg); g.uniform3fv(ud.u_ca, GLC.ca);
+    g.uniform1f(ud.u_inv, GLC.inv); g.uniform1f(ud.u_tdt, Ly.tdtomato ? 1 : 0); g.uniform1f(ud.u_vig, Ly.vignette ? 1 : 0);
+    g.uniform1f(ud.u_con, cfg.image.contrast); g.uniform1f(ud.u_sat, cfg.image.saturation);
+    g.uniform1f(ud.u_bord, Ly.borders ? 1 : 0); g.uniform1f(ud.u_dimmap, mapDim); g.uniform1f(ud.u_dpr, devW / W);
+    g.activeTexture(g.TEXTURE6); g.bindTexture(g.TEXTURE_2D, T_area.t); g.uniform1i(ud.u_bmask, 6);
+    g.uniform3fv(ud.u_at, GLC.at); g.uniform1f(ud.u_atOn, cfg.image.areas > 0 ? 1 : 0);
+    if (M & 64) g.drawArrays(g.TRIANGLES, 0, 3);
+  }
+  const px = new Uint8Array(4);
+  function sync() { g.readPixels(0, 0, 1, 1, g.RGBA, g.UNSIGNED_BYTE, px); }
+  const tqx = BENCH && g.getExtension('EXT_disjoint_timer_query_webgl2');
+  return { g, resize, upload, draw, cells, tracts, sync, areas, tq: tqx ? { ext: tqx } : null };
+}
+
+// ---------------------------------------------------------------- 2D fallback (no WebGL2 / no float targets)
+let FB = null;
+function buildFallback() {
+  document.body.classList.add('nogl');
+  const ctx = fbC.getContext('2d'); if (!ctx) return null;
+  let anat = null, d = 1;
+  const css = a => 'rgb(' + a.map(v => Math.round(clamp(v, 0, 1) * 255)).join(',') + ')';
+  const fb = { dirty: true, resize, draw };
+  function resize() {
+    d = Math.min(2, window.devicePixelRatio || 1);
+    fbC.width = Math.max(1, Math.round(W * d)); fbC.height = Math.max(1, Math.round(H * d));
+    anat = document.createElement('canvas'); anat.width = fbC.width; anat.height = fbC.height;
+    const a = anat.getContext('2d');
+    const inv = !!cfg.invert, bg = hexRGB(cfg.colors.bg), c1 = hexRGB(cfg.colors.dim), c2 = hexRGB(cfg.colors.bright), cm = hexRGB(cfg.colors.inh);
+    a.fillStyle = cfg.colors.bg; a.fillRect(0, 0, anat.width, anat.height);
+    a.globalCompositeOperation = 'source-over';
+    const rr = makeRng(5);
+    const rgba = (c, al) => 'rgba(' + c.map(v => Math.round(v * 255)).join(',') + ',' + al.toFixed(3) + ')';
+    if (cfg.layers.neuropil) {
+      const n2 = Math.round(W * H / 30);
+      for (let k = 0; k < n2; k++) { const v = rr(); a.fillStyle = rgba(c1, 0.05 + v * 0.12); a.fillRect(rr() * anat.width, rr() * anat.height, d, d); }
+    }
+    if (cfg.layers.vessels) {
+      a.lineCap = 'round'; a.strokeStyle = rgba(bg, 0.85);
+      for (let k = 0; k < VSEG.length; k += 6) {
+        const [x0, y0] = toScreen(VSEG[k], VSEG[k + 1]); const x1 = x0 + (VSEG[k + 2] - VSEG[k]) * S, y1 = y0 + (VSEG[k + 3] - VSEG[k + 1]) * S;
+        a.lineWidth = (VSEG[k + 4] + VSEG[k + 5]) * S * d; a.beginPath(); a.moveTo(x0 * d, y0 * d); a.lineTo(x1 * d, y1 * d); a.stroke();
+      }
+    }
+    if (cfg.layers.dendrites) for (let k = 0; k < ND; k++) {
+      const b = k * 8, i = dend[b + 6]; if (!inView[i]) continue;
+      const z = Math.abs(Z[i]), att = 1 / (1 + z * z / 110);
+      const [sx, sy] = toScreen(X[i], Y[i]);
+      a.strokeStyle = rgba(c2, 0.28 * F0[i] * att * (0.4 + 0.6 * dend[b + 7]));
+      a.lineWidth = Math.max(0.6, dend[b + 4] * 0.5 * S * d);
+      a.beginPath(); a.moveTo((sx + dend[b] * S) * d, (sy + dend[b + 1] * S) * d); a.lineTo((sx + dend[b + 2] * S) * d, (sy + dend[b + 3] * S) * d); a.stroke();
+    }
+    if (cfg.layers.tracts) {
+      a.strokeStyle = rgba(c2, 0.22); a.lineWidth = 1.2 * d;
+      for (let k = 0; k < tractN; k++) { const o = k * 12; const [bx, by] = toScreen(tractData[o + 8], tractData[o + 9]); a.beginPath(); a.moveTo((bx + tractData[o] * S) * d, (by + tractData[o + 1] * S) * d); a.lineTo((bx + tractData[o + 2] * S) * d, (by + tractData[o + 3] * S) * d); a.stroke(); }
+    }
+    for (let i = 0; i < N; i++) {
+      if (!inView[i]) continue;
+      const [x, y] = toScreen(X[i], Y[i]); const z = Math.abs(Z[i]);
+      const att = 1 / (1 + z * z / 110), r = R[i] * S * d;
+      if (att < 0.12) continue;
+      const gx = x * d, gy = y * d;
+      const gr = a.createRadialGradient(gx, gy, r * 0.35, gx, gy, r * 1.15);
+      const bb = F0[i] * att;
+      gr.addColorStop(0, rgba(c1, 0.2 * bb)); gr.addColorStop(0.55, rgba(c2, 0.75 * bb)); gr.addColorStop(1, rgba(c2, 0));
+      a.fillStyle = gr; a.beginPath(); a.arc(gx, gy, r * 1.15, 0, 6.2832); a.fill();
+      if (TDT[i] > 0 && cfg.layers.tdtomato) { a.fillStyle = rgba(cm, 0.25 * TDT[i] * att); a.beginPath(); a.arc(gx, gy, r * 0.9, 0, 6.2832); a.fill(); }
+    }
+    if (inv) { a.globalCompositeOperation = 'difference'; a.fillStyle = cfg.colors.bg; a.globalCompositeOperation = 'source-over'; }
+    fb.dirty = false;
+  }
+  function draw() {
+    if (!anat || fb.dirty) resize();
+    const D = dispCur || dffCur, hot = hexRGB(cfg.colors.peak);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(anat, 0, 0);
+    ctx.globalCompositeOperation = cfg.invert ? 'source-over' : 'lighter';
+    const col = cfg.invert ? hexRGB(cfg.colors.peak) : hot;
+    const rgba = al => 'rgba(' + col.map(v => Math.round(v * 255)).join(',') + ',' + al.toFixed(3) + ')';
+    for (let i = 0; i < N; i++) {
+      const v = D[i]; if (v < 0.05 || !inView[i]) continue;
+      const z = Math.abs(Z[i]), att = 1 / (1 + z * z / 110); if (att < 0.12) continue;
+      const [x, y] = toScreen(X[i], Y[i]);
+      const rr = R[i] * S * d;
+      ctx.strokeStyle = rgba(Math.min(0.9, v * 0.22 * att)); ctx.lineWidth = rr * 0.55;
+      ctx.beginPath(); ctx.arc(x * d, y * d, rr * 0.72, 0, 6.2832); ctx.stroke();
+    }
+    // pulses travelling the tracts
+    ctx.fillStyle = rgba(0.85);
+    for (const pu of pulses) {
+      const e = pu.e, A = SL[e.a], B = SL[e.b]; if (!A.on || !B.on) continue;
+      const u = (simT - pu.t0) / pu.dur; if (u < 0 || u > 1) continue;
+      const f = pu.dir > 0 ? u : 1 - u;
+      ctx.beginPath(); ctx.arc((A.x + (B.x - A.x) * f) * d, (A.y + (B.y - A.y) * f) * d, 2.4 * d, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    if (cfg.layers.vignette) {
+      const g = ctx.createRadialGradient(fbC.width / 2, fbC.height / 2, Math.min(fbC.width, fbC.height) * 0.35, fbC.width / 2, fbC.height / 2, Math.max(fbC.width, fbC.height) * 0.75);
+      g.addColorStop(0, 'rgba(' + cssRGB(cfg.colors.bg) + ',0)'); g.addColorStop(1, 'rgba(' + cssRGB(cfg.colors.bg) + ',0.85)');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, fbC.width, fbC.height);
+    }
+  }
+  return fb;
+}
+
+// ---------------------------------------------------------------- motion, stim, demo
+const jit = [0, 0]; let zf = 0, mapDim = 1;
+const EXPO = 0.62;
+function motion(t) {
+  const k = RM || !cfg.layers.motion ? 0 : cfg.sim.motion;
+  // alien heartbeat (~1.7 Hz, double-humped) + breathing (0.31 Hz), µm
+  const hb = Math.pow(Math.max(0, Math.sin(t * 10.7)), 6) + 0.5 * Math.pow(Math.max(0, Math.sin(t * 10.7 - 0.9)), 8);
+  const br = Math.sin(t * 1.95);
+  jit[0] = k * (0.55 * hb + 0.9 * br); jit[1] = k * (0.35 * hb + 1.4 * br + 0.25 * Math.sin(t * 0.37));
+  zf = k * (1.6 * Math.sin(t * 0.21) + 0.6 * br);
+}
+const cur = document.getElementById('cursor');
+const stimMark = document.getElementById('stimmark');
+function stimAt(px, py, tSec) {
+  if (!geoReady) return;
+  const [wx, wy] = toWorld(px, py);
+  stimQ.push([wx, wy]);
+  stimVis.x = px; stimVis.y = py; stimVis.t = tSec; stimVis.rad = 56;
+  const ph = Math.min(0.999, scanPhase);
+  stimVis.frame = frameNo; stimVis.r0 = ph; stimVis.r1 = Math.min(1, ph + 25 / FR_MS);
+  logStim(wx, wy);
+  const rr = 55 * S;
+  const sp = stimMark.querySelector('span');
+  sp.style.transform = 'translate(' + (-48).toFixed(0) + 'px,' + (rr + 6).toFixed(0) + 'px)';
+  stimMark.style.transform = 'translate(' + px.toFixed(0) + 'px,' + py.toFixed(0) + 'px)';
+  stimMark.classList.remove('go'); void stimMark.offsetWidth; stimMark.classList.add('go');
+}
+
+// scripted visit (?demo=1), on the tissue's own clock: hover tinue (its pulses make two unlabelled cells flicker),
+// then click spill and tinue so both keep talking, and look away: their pulses drift into step and meet at
+// umbra, which wakes and is found. Then a light pulse on bare tissue, and a long hover on wavefront.
+const DEMO_SCRIPT = [
+  [0.0, 'move', [0.92, 0.9]],
+  [0.2, 'glide', ['cell', 'tinue', 1.1]],
+  [1.3, 'hover', 'tinue'],
+  [3.5, 'unhover'],
+  [3.6, 'glide', ['cell', 'spill', 0.8]],
+  [4.5, 'click'],
+  [4.6, 'glide', ['cell', 'tinue', 0.7]],
+  [5.4, 'click'],
+  [5.5, 'glide', ['p', 0.62, 0.9, 1.6]],
+  [9.6, 'click'],
+  [10.6, 'glide', ['cell', 'wavefront', 1.0]],
+  [11.7, 'hover', 'wavefront'],
+  [14.6, 'unhover'],
+  [14.7, 'glide', ['p', 0.92, 0.9, 1.2]],
+];
+const DEMO_LOOP = 16;
+let demoK = 0, demoLoop = 0;
+const dc = { x: 0, y: 0, gx0: 0, gy0: 0, gx1: 0, gy1: 0, gt0: 0, gd: 1, gl: false };
+function demoTarget(a) {
+  if (a[0] === 'cell') { const s = SLID[a[1]]; if (s && s.on) return [s.x + 2, s.y + 3, a[2]]; return [dc.x, dc.y, a[2]]; }
+  return [a[1] * W, a[2] * H, a[3]];
+}
+function demoUpdate(tSec, tDisp) {
+  if (!DEMO || W < 1 || !geoReady || simT0 < 0) return;
+  cur.style.display = 'block';
+  let t = tSec - demoLoop * DEMO_LOOP;
+  if (t >= DEMO_LOOP) { demoLoop++; demoK = 0; t -= DEMO_LOOP; }
+  while (demoK < DEMO_SCRIPT.length && DEMO_SCRIPT[demoK][0] <= t) {
+    const [, kind, arg] = DEMO_SCRIPT[demoK++];
+    if (kind === 'move') { if (demoLoop > 0) continue; dc.x = arg[0] * W; dc.y = arg[1] * H; dc.gl = false; }
+    else if (kind === 'glide') { const [x, y, d] = demoTarget(arg); dc.gx0 = dc.x; dc.gy0 = dc.y; dc.gx1 = x; dc.gy1 = y; dc.gt0 = t; dc.gd = d; dc.gl = true; }
+    else if (kind === 'click') {
+      let hitS = null;
+      for (const s of SL) if (s.on && (s.x - dc.x) ** 2 + (s.y - dc.y) ** 2 < 22 * 22) hitS = s;
+      if (hitS) pokeSlot(hitS, false); else stimAt(dc.x, dc.y, tDisp);
+    }
+    else if (kind === 'hover') setActive(SLID[arg], 'field');
+    else if (kind === 'unhover') setActive(null);
+  }
+  if (dc.gl) {
+    const u = Math.min(1, (t - dc.gt0) / dc.gd), e = u * u * (3 - 2 * u);
+    const mx = (dc.gx0 + dc.gx1) / 2 - (dc.gy1 - dc.gy0) * 0.12, my = (dc.gy0 + dc.gy1) / 2 + (dc.gx1 - dc.gx0) * 0.12;
+    dc.x = (1 - e) * (1 - e) * dc.gx0 + 2 * e * (1 - e) * mx + e * e * dc.gx1;
+    dc.y = (1 - e) * (1 - e) * dc.gy0 + 2 * e * (1 - e) * my + e * e * dc.gy1;
+    if (u >= 1) dc.gl = false;
+  }
+  ptr = [dc.x, dc.y]; ptrMoved = true;
+  cur.style.transform = 'translate(' + dc.x.toFixed(1) + 'px,' + dc.y.toFixed(1) + 'px)';
+}
+
+// ---------------------------------------------------------------- tune pane
+const tuneEl = document.getElementById('tune');
+const TUNE_DEV = Q.has('tune');
+const NICE = { neuropil: 'neuropil', vessels: 'vessels', dendrites: 'dendrites', tdtomato: 'second channel', tracts: 'relation axons', borders: 'area borders', outlines: 'cell outlines',
+  nearmiss: 'near-miss rings', vignette: 'vignette', scan: 'scan artifacts', motion: 'heartbeat motion', flash: 'click flash', tagline: 'tagline', index: 'index button', contacts: 'contact row',
+  areas: 'area names', hint: 'hint', tally: 'silent-cell tally', whispers: 'names on spontaneous firing', relations: 'relation names', touchNames: 'names at rest (touch)', status: 'status line',
+  acquisition: 'acquisition readout', scalebar: 'scale bar + stim log', trace: 'mean ΔF/F trace', roiIds: 'roi ids', stimCaption: '470 nm captions', cellPanel: 'cell trace panel' };
+function buildPane() {
+  const ck = (grp, k, lbl) => '<label class="c"><span>' + esc(lbl || NICE[k] || k) + '</span><input type="checkbox" data-k="' + grp + '.' + k + '"' + (cfg[grp][k] ? ' checked' : '') + '></label>';
+  const sl = (grp, [k, a, b, st, lbl]) => '<div class="r s"><span>' + esc(lbl || k) + '</span><input type="range" min="' + a + '" max="' + b + '" step="' + st + '" value="' + cfg[grp][k] + '" data-k="' + grp + '.' + k + '"><output>' + (+cfg[grp][k]).toFixed(st >= 1 ? 0 : 2) + '</output></div>';
+  let h = '<div class="th"><b>tune</b><span>` toggles · esc closes</span><button type="button" class="x" data-act="close" aria-label="close tune pane">×</button></div>';
+  h += '<details open><summary>palette</summary><div class="r"><select data-act="palette" aria-label="palette">' + Object.keys(PALETTES).map(n => '<option' + (n === cfg.palette ? ' selected' : '') + '>' + n + '</option>').join('') + (PALETTES[cfg.palette] ? '' : '<option selected>custom</option>') + '</select></div>';
+  h += '<div class="sw">' + ['bg', 'dim', 'bright', 'peak', 'inh', 'stim', 'ink', 'accent'].map(r => '<label><span>' + r + '</span><input type="color" data-c="' + r + '" value="' + cfg.colors[r] + '"></label>').join('') + '</div>';
+  h += '<label class="c"><span>paper (invert)</span><input type="checkbox" data-k="invert"' + (cfg.invert ? ' checked' : '') + '></label></details>';
+  h += '<details open><summary>image</summary>' + SLIDERS.image.map(s => sl('image', s)).join('') + '</details>';
+  h += '<details open><summary>gold</summary><div class="r gp">' + Object.keys(GOLD_PRESETS).map(n => '<button type="button" class="btn" data-act="gold" data-v="' + n + '">' + n + '</button>').join('') + '</div>' + SLIDERS.gold.map(s => sl('gold', s)).join('') + '</details>';
+  h += '<details open><summary>layers</summary><div class="cols">' + Object.keys(cfg.layers).map(k => ck('layers', k)).join('') + '</div></details>';
+  h += '<details open><summary>text</summary><div class="cols">' + Object.keys(cfg.text).map(k => ck('text', k)).join('') + '</div></details>';
+  h += '<details><summary>instrument</summary><div class="cols">' + Object.keys(cfg.instrument).map(k => ck('instrument', k)).join('') + '</div></details>';
+  h += '<details open><summary>sim</summary>' + SLIDERS.sim.map(s => sl('sim', s)).join('') + '</details>';
+  // ` alone (anyone can press it) never names an unfound silent cell; ?tune (the owner's door) shows everything
+  const spoil = s => s.silent && !s.found && !TUNE_DEV;
+  let anon = 0;
+  h += '<details><summary>projects</summary><div class="cols">' + SL.map(s => ck('projects', s.id, spoil(s) ? '◌ ' + (++anon) : s.p.name + (s.silent ? ' ◌' : ''))).join('') + '</div><div class="note">◌ = silent cell (unreleased)' + (anon ? ' · names hidden until found' : '') + '</div></details>';
+  const sil = SL.filter(s => s.silent);
+  h += '<details><summary>silent cells</summary><div class="note">' + sil.filter(s => s.found).length + ' of ' + sil.length + ' found on this browser</div><div class="btns">' + (TUNE_DEV ? '<button type="button" class="btn" data-act="reveal">reveal all</button>' : '') + '<button type="button" class="btn" data-act="forget">forget found</button><button type="button" class="btn" data-act="replay">replay</button></div></details>';
+  h += '<div class="note">paste the copied JSON over DEFAULTS in the file to ship it.</div>';
+  h += '<div class="ft btns"><button type="button" class="btn" data-act="copy">copy config</button><button type="button" class="btn" data-act="reset">reset</button><span class="note" id="tnote"></span></div>';
+  tuneEl.innerHTML = h;
+}
+function setTune(open) {
+  if (open) { buildPane(); tuneEl.hidden = false; } else tuneEl.hidden = true;
+}
+function applyText() {
+  const b = document.body.classList;
+  for (const k in cfg.text) b.toggle('no-' + k, !cfg.text[k]);
+  b.toggle('t-contacts', !!cfg.text.contacts);
+  for (const k in cfg.instrument) b.toggle('i-' + k, !!cfg.instrument[k]);
+  b.toggle('no-outlines', !cfg.layers.outlines); b.toggle('no-nearmiss', !cfg.layers.nearmiss);
+  syncTn();
+  if (!cfg.instrument.cellPanel) panel.classList.remove('on');
+  sizeScrim();
+}
+function postGraph() {
+  if (!sim || !geoReady) return;
+  const n = SL.length, cell = new Int32Array(n), silent = new Uint8Array(n), found = new Uint8Array(n), par = new Int32Array(n * 2);
+  const rs = rates(), rate = new Float32Array(n);
+  SL.forEach((s, k) => { cell[k] = s.on ? s.cell : -1; silent[k] = s.silent ? 1 : 0; found[k] = s.found ? 1 : 0; rate[k] = rs[k]; par[k * 2] = s.par[0]; par[k * 2 + 1] = s.par[1]; });
+  const ed = []; EDGES.forEach(e => { if (e.on) ed.push(e.a, e.b, e.w, e.delay); });
+  sim.post({ t: 'graph', cell, silent, found, rate, par, edges: Float32Array.from(ed), win: cfg.sim.window, S: PUZ });
+}
+function postRates() { if (sim && geoReady) sim.post({ t: 'rates', rate: Float32Array.from(rates()) }); }
+function onTune(el) {
+  const k = el.dataset.k;
+  if (el.dataset.c) { cfg.colors[el.dataset.c] = el.value; cfg.palette = 'custom'; const sel = tuneEl.querySelector('select'); if (sel && ![...sel.options].some(o => o.value === 'custom')) sel.add(new Option('custom')); if (sel) sel.value = 'custom'; applyColors(); }
+  else if (k === 'invert') { cfg.invert = el.checked; applyColors(); }
+  else if (k) {
+    const [grp, key] = k.split('.');
+    const v = el.type === 'checkbox' ? el.checked : +el.value;
+    cfg[grp][key] = v;
+    if (el.type === 'range') { const o = el.parentNode.querySelector('output'); if (o) o.textContent = v.toFixed(+el.step >= 1 ? 0 : 2); }
+    if (grp === 'text' || grp === 'instrument') applyText();
+    if (grp === 'image' && key === 'areas') areaTones();
+    if (grp === 'layers') { applyText(); if (key === 'neuropil' || key === 'vessels' || key === 'dendrites' || key === 'tdtomato' || key === 'tracts') { if (R2 && (key === 'neuropil' || key === 'vessels')) R2.resize(); if (FB) FB.dirty = true; } }
+    if (grp === 'sim') {
+      if (key === 'drive' || key === 'coupling' || key === 'decay') postParams();
+      if (key === 'axonSpeed') delays();
+      if (key === 'axonSpeed' || key === 'window') postGraph();
+      if (key === 'heat' || key === 'recencyDays') { postRates(); SL.forEach(s => { if (s.on) dressCell(s); }); if (R2) R2.cells(); if (FB) FB.dirty = true; }
+    }
+    if (grp === 'projects') { relayout(); }
+  }
+  saveCfg();
+}
+tuneEl.addEventListener('input', e => onTune(e.target));
+tuneEl.addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.act === 'palette' && PALETTES[t.value]) {
+    cfg.palette = t.value; cfg.colors = clone(PALETTES[t.value].colors); cfg.invert = PALETTES[t.value].invert;
+    applyColors(); saveCfg(); const st = tuneEl.scrollTop; buildPane(); tuneEl.scrollTop = st;
+  }
+});
+tuneEl.addEventListener('click', e => {
+  const a = e.target.dataset && e.target.dataset.act; if (!a) return;
+  const note = document.getElementById('tnote');
+  if (a === 'close') setTune(false);
+  else if (a === 'copy') {
+    const txt = JSON.stringify(cfg, null, 2);
+    const done = () => { if (note) note.textContent = 'copied'; };
+    const fallback = () => { const ta = document.createElement('textarea'); ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (er) { if (note) note.textContent = 'copy failed'; } ta.remove(); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(done, fallback); else fallback();
+  } else if (a === 'reset') {
+    cfg = clone(BASE); store.del(TUNE_KEY); applyColors(); applyText(); postParams(); relayout(); buildPane();
+    const n2 = document.getElementById('tnote'); if (n2) n2.textContent = 'reset to defaults';
+  } else if (a === 'reveal' && TUNE_DEV) {
+    SL.forEach(s => { if (s.silent && !s.found) { s.found = true; foundOrder.push(s.id); makeLab(s); } });
+    rewardDone = true; saveFound(); relayout(); updateTally(); showRewardLine(false); buildPane();
+  } else if (a === 'forget') {
+    foundOrder = []; rewardDone = false; SL.forEach(s => { if (s.silent) { s.found = false; makeLab(s); } });
+    rewardEl.hidden = true; rewardEl.classList.remove('on'); store.del(FOUND_KEY); relayout(); updateTally(); buildPane();
+  } else if (a === 'gold' && GOLD_PRESETS[e.target.dataset.v]) {
+    Object.assign(cfg.gold, GOLD_PRESETS[e.target.dataset.v]); saveCfg(); const st = tuneEl.scrollTop; buildPane(); tuneEl.scrollTop = st;
+  } else if (a === 'replay') startReplay();
+});
+window.addEventListener('keydown', e => {
+  const typing = e.target && (e.target.tagName === 'TEXTAREA' || (e.target.tagName === 'INPUT' && !/^(checkbox|range|color)$/.test(e.target.type)));
+  if ((e.key === '`' || e.code === 'Backquote') && !typing && !e.metaKey && !e.ctrlKey) { setTune(tuneEl.hidden); e.preventDefault(); }
+  else if (e.key === 'Escape') {
+    if (!tuneEl.hidden) setTune(false); else if (!ixEl.hidden) { setIndex(false); ixb.focus(); } else if (pinned) setActive(null);
+    else if (latched.length) { latched.forEach(l => l.s.el.classList.remove('lat')); latched = []; }
+  }
+});
+
+// ---------------------------------------------------------------- main loop
+let raf = 0, lastMs = -1, popTick = 0;
+function relayout() { viewOK = false; }
+let REM = 1;   // root font size / 12px: the layout's text estimates were tuned at 12px
+function layout() {
+  REM = (parseFloat(getComputedStyle(document.documentElement).fontSize) || 12) / 12;
+  if (!computeView()) return false;
+  updateStatic();
+  if (!geoReady) return true;
+  placeCells(); buildTracts(); placeLabels(hdrBox()); crowdRels(); placeAreaNames(); buildIndex(); updateTally(); postGraph();
+  if (DBG) console.log('layout', W, H, 'tracts', tractN, EDGES.filter(e => e.on).length, SL.filter(s => s.on).map(s => s.id + '@' + s.x.toFixed(0) + ',' + s.y.toFixed(0)).join(' '));
+  try { if (R2) R2.resize(); else if (FB) FB.dirty = true; }
+  catch (e) { console.warn('gl resize failed, falling back', e); R2 = null; FB = buildFallback(); }
+  if (active && cfg.instrument.cellPanel) { sizeTrace(); positionPanel(active); }
+  if (sim) sim.post({ t: 'view', view: inView.slice() });
+  return true;
+}
+let viewOK = false, demoBooted = false, dbgN = 0, dbgAcc = 0;
+let slowEma = 16.7, slowN = 0;
+function adapt(dt) {
+  // if the display can't keep up, trade device pixels for frames (never in demo/bench: they measure on purpose)
+  if (DEMO || !R2 || qScale <= 0.5) return;
+  slowEma += (dt - slowEma) * 0.05;
+  if (slowEma > 26) { if (++slowN > 120) { qScale = Math.max(0.5, qScale * 0.75); slowN = 0; slowEma = 16.7; viewOK = false; } }
+  else slowN = 0;
+}
+let voiceNow = [];
+function pump(dt) {
+  if (!geoReady || !sim || simT0 < 0) return;
+  voiceNow = tickVoices();
+  simDebt += dt * (RM ? 0.6 : 1);
+  if (inflight) {
+    if (simDebt > 250) simDebt = 250;
+    if (performance.now() - inflightT > 4000 && sim.kind === 'worker') { console.warn('sim stalled'); inflightT = performance.now(); }
+    return;
+  }
+  const ms = Math.min(Math.floor(simDebt), 120);
+  if (ms < 1 && !stimQ.length && !pokeQ.length) return;
+  simDebt -= ms;
+  inflight = true; inflightT = performance.now();
+  sim.post({ t: 'run', ms, stims: stimQ.splice(0), pokes: pokeQ.splice(0), voices: voiceNow });
+}
+function updatePulses() {
+  pulseU.fill(0);
+  for (let k = pulses.length - 1; k >= 0; k--) {
+    const pu = pulses[k], e = pu.e;
+    if (!e.on || e.gidx < 0 || e.gidx >= 40) { pulses.splice(k, 1); continue; }
+    const head = (simT - pu.t0) / pu.dur;
+    if (head > 1 + 420 / Math.max(e.len, 1)) { pulses.splice(k, 1); continue; }
+    if (head < 0) continue;
+    const o = e.gidx * 4 + (pu.dir > 0 ? 0 : 2);
+    pulseU[o] = head; pulseU[o + 1] = pu.amp;
+  }
+}
+let bench = null;
+function frame(ms) {
+  raf = requestAnimationFrame(frame);
+  const tf0 = performance.now();
+  if (DEMO && !BENCH) { ms = performance.now(); if (lastMs < 0 && !demoBooted) { lastMs = BOOT_MS; demoBooted = true; } }
+  if (lastMs < 0) lastMs = ms;
+  const dtRaw = Math.max(0, ms - lastMs), dt = Math.min(50, dtRaw); lastMs = ms;
+  if (viewOK && ((window.innerWidth | 0) !== W || (window.innerHeight | 0) !== H)) viewOK = false;
+  if (!viewOK) { viewOK = layout(); if (!viewOK) return; }
+  adapt(dt);
+  const demoT = () => (simT0 >= 0 ? (simT - simT0 + simDebt) / 1000 : 0);
+  if (DEMO && sim && sim.kind === 'inline') {
+    let rem = Math.min(dtRaw, 3000);
+    // a still at ?t=: seek there in ≤1.5 s slices, so no single task is long enough to starve a virtual-time capture
+    if (SEEK && !seeked && simT0 >= 0 && demoT() >= 0.2) { seeked = true; seekLeft = Math.max(0, (SEEK - demoT()) * 1000); }
+    if (SEEK && seeked) { rem = Math.min(seekLeft, 1500); seekLeft -= rem; }
+    if (rem > 0) do { const h = Math.min(rem, 33); rem -= h; pump(h); nowSec += h / 1000; demoUpdate(demoT(), nowSec); expire(); } while (rem > 0);
+  } else { pump(dt); nowSec += dt / 1000; demoUpdate(demoT(), nowSec); }
+  motion(nowSec);
+  if (!geoReady) return;
+  nearUpdate(); expire();
+  if (rewardAt > 0 && nowSec >= rewardAt) { rewardAt = -1; showRewardLine(true); if (REWARD.replay) startReplay(); }
+  while (replayQ.length && nowSec >= replayQ[0][0]) { const s = replayQ.shift()[1]; pokeQ.push(s.k); }
+  const mapT = document.body.classList.contains('map') ? 0.82 : 1; mapDim += (mapT - mapDim) * 0.05;
+  updatePulses();
+  const scan = RM ? 1 : Math.min(1, scanPhase + simDebt / FR_MS);
+  if (newFrames) {
+    newFrames = false;
+    if (R2) R2.upload();
+    if (cfg.instrument.acquisition) updateClock();
+    if (cfg.instrument.trace && (++popTick % 2 === 0 || SEEK)) drawPop();
+    if (active && cfg.instrument.cellPanel) drawPanel();
+    if (FB) FB.draw();
+  } else if (FB && pulses.length) FB.draw();
+  if (R2) {
+    const tq = BENCH && R2.tq;
+    if (tq && !tq.busy) { tq.q = tq.q || R2.g.createQuery(); R2.g.beginQuery(tq.ext.TIME_ELAPSED_EXT, tq.q); tq.busy = 1; tq.open = 1; }
+    R2.draw(nowSec, scan);
+    if (tq && tq.open) { R2.g.endQuery(tq.ext.TIME_ELAPSED_EXT); tq.open = 0; }
+    if (tq && tq.busy && !tq.open && R2.g.getQueryParameter(tq.q, R2.g.QUERY_RESULT_AVAILABLE)) {
+      const ns = R2.g.getQueryParameter(tq.q, R2.g.QUERY_RESULT); tq.busy = 0;
+      if (!R2.g.getParameter(tq.ext.GPU_DISJOINT_EXT) && bench && performance.now() - bench.t0 > 1000) (bench.gpu = bench.gpu || []).push(ns / 1e6);
+    }
+  }
+  if (elStim.classList.contains('on') && nowSec - stimLogT > 2.6) elStim.classList.remove('on');
+  if (cfg.text.hint && !document.body.classList.contains('hinted') && nowSec > 25) document.body.classList.add('hinted');
+  if (cfg.text.hint && !clueShown && !DEMO && !foundOrder.length && nowSec > 22) { clueShown = true; showClue(9); }
+  if (BENCH && R2 && simT0 >= 0) {
+    const tc = performance.now();
+    if (Q.get('sync') !== '0') R2.sync();   // wait for the GPU: cost = this frame's JS + all of its GPU work, unpipelined (a pessimistic bound)
+    const now = performance.now();
+    if (!bench) bench = { t0: now, costs: [], cpus: [], ints: [], last: now };
+    else if (now - bench.t0 > 1000) { bench.costs.push(now - tf0); bench.cpus.push(tc - tf0); bench.ints.push(now - bench.last); }
+    bench.last = now;
+    if (Q.get('prof') === '1' && !bench.prof && now - bench.t0 > 3000) {
+      // per-pass GPU cost: time the frame with each pass removed (dev only: ?bench=1&prof=1)
+      bench.prof = {};
+      const tm1 = m => { R2.draw(nowSec, scan, m); R2.sync(); const a = performance.now(); for (let k = 0; k < 30; k++) R2.draw(nowSec, scan, m); R2.sync(); return (performance.now() - a) / 30; };
+      const tm = m => Math.min(tm1(m), tm1(m), tm1(m));
+      const base = tm(0);
+      bench.prof.all = +tm(255).toFixed(2); bench.prof.none = +base.toFixed(2);
+      for (const [nm, bit] of [['splat', 1], ['fluo', 2], ['dend', 4], ['tract', 8], ['soma', 16], ['acq', 32], ['disp', 64]]) bench.prof[nm] = +(tm(bit) - base).toFixed(2);
+      console.log('PROF ' + JSON.stringify(bench.prof));
+    }
+    if (!bench.done && now - bench.t0 > 9000) {
+      bench.done = true;
+      const st = a => { const s = a.slice().sort((x, y) => x - y); return { avg: +(a.reduce((x, y) => x + y, 0) / a.length).toFixed(2), p95: +s[Math.floor(s.length * 0.95)].toFixed(2) }; };
+      const c = st(bench.costs), iv = st(bench.ints), cp = st(bench.cpus), gq = bench.gpu && bench.gpu.length ? st(bench.gpu) : null;
+      console.log('BENCH ' + JSON.stringify({ avgMs: c.avg, p95Ms: c.p95, frames: bench.costs.length, cpuAvgMs: cp.avg, cpuP95Ms: cp.p95, intervalAvgMs: iv.avg, intervalP95Ms: iv.p95,
+        gpuTimerAvgMs: gq ? gq.avg : 'n/a', gpuTimerP95Ms: gq ? gq.p95 : 'n/a', gpuTimerN: bench.gpu ? bench.gpu.length : 0, css: [W, H], dev: [glC.width, glC.height], acq: [acqW, acqH], sim: sim.kind, simT }));
+    }
+  }
+  if (DBG) { const c = performance.now() - tf0; dbgAcc += c; if (++dbgN % 120 === 0) { console.log('dbg', dbgN, 't', nowSec.toFixed(1), 'simT', simT, 'kind', sim && sim.kind, 'cpu ms/frame', (dbgAcc / 120).toFixed(2), 'acq', acqW, acqH, 'found', foundOrder.join(','), 'body', document.body.className, 'reward', rewardEl.hidden, rewardEl.className, getComputedStyle(rewardEl).opacity, 'rewardAt', rewardAt); dbgAcc = 0; } }
+}
+let nowSec = 0;
+function start() { if (!raf) { lastMs = -1; raf = requestAnimationFrame(frame); } }
+function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; }
+document.addEventListener('visibilitychange', () => { document.hidden ? stop() : start(); });
+let rzT = 0;
+window.addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { viewOK = false; }, 60); });
+
+// boot: text and links are already painted and live; the tissue grows off the main thread
+applyColors(); applyText(); buildIndex(); updateTally();
+if (Q.get('index') === '1') setIndex(true);
+if (Q.has('tune')) setTune(true);
+viewOK = layout();
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { viewOK = false; });
+startSim(false);
+start();
+}
+requestAnimationFrame(() => setTimeout(boot, 0));
 </script>
 </body>
 </html>
