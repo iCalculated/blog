@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794295715';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794295715';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794295715';
-import { Board, buildPTN } from './board.js?v=1794295715';
-import * as engine from './engine.js?v=1794295715';
-import * as tiltak from './tiltak.js?v=1794295715';
+import { Game } from './shared/tak.js?v=1794322419';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794322419';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794322419';
+import { Board, buildPTN } from './board.js?v=1794322419';
+import * as engine from './engine.js?v=1794322419';
+import * as tiltak from './tiltak.js?v=1794322419';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -495,7 +495,7 @@ async function solved() {
 
 // After the puzzle the board is free: play any legal move, for either side, from any position.
 async function openExploration() {
-  await board.ui({ disableBoard: false, showRoads: true });
+  await board.ui({ disableBoard: false }); // roads are drawn only where one is complete (board.js does that by itself)
   await board.setPlayer(gameAt(shownLine().slice(0, S.view ?? shownLine().length)).toMove);
   renderAll();
   runEngine();
