@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794322419';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794322419';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794322419';
-import { Board, buildPTN } from './board.js?v=1794322419';
-import * as engine from './engine.js?v=1794322419';
-import * as tiltak from './tiltak.js?v=1794322419';
+import { Game } from './shared/tak.js?v=1794323286';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794323286';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794323286';
+import { Board, buildPTN } from './board.js?v=1794323286';
+import * as engine from './engine.js?v=1794323286';
+import * as tiltak from './tiltak.js?v=1794323286';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -453,7 +453,9 @@ async function report(win) {
         const r = await api('/api/result', { puzzleId: p.id, win, theme: s.theme || undefined, ...timing });
         if (r.user) {
           s.delta = r.rated ? r.userDelta : null;
-          if (r.rated) { p.attempts++; if (r.puzzleRating != null) p.rating = r.puzzleRating; }
+          // Like Lichess, the info panel keeps the rating the puzzle had when you played it (what you were up
+          // against), not the one your result just moved it to.
+          if (r.rated) p.attempts++;
           me = r.user; renderUser();
         }
       }
