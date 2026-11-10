@@ -1,8 +1,8 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794324042';
-import { parsePTN } from './shared/ptn.js?v=1794324042';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794325876';
+import { parsePTN } from './shared/ptn.js?v=1794325876';
 
 const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
@@ -90,7 +90,7 @@ export class Board {
   constructor(el, { onMove, onState } = {}) {
     this.el = el; this.onMove = onMove; this.onState = onState;
     el.classList.add('tb-host');
-    this.opts = { disableBoard: false, showRoads: false, animateBoard: true };
+    this.opts = { disableBoard: false, showRoads: false, animateBoard: true, dropOnStray: false };
     this.player = null; this.rot = false; this.sel = null; this.hlSquares = []; this.hover = -1;
     this.ready = Promise.resolve();
     this._setup(new Game(5), []);
@@ -283,7 +283,7 @@ export class Board {
   _sqAt(e) { const d = e.target.closest?.('.tb-sq'); return d && this.el.contains(d) ? +d.dataset.sq : -1; }
 
   _onClick(e, alt) {
-    if (e.target.closest('.tb-tray')) { if (this.sel?.t === 'tray') this.cancel(); return; }
+    if (e.target.closest('.tb-tray')) { if (this.sel?.t === 'tray' || this._unmovedStack()) this.cancel(); return; }
     const st = e.target.closest('.tb-st.pick');
     if (st) return this._trayClick(+st.parentNode.dataset.id, alt);
     const sq = this._sqAt(e);
@@ -301,10 +301,23 @@ export class Board {
     this._render();
   }
 
+  // A stack picked up but not moved yet. One stray tap on your own stone used to freeze the board (no Esc on phones).
+  // Now tapping another of your stacks switches to it and tapping the tray puts it down, everywhere; tapping any other
+  // square puts it down only with opts.dropOnStray (free analysis). While solving a puzzle such taps stay ignored, since
+  // a slipped finger mid-entry would otherwise turn the next intended tap into a different move, i.e. a miss.
+  _unmovedStack() { return this.sel?.t === 'stack' && this.sel.path.length === 1; }
+
   _squareClick(sq, alt) {
     if (!this._canInput()) return;
     const v = this._view();
-    if (!this._valid(v).has(sq)) return;
+    if (!this._valid(v).has(sq)) {
+      if (!this._unmovedStack()) return;
+      const held = this.sel;
+      this.sel = null;
+      if (this.snaps[this.cur].st[sq].length && this._valid(this._view()).has(sq)) return this._squareClick(sq, alt); // another own stack
+      if (!this.opts.dropOnStray) { this.sel = held; return; }
+      return this._render();
+    }
     const s = this.snaps[this.cur], g = s.g, sel = this.sel;
     if (!sel || sel.t === 'tray') {
       if (!s.st[sq].length) {
@@ -418,7 +431,7 @@ export class Board {
     if (v.cnt) counts.set(st[v.cnt[0]].at(-1), v.cnt[1]);
 
     // tray
-    const canPick = this._canInput() && (!this.sel || this.sel.t === 'tray');
+    const canPick = this._canInput() && (!this.sel || this.sel.t === 'tray' || this._unmovedStack());
     const pc = this._placeColor(), opening = g.ply < 2;
     for (let id = 0; id < 2 * P.T; id++) {
       if (onBoard.has(id)) continue;

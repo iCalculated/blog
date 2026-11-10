@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794324042';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794324042';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794324042';
-import { Board, buildPTN } from './board.js?v=1794324042';
-import * as engine from './engine.js?v=1794324042';
-import * as tiltak from './tiltak.js?v=1794324042';
+import { Game } from './shared/tak.js?v=1794325876';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794325876';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794325876';
+import { Board, buildPTN } from './board.js?v=1794325876';
+import * as engine from './engine.js?v=1794325876';
+import * as tiltak from './tiltak.js?v=1794325876';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -183,7 +183,7 @@ async function loadNext() {
     S = null;
     notice = { kind: 'none', title: 'No puzzles match', body: 'Try another theme, difficulty or board size.' };
     history.replaceState(null, '', '#/');
-    await board.ui({ disableBoard: true, showRoads: false });
+    await board.ui({ disableBoard: true, showRoads: false, dropOnStray: false });
     await board.load(buildPTN({ size: +(prefs.size || 5) }));
     renderAll(); setTitle(); return;
   }
@@ -295,7 +295,7 @@ async function start(p, theme = '') {
   notice = null;
   setTitle();
   renderAll(); // side panel right away
-  await board.ui({ disableBoard: true, showRoads: false });
+  await board.ui({ disableBoard: true, showRoads: false, dropOnStray: false });
   if (S !== s) return;
   if (hist.length) {
     // Show the game up to just before the opponent's last move, then play that move (Lichess-style).
@@ -500,7 +500,7 @@ async function solved() {
 
 // After the puzzle the board is free: play any legal move, for either side, from any position.
 async function openExploration() {
-  await board.ui({ disableBoard: false }); // roads are drawn only where one is complete (board.js does that by itself)
+  await board.ui({ disableBoard: false, dropOnStray: true }); // roads are drawn only where one is complete (board.js does that by itself)
   await board.setPlayer(gameAt(shownLine().slice(0, S.view ?? shownLine().length)).toMove);
   renderAll();
   runEngine();
@@ -542,8 +542,11 @@ async function afterExplore() {
   runEngine();
 }
 async function backToSolution() {
-  S.branch = null; S.onBranch = false; S.view = null; S.loadedKey = null;
-  await showLine(officialLine(), officialLine().length);
+  // Return to where your line split off (not the end of the solution, a finished game where no move can be played).
+  const at = Math.min(S.branch?.at ?? officialLine().length, officialLine().length);
+  S.branch = null; S.onBranch = false; S.loadedKey = null;
+  S.view = at < officialLine().length ? at : null;
+  await showLine(officialLine(), at);
   afterExplore();
 }
 
@@ -678,6 +681,10 @@ const refocusPV = (was) => {
 };
 
 // ---------- rendering ----------
+// After the puzzle: the result of the position on the board, if that game is over (then no move can be played there).
+const shownOver = () => { const line = shownLine(); return gameAt(line.slice(0, S.view ?? line.length)).result(); };
+const overNote = (r) => `Game over here: ${r.winner ? `${colorName(r.winner)} ${r.kind === 'road' ? 'made a road' : 'won on flats'}` : 'a draw'}. `
+  + `Step back${finePointer.matches ? ' (←)' : ''} or click an earlier move to explore from there.`;
 const solvedTitle = () => S.outcome === 'viewed' ? 'Solution shown' : S.outcome === 'miss' ? 'Solved, after a miss' : 'Solved';
 // Review dock (Shy picked it from mockups): on phones in portrait, once the puzzle is over, the result with Next
 // puzzle, Tiltak's line and the step buttons are pinned to the bottom of the screen. It only exists while pinned;
@@ -728,8 +735,8 @@ function renderAll(mood) {
       <p>That isn’t the puzzle’s line; checking whether it still forces a win.</p></div>${playActions}`;
   } else if (S.status === 'solved') {
     const title = solvedTitle();
-    const note = S.casual ? 'You used a hint, so this one didn’t count toward your rating.'
-      : `Play any move to explore${finePointer.matches ? ', or step through the line with ← and →' : ''}.`;
+    const note = (S.casual ? 'You used a hint, so this one didn’t count toward your rating. ' : '')
+      + (shownOver() ? overNote(shownOver()) : S.casual ? '' : `Play any move to explore${finePointer.matches ? ', or step through the line with ← and →' : ''}.`);
     fbHtml = `<div class="icon ${S.outcome === 'clean' ? 'good' : 'bad'}">${S.outcome === 'clean' ? '✓' : '✗'}</div><div class="body">
       <h2>${title}<span class="dslot"></span></h2><p>${note}</p></div>
       <div class="actions"><button class="primary" data-act="next">Next puzzle</button></div>`;
@@ -849,7 +856,7 @@ function renderAll(mood) {
   // A server notice (slow or unreachable) replaces the result, so a Next puzzle that's waiting doesn't look dead.
   const dockHead = notice ? `<span class="icon bad" aria-hidden="true">!</span><b>${esc(notice.title)}</b>`
     : `<span class="icon ${clean ? 'good' : 'bad'}" aria-hidden="true">${clean ? '✓' : '✗'}</span><b>${solvedTitle()}${delta}</b>`;
-  const dockNote = notice ? esc(notice.body) : S.casual ? 'You used a hint, so this one didn’t count.' : '';
+  const dockNote = notice ? esc(notice.body) : S.casual ? 'You used a hint, so this one didn’t count.' : shownOver() ? 'Game over here. Step back with ◀ to explore.' : '';
   const engSlot = `<div class="eng-slot">${engineHtml}</div>`;
   const scroller = `<div class="mscroll" role="group" aria-label="Moves"><div class="mtable">${rows}</div></div>`;
   const nav = `<div class="nav"><button data-step="first" title="Start" aria-label="Start">⏮</button><button data-step="prev" title="Back (←)" aria-label="Back">◀</button><button data-step="next" title="Forward (→)" aria-label="Forward">▶</button><button data-step="last" title="Current position" aria-label="Current position">⏭</button>${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
