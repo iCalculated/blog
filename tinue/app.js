@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794323286';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794323286';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794323286';
-import { Board, buildPTN } from './board.js?v=1794323286';
-import * as engine from './engine.js?v=1794323286';
-import * as tiltak from './tiltak.js?v=1794323286';
+import { Game } from './shared/tak.js?v=1794323953';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794323953';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794323953';
+import { Board, buildPTN } from './board.js?v=1794323953';
+import * as engine from './engine.js?v=1794323953';
+import * as tiltak from './tiltak.js?v=1794323953';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -314,6 +314,7 @@ async function start(p, theme = '') {
       await board.ui({ disableBoard: false });
       startClock(s);
       renderAll();
+      flushHint(s);
     }, 650);
   } else {
     await board.load(currentPTN());
@@ -325,6 +326,7 @@ async function start(p, theme = '') {
     startClock(s);
   }
   renderAll();
+  flushHint(s);
 }
 
 // Solve time: milliseconds the puzzle was actually on screen since the board became playable (a hidden tab or another
@@ -403,7 +405,7 @@ async function userMove(ptn) {
         logMove('slow', canon, tMove);
         S.slower = canon;
         renderAll();
-        setTimeout(() => { if (S !== s) return; S.busy = false; restoreBoard(); }, 700);
+        setTimeout(() => { if (S !== s) return; S.busy = false; restoreBoard().then(() => flushHint(s)); }, 700);
         return;
       }
     }
@@ -416,7 +418,7 @@ async function userMove(ptn) {
       if (r && S === s && S.refutation?.miss === canon) { S.refutation = { miss: canon, ...r }; renderAll(); }
     });
     fail();
-    setTimeout(() => { if (S !== s) return; S.busy = false; restoreBoard(); }, 700);
+    setTimeout(() => { if (S !== s) return; S.busy = false; restoreBoard().then(() => flushHint(s)); }, 700);
     return;
   }
   S.slower = null;
@@ -438,6 +440,7 @@ async function userMove(ptn) {
     if (S !== s) return;
     S.busy = false;
     renderAll();
+    flushHint(s);
   }, 450);
 }
 
@@ -582,7 +585,11 @@ async function showSolution() {
   step();
 }
 
+// A Hint pressed while the board is busy (loading, the opponent's reply, the reset after a wrong or slower move) would
+// be lost: remember it and show it once the board is free.
+function flushHint(s) { if (S === s && s.pendingHint) { s.pendingHint = false; showHint(); } }
 function showHint() {
+  if (S && S.busy && (S.status === 'retry' || S.status === 'play') && !S.placeholder) { S.pendingHint = true; return; }
   if (!S || S.placeholder || S.busy || S.status === 'solved' || S.status === 'viewing') return;
   const g = S.g;
   const mv = S.node === 'win' ? finisher(g) : Object.keys(S.node)[0];

@@ -377,10 +377,9 @@ export class Solver {
     const ordered = this._orderAttack(moves);
     for (const mv of ordered) {
       const u = g.apply(mv);
-      const res = g.result();
       let ok = false;
-      if (!res) ok = this.allLose(plies - 1);
-      g.undo(u);
+      // finally: a budget overrun deep in the search must still leave the caller's game as it was
+      try { if (!g.result()) ok = this.allLose(plies - 1); } finally { g.undo(u); }
       if (ok) { this.tt.set(k, true); return true; }
     }
     this.tt.set(k, false);
@@ -399,11 +398,8 @@ export class Solver {
     for (const r of replies) {
       this._check();
       const u = g.apply(r);
-      const res = g.result();
       let lost;
-      if (res) lost = res.winner === att;
-      else lost = this.winIn(plies - 1);
-      g.undo(u);
+      try { const res = g.result(); lost = res ? res.winner === att : this.winIn(plies - 1); } finally { g.undo(u); }
       if (!lost) { this.tt.set(k, false); return false; }
     }
     this.tt.set(k, true);
@@ -440,11 +436,8 @@ export function winningMoves(g, plies, opts) {
   const me = g.toMove, out = [];
   for (const mv of g.legalMoves()) {
     const u = g.apply(mv);
-    const res = g.result();
     let ok;
-    if (res) ok = res.winner === me;
-    else ok = plies >= 3 ? s.allLose(plies - 1) : false;
-    g.undo(u);
+    try { const res = g.result(); ok = res ? res.winner === me : plies >= 3 ? s.allLose(plies - 1) : false; } finally { g.undo(u); }
     if (ok) out.push(g.moveToPTN(mv));
   }
   return { moves: out, nodes: s.nodes };
