@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794325876';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794325876';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794325876';
-import { Board, buildPTN } from './board.js?v=1794325876';
-import * as engine from './engine.js?v=1794325876';
-import * as tiltak from './tiltak.js?v=1794325876';
+import { Game } from './shared/tak.js?v=1794338425';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794338425';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794338425';
+import { Board, buildPTN } from './board.js?v=1794338425';
+import * as engine from './engine.js?v=1794338425';
+import * as tiltak from './tiltak.js?v=1794338425';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -909,7 +909,7 @@ $('#feedback').addEventListener('click', async (e) => {
     if (kb) $('#ptn-in')?.focus();
   }
 });
-const themeDesc = () => { $('#theme-desc').textContent = prefs.theme && THEMES[prefs.theme] ? THEMES[prefs.theme].desc : 'A mix of everything. You don’t know what’s coming, just like in a real game.'; };
+const themeDesc = () => { $('#theme-desc').textContent = prefs.theme && THEMES[prefs.theme] ? THEMES[prefs.theme].desc + ' Knowing the theme is a hint, so wins here barely raise your rating.' : 'A mix of everything. You don’t know what’s coming, just like in a real game.'; };
 $('#difficulty').value = prefs.difficulty;
 $('#difficulty').onchange = (e) => { prefs.difficulty = e.target.value; store.set('prefs', prefs); loadNext(); };
 $('#size').onchange = (e) => { prefs.size = e.target.value; store.set('prefs', prefs); renderFilters(); loadNext(); };
