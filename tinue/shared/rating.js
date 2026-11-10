@@ -2,7 +2,7 @@
 // New players start at 1500 ± 250, and puzzles start at their prior ± 250: uncertain ratings move fast,
 // settled ones slowly, and a result from an uncertain player moves a puzzle less.
 // scripts/simulate-glicko.mjs shows why these numbers were picked.
-import { update, cap, blend, PLAYER_START, PUZZLE_RD, provisional } from './glicko.js?v=1794323953';
+import { update, cap, blend, PLAYER_START, PUZZLE_RD, provisional } from './glicko.js?v=1794324042';
 
 const CLUELESS_RD = 230;
 

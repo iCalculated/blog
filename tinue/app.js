@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794323953';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794323953';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794323953';
-import { Board, buildPTN } from './board.js?v=1794323953';
-import * as engine from './engine.js?v=1794323953';
-import * as tiltak from './tiltak.js?v=1794323953';
+import { Game } from './shared/tak.js?v=1794324042';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794324042';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794324042';
+import { Board, buildPTN } from './board.js?v=1794324042';
+import * as engine from './engine.js?v=1794324042';
+import * as tiltak from './tiltak.js?v=1794324042';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -734,10 +734,10 @@ function renderAll(mood) {
       <h2>${title}<span class="dslot"></span></h2><p>${note}</p></div>
       <div class="actions"><button class="primary" data-act="next">Next puzzle</button></div>`;
   } else if (S.status === 'retry' && S.slower) {
-    fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>That wins too, but slower</h2>
+    fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>That wins too, but slower<span class="dslot"></span></h2>
       <p>${esc(S.slower)} also forces a win, but there’s a faster one. This puzzle already counts as a miss; keep trying or view the solution.</p></div>${playActions}`;
   } else if (S.status === 'retry') {
-    fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>That’s not the move</h2>
+    fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>That’s not the move<span class="dslot"></span></h2>
       <p>${refText(S.refutation) || 'Try another move.'} This puzzle now counts as a miss; keep trying or view the solution.</p></div>${playActions}`;
   } else if (S.status === 'viewing') {
     fbHtml = `<div class="icon bad">…</div><div class="body"><h2>Solution</h2><p>Watch the winning line.</p></div>`;
@@ -771,7 +771,7 @@ function renderAll(mood) {
   // Session card: your rating (with the latest change beside it) and one chip per puzzle, Lichess-style.
   const last = session.at(-1);
   const sign = (d) => (d >= 0 ? '+' : '−') + Math.abs(Math.round(d));
-  $('#session').innerHTML = `<div><div class="label">Your rating</div><div class="rating-line"><span class="big">${myRating}</span>${S.status === 'solved' && last?.id === p.id && last.delta != null ? `<span class="delta ${last.delta >= 0 ? 'up' : 'down'}">${sign(last.delta)}</span>` : ''}</div></div>
+  $('#session').innerHTML = `<div><div class="label">Your rating</div><div class="rating-line"><span class="big">${myRating}</span>${S.resultSent && last?.id === p.id && last.delta != null ? `<span class="delta ${last.delta >= 0 ? 'up' : 'down'}">${sign(last.delta)}</span>` : ''}</div></div>
     <div class="streak">${session.map((x) => `<a class="${x.win ? 'w' : 'l'}${x.id === p.id ? ' cur' : ''}" href="#/puzzle/${esc(x.id)}" title="Puzzle #${esc(x.id)}">${x.delta != null ? sign(x.delta) : x.win ? '✓' : '✗'}</a>`).join('')}</div>`;
 
   // Everything about the puzzle itself comes at the end.
