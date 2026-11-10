@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794202589';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794202589';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794202589';
-import { Board, buildPTN } from './board.js?v=1794202589';
-import * as engine from './engine.js?v=1794202589';
-import * as tiltak from './tiltak.js?v=1794202589';
+import { Game } from './shared/tak.js?v=1794295715';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794295715';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794295715';
+import { Board, buildPTN } from './board.js?v=1794295715';
+import * as engine from './engine.js?v=1794295715';
+import * as tiltak from './tiltak.js?v=1794295715';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -71,6 +71,14 @@ prefs.difficulty ||= 'normal';
 store.set('prefs', prefs);
 const session = []; // {id, win, delta}
 const seenGuest = new Set(store.get('seen', []));
+// A random id for this browser's anonymous guest results (null if storage or crypto is unavailable).
+const guestId = () => {
+  let id = store.get('gid', null);
+  if (typeof id === 'string' && /^[a-f0-9]{32}$/.test(id)) return id;
+  try { id = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join(''); } catch { return null; }
+  store.set('gid', id);
+  return store.get('gid', null) === id ? id : null;
+};
 
 const board = new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
@@ -451,8 +459,13 @@ async function report(win) {
       }
     } catch { s.delta = null; }
   } else {
+    // Guests are rated locally only. Their first try at a puzzle is also sent anonymously (random browser id, the
+    // rating before this attempt, timing) to calibrate puzzle difficulty; the server records it and rates nothing.
+    if (!seenGuest.has(p.id)) {
+      const gid = guestId();
+      if (gid) api('/api/guest-result', { gid, puzzleId: p.id, win, hinted: !!S.hinted, rating: guest.rating, rd: guest.rd, games: guest.games, ...timing }, { quiet: true }).catch(() => {});
+    }
     if (!S.hinted && !seenGuest.has(p.id)) {
-      // Guests are rated locally only; nothing is sent to the server.
       const r = rate(guest, p, win, themeWeight(s.theme, THEMES, win));
       Object.assign(guest, r.user); guest.games++; S.delta = r.userDelta;
       store.set('guest', guest);
