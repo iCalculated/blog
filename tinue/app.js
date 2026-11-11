@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794338425';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794338425';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794338425';
-import { Board, buildPTN } from './board.js?v=1794338425';
-import * as engine from './engine.js?v=1794338425';
-import * as tiltak from './tiltak.js?v=1794338425';
+import { Game } from './shared/tak.js?v=1794417098';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794417098';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794417098';
+import { Board, buildPTN } from './board.js?v=1794417098';
+import * as engine from './engine.js?v=1794417098';
+import * as tiltak from './tiltak.js?v=1794417098';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -11,10 +11,10 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 // Auth is a bearer token from localStorage (cross-site cookies get blocked), plus a cookie for same-origin dev.
 const API = (window.TINUE_API || '').replace(/\/$/, '');
 const authHeaders = () => { const t = store.get('token', null); return t ? { authorization: 'Bearer ' + t } : {}; };
-const api = async (path, body, { quiet = false } = {}) => {
+const api = async (path, body, { quiet = false, noWait = quiet } = {}) => {
   // If the server can't be reached, say so instead of showing a blank page. (On Shy's tailnet, Chrome asks for
   // "local network access" before a public page may call crux's private address; that prompt also stalls here.)
-  const slow = quiet ? null : setTimeout(() => { notice = WAIT_NOTICE; renderAll(); }, 4000);
+  const slow = noWait ? null : setTimeout(() => { notice = WAIT_NOTICE; renderAll(); }, 4000);
   const t0 = performance.now();
   let outcome = 'ok';
   // A request stuck on a dead connection (e.g. the tailnet path to crux re-forming after sleep) is abandoned
@@ -364,6 +364,7 @@ async function restoreBoard() {
   const live = S.status === 'play' || S.status === 'retry';
   await board.ui({ disableBoard: !live });
   if (live) await board.setPlayer(S.solver);
+  if (live && S.hint?.node === S.node && S.hint.at === S.moves.length) await board.highlight(S.hint.sqs); // a reload clears it
   renderAll();
 }
 
@@ -451,9 +452,10 @@ async function report(win) {
   const s = S, p = S.p, timing = { ms: (s.decidedMs ?? elapsed(s)) ?? undefined, log: s.log.length ? s.log : undefined };
   if (me) {
     try { // a failed upload (network, server restart) loses this result, not the session
-      if (S.hinted) { await api('/api/result', { puzzleId: p.id, win, casual: true, ...timing }); s.delta = null; }
+      if (S.hinted) { await api('/api/result', { puzzleId: p.id, win, casual: true, ...timing }, { noWait: true }); s.delta = null; }
       else {
-        const r = await api('/api/result', { puzzleId: p.id, win, theme: s.theme || undefined, ...timing });
+        // noWait: a slow upload mustn't swap the card (and its Hint button) for the waiting notice; a failed one still says so
+        const r = await api('/api/result', { puzzleId: p.id, win, theme: s.theme || undefined, ...timing }, { noWait: true });
         if (r.user) {
           s.delta = r.rated ? r.userDelta : null;
           // Like Lichess, the info panel keeps the rating the puzzle had when you played it (what you were up
@@ -594,13 +596,46 @@ function flushHint(s) { if (S === s && s.pendingHint) { s.pendingHint = false; s
 function showHint() {
   if (S && S.busy && (S.status === 'retry' || S.status === 'play') && !S.placeholder) { S.pendingHint = true; return; }
   if (!S || S.placeholder || S.busy || S.status === 'solved' || S.status === 'viewing') return;
+  // Looking at an earlier position: go back to the live one and show the hint there.
+  if (S.view != null) { const s = S; restoreBoard().then(() => { if (S === s && S.view == null) showHint(); }); return; }
   const g = S.g;
   const mv = S.node === 'win' ? finisher(g) : Object.keys(S.node)[0];
   if (!mv) return;
   if (!S.hinted) logMove('hint');
   S.hinted = true;
-  board.highlight([g.sqName(g.parseMove(mv).sq)]);
+  // Each press at the same position says more: 1, the square to play on or move from; 2, the whole path of a stack
+  // move; 3, the stone to place or how to drop the stack. A miss that already used those squares skips ahead.
+  const path = moveSquares(mv), at = S.moves.length, lastMiss = S.misses.at(-1);
+  let level = S.hint?.node === S.node && S.hint.at === at ? S.hint.level + 1 : 1;
+  if (lastMiss?.at === at) {
+    const missed = moveSquares(lastMiss.ptn);
+    if (missed[0] === path[0]) level = Math.max(level, 2);
+    if (missed.join() === path.join()) level = Math.max(level, 3);
+  }
+  if (path.length === 1 && level === 2) level = 3; // a placement has no path to show
+  level = Math.min(level, 3);
+  S.hint = { node: S.node, at, level, sqs: level >= 2 ? path : path.slice(0, 1), note: level === 3 ? moveNote(mv) : '' };
+  board.highlight(S.hint.sqs);
   renderAll();
+}
+// The last hint step in words: which stone to place, or how many to carry and how to drop them.
+function moveNote(ptn) {
+  const m = /^(\d?)[a-h][1-8]([<>+-])(\d*)/.exec(ptn);
+  if (!m) return `Place a ${{ S: 'wall', C: 'capstone' }[ptn[0]] || 'flat'} there.`;
+  const n = +m[1] || 1, drops = m[3] ? m[3].split('').map(Number) : [n];
+  if (drops.length === 1) return n === 1 ? 'Move the top piece one square.' : `Carry ${n} pieces one square.`;
+  return `Carry ${n} pieces and drop ${drops.join(', then ')}.`;
+}
+// Squares a move touches, as names: where it starts, then each square a stack drops onto.
+function moveSquares(ptn) {
+  const m = /^(\d?)([a-h])([1-8])([<>+-])?(\d*)/.exec(ptn.replace(/^[FSC]/, ''));
+  if (!m) return [];
+  const sqs = [m[2] + m[3]];
+  if (!m[4]) return sqs;
+  const [df, dr] = { '+': [0, 1], '-': [0, -1], '>': [1, 0], '<': [-1, 0] }[m[4]];
+  let f = m[2].charCodeAt(0), r = +m[3];
+  for (let i = 0; i < (m[5] ? m[5].length : 1); i++) { f += df; r += dr; sqs.push(String.fromCharCode(f) + r); }
+  return sqs;
 }
 
 // Browse any earlier position (game history or puzzle moves). Index = number of plies shown.
@@ -619,6 +654,7 @@ async function viewPly(i, branch = S.onBranch) {
   i = Math.max(0, Math.min(total, i));
   if (i === total) { if (S.view != null) await restoreBoard(); return; }
   S.view = i;
+  await board.highlight([]); // the hint belongs to the live position; restoreBoard redraws it
   await board.ui({ disableBoard: true });
   if (i === 0) await board.first(); else await board.goTo(i - 1);
   renderAll();
@@ -726,6 +762,7 @@ function renderAll(mood) {
     : r.kind === 'gives-road' ? `After ${esc(r.miss)}, ${other} makes a road with <b>${esc(r.reply)}</b>.`
     : r.kind === 'refuted' ? `After ${esc(r.miss)}, ${other} answers <b>${esc(r.reply)}</b> and ${r.exact ? 'the forced win is gone' : 'the solver finds no forced win'}.`
     : `${esc(r.miss)} doesn’t force the win.`;
+  const hintNote = S.hint?.note && S.hint.node === S.node && S.hint.at === S.moves.length ? `<b>Hint:</b> ${esc(S.hint.note)} ` : '';
   let fbHtml;
   if (notice) {
     $('#feedback').classList.remove('is-loading');
@@ -742,19 +779,19 @@ function renderAll(mood) {
       <div class="actions"><button class="primary" data-act="next">Next puzzle</button></div>`;
   } else if (S.status === 'retry' && S.slower) {
     fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>That wins too, but slower<span class="dslot"></span></h2>
-      <p>${esc(S.slower)} also forces a win, but there’s a faster one. This puzzle already counts as a miss; keep trying or view the solution.</p></div>${playActions}`;
+      <p>${hintNote}${esc(S.slower)} also forces a win, but there’s a faster one. This puzzle already counts as a miss; keep trying or view the solution.</p></div>${playActions}`;
   } else if (S.status === 'retry') {
     fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>That’s not the move<span class="dslot"></span></h2>
-      <p>${refText(S.refutation) || 'Try another move.'} This puzzle now counts as a miss; keep trying or view the solution.</p></div>${playActions}`;
+      <p>${hintNote}${refText(S.refutation) || 'Try another move.'} This puzzle now counts as a miss; keep trying or view the solution.</p></div>${playActions}`;
   } else if (S.status === 'viewing') {
     fbHtml = `<div class="icon bad">…</div><div class="body"><h2>Solution</h2><p>Watch the winning line.</p></div>`;
   } else {
     const good = mood === 'good';
     if (S.slower) fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>That wins too, but slower</h2>
-      <p>${esc(S.slower)} also forces a win, but there’s a faster one. Find it; this doesn’t count as a miss.</p></div>${playActions}`;
+      <p>${hintNote}${esc(S.slower)} also forces a win, but there’s a faster one. Find it; this doesn’t count as a miss.</p></div>${playActions}`;
     else fbHtml = `<div class="icon ${good ? 'good' : 'turn p' + S.solver}">${good ? '✓' : ''}</div><div class="body">
       <h2>${good ? 'Best move!' : 'Your turn'}</h2>
-      <p>${good ? 'Keep going.' : `You play ${colorName(S.solver)}`}</p></div>${playActions}`;
+      <p>${hintNote}${good ? 'Keep going.' : `You play ${colorName(S.solver)}`}</p></div>${playActions}`;
   }
   // Only touch the card when it changes (it's a live region), and keep keyboard focus on the equivalent
   // button when it does (Hint / View solution, then Continue once the puzzle is over).
@@ -764,7 +801,14 @@ function renderAll(mood) {
     const ended = !fb._html?.includes('data-act="next"') && fbHtml.includes('data-act="next"');
     if (fb.contains(active)) fbFocus = active.dataset.act || null;
     else if (active && active !== document.body) fbFocus = null;
-    fb.innerHTML = fbHtml; fb._html = fbHtml;
+    // Same buttons as before (e.g. the miss text updating with the refutation): replace only the text, so a press on
+    // Hint or Solution that straddles the update still lands as a click.
+    const acts = fb.querySelector(':scope > .actions');
+    if (acts && fb._html?.endsWith(playActions) && fbHtml.endsWith(playActions) && acts.outerHTML === playActions) {
+      for (const el of [...fb.children]) if (el !== acts) el.remove();
+      acts.insertAdjacentHTML('beforebegin', fbHtml.slice(0, -playActions.length));
+    } else fb.innerHTML = fbHtml;
+    fb._html = fbHtml;
     if (fbFocus && (!document.activeElement || document.activeElement === document.body)) {
       const same = fb.querySelector(`[data-act="${fbFocus}"]:not(:disabled)`);
       if (same && same.offsetParent) same.focus(); else focusNext = true;

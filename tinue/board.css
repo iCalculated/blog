@@ -50,7 +50,7 @@
 
 .tb-host { container-type: inline-size; }
 .tb {
-  --b1: #f0d9b5; --b2: #b58863; --b3: #262421; --pri: #9cb83a;
+  --b1: #f0d9b5; --b2: #b58863; --b3: #262421; --pri: #9cb83a; --hint: #2f86d6;
   --p1: #f6f1e7; --p1s: #ffffff; --p1b: #8f8473; --p1r: #f6f1e7;
   /* --p2b: black stones' outline is light enough to separate stacked black stones (a near-black one merged them) */
   --p2: #2f2c29; --p2s: #3d3935; --p2b: #7a7168; --p2r: #4a4540;
@@ -74,15 +74,19 @@
 .tb.t2 .tb-pl { background: var(--p2r); }
 .tb-sq.c .tb-cur { opacity: .4; }
 .tb-sq.c.cp .tb-cur { opacity: .75; }
-.tb-sq.s .tb-pl { opacity: .4; }
-.tb-sq.s.sp .tb-pl { opacity: .8; }
+/* hints: their own colour (the side-to-move tint was cream on cream for White), plus a ring that shows around stacks */
+.tb-sq.s .tb-pl, .tb.t2 .tb-sq.s .tb-pl { background: var(--hint); }
+.tb-sq.s .tb-pl { opacity: .35; }
+.tb-sq.s.sp .tb-pl { opacity: .5; }
+.tb-sq.s::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 .05em var(--hint); }
+.tb-sq.s.sp::after { box-shadow: inset 0 0 0 .08em var(--hint); }
 .tb-sq.fw .tb-pl { opacity: .4; }
 .tb-sq.fw.o1 .tb-pl { background: var(--p1r); }
 .tb-sq.fw.o2 .tb-pl { background: var(--p2r); }
 .tb-sq.sel .tb-pl { opacity: .5; }
 .tb-sq.sel.selp .tb-pl { opacity: .25; }
 .tb-sq.v { cursor: pointer; }
-@media (pointer: fine) { .tb-sq.v:hover .tb-pl { opacity: .35; } }
+@media (pointer: fine) { .tb-sq.v:not(.s):hover .tb-pl { opacity: .35; } }
 
 /* coordinates */
 .tb-lab { position: absolute; width: 1.5em; height: 1.5em; line-height: 1.5em; text-align: center;
