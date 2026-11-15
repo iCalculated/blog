@@ -15,6 +15,7 @@
 // stop() ends the current search early and its promise resolves with what was found so far.
 // Supported: sizes 4, 5, 6; komi 0 and 2 (the only komi Tiltak has trained weights for). Other komi
 // values are rounded to the nearest of those and reported in komiUsed / komiApprox.
+import { canonPTN } from './shared/ptn.js?v=1794772090';
 
 export const SUPPORTED = Object.freeze({ sizes: [4, 5, 6], komi: [0, 2] });
 export const supports = (size, komi = 0) => SUPPORTED.sizes.includes(size) && (komi == null || komi >= -5 && komi <= 5);
@@ -88,19 +89,6 @@ function shape(info, ctx) {
     komiUsed: ctx.komiUsed,
     komiApprox: ctx.komiApprox,
   };
-}
-
-// Tiltak already prints standard PTN (a1, Sa1, Cb2, 3c3>12, 2d4-); this only canonicalises the optional
-// bits so its moves compare equal to Game.moveToPTN(): no "F", no count of 1, no lone drop equal to the count.
-export function canonPTN(m) {
-  if (!m) return m;
-  let s = m.replace(/['"!?*]+$/, '').replace(/^F/, '');
-  const mv = /^(\d?)([a-h][1-8])([<>+-])(\d*)$/.exec(s);
-  if (!mv) return s;
-  let [, c, sq, dir, drops] = mv;
-  const count = c ? +c : 1;
-  if (drops.length === 1 && +drops === count) drops = '';
-  return (count > 1 ? count : '') + sq + dir + drops;
 }
 
 function nearestKomi(k) {

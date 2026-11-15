@@ -1,5 +1,5 @@
 // Parse a PTN game (headers + moves) and replay it.
-import { Game } from './tak.js?v=1794771348';
+import { Game } from './tak.js?v=1794772090';
 
 export function parsePTN(text) {
   const headers = {};
@@ -30,4 +30,17 @@ export function ptnFromServer(move) {
   const carry = drops.reduce((s, d) => s + +d, 0);
   const dir = a[0] === b[0] ? (a[1] < b[1] ? '+' : '-') : (a[0] < b[0] ? '>' : '<');
   return `${carry > 1 ? carry : ''}${a.toLowerCase()}${dir}${drops.length > 1 ? drops.join('') : ''}`;
+}
+
+// Canonical PTN for engine output (Tiltak in the browser, Syntaks on the server), so their moves compare equal to
+// Game.moveToPTN(): no "F", no count of 1, no lone drop equal to the count, no trailing marks.
+export function canonPTN(m) {
+  if (!m) return m;
+  const s = m.replace(/['"!?*]+$/, '').replace(/^F/, '');
+  const mv = /^(\d?)([a-h][1-8])([<>+-])(\d*)$/.exec(s);
+  if (!mv) return s;
+  let [, c, sq, dir, drops] = mv;
+  const count = c ? +c : 1;
+  if (drops.length === 1 && +drops === count) drops = '';
+  return (count > 1 ? count : '') + sq + dir + drops;
 }

@@ -14,7 +14,10 @@ export const PROVISIONAL_RD = 110; // above this a rating is shown as "1650?"
 // Shy's pick, 2026-11-15. With one game per rating period the volatility barely moves, so it is effectively
 // per-player and fixed: accounts created before this keep their stored 0.09 unless migrated.
 export const PLAYER_START = { rating: 1500, rd: 500, vol: 0.06 };
-export const PUZZLE_RD = 250; // starting deviation for a puzzle around its prior rating
+export const PUZZLE_START = { rd: 250, vol: 0.09 }; // a puzzle starts at its prior rating ± 250
+// What ratings from before Glicko (2026-11-07) were converted with: rd from how much they had been played (rdFromCount
+// in rating.js, with this rd as the start) and this volatility.
+export const LEGACY_START = { rd: 250, vol: 0.09 };
 const RD_MAX = 500, VOL_MAX = 0.1;
 
 const g = (phi) => 1 / Math.sqrt(1 + (3 * phi * phi) / (Math.PI * Math.PI));

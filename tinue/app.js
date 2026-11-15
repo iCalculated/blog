@@ -1,24 +1,25 @@
-import { Game } from './shared/tak.js?v=1794771348';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794771348';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794771348';
-import { Board, buildPTN } from './board.js?v=1794771348';
-import * as engine from './engine.js?v=1794771348';
-import * as tiltak from './tiltak.js?v=1794771348';
+import { Game } from './shared/tak.js?v=1794772090';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794772090';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794772090';
+import { Board, buildPTN } from './board.js?v=1794772090';
+import * as engine from './engine.js?v=1794772090';
+import * as tiltak from './tiltak.js?v=1794772090';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 // The API can live elsewhere (static page on shydrie.xyz, API on crux): config.js sets TINUE_API.
 // Auth is a bearer token from localStorage (cross-site cookies get blocked), plus a cookie for same-origin dev.
 const API = (window.TINUE_API || '').replace(/\/$/, '');
-const authHeaders = () => { const t = store.get('token', null); return t ? { authorization: 'Bearer ' + t } : {}; };
+const authHeaders = () => (token ? { authorization: 'Bearer ' + token } : {});
 
 // A puzzle's address is a real path, <app>/puzzle/<id>, so pasting it into Discord unfurls: the static build writes
 // a small page there with the puzzle's embed tags that forwards to #/puzzle/<id>, and the app then shows the path
 // again. Other pages stay hash routes. APP is the app's directory (/tinue/ on shydrie.xyz, / on a dev server).
 const APP = location.pathname.replace(/(puzzle\/[^/]+|glossary|me|leaderboard)\/?$/, '').replace(/[^/]*$/, '');
-const puzzlePath = (id) => APP + 'puzzle/' + encodeURIComponent(id);
-const showPuzzleURL = (id) => { if (location.pathname + location.hash !== puzzlePath(id)) history.replaceState(null, '', puzzlePath(id)); };
-const showHashURL = (h) => { if (location.pathname !== APP || location.hash !== h) history.replaceState(null, '', APP + h); };
+// The query string (e.g. ?board=ninja) rides along on every address the app shows or shares.
+const puzzlePath = (id) => APP + 'puzzle/' + encodeURIComponent(id) + location.search;
+const showPuzzleURL = (id) => { if (location.pathname + location.search + location.hash !== puzzlePath(id)) history.replaceState(null, '', puzzlePath(id)); };
+const showHashURL = (h) => { if (location.pathname !== APP || location.hash !== h) history.replaceState(null, '', APP + location.search + h); };
 
 // Share: the puzzle's own address (see above). Phones get the system share sheet; elsewhere it is copied.
 async function sharePuzzle(p, btn) {
@@ -82,13 +83,24 @@ let notice = null; // a message that replaces the turn card: {kind: 'wait' | 'ne
 const store = {
   get(k, d) { try { const v = localStorage.getItem('tinue.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('tinue.' + k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem('tinue.' + k); } catch {} },
 };
 
-let me = null; // server user
-const guest = store.get('guest', { rating: PLAYER_START.rating, rd: PLAYER_START.rd, vol: PLAYER_START.vol, games: 0, v: 2 });
-guest.rd ??= rdFromCount(guest.games, 250); guest.vol ??= 0.09; // guests from before Glicko (converted with the start values of that time)
-// 2026-11-15: volatility 0.09 → 0.06 for everyone (accounts were migrated on the server); a guest keeps its deviation.
-if (!guest.v) { guest.vol = Math.min(guest.vol, PLAYER_START.vol); guest.v = 2; store.set('guest', guest); }
+// The server rates everyone. me: the player it knows us as, an account (name) or a guest (name null: has played
+// without claiming a name), with the token that identifies us (kept in memory too, in case storage is unavailable).
+// A first-time visitor has neither until their first result (or claiming a name), whose answer brings the token.
+let me = null, token = store.get('token', null);
+const setToken = (t) => {
+  token = t;
+  if (t) { store.set('token', t); store.del('guest'); store.del('seen'); } else store.del('token');
+};
+// Until 2026-11-15 guests were rated in this browser. Until the first result here makes a guest a server user (whose
+// rating the server replays from the results this browser sent then), that rating and the puzzles seen steer the
+// next puzzle and show as "your rating".
+const legacyGuest = token ? null : store.get('guest', null), legacySeen = token ? [] : store.get('seen', null) || [];
+const guestSeed = () => ({ gid: guestId() ?? undefined });
+// Your rating as shown: the server's, else (no result yet) the browser's from before, else the start.
+const myRating = () => me || (legacyGuest?.games ? { rating: legacyGuest.rating, provisional: provisional(legacyGuest) } : { rating: PLAYER_START.rating, provisional: true });
 // "1650?" while a rating is still provisional (high deviation), as on Lichess.
 const fmtRating = (r, prov) => `${Math.round(r)}${prov ? '<span class="prov" title="Provisional: it settles after about 15 rated puzzles">?</span>' : ''}`;
 const prefs = store.get('prefs', {});
@@ -99,8 +111,8 @@ if (!prefs.v3) { if (prefs.size === '5') prefs.size = '6'; prefs.v3 = true; }
 prefs.difficulty ||= 'normal';
 store.set('prefs', prefs);
 const session = []; // {id, win, delta}
-const seenGuest = new Set(store.get('seen', []));
-// A random id for this browser's anonymous guest results (null if storage or crypto is unavailable).
+// A random id for this browser (null if storage or crypto is unavailable). It links a guest's server row to the
+// anonymous results older clients sent, and lets a guest whose token got lost on the way get its row back.
 const guestId = () => {
   let id = store.get('gid', null);
   if (typeof id === 'string' && /^[a-f0-9]{32}$/.test(id)) return id;
@@ -109,21 +121,25 @@ const guestId = () => {
   return store.get('gid', null) === id ? id : null;
 };
 
-const board = new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
+// ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
+const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
+const board = NINJA ? new (await import('./ninja.js?v=1794772090')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+  : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
 
 // ---------- user box ----------
 function renderUser() {
   const box = $('#userbox');
-  store.set('me', me ? { name: me.name } : null);
-  if (me) {
+  store.set('me', me ? { name: me.name } : null); // a guest is { name: null }
+  if (me) { store.set('myRating', me.rating); store.set('myProv', !!me.provisional); } // shown before /api/me answers next time
+  if (me?.name) {
     // Name with a small menu on hover/focus: History, Log out (with an inline confirm).
     box.innerHTML = `<div class="menu"><button class="link name" aria-haspopup="true">${esc(me.name)}</button>
       <div class="pop" role="menu"><a href="#/me" role="menuitem">History</a><button class="link" id="logout" role="menuitem">Log out</button>
         <div class="confirm hidden" id="logout-confirm"><p>You’ll need your login token (on your History page) to sign back in on this device.</p><button class="danger" id="logout-yes">Log out</button></div></div></div>`;
     $('#logout').onclick = () => { $('#logout-confirm').classList.remove('hidden'); $('#logout').classList.add('hidden'); };
-    $('#logout-yes').onclick = async () => { await api('/api/logout', {}); store.set('token', null); me = null; session.length = 0; renderUser(); refreshPage(); };
+    $('#logout-yes').onclick = async () => { await api('/api/logout', {}); setToken(null); me = null; session.length = 0; renderUser(); refreshPage(); };
   } else {
     // One quiet button; claiming a name (or pasting a token) happens in a small popover.
     box.innerHTML = `<div class="menu click"><button class="link name" id="claim-open" aria-haspopup="dialog" aria-expanded="false">Claim a username</button>
@@ -148,16 +164,18 @@ function renderUser() {
     const showErr = (id, msg) => { const el = $(id); el.textContent = msg; el.classList.remove('hidden'); };
     $('#claim').onsubmit = async (e) => {
       e.preventDefault();
-      const r = await api('/api/register', { name: $('#claim-name').value.trim() });
+      // A guest's row just gets the name (rating and history stay); a first-time visitor's is created like a guest's.
+      const r = await api('/api/register', { name: $('#claim-name').value.trim(), ...(token ? {} : { guest: guestSeed() }) });
       if (r.error) return showErr('#claim-err', r.error);
-      me = r.user; store.set('token', r.token); session.length = 0; renderUser(); refreshPage();
+      if (r.token) setToken(r.token);
+      me = r.user; renderUser(); refreshPage();
     };
     $('#tok').onsubmit = async (e) => {
       e.preventDefault();
-      const token = $('#tok-in').value.trim();
-      const r = await api('/api/login', { token });
+      const t = $('#tok-in').value.trim();
+      const r = await api('/api/login', { token: t });
       if (r.error) return showErr('#tok-err', 'That token doesn’t match an account.');
-      me = r.user; store.set('token', token); session.length = 0; renderUser(); refreshPage();
+      setToken(t); me = r.user; session.length = 0; renderUser(); refreshPage();
     };
   }
 }
@@ -185,12 +203,12 @@ const nextQuery = () => {
   const q = new URLSearchParams({ difficulty: prefs.difficulty });
   if (prefs.size) q.set('size', prefs.size);
   if (prefs.theme) q.set('theme', prefs.theme);
-  if (!me) { q.set('rating', Math.round(guest.rating)); q.set('exclude', [...seenGuest].slice(-200).join(',')); }
+  if (!token) { q.set('rating', Math.round(myRating().rating)); if (legacySeen.length) q.set('exclude', legacySeen.slice(-200).join(',')); }
   return q.toString();
 };
 // The next puzzle is fetched as soon as this one's result is in, so Continue doesn't wait on the network.
 let prefetched = null; // { key, req }
-const nextKey = () => (me ? 'u:' + me.name : 'g') + '|' + nextQuery();
+const nextKey = () => (token ? 't:' + token.slice(0, 8) : 'g') + '|' + nextQuery();
 function prefetchNext() {
   const key = nextKey();
   prefetched = { key, req: api('/api/next?' + nextQuery(), null, { quiet: true }).catch(() => null) };
@@ -492,36 +510,19 @@ async function report(win) {
   S.resultSent = true;
   S.casual = S.hinted; // a hint before the result makes the attempt unrated
   const s = S, p = S.p, timing = { ms: (s.decidedMs ?? elapsed(s)) ?? undefined, log: s.log.length ? s.log : undefined };
-  if (me) {
-    try { // a failed upload (network, server restart) loses this result, not the session
-      if (S.hinted) { await api('/api/result', { puzzleId: p.id, win, casual: true, ...timing }, { noWait: true }); s.delta = null; }
-      else {
-        // noWait: a slow upload mustn't swap the card (and its Hint button) for the waiting notice; a failed one still says so
-        const r = await api('/api/result', { puzzleId: p.id, win, theme: s.theme || undefined, ...timing }, { noWait: true });
-        if (r.user) {
-          s.delta = r.rated ? r.userDelta : null;
-          // Like Lichess, the info panel keeps the rating the puzzle had when you played it (what you were up
-          // against), not the one your result just moved it to.
-          if (r.rated) p.attempts++;
-          me = r.user; renderUser();
-        }
-      }
-    } catch { s.delta = null; }
-  } else {
-    // Guests are rated locally only. Their first try at a puzzle is also sent anonymously (random browser id, the
-    // rating before this attempt, timing) to calibrate puzzle difficulty; the server records it and rates nothing.
-    if (!seenGuest.has(p.id)) {
-      const gid = guestId();
-      if (gid) api('/api/guest-result', { gid, puzzleId: p.id, win, hinted: !!S.hinted, rating: guest.rating, rd: guest.rd, games: guest.games, ...timing }, { quiet: true }).catch(() => {});
+  try { // a failed upload (network, server restart) loses this result, not the session
+    // noWait: a slow upload mustn't swap the card (and its Hint button) for the waiting notice; a failed one still says so
+    const r = await api('/api/result', { puzzleId: p.id, win, ...(s.hinted ? { casual: true } : { theme: s.theme || undefined }), ...timing,
+      ...(token ? {} : { guest: guestSeed() }) }, { noWait: true }); // the first result makes a first-time visitor a guest
+    if (r.token) setToken(r.token);
+    if (r.user) {
+      s.delta = r.rated ? r.userDelta : null;
+      // Like Lichess, the info panel keeps the rating the puzzle had when you played it (what you were up
+      // against), not the one your result just moved it to.
+      if (r.rated) p.attempts++;
+      me = r.user; renderUser();
     }
-    if (!S.hinted && !seenGuest.has(p.id)) {
-      const r = rate(guest, p, win, themeWeight(s.theme, THEMES, win));
-      Object.assign(guest, r.user); guest.games++; S.delta = r.userDelta;
-      store.set('guest', guest);
-    }
-    seenGuest.add(p.id); store.set('seen', [...seenGuest].slice(-500));
-    renderUser();
-  }
+  } catch { s.delta = null; }
   session.push({ id: p.id, win, delta: s.delta });
   renderAll();
   if (S === s) prefetchNext();
@@ -785,23 +786,40 @@ const fitDock = () => {
   wrap.style.maxWidth = '';
   if (pinned && S?.p?.size) {
     const top = wrap.getBoundingClientRect().top + scrollY, w = wrap.clientWidth;
-    const bar = wrap.querySelector('.tb-fc')?.offsetHeight || 0; // the flat-count bar above the board
-    const maxW = Math.max(220, Math.floor((root.clientHeight - h - top - 8 - bar) / (1 + 1 / S.p.size))); // tray is 1/n of the board
+    // scale by the board host's own shape (flat bar + board + tray, or PTN Ninja's frame), measured at full width
+    const maxW = Math.max(220, Math.floor(((root.clientHeight - h - top - 8) * w) / wrap.offsetHeight));
     if (maxW < w) wrap.style.maxWidth = maxW + 'px';
   }
 };
 const dockRO = typeof ResizeObserver === 'function' ? new ResizeObserver(() => fitDock()) : null;
 addEventListener('resize', () => fitDock());
 const nextBtn = () => $('#moves .dock [data-act="next"]') || $('#feedback [data-act="next"]');
+// "+12" / "−8": a rating change, with a real minus sign.
+const signed = (d) => (d >= 0 ? '+' : '−') + Math.abs(Math.round(d));
+const deltaSpan = (d) => `<span class="delta ${d >= 0 ? 'up' : 'down'}">${signed(d)}</span>`;
+
+// Redraw the side panel from S: the feedback card, the session card (your rating), the puzzle's info and the move list.
 function renderAll(mood) {
   if (!S) S = PLACEHOLDER;
   const loading = !!S.placeholder;
   for (const id of ['#feedback', '#moves']) $(id).classList.toggle('is-loading', loading);
-  const { p } = S;
+  const delta = S.delta != null ? deltaSpan(S.delta) : '';
+  const focusNext = renderFeedback(mood, delta);
+  renderSession();
+  // Everything about the puzzle itself comes at the end.
+  const done = S.status === 'solved';
+  const docked = done && DOCK_MQ.matches;
+  const vp = $('#view-puzzle');
+  vp.classList.toggle('analysis', done); // phones: step buttons only for the review...
+  vp.classList.toggle('peek', !done && S.view != null); // ...or to get back after tapping an earlier move
+  vp.classList.toggle('docked', docked);
+  renderInfo(done);
+  renderMoves(docked, delta, focusNext);
+}
+
+// The feedback card (a live region). Returns whether Next puzzle should take keyboard focus once it is drawn.
+function renderFeedback(mood, delta) {
   const fb = $('#feedback');
-  const myRating = fmtRating(me ? me.rating : guest.rating, me ? me.provisional : provisional(guest));
-  if (me) { store.set('myRating', me.rating); store.set('myProv', !!me.provisional); }
-  const delta = S.delta != null ? `<span class="delta ${S.delta >= 0 ? 'up' : 'down'}">${S.delta >= 0 ? '+' : '−'}${Math.abs(Math.round(S.delta))}</span>` : '';
   const dis = S.placeholder ? ' disabled tabindex="-1"' : '';
   const playActions = `<div class="actions"><button data-act="hint"${dis}>Hint</button><button data-act="solution"${dis} title="View the solution">Solution</button></div>`;
   const other = colorName(3 - S.solver);
@@ -866,20 +884,21 @@ function renderAll(mood) {
   if (dslot && dslot._html !== delta) { dslot.innerHTML = delta; dslot._html = delta; }
   $('#ptn-in').disabled = !!(S.placeholder || board.opts.disableBoard);
 
-  // Session card: your rating (with the latest change beside it) and one chip per puzzle, Lichess-style.
-  const last = session.at(-1);
-  const sign = (d) => (d >= 0 ? '+' : '−') + Math.abs(Math.round(d));
-  $('#session').innerHTML = `<div><div class="label">Your rating</div><div class="rating-line"><span class="big">${myRating}</span>${S.resultSent && last?.id === p.id && last.delta != null ? `<span class="delta ${last.delta >= 0 ? 'up' : 'down'}">${sign(last.delta)}</span>` : ''}</div></div>
-    <div class="streak">${session.map((x) => `<a class="${x.win ? 'w' : 'l'}${x.id === p.id ? ' cur' : ''}" href="#/puzzle/${esc(x.id)}" title="Puzzle #${esc(x.id)}">${x.delta != null ? sign(x.delta) : x.win ? '✓' : '✗'}</a>`).join('')}</div>`;
+  return focusNext;
+}
 
-  // Everything about the puzzle itself comes at the end.
-  const done = S.status === 'solved';
-  const docked = done && DOCK_MQ.matches;
-  const vp = $('#view-puzzle');
-  vp.classList.toggle('analysis', done); // phones: step buttons only for the review...
-  vp.classList.toggle('peek', !done && S.view != null); // ...or to get back after tapping an earlier move
-  vp.classList.toggle('docked', docked);
-  const info = $('#info');
+// Session card: your rating (with the latest change beside it) and one chip per puzzle, Lichess-style.
+function renderSession() {
+  const mine = myRating(), shown = fmtRating(mine.rating, mine.provisional);
+  const last = session.at(-1);
+  $('#session').innerHTML = `<div><div class="label">Your rating</div><div class="rating-line"><span class="big">${shown}</span>${S.resultSent && last?.id === S.p.id && last.delta != null ? deltaSpan(last.delta) : ''}</div></div>
+    <div class="streak">${session.map((x) => `<a class="${x.win ? 'w' : 'l'}${x.id === S.p.id ? ' cur' : ''}" href="#/puzzle/${esc(x.id)}" title="Puzzle #${esc(x.id)}">${x.delta != null ? signed(x.delta) : x.win ? '✓' : '✗'}</a>`).join('')}</div>`;
+
+}
+
+// The puzzle's info panel, shown once it is over.
+function renderInfo(done) {
+  const info = $('#info'), { p } = S;
   info.classList.toggle('hidden', !done);
   if (done) {
     const themes = (p.themes || []).filter((t) => THEMES[t] && THEMES[t].group !== 'Board');
@@ -899,9 +918,14 @@ function renderAll(mood) {
     if (sb) sb.onclick = () => sharePuzzle(p, sb);
   }
 
-  // Move list, Lichess-style: a fixed-height scrolling table (number | White | Black). The game so far is
-  // dim, a divider marks where the puzzle starts, your misses sit struck-through in the cell of the move you
-  // were looking for, and your own line is an indented row at its branch point. Click any move to see it.
+}
+
+// Move list, Lichess-style: a fixed-height scrolling table (number | White | Black). The game so far is
+// dim, a divider marks where the puzzle starts, your misses sit struck-through in the cell of the move you
+// were looking for, and your own line is an indented row at its branch point. Click any move to see it.
+// On phones, after the puzzle, the result, engine and step buttons dock below it (docked).
+function renderMoves(docked, delta, focusNext) {
+  const { p } = S;
   const official = officialLine();
   const startPly = S.hist.length ? 0 : Game.fromTPS(p.tps).ply;
   const viewIdx = S.view ?? shownLine().length;
@@ -915,7 +939,6 @@ function renderAll(mood) {
     cells.push({ ply: startPly + i, i, html: `${k >= 0 ? missesAt(k) : ''}<span class="${cls}" data-i="${i + 1}">${esc(m)}</span>` });
   });
   if (S.misses.some((x) => x.at === S.moves.length)) cells.push({ ply: startPly + official.length, i: official.length, html: missesAt(S.moves.length) });
-  const puzzleFrom = S.hist.length; // index of the first puzzle ply
   const branchRow = () => {
     const b0 = S.branch.at;
     const moves = S.branch.moves.map((m, j) => {
@@ -1108,15 +1131,16 @@ async function glossaryPage() {
 async function mePage() {
   show('view-me');
   const el = $('#view-me');
-  if (!me) { el.innerHTML = `<h1>History</h1><div class="panel"><p class="flush">Claim a username at the top right to keep your rating and history across visits. As a guest you’re rated <b class="your-rating">${fmtRating(guest.rating, provisional(guest))}</b> after ${guest.games} puzzle${guest.games === 1 ? '' : 's'}.</p></div>`; return; }
+  const claim = 'Claim a username at the top right to be on the leaderboard and to sign in on other devices.';
+  if (!me) { el.innerHTML = `<h1>History</h1><div class="panel"><p class="flush">Your puzzles will show up here. ${claim}</p></div>`; return; }
   const { history: h } = await api('/api/history');
-  const tok = store.get('token', null);
+  const tok = me.name ? token : null; // a guest has no name to sign in as elsewhere: claiming one comes first
   // rating chart
-  const pts = h.filter((r) => r.rated).reverse().map((r) => r.user_rating + r.user_delta);
-  pts.unshift(1500);
+  const rated = h.filter((r) => r.rated).reverse();
+  const pts = rated.length ? [rated[0].user_rating, ...rated.map((r) => r.user_rating + r.user_delta)] : [me.rating];
   const W = 860, H = 160, lo = Math.min(...pts) - 20, hi = Math.max(...pts) + 20;
   const path = pts.map((v, i) => `${i ? 'L' : 'M'}${(i / Math.max(1, pts.length - 1)) * W},${H - ((v - lo) / (hi - lo)) * H}`).join('');
-  el.innerHTML = `<h1>${esc(me.name)}</h1><p class="muted">Rating <b class="your-rating">${fmtRating(me.rating, me.provisional)}</b></p>
+  el.innerHTML = `<h1>${me.name ? esc(me.name) : 'History'}</h1>${me.name ? '' : `<div class="panel"><p class="flush">You’re playing as a guest: this browser remembers you. ${claim}</p></div>`}<p class="muted">Rating <b class="your-rating">${fmtRating(me.rating, me.provisional)}</b></p>
     <p class="muted">${me.games} rated puzzle${me.games === 1 ? '' : 's'}, ${me.wins} solved first try.${tok ? ' Your login token (paste on another device):' : ''}</p>
     ${tok ? `<div class="token"><input id="token-out" readonly value="${esc(tok)}" aria-label="Login token"><button id="token-copy">Copy</button></div>` : ''}
     <div class="chart"><svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"><path d="${path}" fill="none" stroke="#3692e7" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>
@@ -1169,7 +1193,7 @@ window.addEventListener('hashchange', route);
 
 (async () => {
   const cached = store.get('me', null);
-  if (cached && store.get('token', null)) { me = { ...cached, rating: store.get('myRating', 1500), provisional: store.get('myProv', true), games: 0, wins: 0 }; }
+  if (cached && token) { me = { ...cached, rating: store.get('myRating', PLAYER_START.rating), provisional: store.get('myProv', true), games: 0, wins: 0 }; }
   renderUser();
   themeDesc();
   renderAll(); // placeholder panels at their final size
@@ -1177,5 +1201,5 @@ window.addEventListener('hashchange', route);
   requestAnimationFrame(() => document.documentElement.classList.remove('booting')); // reveal once laid out
   const meP = api('/api/me').then((r) => { me = r.user; renderUser(); if (S) renderAll(); }).catch(() => {});
   // With a cached account the puzzle request goes out alongside /api/me (the server knows us by the token).
-  if (!store.get('token', null) || me) route(); else { await meP; route(); }
+  if (!token || me) route(); else { await meP; route(); }
 })();
