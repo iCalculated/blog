@@ -6,7 +6,7 @@ export const THEMES = {
   tinueIn4:  { name: 'Tinuë in 4+',   group: 'Length', desc: 'Longer forced wins.' },
   gaelet:    { name: 'Flat win',      group: 'Goal',   desc: 'Win on flat count instead of a road: the board fills up or someone runs out of pieces, and you have more flats on top. Tak players call a forced flat win a "gaelet".' },
   fork:      { name: 'Double threat', group: 'Motif',  desc: 'Your move creates two road threats through two different empty squares. The opponent can only block one.' },
-  quietMove: { name: 'Quiet move',    group: 'Motif',  desc: 'Somewhere in the solution you make a move that threatens nothing immediately, yet the opponent still can’t escape. Usually the hardest kind.' },
+  quietMove: { name: 'Non-Tak tinuë', group: 'Motif',  desc: 'A forced road where at least one of your moves isn’t Tak: it threatens no road next turn, yet the opponent still can’t escape. Usually the hardest kind.' },
   smash:     { name: 'Smash',         group: 'Motif',  desc: 'Your capstone moves onto a wall and flattens it, opening a path for your road.' },
   spread:    { name: 'Spread',        group: 'Motif',  desc: 'You pick up a stack and drop pieces along a line so that every square you drop on ends up showing your colour. You gain several squares at once.' },
   throw:     { name: 'Throw',         group: 'Motif',  desc: 'Like a spread, but you don’t care about the near squares — some end up showing your opponent’s colour. What matters is the piece that lands at the far end.' },
