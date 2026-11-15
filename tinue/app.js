@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794774253';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794774253';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794774253';
-import { Board, buildPTN } from './board.js?v=1794774253';
-import * as engine from './engine.js?v=1794774253';
-import * as tiltak from './tiltak.js?v=1794774253';
+import { Game } from './shared/tak.js?v=1794775792';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794775792';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794775792';
+import { Board, buildPTN } from './board.js?v=1794775792';
+import * as engine from './engine.js?v=1794775792';
+import * as tiltak from './tiltak.js?v=1794775792';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -119,7 +119,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794774253')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794775792')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -502,15 +502,16 @@ async function userMove(ptn) {
   // A proven win the puzzle's tree doesn't list is slower (the tree has every win at the minimal depth): not a miss.
   // Precomputed lists (alts at the root, altsAt in 5-ply lines) answer at once. Past the root of a deep (7+ ply)
   // puzzle nothing is precomputed, so the engine gets ~2.5 s to prove it (same search) before it counts as a miss.
-  // (A 'win' node is a road-in-1: there the slower win is rightly wrong.)
+  // A 'win' node (road-in-1 on the board) is checked the same way: a move that still forces the win, e.g. a double
+  // threat instead of the road, is "wins too, but slower", not a miss (Shy, 2026-11-15; alion02 on pd528655).
   const s = S;
   if (!correct) {
     g.undo(u);
     S.busy = true;
     const plies = [...(S.hist.length ? officialLine() : S.moves.map((m) => m.ptn)), canon];
-    if (!res && node && node !== 'win') {
-      let wins = slowerWins().includes(canon);
-      if (!wins && S.p.plies >= 7 && S.moves.length) {
+    if (!res && node) {
+      let wins = node !== 'win' && slowerWins().includes(canon);
+      if (!wins && (node === 'win' || (S.p.plies >= 7 && S.moves.length))) {
         S.slower = null; S.checking = canon;
         renderAll();
         wins = await engine.stillWins({ ...enginePos(plies), attacker: S.solver });

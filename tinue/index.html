@@ -12,10 +12,12 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#9cb83a">
 <link rel="preconnect" href="https://crux.tail5ed24.ts.net:8443" crossorigin="use-credentials"><link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%23262421'/><g fill='%23e8e6e3'><path d='M10 15 A6 6 0 0 1 22 15 Z'/><rect x='5' y='17' width='22' height='4' rx='1.3'/><rect x='5' y='23' width='22' height='4' rx='1.3'/></g></svg>">
+<script>/* ?board=ninja: connect to ptn.ninja now (the iframe itself starts below, once the stylesheets are in) */
+if (/(^|&)board=ninja(&|$)/.test(location.search.slice(1))) document.head.append(Object.assign(document.createElement('link'), { rel: 'preconnect', href: 'https://ptn.ninja' }));</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="board.css?v=1794774253">
-<link rel="stylesheet" href="style.css?v=1794774253">
+<link rel="stylesheet" href="board.css?v=1794775792">
+<link rel="stylesheet" href="style.css?v=1794775792">
 <style>.booting main, .booting .credits { visibility: hidden; }</style>
 <script>setTimeout(() => document.documentElement.classList.remove("booting"), 2000);</script>
 <meta name="googlebot" content="noindex"><meta name="bingbot" content="noindex">
@@ -36,6 +38,17 @@
   <h1 class="sr-only">Puzzle</h1>
   <section class="board-col">
     <div class="board-wrap" id="board-wrap"><div id="board" class="board-host"></div></div>
+    <script>
+      // ?board=ninja: start PTN Ninja right away, while tinue's own modules are still loading (ninja.js takes this
+      // iframe over and shows it once the puzzle is drawn). Without the flag this does nothing and fetches nothing.
+      if (/(^|&)board=ninja(&|$)/.test(location.search.slice(1))) {
+        const b = document.getElementById('board'), f = document.createElement('iframe');
+        b.style.cssText = 'background:#262421;border-radius:var(--corner,6px)'; // placeholder until it's shown
+        f.style.cssText = 'display:block;width:100%;aspect-ratio:1/1.3;border:0;opacity:0';
+        f.src = 'https://ptn.ninja/?moveNumber=false&unplayedPieces=true&disableStoneCycling=true&showBoardPrefsBtn=false&disableNavigation=true&disablePTN=true&disableText=true&flatCounts=true&turnIndicator=true&gameTimer=false&showHeader=false&showEval=false&showRoads=false&stackCounts=false&notifyGame=false&disableUndo=true&showPTN=false&showText=false&showControls=false&showScrubber=false&animateBoard=true'; // same settings as UI in ninja.js
+        b.append(f);
+      }
+    </script>
     <form id="ptn-form" class="ptn-form"><input id="ptn-in" class="ptn-in" aria-label="Type a move" placeholder="Type a move, e.g. c3 or 2a1>11" autocomplete="off" autocapitalize="off" spellcheck="false" disabled></form>
   </section>
 
@@ -74,7 +87,7 @@
   <p>tinue is free software under the <a href="LICENSE.txt">GNU GPL v3</a>. <a href="https://github.com/iCalculated/blog/tree/main/tinue">Source code</a>.</p>
 </footer>
 
-<script src="config.js?v=1794774253"></script>
-<script type="module" src="app.js?v=1794774253"></script>
+<script src="config.js?v=1794775792"></script>
+<script type="module" src="app.js?v=1794775792"></script>
 </body>
 </html>

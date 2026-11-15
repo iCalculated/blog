@@ -2,8 +2,8 @@
 // embeds it. Same API as Board (board.js), so app.js doesn't care which one it has. Only loaded via import()
 // when the flag is set: everyone else fetches nothing from here or from ptn.ninja.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1794774253';
-import { parsePTN } from './shared/ptn.js?v=1794774253';
+import { Game } from './shared/tak.js?v=1794775792';
+import { parsePTN } from './shared/ptn.js?v=1794775792';
 
 const ORIGIN = 'https://ptn.ninja';
 // tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses).
@@ -19,7 +19,8 @@ const THEME = {
   },
 };
 // PlayTak's embed settings, but with PTN Ninja's own turn indicator + flat-count bar (Shy: use the built-in one).
-// Sent in the URL and again over postMessage: Firefox doesn't reliably apply URL settings.
+// index.html starts the iframe with these in its URL (keep the two in step); they're sent again over postMessage
+// once PTN Ninja is up, since Firefox doesn't reliably apply URL settings and the theme only goes that way.
 const UI = {
   theme: THEME, moveNumber: false, unplayedPieces: true, disableStoneCycling: true, showBoardPrefsBtn: false,
   disableNavigation: true, disablePTN: true, disableText: true, flatCounts: true, turnIndicator: true,
@@ -27,29 +28,44 @@ const UI = {
   disableUndo: true, showPTN: false, showText: false, showControls: false, showScrubber: false, animateBoard: true,
 };
 const PARAMS = '?' + Object.entries(UI).filter(([k]) => k !== 'theme').map(([k, v]) => `${k}=${v}`).join('&');
+const FRAME_CSS = 'display:block;width:100%;aspect-ratio:1/1.3;border:0;border-radius:var(--corner,6px);background:#262421';
 // tinue's orientation keys, for when focus is on the page rather than inside the iframe (PTN Ninja's own hotkeys
 // handle them there).
 const TRANSFORM = { '[': 'ROTATE_LEFT', ']': 'ROTATE_RIGHT', '-': 'ROTATE_180', ';': 'FLIP_HORIZONTAL', ':': 'FLIP_VERTICAL', '=': 'RESET_TRANSFORM' };
+const READY_TIMEOUT = 15000; // no PTN Ninja by then (blocked, offline, down): use tinue's own board instead
+const store = {
+  get(k) { try { return JSON.parse(localStorage.getItem('tinue.' + k)); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem('tinue.' + k, JSON.stringify(v)); } catch {} },
+};
 
 export class NinjaBoard {
   constructor(el, { onMove } = {}) {
-    this.onMove = onMove;
+    this.el = el; this.onMove = onMove;
     this.opts = { disableBoard: false, showRoads: false, animateBoard: true, dropOnStray: false };
     this.games = [new Game(5)]; this.snaps = [{}]; this.cur = 0; this.peeking = false;
-    const f = this.iframe = document.createElement('iframe');
+    this.ptn = null; this.player = null; this.hl = [];
+    // index.html usually started the iframe already (before the page's modules loaded); otherwise start it now
+    let f = el.querySelector('iframe');
+    if (!f) { f = document.createElement('iframe'); f.src = ORIGIN + '/' + PARAMS; f.style.opacity = '0'; el.replaceChildren(f); }
+    this.iframe = f;
     f.title = 'Tak board (PTN Ninja)';
-    f.allow = 'clipboard-write';
-    // the board plus PTN Ninja's turn indicator above it and its tray below
-    f.style.cssText = 'display:block;width:100%;aspect-ratio:1/1.3;border:0;border-radius:var(--corner,6px);background:#161512';
-    f.src = ORIGIN + '/' + PARAMS;
-    el.replaceChildren(f);
+    f.style.cssText = FRAME_CSS + ';opacity:' + f.style.opacity + ';transition:opacity .15s';
     this.ready = new Promise((resolve) => { this._resolve = resolve; });
+    this._failTimer = setTimeout(() => this._fallback(), READY_TIMEOUT);
     window.addEventListener('message', (e) => {
-      if (e.source !== f.contentWindow) return;
+      if (e.source !== f.contentWindow || this.fb) return;
       const { action, value } = e.data || {};
       if (action === 'GAME_STATE') {
-        if (this._resolve) { this._post('SET_UI', UI); this._resolve(); this._resolve = null; }
-      } else if (action === 'INSERT_PLY') this._played(typeof value === 'string' ? value : value?.ptn ?? value?.text);
+        if (this._resolve) {
+          clearTimeout(this._failTimer);
+          // tinue shows names nowhere else on the board, and they crowd the flat counts
+          this._post('SET_UI', { ...UI, boardTransform: store.get('ninjaTransform') || [0, 0] });
+          this._post('SHOW_NAMES', false);
+          this._resolve(); this._resolve = null;
+          this._settle();
+        }
+      } else if (action === 'SET_UI' && value?.boardTransform) store.set('ninjaTransform', value.boardTransform); // kept per browser
+      else if (action === 'INSERT_PLY') this._played(typeof value === 'string' ? value : value?.ptn ?? value?.text);
       else if (action === 'UNHANDLED_KEY' && value?.key) {
         // keys PTN Ninja didn't use (arrows etc. with its navigation off) work as if pressed on the page
         const { key, code, shiftKey, ctrlKey, altKey, metaKey } = value;
@@ -57,15 +73,46 @@ export class NinjaBoard {
       }
     });
     window.addEventListener('keydown', (e) => {
-      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || !(e.key in TRANSFORM)) return;
+      if (this.fb || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || !(e.key in TRANSFORM)) return;
       if (e.target.closest?.('input, select, textarea, [contenteditable]')) return;
       e.preventDefault(); this._send(TRANSFORM[e.key]);
+    });
+    // Callers hold this object; after a fallback every call goes to tinue's own board instead.
+    return new Proxy(this, {
+      get: (t, k) => { const o = t.fb && k in t.fb ? t.fb : t; const v = o[k]; return typeof v === 'function' ? v.bind(o) : v; },
     });
   }
 
   // ---------- messaging ----------
-  _post(action, value) { this.iframe.contentWindow.postMessage(value === undefined ? { action } : { action, value }, ORIGIN); }
+  _post(action, value) { if (!this.fb) this.iframe.contentWindow.postMessage(value === undefined ? { action } : { action, value }, ORIGIN); }
   async _send(action, value) { await this.ready; this._post(action, value); }
+
+  // Show the iframe only once PTN Ninja has drawn what tinue last loaded and stopped resizing: no white page,
+  // no board jumping size. Each load restarts the short wait.
+  _settle() {
+    if (this.shown) return;
+    clearTimeout(this._settleTimer);
+    this._settleTimer = setTimeout(() => {
+      if (this._resolve || this.fb) return;
+      this.shown = true;
+      requestAnimationFrame(() => { this.iframe.style.opacity = '1'; });
+    }, 120);
+  }
+
+  // PTN Ninja never came up: put tinue's own board in its place, in the same state, and hand it every call.
+  async _fallback() {
+    if (this.fb || !this._resolve) return;
+    const { Board } = await import('./board.js?v=1794775792');
+    this.el.style.cssText = ''; // index.html's placeholder background
+    const fb = new Board(this.el, { onMove: this.onMove });
+    this.fb = fb;
+    console.warn('PTN Ninja did not load; using tinue\'s board');
+    await fb.ui(this.opts);
+    if (this.player != null) await fb.setPlayer(this.player);
+    if (this.ptn) { await fb.load(this.ptn); await fb.goTo(this.cur - 1); }
+    if (this.hl.length) await fb.highlight(this.hl);
+    this._resolve(); this._resolve = null; // calls already waiting on PTN Ninja go nowhere now
+  }
 
   // ---------- what the board shows (tracked here, since PTN Ninja doesn't report it) ----------
   get g() { return this.games[this.cur]; }
@@ -88,7 +135,7 @@ export class NinjaBoard {
     const komi = +(headers.Komi || 0);
     const g = headers.TPS ? Game.fromTPS(headers.TPS, komi) : new Game(+headers.Size || 5);
     g.komi = komi;
-    this.games = [g]; this.snaps = [{}];
+    this.games = [g]; this.snaps = [{}]; this.ptn = ptn;
     for (const m of moves) { const c = this._canon(this.games.at(-1), m); if (!c) break; this._push(c); }
     this.cur = this.snaps.length - 1; this.peeking = false;
     // without PTN Ninja's fly-in animation for the whole game
@@ -98,6 +145,7 @@ export class NinjaBoard {
     this._post('LAST');
     await new Promise((r) => setTimeout(r, 60));
     this._post('SET_UI', { animateBoard: this.opts.animateBoard });
+    this._settle();
   }
   async append(ply) {
     const c = this._canon(this.games.at(-1), ply);
@@ -110,14 +158,14 @@ export class NinjaBoard {
   last() { this.cur = this.snaps.length - 1; this.peeking = false; return this._send('LAST'); }
   // Half-step: the position before the next move, that move's squares highlighted (PTN Ninja's not-done ply).
   peek() { if (!this.snaps[this.cur + 1]) return false; this.peeking = true; this._send('GO_TO_PLY', { plyID: this.cur, isDone: false }); return true; }
-  setPlayer(p) { return this._send('SET_PLAYER', p); }
+  setPlayer(p) { this.player = p; return this._send('SET_PLAYER', p); }
   ui(v = {}) {
     Object.assign(this.opts, v);
     const out = {};
     for (const k of ['disableBoard', 'showRoads', 'animateBoard']) if (k in v) out[k] = v[k];
     return Object.keys(out).length ? this._send('SET_UI', out) : this.ready;
   }
-  highlight(squares = []) { return this._send('HIGHLIGHT_SQUARES', squares || []); }
+  highlight(squares = []) { this.hl = squares || []; return this._send('HIGHLIGHT_SQUARES', this.hl); }
   cancel() { return this._send('CANCEL_MOVE'); }
   // A typed move: checked here, then played on PTN Ninja's board, which reports it back like a click.
   play(ptn) {
