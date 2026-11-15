@@ -1,8 +1,8 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794770109';
-import { parsePTN } from './shared/ptn.js?v=1794770109';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794770260';
+import { parsePTN } from './shared/ptn.js?v=1794770260';
 
 const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
@@ -201,9 +201,11 @@ export class Board {
 
   _build() {
     const n = this.n;
-    this.el.innerHTML = `<div class="tb" style="--n:${n}"><div class="tb-board" role="img"></div><div class="tb-tray"></div></div>`;
+    // Flat-count bar on top (as PTN Ninja's): each side's width is its share of top flats, komi hatched in.
+    this.el.innerHTML = `<div class="tb" style="--n:${n}"><div class="tb-fc" aria-hidden="true"><div class="tb-f1"><i></i><b></b></div><div class="tb-f2"><i></i><b></b></div></div>` +
+      '<div class="tb-board" role="img"></div><div class="tb-tray"></div></div>';
     this.root = this.el.firstChild;
-    this.boardEl = this.root.firstChild; this.trayEl = this.root.lastChild;
+    [this.fcEl, this.boardEl, this.trayEl] = this.root.children;
     this.sqEls = []; this.cache = new Map();
     const order = [];
     for (let dr = n - 1; dr >= 0; dr--) for (let dc = 0; dc < n; dc++) order.push(this._logical(dc, dr));
@@ -212,8 +214,6 @@ export class Board {
       const d = document.createElement('div');
       d.className = 'tb-sq ' + (c % 2 !== r % 2 ? 'lt' : 'dk');
       d.dataset.sq = sq;
-      // round the board's top corners to match the page's panels (pieces live in their own layer, so nothing clips)
-      if (dr === n - 1 && (dc === 0 || dc === n - 1)) { d.style[dc === 0 ? 'borderTopLeftRadius' : 'borderTopRightRadius'] = 'var(--corner, 6px)'; d.style.overflow = 'hidden'; }
       d.innerHTML = '<div class="tb-hl tb-cur"></div><div class="tb-hl tb-pl"></div><div class="tb-rd"><i class="m"></i><i class="n"></i><i class="e"></i><i class="s"></i><i class="w"></i></div>' +
         (dc === 0 ? `<span class="tb-lab tb-lr">${this.M[2] ? FILES[c] : r + 1}</span>` : '') + (dr === 0 ? `<span class="tb-lab tb-lc">${this.M[0] ? FILES[c] : r + 1}</span>` : '');
       d._rd = d.children[2].children;
@@ -504,8 +504,22 @@ export class Board {
     const res = g.result();
     const roads = this._roads(g, res);
     const who = (c) => (c === 1 ? 'White' : 'Black');
-    const label = `Tak board, ${res ? (res.winner ? `${who(res.winner)} won` : 'drawn') : `${who(g.toMove)} to move`}. Position: ${g.toTPS()}`;
+    const f = g.flatCounts(), k = g.komi || 0, kTxt = String(Math.abs(k)).replace(/^0?\.5$/, '½').replace('.5', '½');
+    const label = `Tak board, ${res ? (res.winner ? `${who(res.winner)} won` : 'drawn') : `${who(g.toMove)} to move`}. ` +
+      `Flats: White ${f[1]}${k < 0 ? ` + ${kTxt} komi` : ''}, Black ${f[2]}${k > 0 ? ` + ${kTxt} komi` : ''}. Position: ${g.toTPS()}`;
     this._set(this.boardEl, 'l', label, (x) => this.boardEl.setAttribute('aria-label', x));
+
+    // flat-count bar
+    const w1 = f[1] + Math.max(0, -k), w2 = f[2] + Math.max(0, k), tot = w1 + w2;
+    const pct = tot ? Math.min(88, Math.max(12, (100 * w1) / tot)) : 50;
+    const [s1, s2] = this.fcEl.children;
+    this._set(s1, 'w', pct, (x) => { s1.style.width = x + '%'; });
+    this._set(s2, 'w', 100 - pct, (x) => { s2.style.width = x + '%'; });
+    [[s1, f[1], -k, w1], [s2, f[2], k, w2]].forEach(([el, flats, km, w]) => {
+      const t = flats + (km > 0 ? ' +' + kTxt : ''), hatch = km > 0 && w ? (100 * km) / w : 0;
+      this._set(el.lastChild, 't', t, (x) => { el.lastChild.textContent = x; });
+      this._set(el.firstChild, 'w', hatch, (x) => { el.firstChild.style.width = x + '%'; });
+    });
 
     // squares
     const hl = this.peekHl || (this.cur > 0 ? s.hl : null);

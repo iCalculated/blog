@@ -35,6 +35,9 @@
      and to board edges, in the owner's road color: .2 for connections, .8 for the winning road. A
      finished road game shows just the winning road (.8) even without showRoads.
 
+   FLAT COUNTS: a 22px bar on the board's top edge, white left and black right, each as wide as its share of top
+   flats plus any komi it receives (komi = a hatched end of that side, read "+2½"); 12%–88% so a count always fits.
+
    MOTION: transform/opacity/size/color transitions of .3s cubic-bezier(.3,.3,.5,1); no animation on
    load/goTo/first/last; none at all with prefers-reduced-motion.
 
@@ -69,6 +72,16 @@
 .tb-board { position: relative; z-index: 1; width: 100%; aspect-ratio: 1; background: var(--b1);
   display: grid; grid-template-columns: repeat(var(--n), 1fr); grid-template-rows: repeat(var(--n), 1fr); }
 .tb-tray { width: 100%; aspect-ratio: var(--n) / 1; background: var(--b3); border-radius: 0 0 var(--corner, 6px) var(--corner, 6px); }
+/* flat-count bar: top flats per side (walls and caps don't count), komi as a hatched end of the side that gets it */
+.tb-fc { display: flex; height: 22px; border-radius: var(--corner, 6px) var(--corner, 6px) 0 0; overflow: hidden;
+  font: 600 12px/22px var(--mono, ui-monospace, monospace); font-variant-numeric: tabular-nums; }
+.tb-fc > div { position: relative; width: 50%; padding: 0 8px; white-space: nowrap; transition: width var(--dur) var(--ease); }
+.tb-fc b { position: relative; font-weight: inherit; }
+.tb-fc i { position: absolute; top: 0; bottom: 0; width: 0; }
+.tb-f1 { background: var(--p1); color: var(--p2); }
+.tb-f1 i { left: 0; background: repeating-linear-gradient(135deg, #ddd5c6 0 4px, var(--p1) 4px 8px); }
+.tb-f2 { background: var(--p2); color: var(--p1); text-align: right; }
+.tb-f2 i { right: 0; background: repeating-linear-gradient(135deg, var(--p2r) 0 4px, var(--p2) 4px 8px); }
 
 /* squares */
 .tb-sq { position: relative; font-size: calc(100cqw / var(--n)); }

@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794770109';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794770109';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794770109';
-import { Board, buildPTN } from './board.js?v=1794770109';
-import * as engine from './engine.js?v=1794770109';
-import * as tiltak from './tiltak.js?v=1794770109';
+import { Game } from './shared/tak.js?v=1794770260';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794770260';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794770260';
+import { Board, buildPTN } from './board.js?v=1794770260';
+import * as engine from './engine.js?v=1794770260';
+import * as tiltak from './tiltak.js?v=1794770260';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -785,7 +785,8 @@ const fitDock = () => {
   wrap.style.maxWidth = '';
   if (pinned && S?.p?.size) {
     const top = wrap.getBoundingClientRect().top + scrollY, w = wrap.clientWidth;
-    const maxW = Math.max(220, Math.floor((root.clientHeight - h - top - 8) / (1 + 1 / S.p.size))); // tray is 1/n of the board
+    const bar = wrap.querySelector('.tb-fc')?.offsetHeight || 0; // the flat-count bar above the board
+    const maxW = Math.max(220, Math.floor((root.clientHeight - h - top - 8 - bar) / (1 + 1 / S.p.size))); // tray is 1/n of the board
     if (maxW < w) wrap.style.maxWidth = maxW + 'px';
   }
 };
