@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794766732';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794766732';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794766732';
-import { Board, buildPTN } from './board.js?v=1794766732';
-import * as engine from './engine.js?v=1794766732';
-import * as tiltak from './tiltak.js?v=1794766732';
+import { Game } from './shared/tak.js?v=1794769956';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794769956';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794769956';
+import { Board, buildPTN } from './board.js?v=1794769956';
+import * as engine from './engine.js?v=1794769956';
+import * as tiltak from './tiltak.js?v=1794769956';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -680,7 +680,7 @@ function moveSquares(ptn) {
 
 // Browse any earlier position (game history or puzzle moves). Index = number of plies shown.
 async function viewPly(i, branch = S.onBranch) {
-  if (!S || S.placeholder) return;
+  if (!S || S.placeholder || board.holding) return; // stones in hand: finish or cancel the move first
   if (S.status === 'solved') {
     S.onBranch = !!(branch && S.branch);
     const line = shownLine();
@@ -1004,17 +1004,45 @@ $('#difficulty').value = prefs.difficulty;
 $('#difficulty').onchange = (e) => { prefs.difficulty = e.target.value; store.set('prefs', prefs); loadNext(); };
 $('#size').onchange = (e) => { prefs.size = e.target.value; store.set('prefs', prefs); renderFilters(); loadNext(); };
 $('#theme').onchange = (e) => { prefs.theme = e.target.value; store.set('prefs', prefs); themeDesc(); loadNext(); };
+// Stepping in half-moves, as in PTN Ninja: h = 2·plies shown, +1 while the next move's squares are only
+// highlighted (Shift+arrow). Plain steps land on whole moves.
+async function navTo(h) {
+  if (!S || S.placeholder || board.holding) return;
+  const total = shownLine().length;
+  h = Math.max(0, Math.min(2 * total, h));
+  await viewPly(h >> 1);
+  if (h & 1 && (S.view ?? total) === h >> 1) board.peek();
+}
+const navAt = () => 2 * (S.view ?? shownLine().length) + (board.peeking ? 1 : 0);
+const navStep = (dir, half) => { const h = navAt(); navTo(half ? h + dir : h + dir * (h & 1 ? 1 : 2)); };
+// Captured first, so Enter = Continue wins over board.js's Enter (lift / drop all) when nothing is in hand.
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || !S) return;
   if (S.placeholder || $('#view-puzzle').classList.contains('hidden')) return;
-  const total = shownLine().length, cur = S.view ?? total;
   if (e.key === 'Enter') {
-    // Enter = Continue, unless it's meant for whatever has focus (a button, a link, a field).
-    if (S.status === 'solved' && !e.target.closest?.('a, button, input, select, textarea, [contenteditable]')) loadNext();
-  } else if (e.key === 'ArrowLeft') viewPly(cur - 1);
-  else if (e.key === 'ArrowRight') viewPly(cur + 1);
-  // (Escape cancels a half-entered move: board.js handles it.)
-});
+    // Enter = Continue, unless it's meant for whatever has focus (a button, a link, a field) or stones are in hand.
+    if (S.status === 'solved' && !board.holding && !e.target.closest?.('a, button, input, select, textarea, [contenteditable]')) { e.preventDefault(); loadNext(); }
+    return;
+  }
+  const dir = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;
+  if (e.key === 'Home' || e.key === 'End' || (dir && e.ctrlKey)) { e.preventDefault(); navTo(e.key === 'Home' || dir < 0 ? 0 : Infinity); }
+  else if (dir && !e.altKey && !e.metaKey) { e.preventDefault(); navStep(dir, e.shiftKey); }
+  // (Escape, number keys and rotation are the board's: board.js.)
+}, { capture: true });
+// Scroll wheel over the board steps through moves (mouse and trackpad only; a phone's swipe still scrolls the page).
+let wheelAcc = 0;
+$('#board').addEventListener('wheel', (e) => {
+  if (!finePointer.matches || !S || S.placeholder || board.holding || e.ctrlKey) return;
+  e.preventDefault();
+  const step = devicePixelRatio * 100, d = (e.deltaY || e.deltaX) * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? 800 : 1);
+  if (Math.sign(d) !== Math.sign(wheelAcc)) wheelAcc = 0;
+  wheelAcc += d;
+  const times = Math.trunc(wheelAcc / step);
+  if (!times) return;
+  wheelAcc -= times * step;
+  const h = navAt();
+  navTo(e.shiftKey ? h + times : 2 * ((h + (times > 0 ? 0 : 1)) >> 1) + 2 * times);
+}, { passive: false });
 // Typed moves (keyboard / screen reader): played on the board exactly as if clicked.
 $('#ptn-form').addEventListener('submit', (e) => {
   e.preventDefault();

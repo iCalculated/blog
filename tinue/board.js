@@ -1,12 +1,18 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794766732';
-import { parsePTN } from './shared/ptn.js?v=1794766732';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794769956';
+import { parsePTN } from './shared/ptn.js?v=1794769956';
 
 const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
 const FILES = 'abcdefgh';
+// Board orientation: a 2×2 matrix [a, b, c, d] taking centred logical (file, rank) to display (x, y), y up.
+// Keys compose a turn or mirror onto it, as in PTN Ninja: [ ] quarter turns, - half turn, ; : mirrors, = reset.
+const ID = [1, 0, 0, 1];
+const OPS = { ']': [0, 1, -1, 0], '[': [0, -1, 1, 0], '-': [-1, 0, 0, -1], ';': [-1, 0, 0, 1], ':': [1, 0, 0, -1], '=': null };
+const mul = ([p, q, r, t], [a, b, c, d]) => [p * a + q * c, p * b + q * d, r * a + t * c, r * b + t * d];
+const loadOrient = () => { try { const m = JSON.parse(localStorage.getItem('tinue.orient')); if (Array.isArray(m) && m.length === 4) return m; } catch {} return ID; };
 
 // ---------- positions with piece identities (so a move can be animated piece by piece) ----------
 // Piece ids: per color, stones 0..F-1 then caps; id = (color-1)*T + k. A position (snapshot) keeps
@@ -91,7 +97,7 @@ export class Board {
     this.el = el; this.onMove = onMove; this.onState = onState;
     el.classList.add('tb-host');
     this.opts = { disableBoard: false, showRoads: false, animateBoard: true, dropOnStray: false };
-    this.player = null; this.rot = false; this.sel = null; this.hlSquares = []; this.hover = -1;
+    this.player = null; this.M = loadOrient(); this.sel = null; this.hlSquares = []; this.hover = -1; this.peekHl = null;
     this.ready = Promise.resolve();
     this._setup(new Game(5), []);
     el.addEventListener('click', (e) => this._onClick(e, false));
@@ -99,25 +105,35 @@ export class Board {
     // for a quick second tap on the same spot (taking more stones off a stack) and zooms; cancelling touchend stops
     // the zoom and the synthetic click, so each tap is handled exactly once. Scrolls (the finger moved) and pinches
     // (two fingers) are left alone.
-    let t0 = null;
+    // A long press (500 ms, one finger, under 10 px of drift) is the touch right-click; its release is not a tap.
+    let t0 = null, lp = 0, lastTouch = 0;
+    const at = (x, y) => { const t = document.elementFromPoint(x, y); return t && el.contains(t) ? t : null; };
     el.addEventListener('touchstart', (e) => {
       const t = e.changedTouches[0];
-      t0 = e.touches.length === 1 ? { x: t.clientX, y: t.clientY } : null;
+      clearTimeout(lp); lastTouch = Date.now();
+      const s = t0 = e.touches.length === 1 ? { x: t.clientX, y: t.clientY, long: false } : null;
+      if (s) lp = setTimeout(() => { if (t0 !== s) return; s.long = true; const target = at(s.x, s.y); if (target) this._onClick({ target }, true); }, 500);
     }, { passive: true });
-    el.addEventListener('touchcancel', () => { t0 = null; });
+    el.addEventListener('touchmove', (e) => {
+      const t = e.touches[0];
+      if (t0 && !t0.long && Math.hypot(t.clientX - t0.x, t.clientY - t0.y) > 10) { clearTimeout(lp); t0 = null; }
+    }, { passive: true });
+    el.addEventListener('touchcancel', () => { clearTimeout(lp); t0 = null; });
     el.addEventListener('touchend', (e) => {
       const t = e.changedTouches[0], s = t0;
-      t0 = null;
+      clearTimeout(lp); lastTouch = Date.now(); t0 = null;
+      if (s?.long) { if (e.cancelable) e.preventDefault(); return; }
       if (!s || e.touches.length || Math.hypot(t.clientX - s.x, t.clientY - s.y) > 10) return;
       const target = document.elementFromPoint(t.clientX, t.clientY);
       if (!target || !el.contains(target)) return;
       e.preventDefault();
       this._onClick({ target }, false);
     }, { passive: false });
-    el.addEventListener('contextmenu', (e) => { e.preventDefault(); this._onClick(e, true); });
+    // Android fires its own contextmenu on a long press: the timer above already handled that one.
+    el.addEventListener('contextmenu', (e) => { e.preventDefault(); if (e.pointerType !== 'touch' && !t0 && Date.now() - lastTouch > 800) this._onClick(e, true); });
     el.addEventListener('mouseover', (e) => { const sq = this._sqAt(e); if (sq !== this.hover) { this.hover = sq; this._render(); } });
     el.addEventListener('mouseleave', () => { if (this.hover >= 0) { this.hover = -1; this._render(); } });
-    window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && this.sel) this.cancel(); });
+    window.addEventListener('keydown', (e) => this._onKey(e));
   }
 
   // ---------- public API ----------
@@ -150,6 +166,10 @@ export class Board {
     this._render();
   }
   async cancel() { this.sel = null; this._render(); }
+  get holding() { return !!this.sel; } // stones in hand (or a tray stone picked): navigation waits
+  get peeking() { return !!this.peekHl; }
+  // Half-step: keep this position but highlight the squares the next move touches (Shift+arrow, as in PTN Ninja).
+  peek() { const nx = this.snaps[this.cur + 1]; if (nx) { this.peekHl = nx.hl; this._render(false); } return !!nx; }
   // Play a move given as PTN (typed instead of clicked), exactly as if it had been entered on the board.
   play(ptn) {
     if (!this._canInput()) return false;
@@ -158,7 +178,13 @@ export class Board {
     this._commit(ptn);
     return true;
   }
-  async rotate180() { this.rot = !this.rot; this._build(); this._render(false); }
+  async rotate180() { this.orient('-'); }
+  // key: one of OPS ('=' resets). Kept in this browser, like PTN Ninja's setting.
+  orient(key) {
+    this.M = OPS[key] ? mul(OPS[key], this.M) : ID;
+    try { localStorage.setItem('tinue.orient', JSON.stringify(this.M)); } catch {}
+    this._build(); this._render(false);
+  }
 
   // ---------- setup / DOM ----------
   _setup(g, moves) {
@@ -189,7 +215,7 @@ export class Board {
       // round the board's top corners to match the page's panels (pieces live in their own layer, so nothing clips)
       if (dr === n - 1 && (dc === 0 || dc === n - 1)) { d.style[dc === 0 ? 'borderTopLeftRadius' : 'borderTopRightRadius'] = 'var(--corner, 6px)'; d.style.overflow = 'hidden'; }
       d.innerHTML = '<div class="tb-hl tb-cur"></div><div class="tb-hl tb-pl"></div><div class="tb-rd"><i class="m"></i><i class="n"></i><i class="e"></i><i class="s"></i><i class="w"></i></div>' +
-        (dc === 0 ? `<span class="tb-lab tb-lr">${r + 1}</span>` : '') + (dr === 0 ? `<span class="tb-lab tb-lc">${FILES[c]}</span>` : '');
+        (dc === 0 ? `<span class="tb-lab tb-lr">${this.M[2] ? FILES[c] : r + 1}</span>` : '') + (dr === 0 ? `<span class="tb-lab tb-lc">${this.M[0] ? FILES[c] : r + 1}</span>` : '');
       d._rd = d.children[2].children;
       this.boardEl.append(d);
       this.sqEls[sq] = d;
@@ -207,11 +233,18 @@ export class Board {
     this.boardEl.append(pcs);
   }
 
-  _disp(sq) { const n = this.n, r = (sq / n) | 0, c = sq % n; return this.rot ? [n - 1 - c, n - 1 - r] : [c, r]; }
-  _logical(dc, dr) { const n = this.n; return this.rot ? (n - 1 - dr) * n + (n - 1 - dc) : dr * n + dc; }
+  // Coordinates doubled and centred (2i − (n−1)) so every turn and mirror stays in integers.
+  _disp(sq) {
+    const h = this.n - 1, [a, b, c, d] = this.M, X = 2 * (sq % this.n) - h, Y = 2 * ((sq / this.n) | 0) - h;
+    return [(a * X + b * Y + h) / 2, (c * X + d * Y + h) / 2];
+  }
+  _logical(dc, dr) {
+    const h = this.n - 1, [a, b, c, d] = this.M, X = 2 * dc - h, Y = 2 * dr - h;
+    return ((b * X + d * Y + h) / 2) * this.n + (a * X + c * Y + h) / 2;
+  }
 
   _show(i, animate = false) {
-    this.cur = i; this.sel = null;
+    this.cur = i; this.sel = null; this.peekHl = null;
     this._render(animate);
     this.onState?.({ plyID: i - 1, plies: this.snaps.length - 1, tps: this.snaps[i].g.toTPS() });
   }
@@ -321,9 +354,12 @@ export class Board {
     const s = this.snaps[this.cur], g = s.g, sel = this.sel;
     if (!sel || sel.t === 'tray') {
       if (!s.st[sq].length) {
+        // Left: a flat (a cap once flats run out). Right / long press: a cap while you have one, else a wall.
         let type = FLAT;
         if (sel) type = sel.cap ? CAP : sel.wall ? WALL : FLAT;
-        else if (g.ply >= 2 && !g.stones[g.toMove]) type = CAP;
+        else if (g.ply < 2) type = FLAT;
+        else if (alt) type = g.caps[g.toMove] ? CAP : WALL;
+        else if (!g.stones[g.toMove]) type = CAP;
         return this._commit(g.moveToPTN({ kind: 'p', sq, type }));
       }
       this.sel = { t: 'stack', path: [sq], picked: alt ? 1 : Math.min(this.n, s.st[sq].length), drops: [], dir: null, flat: null };
@@ -332,7 +368,19 @@ export class Board {
     const cur = sel.path.at(-1), moved = sel.path.length > 1;
     let hand = sel.picked - sel.drops.reduce((a, b) => a + b, 0);
     if (sq === cur) {
-      if (!moved) { if (--sel.picked === 0) this.sel = null; return this._render(); }
+      if (!moved) {
+        // origin: left puts one back, right lifts one more (all lifted already: put the stack down)
+        if (!alt) { if (--sel.picked === 0) this.sel = null; }
+        else if (sel.picked < Math.min(this.n, s.st[cur].length)) sel.picked++;
+        else this.sel = null;
+        return this._render();
+      }
+      // drop square: left drops one more; right takes the last one back, or with one here drops the whole hand
+      if (alt) {
+        if (sel.drops.at(-1) > 1) { sel.drops[sel.drops.length - 1]--; return this._render(); }
+        sel.drops[sel.drops.length - 1] += hand;
+        return this._finish();
+      }
       sel.drops[sel.drops.length - 1]++;
       return hand === 1 ? this._finish() : this._render();
     }
@@ -352,6 +400,77 @@ export class Board {
       if (nx < 0 || !this._enterable(nx, s)) { sel.drops[sel.drops.length - 1] += hand; hand = 0; }
     }
     return hand === 0 ? this._finish() : this._render();
+  }
+
+  // ---------- keys ----------
+  _onKey(e) {
+    if (e.defaultPrevented) return;
+    if (e.key === 'Escape') { if (this.sel) this.cancel(); return; }
+    if (e.ctrlKey || e.metaKey || e.altKey || !this.el.getClientRects().length) return; // modified, or the board is hidden
+    if (e.target.closest?.('input, select, textarea, [contenteditable]')) return;
+    if (e.key in OPS) { e.preventDefault(); return this.orient(e.key); }
+    if (e.key === 'Enter' && e.target.closest?.('a, button, summary')) return;
+    const k = e.key === 'Enter' ? 'all' : e.key === '`' ? 'own' : /^[1-8]$/.test(e.key) ? +e.key : 0;
+    if (k && this._keyCount(k)) e.preventDefault();
+  }
+
+  // How many of `ids` (bottom first) a key means: k, all of them, or 'own': up to and including the first stone
+  // of the mover's colour, so that colour ends on top. 0 = nothing to do.
+  _count(k, ids) {
+    if (k === 'all') return ids.length;
+    if (k !== 'own') return Math.min(k, ids.length);
+    const me = this.snaps[this.cur].g.toMove, j = ids.findIndex((id) => this.P.color(id) === me);
+    return j + 1;
+  }
+
+  // Number keys, Enter and ` (PTN Ninja's hotkeys). They lift from the stack under the pointer, then drop on the
+  // square under the pointer until the first drop, then on the next square along the line. Never place a stone.
+  _keyCount(k) {
+    const sel = this.sel, s = this.snaps[this.cur], g = s.g, n = this.n;
+    if (!this._canInput() || sel?.t === 'tray') return false;
+    if (!sel) {
+      const sq = this.hover, st = s.st[sq];
+      if (sq < 0 || !st.length || !this._valid(this._view()).has(sq)) return false;
+      const max = Math.min(n, st.length);
+      let c = 0;
+      if (k === 'own') { for (c = max; c && !(c < st.length && this.P.color(st[st.length - 1 - c]) === g.toMove); c--); }
+      else c = k === 'all' ? max : Math.min(k, max);
+      if (!c) return false;
+      this.sel = { t: 'stack', path: [sq], picked: c, drops: [], dir: null, flat: null };
+      this._render();
+      return true;
+    }
+    const o = s.st[sel.path[0]], cur = sel.path.at(-1), moved = sel.path.length > 1;
+    const ids = o.slice(o.length - sel.picked).slice(sel.drops.reduce((a, b) => a + b, 0)); // the hand, bottom first
+    const tgt = moved ? this._next(cur, sel.dir) : this.hover;
+    if (tgt < 0) return false;
+    const dropHere = (keep = 0) => { // on the current square (the origin: put stones back)
+      const c = Math.min(this._count(k, ids), ids.length - keep);
+      if (c <= 0) return false;
+      if (!moved) { sel.picked -= c; if (!sel.picked) this.sel = null; return this._render(), true; }
+      sel.drops[sel.drops.length - 1] += c;
+      return (c === ids.length ? this._finish() : this._render()), true;
+    };
+    if (tgt === cur) return dropHere();
+    const dir = Object.keys(STEP).find((d) => this._next(cur, d) === tgt);
+    if (!dir || !this._enterable(tgt, s)) return false;
+    const top = s.st[tgt].at(-1);
+    if (top != null && s.ty[top] === WALL) {
+      // a wall ahead: whittle the hand down here until the capstone is alone, then it flattens the wall
+      if (ids.length > 1) return dropHere(1);
+      this._squareClick(tgt, false);
+      return true;
+    }
+    const c = this._count(k, ids);
+    if (!c) return false;
+    let hand = ids.length - c;
+    sel.path.push(tgt); sel.dir = dir; sel.drops.push(c);
+    if (hand > 0) {
+      const nx = this._next(tgt, dir);
+      if (nx < 0 || !this._enterable(nx, s)) { sel.drops[sel.drops.length - 1] += hand; hand = 0; }
+    }
+    if (hand === 0) this._finish(); else this._render();
+    return true;
   }
 
   _finish() {
@@ -389,7 +508,7 @@ export class Board {
     this._set(this.boardEl, 'l', label, (x) => this.boardEl.setAttribute('aria-label', x));
 
     // squares
-    const hl = this.cur > 0 ? s.hl : null;
+    const hl = this.peekHl || (this.cur > 0 ? s.hl : null);
     const selSqs = this.sel?.t === 'stack' ? this.sel.path : [];
     for (let sq = 0; sq < n * n; sq++) {
       const top = g.top(sq);
@@ -476,8 +595,12 @@ export class Board {
       const sides = [[r === n - 1, sq + n, 'ns'], [c === n - 1, sq + 1, 'ew'], [r === 0, sq - n, 'ns'], [c === 0, sq - 1, 'ew']];
       const conn = sides.map(([edge, nb]) => edge || road(nb) === color);
       const isRd = sides.map(([edge, nb, ax], i) => inRoad && conn[i] && (edge ? R[ax] : R.set.has(nb)));
-      let ord = [0, 1, 2, 3];
-      if (this.rot) ord = [2, 3, 0, 1];
+      // display side k (n, e, s, w) shows logical side ord[k]
+      const ord = [];
+      [[0, 1], [1, 0], [0, -1], [-1, 0]].forEach(([x, y], i) => {
+        const [a, b, c, d] = this.M, X = a * x + b * y, Y = c * x + d * y;
+        ord[Y === 1 ? 0 : X === 1 ? 1 : Y === -1 ? 2 : 3] = i;
+      });
       const edges = ord.map((i) => sides[i][0]), cn = ord.map((i) => conn[i]), rd = ord.map((i) => isRd[i]);
       const cls = (on, isR) => (on && showAll ? ' on' : '') + (isR ? ' rd' : '');
       const any = conn.some(Boolean);

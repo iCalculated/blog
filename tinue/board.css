@@ -39,13 +39,20 @@
    load/goTo/first/last; none at all with prefers-reduced-motion.
 
    INTERACTION (disableStoneCycling): click empty square = place a flat (cap when out of flats), or the
-   tray-selected type. Tray: click a flat = select it; click the selected flat again = toggle wall;
+   tray-selected type; right click = a cap while one is left, else a wall (always a flat on the first two
+   plies). A long press (500 ms, < 10 px drift, one finger) is a right click; its release is not a tap. Tray: click a flat = select it; click the selected flat again = toggle wall;
    click the selected cap = deselect; click tray background = deselect. Click own stack = lift
    min(N, height). On the origin: each click drops one back (0 = cancel). Click an orthogonal neighbor
    (then only further along that line) = carry the hand there and drop 1; click the current square =
    drop 1 more; click the origin after leaving = cancel. If the next square is blocked the rest drops
    automatically. A capstone on top of the hand may flatten a wall: the rest drops first, then the cap
-   moves alone. Right click: lift 1 / drop the whole hand / select the tray flat as a wall. Esc cancels.
+   moves alone. Right click: lift 1; on the origin before leaving it, lift 1 more (all lifted: cancel); on the
+   current drop square, take the last dropped back (only 1 there: drop the whole hand and finish); on the
+   next square, drop the whole hand; on the tray, select the flat as a wall. Esc cancels.
+   Keys: 1–8 / Enter (most) / ` (just enough for your colour on top) lift from the stack under the pointer, then
+   drop under the pointer until the first drop, then on the next square along the line; a wall ahead makes
+   them drop here until the capstone is alone, which then flattens it. Keys never place a stone.
+   Orientation: [ ] turn 90°, - 180°, ; : mirror, = reset; coordinates follow (kept in localStorage).
    Hover/selected stacks show their height (or pieces in hand / dropped here) on the top piece. */
 
 .tb-host { container-type: inline-size; }
@@ -57,7 +64,7 @@
   --tl: #fafafacd; --td: #212121cd; --tdk: #1a1a1a; --um: #00000033;
   --dur: .3s; --ease: cubic-bezier(.3, .3, .5, 1);
   position: relative; width: 100%; font-size: min(30px, 4.375cqw); line-height: 1;
-  user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
 }
 .tb-board { position: relative; z-index: 1; width: 100%; aspect-ratio: 1; background: var(--b1);
   display: grid; grid-template-columns: repeat(var(--n), 1fr); grid-template-rows: repeat(var(--n), 1fr); }
