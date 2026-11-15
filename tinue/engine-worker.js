@@ -3,8 +3,8 @@
 //   refute:  why was a move wrong? Find the opponent's reply after which the attack fails.
 //   analyze: does the side to move have a forced win (road or flats), and how?
 // It's a forced-win prover, not an evaluator: it answers "win in N" or "nothing forced within N".
-import { Game, Solver } from './shared/tak.js?v=1794782165';
-import { shortestTinue, TinueSearch } from './shared/pns.js?v=1794782165';
+import { Game, Solver } from './shared/tak.js?v=1794782555';
+import { shortestTinue, TinueSearch } from './shared/pns.js?v=1794782555';
 
 function gameFrom({ size, komi, tps, plies }) {
   const g = tps ? Game.fromTPS(tps, komi || 0) : Object.assign(new Game(size), { komi: komi || 0 });
@@ -86,12 +86,14 @@ self.onmessage = ({ data }) => {
       const replies = g.legalMoves().sort((a, b) => (b.kind === 'p') - (a.kind === 'p') || (b.type || 0) - (a.type || 0));
       // A refutation must be proven: after it, the attacker has no forced win at all within the plies left.
       let best = null;
+      const deadline = Date.now() + (data.ms || 8000); // a wide position has ~100 replies of up to 3e5 nodes each
       for (const r of replies) {
+        if (Date.now() > deadline) break;
         const u = g.apply(r);
         const res = g.result() ? null : forcedWin(g, left, 3e5);
         g.undo(u);
         if (res?.none && res.exact) { self.postMessage({ id, kind: 'refuted', reply: g.moveToPTN(r), exact: true }); return; }
-        if (res?.none && !best) best = g.moveToPTN(r);
+        if (res?.none && !best) { best = g.moveToPTN(r); self.postMessage({ id, kind: 'refuted', reply: best, exact: false, partial: true }); }
       }
       self.postMessage(best ? { id, kind: 'refuted', reply: best, exact: false } : { id, kind: 'unknown' });
     } else if (type === 'analyze') {

@@ -1,11 +1,11 @@
-import { Game } from './shared/tak.js?v=1794782165';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794782165';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794782165';
-import { Board, buildPTN } from './board.js?v=1794782165';
-import * as engine from './engine.js?v=1794782165';
-import * as tiltak from './tiltak.js?v=1794782165';
-import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794782165';
-import { createNext } from './next.js?v=1794782165';
+import { Game } from './shared/tak.js?v=1794782555';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794782555';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794782555';
+import { Board, buildPTN } from './board.js?v=1794782555';
+import * as engine from './engine.js?v=1794782555';
+import * as tiltak from './tiltak.js?v=1794782555';
+import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794782555';
+import { createNext } from './next.js?v=1794782555';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -59,7 +59,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794782165')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794782555')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -454,6 +454,8 @@ async function report(win) {
     const r = await api('/api/result', { puzzleId: p.id, win, ...(s.hinted ? { casual: true } : { theme: s.theme || undefined }), ...timing,
       ...(token ? {} : { guest: guestSeed() }) }, { noWait: true }); // the first result makes a first-time visitor a guest
     if (r.token) setToken(r.token);
+    // Refused: 429 (too many results, or too many new guests from one address) or any other error; nothing was rated.
+    if (!r.user && r.error) s.notCounted = /^too many/i.test(r.error) ? 'rate' : 'error';
     if (r.user) {
       answered = true;
       s.delta = r.rated ? r.userDelta : null;
@@ -543,6 +545,9 @@ function finisher(g) {
 
 // Play out the main line (first-listed move at each node) for "View solution".
 async function showSolution() {
+  // Pressed while the board is busy (the puzzle's intro, the opponent's reply, the reset after a miss): play it out
+  // once the board is free (flushHint), as with Hint.
+  if (S && S.busy && (S.status === 'retry' || S.status === 'play') && !S.placeholder) { S.pendingSolution = true; return; }
   if (!S || S.placeholder || S.status === 'solved' || S.status === 'viewing' || S.busy) return;
   const s = S;
   if (!S.resultSent) { S.decidedMs ??= elapsed(); logMove('view', null, S.decidedMs); report(false); }
@@ -574,9 +579,13 @@ async function showSolution() {
   step();
 }
 
-// A Hint pressed while the board is busy (loading, the opponent's reply, the reset after a wrong or slower move) would
-// be lost: remember it and show it once the board is free.
-function flushHint(s) { if (S === s && s.pendingHint) { s.pendingHint = false; showHint(); } }
+// A Hint (or Solution) pressed while the board is busy (loading, the opponent's reply, the reset after a wrong or slower
+// move) would be lost: remember it and show it once the board is free. Solution wins over a pending hint.
+function flushHint(s) {
+  if (S !== s) return;
+  if (s.pendingSolution) { s.pendingSolution = s.pendingHint = false; showSolution(); }
+  else if (s.pendingHint) { s.pendingHint = false; showHint(); }
+}
 function showHint() {
   if (S && S.busy && (S.status === 'retry' || S.status === 'play') && !S.placeholder) { S.pendingHint = true; return; }
   if (!S || S.placeholder || S.busy || S.status === 'solved' || S.status === 'viewing') return;
@@ -727,8 +736,9 @@ const fitDock = () => {
   wrap.style.maxWidth = '';
   if (pinned && S?.p?.size) {
     const top = wrap.getBoundingClientRect().top + scrollY, w = wrap.clientWidth;
-    // scale by the board host's own shape (flat bar + board + tray, or PTN Ninja's frame), measured at full width
-    const maxW = Math.max(220, Math.floor(((root.clientHeight - h - top - 8) * w) / wrap.offsetHeight));
+    // scale by the board host's own shape (flat bar + board + tray, or PTN Ninja's frame), measured at full width;
+    // the floor is low enough that a 320 px phone's tray stays above the dock
+    const maxW = Math.max(160, Math.floor(((root.clientHeight - h - top - 8) * w) / wrap.offsetHeight));
     if (maxW < w) wrap.style.maxWidth = maxW + 'px';
   }
 };
@@ -758,6 +768,8 @@ function renderAll(mood) {
   renderMoves(docked, delta, focusNext);
 }
 
+const notCountedText = () => S.notCounted === 'rate' ? 'Not rated: too many results too quickly; try again in a bit.'
+  : S.notCounted ? 'Not rated: the server didn’t record this result.' : '';
 // The feedback card (a live region). Returns whether Next puzzle should take keyboard focus once it is drawn.
 function renderFeedback(mood, delta) {
   const fb = $('#feedback');
@@ -769,6 +781,10 @@ function renderFeedback(mood, delta) {
     : r.kind === 'refuted' ? `After ${esc(r.miss)}, ${other} answers <b>${esc(r.reply)}</b> and ${r.exact ? 'the forced win is gone' : 'the solver finds no forced win'}.`
     : `${esc(r.miss)} doesn’t force the win.`;
   const hintNote = S.hint?.note && S.hint.node === S.node && S.hint.at === S.moves.length ? `<b>Hint:</b> ${esc(S.hint.note)} ` : '';
+  // The server refused the result: say so instead of "counts as a miss", and nothing is rated.
+  const NOT_COUNTED = notCountedText();
+  const missNote = (already) => S.notCounted ? `${NOT_COUNTED} Keep trying or view the solution.`
+    : `This puzzle ${already ? 'already' : 'now'} counts as a miss; keep trying or view the solution.`;
   let fbHtml;
   if (notice) {
     $('#feedback').classList.remove('is-loading');
@@ -778,17 +794,17 @@ function renderFeedback(mood, delta) {
       <p>That isn’t the puzzle’s line; checking whether it still forces a win.</p></div>${playActions}`;
   } else if (S.status === 'solved') {
     const title = solvedTitle();
-    const note = (S.casual ? 'You used a hint, so this one didn’t count toward your rating. ' : '')
+    const note = (S.notCounted ? NOT_COUNTED + ' ' : S.casual ? 'You used a hint, so this one didn’t count toward your rating. ' : '')
       + (shownOver() ? overNote(shownOver()) : S.casual ? '' : `Play any move to explore${finePointer.matches ? ', or step through the line with ← and →' : ''}.`);
     fbHtml = `<div class="icon ${S.outcome === 'clean' ? 'good' : 'bad'}">${S.outcome === 'clean' ? '✓' : '✗'}</div><div class="body">
       <h2>${title}<span class="dslot"></span></h2><p>${note}</p></div>
       <div class="actions"><button class="primary" data-act="next">Next puzzle</button></div>`;
   } else if (S.status === 'retry' && S.slower) {
     fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>That wins too, but slower<span class="dslot"></span></h2>
-      <p>${hintNote}${esc(S.slower)} also forces a win, but there’s a faster one. This puzzle already counts as a miss; keep trying or view the solution.</p></div>${playActions}`;
+      <p>${hintNote}${esc(S.slower)} also forces a win, but there’s a faster one. ${missNote(true)}</p></div>${playActions}`;
   } else if (S.status === 'retry') {
     fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>That’s not the move<span class="dslot"></span></h2>
-      <p>${hintNote}${refText(S.refutation) || 'Try another move.'} This puzzle now counts as a miss; keep trying or view the solution.</p></div>${playActions}`;
+      <p>${hintNote}${refText(S.refutation) || 'Try another move.'} ${missNote(false)}</p></div>${playActions}`;
   } else if (S.status === 'viewing') {
     fbHtml = `<div class="icon bad">…</div><div class="body"><h2>Solution</h2><p>Watch the winning line.</p></div>`;
   } else {
@@ -913,7 +929,7 @@ function renderMoves(docked, delta, focusNext) {
   // A server notice (slow or unreachable) replaces the result, so a Next puzzle that's waiting doesn't look dead.
   const dockHead = notice ? `<span class="icon bad" aria-hidden="true">!</span><b>${esc(notice.title)}</b>`
     : `<span class="icon ${clean ? 'good' : 'bad'}" aria-hidden="true">${clean ? '✓' : '✗'}</span><b>${solvedTitle()}${delta}</b>`;
-  const dockNote = notice ? esc(notice.body) : S.casual ? 'You used a hint, so this one didn’t count.' : shownOver() ? 'Game over here. Step back with ◀ to explore.' : '';
+  const dockNote = notice ? esc(notice.body) : S.notCounted ? notCountedText() : S.casual ? 'You used a hint, so this one didn’t count.' : shownOver() ? 'Game over here. Step back with ◀ to explore.' : '';
   const engSlot = `<div class="eng-slot">${engineHtml}</div>`;
   const scroller = `<div class="mscroll" role="group" aria-label="Moves"><div class="mtable">${rows}</div></div>`;
   const nav = `<div class="nav"><button data-step="first" title="Start" aria-label="Start">⏮</button><button data-step="prev" title="Back (←)" aria-label="Back">◀</button><button data-step="next" title="Forward (→)" aria-label="Forward">▶</button><button data-step="last" title="Current position" aria-label="Current position">⏭</button>${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
