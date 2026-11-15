@@ -8,7 +8,12 @@ const TAU = 0.75; // how fast volatility may change (Lichess)
 
 export const RD_MIN = 45;
 export const PROVISIONAL_RD = 110; // above this a rating is shown as "1650?"
-export const PLAYER_START = { rating: 1500, rd: 250, vol: 0.09 };
+// New players start at Lichess's 1500 ± 500 (the cap), so a strong newcomer's first wins are big jumps (+246 +154
+// +113 … against equal puzzles) and the "?" clears after ~15 puzzles. Volatility 0.06 (Lichess: 0.09) sets where a
+// settled rating ends up: rd ≈ 65–68 and about ±10 per solve/miss against an equal puzzle (0.09: rd ≈ 83, ±15).
+// Shy's pick, 2026-11-15. With one game per rating period the volatility barely moves, so it is effectively
+// per-player and fixed: accounts created before this keep their stored 0.09 unless migrated.
+export const PLAYER_START = { rating: 1500, rd: 500, vol: 0.06 };
 export const PUZZLE_RD = 250; // starting deviation for a puzzle around its prior rating
 const RD_MAX = 500, VOL_MAX = 0.1;
 

@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794769956';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794769956';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794769956';
-import { Board, buildPTN } from './board.js?v=1794769956';
-import * as engine from './engine.js?v=1794769956';
-import * as tiltak from './tiltak.js?v=1794769956';
+import { Game } from './shared/tak.js?v=1794770109';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794770109';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794770109';
+import { Board, buildPTN } from './board.js?v=1794770109';
+import * as engine from './engine.js?v=1794770109';
+import * as tiltak from './tiltak.js?v=1794770109';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -85,8 +85,10 @@ const store = {
 };
 
 let me = null; // server user
-const guest = store.get('guest', { rating: 1500, games: 0 });
-guest.rd ??= rdFromCount(guest.games, PLAYER_START.rd); guest.vol ??= PLAYER_START.vol; // guests from before Glicko
+const guest = store.get('guest', { rating: PLAYER_START.rating, rd: PLAYER_START.rd, vol: PLAYER_START.vol, games: 0, v: 2 });
+guest.rd ??= rdFromCount(guest.games, 250); guest.vol ??= 0.09; // guests from before Glicko (converted with the start values of that time)
+// 2026-11-15: volatility 0.09 → 0.06 for everyone (accounts were migrated on the server); a guest keeps its deviation.
+if (!guest.v) { guest.vol = Math.min(guest.vol, PLAYER_START.vol); guest.v = 2; store.set('guest', guest); }
 // "1650?" while a rating is still provisional (high deviation), as on Lichess.
 const fmtRating = (r, prov) => `${Math.round(r)}${prov ? '<span class="prov" title="Provisional: it settles after about 15 rated puzzles">?</span>' : ''}`;
 const prefs = store.get('prefs', {});

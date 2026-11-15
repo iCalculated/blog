@@ -1,8 +1,8 @@
 // Ratings are Glicko-2 for both players and puzzles (shared/glicko.js), one rating period per attempt.
-// New players start at 1500 ± 250, and puzzles start at their prior ± 250: uncertain ratings move fast,
+// New players start at 1500 ± 500 (as on Lichess) and puzzles at their prior ± 250: uncertain ratings move fast,
 // settled ones slowly, and a result from an uncertain player moves a puzzle less.
-// scripts/simulate-glicko.mjs shows why these numbers were picked.
-import { update, cap, blend, PLAYER_START, PUZZLE_RD, provisional } from './glicko.js?v=1794769956';
+// scripts/simulate-glicko.mjs and scripts/simulate-newcomers.mjs show why these numbers were picked.
+import { update, cap, blend, PLAYER_START, PUZZLE_RD, provisional } from './glicko.js?v=1794770109';
 
 const CLUELESS_RD = 230;
 
