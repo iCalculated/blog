@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794417098';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794417098';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794417098';
-import { Board, buildPTN } from './board.js?v=1794417098';
-import * as engine from './engine.js?v=1794417098';
-import * as tiltak from './tiltak.js?v=1794417098';
+import { Game } from './shared/tak.js?v=1794740286';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794740286';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794740286';
+import { Board, buildPTN } from './board.js?v=1794740286';
+import * as engine from './engine.js?v=1794740286';
+import * as tiltak from './tiltak.js?v=1794740286';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -11,7 +11,8 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 // Auth is a bearer token from localStorage (cross-site cookies get blocked), plus a cookie for same-origin dev.
 const API = (window.TINUE_API || '').replace(/\/$/, '');
 const authHeaders = () => { const t = store.get('token', null); return t ? { authorization: 'Bearer ' + t } : {}; };
-const api = async (path, body, { quiet = false, noWait = quiet } = {}) => {
+// timeout: one try with that budget (no retry), for callers with a fallback; signal: the caller may abort.
+const api = async (path, body, { quiet = false, noWait = quiet, timeout, signal } = {}) => {
   // If the server can't be reached, say so instead of showing a blank page. (On Shy's tailnet, Chrome asks for
   // "local network access" before a public page may call crux's private address; that prompt also stalls here.)
   const slow = noWait ? null : setTimeout(() => { notice = WAIT_NOTICE; renderAll(); }, 4000);
@@ -21,16 +22,19 @@ const api = async (path, body, { quiet = false, noWait = quiet } = {}) => {
   // after a while: reads are retried once, results (POSTs) just get longer before giving up.
   const once = async (ms) => {
     const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), ms);
+    const cancel = () => ctl.abort();
+    signal?.addEventListener('abort', cancel);
     try {
       const r = await fetch(API + path, body
         ? { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify(body), credentials: 'include', signal: ctl.signal }
         : { headers: authHeaders(), credentials: 'include', signal: ctl.signal });
       return await r.json();
-    } finally { clearTimeout(timer); }
+    } finally { clearTimeout(timer); signal?.removeEventListener('abort', cancel); }
   };
   try {
     let j;
-    if (body) j = await once(20000);
+    if (timeout) j = await once(timeout);
+    else if (body) j = await once(20000);
     else try { j = await once(8000); } catch { outcome = 'retried'; j = await once(12000); }
     if (!quiet && (notice?.kind === 'wait' || notice?.kind === 'net')) { notice = null; renderAll(); }
     return j;
@@ -43,7 +47,8 @@ const api = async (path, body, { quiet = false, noWait = quiet } = {}) => {
   } finally {
     clearTimeout(slow);
     const ms = performance.now() - t0;
-    if ((ms > 2000 || outcome !== 'ok') && path !== '/api/slow') reportSlow(path, ms, outcome);
+    // Engine analysis is slow by design (a ~1.2 s search, maybe queued) and aborted on purpose; not a network signal.
+    if ((ms > 2000 || outcome !== 'ok') && path !== '/api/slow' && !path.startsWith('/api/analyze')) reportSlow(path, ms, outcome);
   }
 };
 // Tell the server about requests that were slow from here, so its log shows what the network added.
@@ -66,7 +71,10 @@ guest.rd ??= rdFromCount(guest.games, PLAYER_START.rd); guest.vol ??= PLAYER_STA
 // "1650?" while a rating is still provisional (high deviation), as on Lichess.
 const fmtRating = (r, prov) => `${Math.round(r)}${prov ? '<span class="prov" title="Provisional: it settles after about 15 rated puzzles">?</span>' : ''}`;
 const prefs = store.get('prefs', {});
-if (!prefs.v2) { prefs.size = '5'; prefs.v2 = true; } // 5×5 by default
+if (!prefs.v2) { prefs.size = '6'; prefs.v2 = true; } // 6×6 by default
+// 2026-11-14: the default moved from 5×5 to 6×6 (where serious Tak is played). Anyone still on the old 5×5 default
+// moves too, once; "Any size" and later choices stay.
+if (!prefs.v3) { if (prefs.size === '5') prefs.size = '6'; prefs.v3 = true; }
 prefs.difficulty ||= 'normal';
 store.set('prefs', prefs);
 const session = []; // {id, win, delta}
@@ -179,12 +187,12 @@ async function loadNext() {
   const { puzzle } = r;
   if (t !== loadSeq) return; // a newer request superseded this one
   if (!puzzle) { // nothing to play: clear the old puzzle rather than leave it playable under the new filters
-    engine.interrupt(); tiltak.stop();
+    engine.interrupt(); tiltak.stop(); anaCtl?.abort();
     S = null;
     notice = { kind: 'none', title: 'No puzzles match', body: 'Try another theme, difficulty or board size.' };
     history.replaceState(null, '', '#/');
     await board.ui({ disableBoard: true, showRoads: false, dropOnStray: false });
-    await board.load(buildPTN({ size: +(prefs.size || 5) }));
+    await board.load(buildPTN({ size: +(prefs.size || 6) }));
     renderAll(); setTitle(); return;
   }
   history.replaceState(null, '', '#/puzzle/' + puzzle.id);
@@ -222,6 +230,10 @@ function gameAt(plies) {
 const enginePos = (plies) => ({ size: S.p.size, komi: S.p.komi || 0, tps: S.hist.length ? null : S.p.tps, plies });
 
 // After the puzzle: ask the engine about the position on the board.
+// 6×6: Syntaks on the server (much stronger there, and it knows every half-point komi); if the server can't answer,
+// Tiltak (4×4–6×6, in the browser) gives the evaluation and line, streamed as it searches. On boards neither can
+// play, our own forced-win solver.
+let anaCtl = null; // the in-flight Syntaks request; aborted when the position changes, so the server drops it
 async function runEngine() {
   if (!S || S.status !== 'solved') return;
   const line = shownLine();
@@ -230,25 +242,34 @@ async function runEngine() {
   if (S.evalKey === key) return;
   const s = S;
   S.evalKey = key; S.eval = null; S.tk = null;
-  // Tiltak (4×4–6×6) gives the evaluation and line, streamed as it searches. On boards it can't play,
-  // fall back to our own forced-win solver.
+  anaCtl?.abort(); anaCtl = null;
   const g = gameAt(line.slice(0, at));
   const res0 = g.result();
   if (res0) { tiltak.stop(); S.eval = { kind: 'over', winner: res0.winner, how: res0.kind }; renderAll(); return; }
-  if (tiltak.supports(S.p.size, S.p.komi || 0)) {
-    S.tk = { thinking: true }; renderAll();
-    let lastPaint = 0;
-    const live = () => S === s && S.evalKey === key;
-    // If Tiltak can't load or crashes, use the solver instead of thinking forever.
-    const fallback = () => { if (live() && (!S.tk || S.tk.thinking)) { S.tk = null; runSolver(s, key, line.slice(0, at)); } };
-    tiltak.analyze({ tps: g.toTPS(), size: S.p.size, komi: S.p.komi || 0, ms: 2500, onInfo: (r) => {
-      if (!live()) return;
-      S.tk = r; const now = performance.now(); if (now - lastPaint > 250) { lastPaint = now; renderEngine(); }
-    } }).then((r) => { if (!live()) return; if (r) { S.tk = r; renderEngine(); } else fallback(); }, fallback);
+  const komi = S.p.komi || 0, live = () => S === s && S.evalKey === key;
+  if (S.p.size === 6 && Math.abs(komi) <= 3.5 && Number.isInteger(komi * 2)) {
+    tiltak.stop();
+    S.tk = { thinking: true, src: 'syntaks' }; renderAll();
+    const ctl = anaCtl = new AbortController();
+    const fallback = () => { if (live()) runTiltak(s, key, g, line.slice(0, at)); };
+    // 6 s covers the search plus a short queue on crux; past that, the browser engine answers sooner.
+    api(`/api/analyze?tps=${encodeURIComponent(g.toTPS())}&komi=${komi}`, null, { quiet: true, timeout: 6000, signal: ctl.signal })
+      .then((r) => { if (!live()) return; if (r?.engine === 'syntaks') { S.tk = { ...r, src: 'syntaks' }; renderEngine(); } else fallback(); }, fallback);
     return;
   }
-  tiltak.stop();
-  runSolver(s, key, line.slice(0, at));
+  runTiltak(s, key, g, line.slice(0, at));
+}
+function runTiltak(s, key, g, plies) {
+  if (!tiltak.supports(S.p.size, S.p.komi || 0)) { tiltak.stop(); return runSolver(s, key, plies); }
+  S.tk = { thinking: true }; renderAll();
+  let lastPaint = 0;
+  const live = () => S === s && S.evalKey === key;
+  // If Tiltak can't load or crashes, use the solver instead of thinking forever.
+  const fallback = () => { if (live() && (!S.tk || S.tk.thinking)) { S.tk = null; runSolver(s, key, plies); } };
+  tiltak.analyze({ tps: g.toTPS(), size: S.p.size, komi: S.p.komi || 0, ms: 2500, onInfo: (r) => {
+    if (!live()) return;
+    S.tk = r; const now = performance.now(); if (now - lastPaint > 250) { lastPaint = now; renderEngine(); }
+  } }).then((r) => { if (!live()) return; if (r) { S.tk = r; renderEngine(); } else fallback(); }, fallback);
 }
 async function runSolver(s, key, plies) {
   S.eval = { kind: 'thinking' }; renderAll();
@@ -285,7 +306,7 @@ async function showLine(line, idx) {
 }
 
 async function start(p, theme = '') {
-  engine.interrupt(); tiltak.stop(); // nothing from the previous puzzle should still be thinking
+  engine.interrupt(); tiltak.stop(); anaCtl?.abort(); // nothing from the previous puzzle should still be thinking
   const g = Game.fromTPS(p.tps, p.komi || 0);
   const hist = p.meta?.history || [];
   // theme: the Theme filter this puzzle was picked with (its result is damped as a themed attempt)
@@ -681,11 +702,15 @@ function engineMarkup() {
       if (S.tk.thinking) lead = '<span class="muted">Thinking…</span>';
       else {
         const pw = Math.max(0, Math.min(1, S.tk.winProb ?? 0.5));
-        const fav = Math.abs(pw - 0.5) < 0.05 ? 'Even' : `${pw > 0.5 ? 'White' : 'Black'} ${Math.round(Math.max(pw, 1 - pw) * 100)}%`;
+        // Syntaks proves forced wins: mate = moves to the win, signed from White's side.
+        const fav = S.tk.mate ? `${S.tk.mate > 0 ? 'White' : 'Black'} wins in ${Math.abs(S.tk.mate)}`
+          : Math.abs(pw - 0.5) < 0.05 ? 'Even' : `${pw > 0.5 ? 'White' : 'Black'} ${Math.round(Math.max(pw, 1 - pw) * 100)}%`;
         lead = `<span class="bar" title="White’s chances"><i style="width:${(pw * 100).toFixed(1)}%"></i></span><b>${fav}</b>`;
         pv = pvHtml(S.tk.pv);
       }
-      tag = '<a class="src" href="https://github.com/MortenLohne/tiltak" target="_blank" rel="noopener" title="Evaluation by Tiltak, running in your browser">Tiltak</a>';
+      tag = S.tk.src === 'syntaks'
+        ? '<a class="src" href="https://github.com/Ciekce/syntaks" target="_blank" rel="noopener" title="Evaluation by Syntaks, Ciekce’s 6×6 engine, running on the puzzle server">Syntaks</a>'
+        : '<a class="src" href="https://github.com/MortenLohne/tiltak" target="_blank" rel="noopener" title="Evaluation by Tiltak, running in your browser">Tiltak</a>';
     } else if (S.eval) {
       const e = S.eval, side = colorName(e.side);
       lead = e.kind === 'thinking' ? '<span class="muted">Thinking…</span>'
@@ -1093,7 +1118,7 @@ window.addEventListener('hashchange', route);
   renderUser();
   themeDesc();
   renderAll(); // placeholder panels at their final size
-  board.load(buildPTN({ size: +(prefs.size || 5) })); // the same board component, empty, until the puzzle arrives
+  board.load(buildPTN({ size: +(prefs.size || 6) })); // the same board component, empty, until the puzzle arrives
   requestAnimationFrame(() => document.documentElement.classList.remove('booting')); // reveal once laid out
   // old path-style URLs from the dev server → hash routes
   const old = /^\/(puzzle\/[\w.-]+|glossary|me|leaderboard)$/.exec(location.pathname);

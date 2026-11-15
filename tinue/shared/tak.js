@@ -16,9 +16,12 @@ const FILES = 'abcdefgh';
 const MAXH = 110;
 const ZA = new Uint32Array(64 * MAXH * 6), ZB = new Uint32Array(64 * MAXH * 6);
 {
-  let s = 0x9e3779b9 >>> 0;
-  const rnd = () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s; };
-  for (let i = 0; i < ZA.length; i++) { ZA[i] = rnd(); ZB[i] = rnd(); }
+  // Each half from its own nonlinear integer hash (lowbias32, with multiplies) of the table index. The tables used to
+  // alternate draws from one xorshift32 stream; xorshift is linear over GF(2), so every ZB entry was a fixed linear map
+  // of its ZA entry, XOR kept that relation, and hb was a function of ha: ~33-bit keys, colliding about once per 10^5
+  // positions (found by the Gaelet Swift port, 2026-11-14). Two separately seeded xorshift streams would still be linear.
+  const mix = (x) => { x ^= x >>> 16; x = Math.imul(x, 0x7feb352d); x ^= x >>> 15; x = Math.imul(x, 0x846ca68b); x ^= x >>> 16; return x >>> 0; };
+  for (let i = 0; i < ZA.length; i++) { ZA[i] = mix(Math.imul(i + 1, 0x9e3779b9) ^ 0x243f6a88); ZB[i] = mix(Math.imul(i + 1, 0x85ebca6b) ^ 0xb7e15162); }
 }
 const zi = (sq, h, p) => (sq * MAXH + Math.min(h, MAXH - 1)) * 6 + p;
 
