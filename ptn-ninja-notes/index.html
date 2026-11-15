@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PTN Ninja embed notes</title>
+<meta name="description" content="Notes from embedding PTN Ninja in tinue: measured costs and a ranked list of small upstream changes that would help embedders.">
+<meta property="og:title" content="PTN Ninja embed notes">
+<meta property="og:description" content="Measured costs of embedding PTN Ninja and a ranked list of small upstream changes, from tinue.">
+<meta name="robots" content="noindex">
+<style>
+  :root {
+    --bg: #fbfaf7; --fg: #1d1c1a; --muted: #6b675f; --line: #e4e0d8; --card: #ffffff; --code: #f1eee8;
+    --accent: #5f7a1c; --s: #2f7a4a; --m: #9a6a12; --l: #a8452f;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161512; --fg: #e8e6e3; --muted: #a39e94; --line: #2f2c28; --card: #1f1d1a; --code: #2a2723;
+      --accent: #9cb83a; --s: #6fc28e; --m: #e0b25a; --l: #ef8a70; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 28px; line-height: 1.2; margin: 0 0 6px; letter-spacing: -.01em; }
+  .sub { color: var(--muted); margin: 0 0 28px; }
+  h2 { font-size: 19px; margin: 40px 0 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+  h3 { font-size: 16px; margin: 0 0 6px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  p { margin: 0 0 12px; }
+  a { color: var(--accent); }
+  code { font: 13.5px/1.4 ui-monospace, "SF Mono", Menlo, monospace; background: var(--code); padding: 1px 5px; border-radius: 4px; word-break: break-word; }
+  .num { color: var(--muted); font-weight: 600; min-width: 2.2em; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; margin: 12px 0; }
+  .card dl { margin: 0; display: grid; grid-template-columns: 7.5em 1fr; gap: 6px 12px; }
+  .card dt { color: var(--muted); font-size: 14px; padding-top: 1px; }
+  .card dd { margin: 0; }
+  .eff { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; }
+  .eff.s { color: var(--s); } .eff.m { color: var(--m); } .eff.l { color: var(--l); }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 4px; font-size: 15px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  td.r { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  ul { margin: 0 0 12px; padding-left: 20px; }
+  li { margin: 4px 0; }
+  .note { color: var(--muted); font-size: 14px; }
+  @media (max-width: 560px) { .card dl { grid-template-columns: 1fr; gap: 2px; } .card dt { padding-top: 6px; } }
+</style>
+</head>
+<body>
+<main>
+<h1>PTN Ninja embed notes</h1>
+<p class="sub">From <a href="https://shydrie.xyz/tinue/">tinue</a>, a rated Tak puzzle trainer. Measured against PTN Ninja v3.8.3 (commit <code>557628d</code>), November 2026.</p>
+
+<p>Hi gruppler. tinue has an opt-in mode, <a href="https://shydrie.xyz/tinue/?board=ninja"><code>?board=ninja</code></a>, that embeds ptn.ninja in an iframe the way PlayTak does and drives it over postMessage. Building it showed a handful of small changes that would make PTN Ninja a better board for any embedder, PlayTak included.</p>
+<p>They're ranked by value per unit of effort. Each one cites the source. Claims marked <em>inferred</em> weren't confirmed in a browser. We're happy to prototype any of them as PRs, in whatever shape you prefer.</p>
+
+<h2>What an embedded board costs today</h2>
+<p>Measured with fresh Chrome profiles on a local page embedding ptn.ninja, and compared with tinue's own board:</p>
+<table>
+  <tr><th></th><th>Embedded PTN Ninja</th><th>tinue's board</th></tr>
+  <tr><td>Before the board appears</td><td class="r">1.2 MB (≈3 MB of JS)</td><td class="r">≈0.1 MB</td></tr>
+  <tr><td>Service-worker precache afterwards</td><td class="r">6.1 MB, 107 requests</td><td class="r">none</td></tr>
+  <tr><td>Iframe created → first <code>GAME_STATE</code>, cold</td><td class="r">0.7–0.8 s</td><td class="r">n/a</td></tr>
+  <tr><td>Same, warm (cached)</td><td class="r">≈0.3 s</td><td class="r">n/a</td></tr>
+</table>
+<p class="note">The board itself is a small part of this. The rest is the editor, online features and offline cache that load around it. On a cold load the iframe also paints a white page and resizes the board before it settles, so tinue keeps it hidden until it's ready.</p>
+
+<h2>Load weight and caching</h2>
+
+<div class="card"><h3><span class="num">1</span> Don't register the service worker inside iframes, and trim the precache <span class="eff s">effort S</span></h3><dl>
+  <dt>Problem</dt><dd>
+    <ul>
+      <li><code>src-pwa/register-service-worker.js:11</code> registers unconditionally. Only the update popup (line 43) checks <code>Platform.within.iframe</code>.</li>
+      <li>Every first-time visitor to an embed downloads 6.1 MB (measured). Per embedding site, too, since storage is partitioned (inferred).</li>
+      <li>About 4 MB of that is the ten <code>apple-launch-*.png</code> splash screens.</li>
+      <li>The MDI font is cached in both woff and woff2.</li>
+      <li>The <code>-coi</code> revision transform (<code>quasar.conf.js:129–137</code>) also revisions content-hashed files, so they're fetched again instead of reused from the HTTP cache (inferred).</li>
+    </ul>
+  </dd>
+  <dt>Proposal</dt><dd>
+    <ul>
+      <li>Wrap <code>register()</code> in <code>if (window.self === window.top)</code>.</li>
+      <li>Add <code>workboxOptions.exclude: [/apple-launch-/, /materialdesignicons.*\.woff$/]</code>.</li>
+      <li>Apply <code>-coi</code> only to unhashed entries.</li>
+    </ul>
+    The standalone PWA is unchanged.</dd>
+</dl></div>
+
+<div class="card"><h3><span class="num">2</span> Keep export and online code out of the first-paint bundle <span class="eff s">effort S–M</span></h3><dl>
+  <dt>Problem</dt><dd>
+    <ul>
+      <li>JSZip and TPStoPNG are static imports (<code>src/store/ui/actions.js:2</code>, <code>:32</code>) but are used only by the export actions (lines 75, 357).</li>
+      <li>Firebase isn't in the startup import graph, yet it makes up about 656 KB of the 2.1 MB <code>vendor.js</code>. Inferred cause: the default vendor cacheGroup pulls <code>node_modules</code> out of async chunks.</li>
+      <li>markdown-it and its emoji tables load eagerly too.</li>
+    </ul>
+  </dd>
+  <dt>Proposal</dt><dd>
+    <ul>
+      <li>Use <code>await import("jszip")</code> and <code>await import(".../TPStoPNG.js")</code> inside the actions that need them.</li>
+      <li>Try <code>build.vendor.remove: ["firebase", "jszip", "markdown-it"]</code>.</li>
+    </ul>
+  </dd>
+</dl></div>
+
+<div class="card"><h3><span class="num">3</span> Load only the icons the app uses <span class="eff m">effort M</span></h3><dl>
+  <dt>Problem</dt><dd><code>extras: ["mdi-v5"]</code> (<code>quasar.conf.js:20</code>) ships every MDI icon (a 319 KB font plus 272 KB of CSS) for about 150 used.</dd>
+  <dt>Proposal</dt><dd><code>App.vue:59–66</code> already routes icons through the <code>ICONS</code> map. Map those entries to SVG-path imports from <code>@quasar/extras/mdi-v5</code> and drop the webfont.</dd>
+</dl></div>
+<p class="note">Our rough guess is that 1–3 bring an embed's first load to about 400 KB. The rest is Vue, Quasar and the full editor, so the longer-term win (effort L) would be a board-only embed entry point.</p>
+
+<h2>Embed API</h2>
+
+<div class="card"><h3><span class="num">4</span> A <code>READY</code> event <span class="eff s">effort S</span></h3><dl>
+  <dt>Problem</dt><dd>Nothing tells the host "settings applied, game loaded". <code>GAME_STATE</code> comes from a deep watcher on <code>position</code> (<code>App.vue:256–272</code>). So hosts treat the first one as ready and re-send all their settings, because URL settings don't reliably stick in Firefox (observed; cause unknown).</dd>
+  <dt>Proposal</dt><dd>Post <code>{action: "READY", value: {version, ui}}</code> once, after <code>Embed.vue</code> has created the game. It's additive.</dd>
+</dl></div>
+
+<div class="card"><h3><span class="num">5</span> Tell the player's moves apart from host echoes <span class="eff s">effort S</span> <span class="eff m">M for part b</span></h3><dl>
+  <dt>Problem</dt><dd>
+    <ul>
+      <li>The README says <code>INSERT_PLY</code> is sent "via user interaction". But the <code>onInsertPly</code> hook (<code>store/game/mutations.js:367–369</code>) also fires for host-sent <code>INSERT_PLY</code>.</li>
+      <li>Most host actions are echoed back:
+        <ul>
+          <li><code>SET_UI</code>, once per key (<code>store/ui/mutations.js:29</code>);</li>
+          <li><code>HIGHLIGHT_SQUARES</code>;</li>
+          <li><code>GO_TO_PLY</code>, <code>FIRST</code> and <code>LAST</code>;</li>
+          <li><code>SET_CURRENT_PTN</code>.</li>
+        </ul>
+      </li>
+      <li>So a player's rotation looks exactly like a host's <code>SET_UI {boardTransform}</code>.</li>
+    </ul>
+  </dd>
+  <dt>Proposal</dt><dd>
+    <ul>
+      <li>(a) Post <code>PLY_PLAYED {ptn, plyID, tps}</code> only from <code>INSERT_PLY_INTERACTIVE</code> (<code>mutations.js:1024</code>).</li>
+      <li>(b) Optionally, let incoming messages carry an <code>id</code>, and stamp what they cause with <code>replyTo</code>.</li>
+    </ul>
+    <code>INSERT_PLY</code> stays as it is.</dd>
+</dl></div>
+
+<div class="card"><h3><span class="num">6</span> A <code>SELECTION</code> event <span class="eff s">effort S</span></h3><dl>
+  <dt>Problem</dt><dd>Hosts can't tell when stones are in hand, so they can't stop their own navigation from interrupting a half-made move. The data is already reactive: <code>state.game.selected</code> (<code>mutations.js:451</code>).</dd>
+  <dt>Proposal</dt><dd>A watcher next to the <code>GAME_STATE</code> one posts <code>SELECTION {squares, moveset, holding}</code>.</dd>
+</dl></div>
+
+<div class="card"><h3><span class="num">7</span> Report errors instead of throwing <span class="eff s">effort S</span></h3><dl>
+  <dt>Problem</dt><dd>
+    <ul>
+      <li>An unknown action runs <code>throw `Invalid action`</code> (<code>App.vue:214</code>).</li>
+      <li>Bad PTN in <code>INSERT_PLY</code> throws from the <code>Ply</code> constructor (<code>Ply.js:74</code>), and the host never hears about it.</li>
+      <li>Small one: <code>case "GET_THEME"</code> appears twice (<code>App.vue:196</code>, <code>:199</code>).</li>
+    </ul>
+  </dd>
+  <dt>Proposal</dt><dd>Wrap the switch in try/catch, then post <code>ERROR {action, message}</code> and return.</dd>
+</dl></div>
+
+<div class="card"><h3><span class="num">8</span> An atomic load <span class="eff s">effort S</span></h3><dl>
+  <dt>Problem</dt><dd>Loading a game without the fly-in animation takes four messages and a timed wait: <code>SET_UI {animateBoard:false}</code>, then <code>SET_CURRENT_PTN</code>, then <code>LAST</code>, then a sleep, then restoring animation. <code>WITHOUT_BOARD_ANIM</code> (<code>ui/actions.js:300</code>) already does this internally.</dd>
+  <dt>Proposal</dt><dd><code>SET_CURRENT_PTN</code> also accepts <code>{ptn, plyID: "last" | n, animate: false}</code>. A plain string keeps working.</dd>
+</dl></div>
+
+<div class="card"><h3><span class="num">9</span> Document the outgoing events <span class="eff s">effort S</span></h3><dl>
+  <dt>Problem</dt><dd>
+    <ul>
+      <li>The README's API section (<code>README.md:52</code>) covers the commands but lists only 4 outgoing events. The code also posts <code>APPEND_PLY</code>, <code>GAME_END</code>, the echoes, <code>DELETE_PLY</code>, <code>UNDO</code> and more.</li>
+      <li>Useful features that aren't documented:
+        <ul>
+          <li><code>SHOW_NAMES</code>, which hides names and keeps the flat counts;</li>
+          <li><code>boardTransform</code> and <code>theme</code> as <code>SET_UI</code> keys;</li>
+          <li>engines don't start in an iframe.</li>
+        </ul>
+      </li>
+    </ul>
+  </dd>
+  <dt>Proposal</dt><dd>Document each event's payload and when it fires.</dd>
+</dl></div>
+
+<h2>Embed UX and settings</h2>
+
+<div class="card"><h3><span class="num">10</span> Coloured hint highlights <span class="eff s">effort S–M</span></h3><dl>
+  <dt>Problem</dt><dd>
+    <ul>
+      <li><code>HIGHLIGHT_SQUARES</code> tints in the side-to-move's colour at 0.4 opacity (<code>Square.vue:585–591</code>). With a cream player 1 on cream squares, a puzzle hint nearly disappears.</li>
+      <li>The highlighter has per-square colours (<code>Square.vue:147</code>), but it's an editing mode that blocks input.</li>
+    </ul>
+  </dd>
+  <dt>Proposal</dt><dd><code>HIGHLIGHT_SQUARES</code> also accepts <code>{squares, color, opacity}</code>, drawn the way the highlighter draws them but without entering highlighter mode.</dd>
+</dl></div>
+
+<div class="card"><h3><span class="num">11</span> Puzzle guards <span class="eff s">effort S–M</span></h3><dl>
+  <dt>Problem</dt><dd>
+    <ul>
+      <li>Playing a different move while a next ply exists creates a branch.</li>
+      <li><code>disableUndo</code> only hides the buttons (<code>NavControls.vue:93–108</code>). Ctrl+Z is gated on <code>disableNavigation</code> instead (<code>Embed.vue:388–392</code>).</li>
+    </ul>
+  </dd>
+  <dt>Proposal</dt><dd>
+    <ul>
+      <li>A <code>noBranches</code> UI key, so such an insert truncates the line.</li>
+      <li><code>disableUndo</code> also gates the hotkey.</li>
+    </ul>
+  </dd>
+</dl></div>
+
+<div class="card"><h3><span class="num">12</span> Opt-in persistence <span class="eff s">effort S</span></h3><dl>
+  <dt>Problem</dt><dd>Embed mode skips settings writes (<code>ui/actions.js:129,147</code>) and reads only <code>theme</code> (<code>state.js:211–216</code>), so a viewer's rotation resets on every load. tinue works around this by saving the <code>boardTransform</code> echo itself.</dd>
+  <dt>Proposal</dt><dd>A <code>persistUI: ["boardTransform", "themeID"]</code> key that opts the listed keys back into localStorage. Off by default.</dd>
+</dl></div>
+
+<h2>Smaller asks</h2>
+<ul>
+  <li><strong>Winning road only.</strong> At game end the drawn road is the whole winning group after dead-end pruning (<code>Board/end.js:67+</code>). A <code>roadDisplay: "path"</code> option would suit puzzles.</li>
+  <li><strong>Accessibility.</strong> From a source read (not audited in a browser), the board has no ARIA labels, keyboard focus or reduced-motion handling. tinue's board has all three if any of it is useful.</li>
+</ul>
+
+<h2>What tinue would delete if these landed</h2>
+<p>
+#4 removes the "first <code>GAME_STATE</code> means ready" sniffing and the blanket settings re-send.
+#5 removes the payload shape checks.
+#6 removes a <code>holding</code> stub that always says "no stones in hand".
+#8 removes a four-message sequence and a timed sleep.
+#12 removes our own rotation storage.
+Our adapter is <a href="https://github.com/iCalculated/blog/blob/main/tinue/ninja.js"><code>ninja.js</code></a>, about 170 lines.</p>
+
+<p class="note">Sources: PTN Ninja at <code>557628d</code> (<a href="https://github.com/gruppler/PTN-Ninja">github.com/gruppler/PTN-Ninja</a>). Weights were measured with curl and headless Chrome on fresh profiles. tinue is GPL-3 and doesn't include PTN Ninja's code; its board re-implements the input behaviour from its description.</p>
+</main>
+</body>
+</html>
