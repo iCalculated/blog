@@ -2,8 +2,8 @@
 // embeds it. Same API as Board (board.js), so app.js doesn't care which one it has. Only loaded via import()
 // when the flag is set: everyone else fetches nothing from here or from ptn.ninja.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1794775792';
-import { parsePTN } from './shared/ptn.js?v=1794775792';
+import { Game } from './shared/tak.js?v=1794778649';
+import { parsePTN } from './shared/ptn.js?v=1794778649';
 
 const ORIGIN = 'https://ptn.ninja';
 // tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses).
@@ -102,7 +102,7 @@ export class NinjaBoard {
   // PTN Ninja never came up: put tinue's own board in its place, in the same state, and hand it every call.
   async _fallback() {
     if (this.fb || !this._resolve) return;
-    const { Board } = await import('./board.js?v=1794775792');
+    const { Board } = await import('./board.js?v=1794778649');
     this.el.style.cssText = ''; // index.html's placeholder background
     const fb = new Board(this.el, { onMove: this.onMove });
     this.fb = fb;
@@ -175,5 +175,4 @@ export class NinjaBoard {
     this._send('INSERT_PLY', c);
     return true;
   }
-  rotate180() { return this._send('ROTATE_180'); }
 }

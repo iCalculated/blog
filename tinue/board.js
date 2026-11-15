@@ -1,8 +1,8 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794775792';
-import { parsePTN } from './shared/ptn.js?v=1794775792';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794778649';
+import { parsePTN } from './shared/ptn.js?v=1794778649';
 
 const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
@@ -93,8 +93,8 @@ function roadOf(g, color) {
 }
 
 export class Board {
-  constructor(el, { onMove, onState } = {}) {
-    this.el = el; this.onMove = onMove; this.onState = onState;
+  constructor(el, { onMove } = {}) {
+    this.el = el; this.onMove = onMove;
     el.classList.add('tb-host');
     this.opts = { disableBoard: false, showRoads: false, animateBoard: true, dropOnStray: false };
     this.player = null; this.M = loadOrient(); this.sel = null; this.hlSquares = []; this.hover = -1; this.peekHl = null;
@@ -178,7 +178,6 @@ export class Board {
     this._commit(ptn);
     return true;
   }
-  async rotate180() { this.orient('-'); }
   // key: one of OPS ('=' resets). Kept in this browser, like PTN Ninja's setting.
   orient(key) {
     this.M = OPS[key] ? mul(OPS[key], this.M) : ID;
@@ -246,7 +245,6 @@ export class Board {
   _show(i, animate = false) {
     this.cur = i; this.sel = null; this.peekHl = null;
     this._render(animate);
-    this.onState?.({ plyID: i - 1, plies: this.snaps.length - 1, tps: this.snaps[i].g.toTPS() });
   }
 
   _canInput() {

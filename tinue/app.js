@@ -1,16 +1,14 @@
-import { Game } from './shared/tak.js?v=1794775792';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794775792';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794775792';
-import { Board, buildPTN } from './board.js?v=1794775792';
-import * as engine from './engine.js?v=1794775792';
-import * as tiltak from './tiltak.js?v=1794775792';
+import { Game } from './shared/tak.js?v=1794778649';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794778649';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794778649';
+import { Board, buildPTN } from './board.js?v=1794778649';
+import * as engine from './engine.js?v=1794778649';
+import * as tiltak from './tiltak.js?v=1794778649';
+import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794778649';
+import { createNext } from './next.js?v=1794778649';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
-// The API can live elsewhere (static page on shydrie.xyz, API on crux): config.js sets TINUE_API.
-// Auth is a bearer token from localStorage (cross-site cookies get blocked), plus a cookie for same-origin dev.
-const API = (window.TINUE_API || '').replace(/\/$/, '');
-const authHeaders = () => (token ? { authorization: 'Bearer ' + token } : {});
 
 // A puzzle's address is a real path, <app>/puzzle/<id>, so pasting it into Discord unfurls: the static build writes
 // a small page there with the puzzle's embed tags that forwards to #/puzzle/<id>, and the app then shows the path
@@ -27,69 +25,11 @@ const canShare = () => !!navigator.share && matchMedia('(pointer: coarse)').matc
 async function sharePuzzle(p) {
   try { await navigator.share({ title: 'tinue puzzle', url: location.origin + puzzlePath(p.id) }); } catch {}
 }
-// timeout: one try with that budget (no retry), for callers with a fallback; signal: the caller may abort.
-const api = async (path, body, { quiet = false, noWait = quiet, timeout, signal } = {}) => {
-  // If the server can't be reached, say so instead of showing a blank page. (On Shy's tailnet, Chrome asks for
-  // "local network access" before a public page may call crux's private address; that prompt also stalls here.)
-  const slow = noWait ? null : setTimeout(() => { notice = WAIT_NOTICE; renderAll(); }, 4000);
-  const t0 = performance.now();
-  let outcome = 'ok';
-  // A request stuck on a dead connection (e.g. the tailnet path to crux re-forming after sleep) is abandoned
-  // after a while: reads are retried once, results (POSTs) just get longer before giving up.
-  const once = async (ms) => {
-    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), ms);
-    const cancel = () => ctl.abort();
-    signal?.addEventListener('abort', cancel);
-    try {
-      const r = await fetch(API + path, body
-        ? { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify(body), credentials: 'include', signal: ctl.signal }
-        : { headers: authHeaders(), credentials: 'include', signal: ctl.signal });
-      return await r.json();
-    } finally { clearTimeout(timer); signal?.removeEventListener('abort', cancel); }
-  };
-  try {
-    let j;
-    if (timeout) j = await once(timeout);
-    else if (body) j = await once(20000);
-    else try { j = await once(8000); } catch { outcome = 'retried'; j = await once(12000); }
-    if (!quiet && (notice?.kind === 'wait' || notice?.kind === 'net')) { notice = null; renderAll(); }
-    return j;
-  } catch (e) {
-    outcome = 'failed';
-    if (quiet) throw e;
-    notice = { kind: 'net', title: 'Can’t reach the puzzle server', body: 'Check your connection and reload. If it keeps happening, the server may be down.' };
-    renderAll();
-    throw e;
-  } finally {
-    clearTimeout(slow);
-    const ms = performance.now() - t0;
-    // Engine analysis is slow by design (a ~1.2 s search, maybe queued) and aborted on purpose; not a network signal.
-    if ((ms > 2000 || outcome !== 'ok') && path !== '/api/slow' && !path.startsWith('/api/analyze')) reportSlow(path, ms, outcome);
-  }
-};
-// Tell the server about requests that were slow from here, so its log shows what the network added.
-const reportSlow = (path, ms, outcome) => {
-  try {
-    const data = JSON.stringify({ path: path.split('?')[0], ms, outcome, hidden: document.visibilityState === 'hidden' });
-    if (!navigator.sendBeacon?.(API + '/api/slow', data)) fetch(API + '/api/slow', { method: 'POST', body: data, keepalive: true }).catch(() => {});
-  } catch {}
-};
-const WAIT_NOTICE = { kind: 'wait', title: 'Waiting for the puzzle server…', body: 'The server may be down; try again in a bit.' };
-let notice = null; // a message that replaces the turn card: {kind: 'wait' | 'net' | 'none', title, body}
-const store = {
-  get(k, d) { try { const v = localStorage.getItem('tinue.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { try { localStorage.setItem('tinue.' + k, JSON.stringify(v)); } catch {} },
-  del(k) { try { localStorage.removeItem('tinue.' + k); } catch {} },
-};
 
 // The server rates everyone. me: the player it knows us as, an account (name) or a guest (name null: has played
-// without claiming a name), with the token that identifies us (kept in memory too, in case storage is unavailable).
-// A first-time visitor has neither until their first result (or claiming a name), whose answer brings the token.
-let me = null, token = store.get('token', null);
-const setToken = (t) => {
-  token = t;
-  if (t) { store.set('token', t); store.del('guest'); store.del('seen'); } else store.del('token');
-};
+// without claiming a name), identified by the token (api.js). A first-time visitor has neither until their first
+// result (or claiming a name), whose answer brings the token.
+let me = null;
 // Until 2026-11-15 guests were rated in this browser. Until the first result here makes a guest a server user (whose
 // rating the server replays from the results this browser sent then), that rating and the puzzles seen steer the
 // next puzzle and show as "your rating".
@@ -119,10 +59,11 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794775792')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794778649')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
+onNotice(() => renderAll()); // api() shows and clears the server notice
 
 // ---------- user box ----------
 function renderUser() {
@@ -202,79 +143,20 @@ const nextQuery = () => {
   if (!token) { q.set('rating', Math.round(myRating().rating)); if (legacySeen.length) q.set('exclude', legacySeen.slice(-200).join(',')); }
   return q.toString();
 };
-// Next puzzle without waiting on the network. While a puzzle is played, the server picks what comes after it both
-// ways, at the rating a solve or a miss will leave (pair, from /api/next?for=); the result chooses one (prefetched).
-// Without a usable pair (a hint, a failed upload) the next one is fetched as soon as the result is in. The chosen
-// puzzle is also kept in storage until it has been played, so the next visit starts on it without asking the server.
-// Keys: the filters it was picked under; a change of player (sign in or out) drops both.
-// Settled players (no "?") instead keep a queue of puzzles picked BATCH at a time at their rating (as Lichess's app
-// does): one request per batch instead of a pair per puzzle, refilled when REFILL_AT are left, and re-picked once
-// their rating drifts more than DRIFT from the batch's (the puzzle already chosen is still played meanwhile).
-let pair = null, prefetched = null; // pair: { id, key, req -> { win, loss } }; prefetched: { key, req -> { puzzle } }
+// What comes after this puzzle (the win/loss pair, a settled player's batch queue, the stored next one): next.js.
 const filterKey = () => [prefs.difficulty, prefs.size || '', prefs.theme || ''].join('|');
-const playerKey = () => (token ? token.slice(0, 8) : '');
-const NEXT_TTL = 12 * 3600e3; // a stored puzzle older than this is asked for again (ratings and imports move on)
-const BATCH = 10, REFILL_AT = 2, DRIFT = 50;
-let queue = store.get('queue', null), filling = null; // queue: { key, who, rating, at, puzzles: [upcoming, not shown yet] }
-const settled = () => !!(token && me && !me.provisional);
-const queueOk = () => !!queue && queue.key === filterKey() && queue.who === playerKey() && Date.now() - queue.at < NEXT_TTL;
-const drifted = () => !me || Math.abs(me.rating - queue.rating) > DRIFT;
-// Fetch a batch: appended to what's queued, or in its place once the rating has drifted (or the queue is stale).
-function fillQueue(taken) {
-  if (filling) return filling;
-  const key = filterKey(), who = playerKey();
-  const keep = queueOk() && !drifted() ? queue.puzzles : [];
-  const exclude = [...keep.map((p) => p.id), S?.p?.id, taken, store.get('next', null)?.puzzle?.id].filter(Boolean);
-  const req = filling = api(`/api/next?${nextQuery()}&n=${BATCH}${exclude.length ? '&exclude=' + exclude.join(',') : ''}`, null, { quiet: true })
-    .then((r) => {
-      if (!r?.puzzles || key !== filterKey() || who !== playerKey()) return;
-      queue = { key, who, rating: r.rating, at: Date.now(), puzzles: [...(queueOk() && !drifted() ? queue.puzzles : []), ...r.puzzles] };
-      store.set('queue', queue);
-    })
-    .catch(() => {}).finally(() => { if (filling === req) filling = null; });
-  return req;
-}
-// The next puzzle from the queue (waiting for a batch only when it's empty), topping it up or re-picking it as needed.
-async function fromQueue() {
-  if (!queueOk() || !queue.puzzles.length) { queue = null; await fillQueue(); }
-  if (!queueOk() || !queue.puzzles.length) return null;
-  const puzzle = queue.puzzles.shift();
-  store.set('queue', queue);
-  if (drifted() || queue.puzzles.length <= REFILL_AT) fillQueue(puzzle.id);
-  return { puzzle };
-}
-function prefetchPair(p) {
-  if (settled()) {
-    // Queues overlap: the next batch is asked for while puzzles are still queued (REFILL_AT), so there's always one
-    // ready. Only when nothing is queued for after this puzzle does it also get the pair, so a slow or failed batch
-    // never means waiting.
-    const have = queueOk() && queue.puzzles.length > 0;
-    if (!have || drifted() || queue.puzzles.length <= REFILL_AT) fillQueue();
-    if (have) return;
-  }
-  pair = { id: p.id, key: filterKey(), req: api('/api/next?' + nextQuery() + '&for=' + encodeURIComponent(p.id), null, { quiet: true }).catch(() => null) };
-}
-function prefetchNext(win, usePair) {
-  store.del('next'); // the stored one was this puzzle: it's played now
-  const key = filterKey();
-  const fromPair = usePair && pair?.key === key && pair.req.then((r) => r && { puzzle: win ? r.win : r.loss });
-  let req;
-  if (settled() && queueOk() && queue.puzzles.length) req = fromQueue();
-  else if (fromPair) req = settled() ? fromPair.then((r) => { fillQueue(r?.puzzle?.id); return r; }) : fromPair; // queue empty (just settled, batch slow or failed)
-  else req = settled() ? fromQueue() : api('/api/next?' + nextQuery(), null, { quiet: true }).catch(() => null);
-  pair = null;
-  prefetched = { key, req };
-  req.then((r) => { if (r?.puzzle && prefetched?.req === req) store.set('next', { key, who: playerKey(), at: Date.now(), puzzle: r.puzzle }); });
-}
-const forgetNext = () => { pair = null; prefetched = null; queue = null; store.del('next'); store.del('queue'); }; // another player now
+const nextQ = createNext({
+  get: (path) => api(path, null, { quiet: true }), store, filterKey, playerKey: () => (token ? token.slice(0, 8) : ''), query: nextQuery,
+  settled: () => !!(token && me && !me.provisional), rating: () => me?.rating ?? null, currentId: () => S?.p?.id,
+});
+const forgetNext = () => nextQ.forgetNext(); // another player now
 async function loadNext() {
   const t = ++loadSeq;
-  const pre = prefetched?.key === filterKey() ? prefetched.req : null;
-  prefetched = null; // (a stored one stays until this puzzle's result: leaving halfway comes back to it)
+  const pre = nextQ.take(); // (a stored one stays until this puzzle's result: leaving halfway comes back to it)
   // A prefetch still in flight gets 3 s (it is quiet: no waiting notice), then a normal request takes over.
   let r = pre && (await Promise.race([pre, new Promise((res) => setTimeout(() => res(null), 3000))]));
   if (!r?.puzzle || r.puzzle.id === S?.p.id) { // (a "no match" answer is re-asked too)
-    if (pre && !r) { notice = WAIT_NOTICE; renderAll(); }
+    if (pre && !r) { setNotice(WAIT_NOTICE); renderAll(); }
     try { r = await api('/api/next?' + nextQuery()); } catch { return; } // api() has shown the error
   }
   const { puzzle } = r;
@@ -282,7 +164,7 @@ async function loadNext() {
   if (!puzzle) { // nothing to play: clear the old puzzle rather than leave it playable under the new filters
     engine.interrupt(); tiltak.stop(); anaCtl?.abort();
     S = null;
-    notice = { kind: 'none', title: 'No puzzles match', body: 'Try another theme, difficulty or board size.' };
+    setNotice({ kind: 'none', title: 'No puzzles match', body: 'Try another theme, difficulty or board size.' });
     showHashURL('#/');
     await board.ui({ disableBoard: true, showRoads: false, dropOnStray: false });
     await board.load(buildPTN({ size: +(prefs.size || 6) }));
@@ -406,8 +288,8 @@ async function start(p, theme = '') {
   const s = S = { p, g, node: p.tree, solver: g.toMove, hist, moves: [], snaps: [g.toTPS()], view: null, status: 'play', resultSent: false, hinted: false, delta: null, busy: true,
         misses: [], outcome: null, branch: null, onBranch: false, theme: theme && (p.themes || []).includes(theme) ? theme : '',
         t0: null, hiddenMs: 0, hiddenAt: null, log: [] };
-  prefetchPair(p);
-  notice = null;
+  nextQ.prefetchPair(p);
+  setNotice(null);
   setTitle();
   renderAll(); // side panel right away
   await board.ui({ disableBoard: true, showRoads: false, dropOnStray: false });
@@ -584,7 +466,7 @@ async function report(win) {
   session.push({ id: p.id, win, delta: s.delta });
   renderAll();
   // The pair assumed this result counts (or is a repeat, which it allows for); after a hint or a lost upload, ask again.
-  if (S === s) prefetchNext(win, pair?.id === p.id && !s.hinted && answered);
+  if (S === s) nextQ.prefetchNext(win, p.id, !s.hinted && answered);
 }
 
 // Proven slower wins at the current attacker node: alts at the root, altsAt[path of moves so far] deeper in.
@@ -1252,9 +1134,7 @@ window.addEventListener('hashchange', route);
 
 (async () => {
   const cached = store.get('me', null);
-  // The puzzle picked after the last result here, if still fresh: the first puzzle needs no request.
-  const nx = store.get('next', null);
-  if (nx?.puzzle && nx.who === playerKey() && nx.key === filterKey() && Date.now() - nx.at < NEXT_TTL) prefetched = { key: nx.key, req: Promise.resolve({ puzzle: nx.puzzle }) };
+  nextQ.resume(); // the puzzle picked after the last result here, if still fresh: the first puzzle needs no request
   if (cached && token) { me = { ...cached, rating: store.get('myRating', PLAYER_START.rating), provisional: store.get('myProv', true), games: 0, wins: 0 }; }
   renderUser();
   themeDesc();
