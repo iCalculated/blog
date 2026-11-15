@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794766072';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794766072';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794766072';
-import { Board, buildPTN } from './board.js?v=1794766072';
-import * as engine from './engine.js?v=1794766072';
-import * as tiltak from './tiltak.js?v=1794766072';
+import { Game } from './shared/tak.js?v=1794766732';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794766732';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794766732';
+import { Board, buildPTN } from './board.js?v=1794766732';
+import * as engine from './engine.js?v=1794766732';
+import * as tiltak from './tiltak.js?v=1794766732';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -12,10 +12,17 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const API = (window.TINUE_API || '').replace(/\/$/, '');
 const authHeaders = () => { const t = store.get('token', null); return t ? { authorization: 'Bearer ' + t } : {}; };
 
-// Share link: the API server's /p/<id> page carries the embed (board picture + title) and forwards to the puzzle.
-// Phones get the system share sheet; elsewhere the link is copied and the button says so.
+// A puzzle's address is a real path, <app>/puzzle/<id>, so pasting it into Discord unfurls: the static build writes
+// a small page there with the puzzle's embed tags that forwards to #/puzzle/<id>, and the app then shows the path
+// again. Other pages stay hash routes. APP is the app's directory (/tinue/ on shydrie.xyz, / on a dev server).
+const APP = location.pathname.replace(/(puzzle\/[^/]+|glossary|me|leaderboard)\/?$/, '').replace(/[^/]*$/, '');
+const puzzlePath = (id) => APP + 'puzzle/' + encodeURIComponent(id);
+const showPuzzleURL = (id) => { if (location.pathname + location.hash !== puzzlePath(id)) history.replaceState(null, '', puzzlePath(id)); };
+const showHashURL = (h) => { if (location.pathname !== APP || location.hash !== h) history.replaceState(null, '', APP + h); };
+
+// Share: the puzzle's own address (see above). Phones get the system share sheet; elsewhere it is copied.
 async function sharePuzzle(p, btn) {
-  const url = `${API || location.origin}/p/${encodeURIComponent(p.id)}`;
+  const url = location.origin + puzzlePath(p.id);
   const say = (t) => { btn.textContent = t; clearTimeout(btn._t); btn._t = setTimeout(() => { btn.textContent = 'Share'; }, 2500); };
   if (navigator.share && matchMedia('(pointer: coarse)').matches) {
     try { await navigator.share({ title: 'tinue puzzle', url }); return; } catch (e) { if (e.name === 'AbortError') return; }
@@ -202,12 +209,12 @@ async function loadNext() {
     engine.interrupt(); tiltak.stop(); anaCtl?.abort();
     S = null;
     notice = { kind: 'none', title: 'No puzzles match', body: 'Try another theme, difficulty or board size.' };
-    history.replaceState(null, '', '#/');
+    showHashURL('#/');
     await board.ui({ disableBoard: true, showRoads: false, dropOnStray: false });
     await board.load(buildPTN({ size: +(prefs.size || 6) }));
     renderAll(); setTitle(); return;
   }
-  history.replaceState(null, '', '#/puzzle/' + puzzle.id);
+  showPuzzleURL(puzzle.id);
   start(puzzle, prefs.theme);
 }
 // Does the puzzle fit the current Theme / Board filters?
@@ -217,7 +224,7 @@ async function loadById(id) {
   const t = ++loadSeq;
   let puzzle; try { ({ puzzle } = await api('/api/puzzle/' + encodeURIComponent(id))); } catch { return; }
   if (t !== loadSeq) return;
-  if (puzzle) start(puzzle); else loadNext();
+  if (puzzle) { showPuzzleURL(puzzle.id); start(puzzle); } else loadNext();
 }
 
 const colorName = (c) => (c === 1 ? 'White' : 'Black');
@@ -1114,14 +1121,17 @@ function go(hash) {
 }
 
 async function route() {
-  const [, page, arg] = (location.hash || '#/').split('/');
+  // a hash wins (in-app links); else the path (<app>/puzzle/<id>, the address shown for a puzzle)
+  const pathRoute = location.pathname.slice(APP.length);
+  const [, page, arg] = (location.hash && location.hash !== '#' ? location.hash : '#/' + pathRoute).split('/');
+  if (page === 'glossary' || page === 'me' || page === 'leaderboard') showHashURL('#/' + (location.hash || '#/' + pathRoute).split('/').slice(1).join('/'));
   if (page === 'glossary') return glossaryPage();
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
-  if (page === 'puzzle' && arg) { if (S?.p.id !== arg) loadById(decodeURIComponent(arg)); }
-  else if (S && !S.placeholder && S.status !== 'solved' && matchesFilters(S.p)) history.replaceState(null, '', '#/puzzle/' + S.p.id); // back to the puzzle in progress
+  if (page === 'puzzle' && arg) { if (S?.p.id !== decodeURIComponent(arg)) loadById(decodeURIComponent(arg)); else showPuzzleURL(S.p.id); }
+  else if (S && !S.placeholder && S.status !== 'solved' && matchesFilters(S.p)) showPuzzleURL(S.p.id); // back to the puzzle in progress
   else loadNext();
 }
 window.addEventListener('hashchange', route);
@@ -1134,9 +1144,6 @@ window.addEventListener('hashchange', route);
   renderAll(); // placeholder panels at their final size
   board.load(buildPTN({ size: +(prefs.size || 6) })); // the same board component, empty, until the puzzle arrives
   requestAnimationFrame(() => document.documentElement.classList.remove('booting')); // reveal once laid out
-  // old path-style URLs from the dev server → hash routes
-  const old = /^\/(puzzle\/[\w.-]+|glossary|me|leaderboard)$/.exec(location.pathname);
-  if (old) history.replaceState(null, '', '/#/' + old[1]);
   const meP = api('/api/me').then((r) => { me = r.user; renderUser(); if (S) renderAll(); }).catch(() => {});
   // With a cached account the puzzle request goes out alongside /api/me (the server knows us by the token).
   if (!store.get('token', null) || me) route(); else { await meP; route(); }
