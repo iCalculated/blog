@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794757037';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794757037';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794757037';
-import { Board, buildPTN } from './board.js?v=1794757037';
-import * as engine from './engine.js?v=1794757037';
-import * as tiltak from './tiltak.js?v=1794757037';
+import { Game } from './shared/tak.js?v=1794766072';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794766072';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794766072';
+import { Board, buildPTN } from './board.js?v=1794766072';
+import * as engine from './engine.js?v=1794766072';
+import * as tiltak from './tiltak.js?v=1794766072';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -11,6 +11,18 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 // Auth is a bearer token from localStorage (cross-site cookies get blocked), plus a cookie for same-origin dev.
 const API = (window.TINUE_API || '').replace(/\/$/, '');
 const authHeaders = () => { const t = store.get('token', null); return t ? { authorization: 'Bearer ' + t } : {}; };
+
+// Share link: the API server's /p/<id> page carries the embed (board picture + title) and forwards to the puzzle.
+// Phones get the system share sheet; elsewhere the link is copied and the button says so.
+async function sharePuzzle(p, btn) {
+  const url = `${API || location.origin}/p/${encodeURIComponent(p.id)}`;
+  const say = (t) => { btn.textContent = t; clearTimeout(btn._t); btn._t = setTimeout(() => { btn.textContent = 'Share'; }, 2500); };
+  if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+    try { await navigator.share({ title: 'tinue puzzle', url }); return; } catch (e) { if (e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(url); say('Link copied'); }
+  catch { window.prompt('Copy this link:', url); }
+}
 // timeout: one try with that budget (no retry), for callers with a fallback; signal: the caller may abort.
 const api = async (path, body, { quiet = false, noWait = quiet, timeout, signal } = {}) => {
   // If the server can't be reached, say so instead of showing a blank page. (On Shy's tailnet, Chrome asks for
@@ -865,7 +877,7 @@ function renderAll(mood) {
     const player = (c, name, r) => `<div><span class="dot p${c}"></span>${esc(name)}${r ? ` <span class="sub">(${r})</span>` : ''}</div>`;
     const game = p.sourceRef?.startsWith('http') ? `<a href="${esc(p.sourceRef)}" target="_blank" rel="noopener">PlayTak game</a>` : esc(p.source);
     info.innerHTML = `<dl>
-        <dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}">#${esc(p.id)}</a>, ${p.size}×${p.size}${p.komi ? ` with komi ${p.komi}` : ''}</dd>
+        <dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}">#${esc(p.id)}</a>, ${p.size}×${p.size}${p.komi ? ` with komi ${p.komi}` : ''} · <button class="link" id="share-link" title="Copy a link that shows this board when pasted into Discord or a chat">Share</button></dd>
         <dt>Rating</dt><dd>${Math.round(p.rating)}</dd>
         <dt>Played</dt><dd>${p.attempts ? `${p.attempts} time${p.attempts === 1 ? '' : 's'}` : 'Not rated by anyone yet'}</dd>
         <dt>From</dt><dd>${game}</dd>
@@ -873,6 +885,8 @@ function renderAll(mood) {
       ${p.turn === 1 ? `<div class="sub">Turning point: ${p.pre0 != null && p.pre0 < 0.4 ? 'you were behind' : 'the game was even'} until your opponent’s last move.</div>` : ''}
       ${m.white ? `<div class="players">${player(1, m.white, m.ratingWhite)}${player(2, m.black, m.ratingBlack)}</div>` : ''}
       <hr><div>${themes.map((t) => `<a class="tag" href="#/glossary/${t}" title="${esc(THEMES[t].desc)}">${THEMES[t].name}</a>`).join('') || '<span class="sub">No themes</span>'}</div>`;
+    const sb = $('#share-link');
+    if (sb) sb.onclick = () => sharePuzzle(p, sb);
   }
 
   // Move list, Lichess-style: a fixed-height scrolling table (number | White | Black). The game so far is
