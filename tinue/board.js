@@ -1,8 +1,8 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794772921';
-import { parsePTN } from './shared/ptn.js?v=1794772921';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794773197';
+import { parsePTN } from './shared/ptn.js?v=1794773197';
 
 const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
@@ -444,8 +444,8 @@ export class Board {
     const ids = o.slice(o.length - sel.picked).slice(sel.drops.reduce((a, b) => a + b, 0)); // the hand, bottom first
     const tgt = moved ? this._next(cur, sel.dir) : this.hover;
     if (tgt < 0) return false;
-    const dropHere = (keep = 0) => { // on the current square (the origin: put stones back)
-      const c = Math.min(this._count(k, ids), ids.length - keep);
+    const dropHere = () => { // on the current square (the origin: put stones back)
+      const c = this._count(k, ids);
       if (c <= 0) return false;
       if (!moved) { sel.picked -= c; if (!sel.picked) this.sel = null; return this._render(), true; }
       sel.drops[sel.drops.length - 1] += c;
@@ -456,8 +456,9 @@ export class Board {
     if (!dir || !this._enterable(tgt, s)) return false;
     const top = s.st[tgt].at(-1);
     if (top != null && s.ty[top] === WALL) {
-      // a wall ahead: whittle the hand down here until the capstone is alone, then it flattens the wall
-      if (ids.length > 1) return dropHere(1);
+      // a wall ahead: as in PTN Ninja, the key drops here instead (the capstone too, if the count reaches it);
+      // once the capstone is alone in hand, it flattens the wall
+      if (ids.length > 1) return dropHere();
       this._squareClick(tgt, false);
       return true;
     }

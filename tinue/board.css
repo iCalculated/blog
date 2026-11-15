@@ -54,7 +54,8 @@
    next square, drop the whole hand; on the tray, select the flat as a wall. Esc cancels.
    Keys: 1–8 / Enter (most) / ` (just enough for your colour on top) lift from the stack under the pointer, then
    drop under the pointer until the first drop, then on the next square along the line; a wall ahead makes
-   them drop here until the capstone is alone, which then flattens it. Keys never place a stone.
+   them drop here instead (the capstone too, if the count reaches it); a lone capstone flattens it. Keys never
+   place a stone.
    Orientation: [ ] turn 90°, - 180°, ; : mirror, = reset; coordinates follow (kept in localStorage).
    Hover/selected stacks show their height (or pieces in hand / dropped here) on the top piece. */
 
