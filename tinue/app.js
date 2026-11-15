@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794770260';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794770260';
-import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794770260';
-import { Board, buildPTN } from './board.js?v=1794770260';
-import * as engine from './engine.js?v=1794770260';
-import * as tiltak from './tiltak.js?v=1794770260';
+import { Game } from './shared/tak.js?v=1794771348';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794771348';
+import { rate, themeWeight, provisional, rdFromCount, PLAYER_START } from './shared/rating.js?v=1794771348';
+import { Board, buildPTN } from './board.js?v=1794771348';
+import * as engine from './engine.js?v=1794771348';
+import * as tiltak from './tiltak.js?v=1794771348';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -77,7 +77,7 @@ const reportSlow = (path, ms, outcome) => {
     if (!navigator.sendBeacon?.(API + '/api/slow', data)) fetch(API + '/api/slow', { method: 'POST', body: data, keepalive: true }).catch(() => {});
   } catch {}
 };
-const WAIT_NOTICE = { kind: 'wait', title: 'Waiting for the puzzle server…', body: 'If your browser asks to allow access to devices on your local network, allow it. Otherwise the server may be down; try again in a bit.' };
+const WAIT_NOTICE = { kind: 'wait', title: 'Waiting for the puzzle server…', body: 'The server may be down; try again in a bit.' };
 let notice = null; // a message that replaces the turn card: {kind: 'wait' | 'net' | 'none', title, body}
 const store = {
   get(k, d) { try { const v = localStorage.getItem('tinue.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
