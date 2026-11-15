@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794773197';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794773197';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794773197';
-import { Board, buildPTN } from './board.js?v=1794773197';
-import * as engine from './engine.js?v=1794773197';
-import * as tiltak from './tiltak.js?v=1794773197';
+import { Game } from './shared/tak.js?v=1794774253';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794774253';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794774253';
+import { Board, buildPTN } from './board.js?v=1794774253';
+import * as engine from './engine.js?v=1794774253';
+import * as tiltak from './tiltak.js?v=1794774253';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -119,7 +119,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794773197')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794774253')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -207,23 +207,66 @@ const nextQuery = () => {
 // Without a usable pair (a hint, a failed upload) the next one is fetched as soon as the result is in. The chosen
 // puzzle is also kept in storage until it has been played, so the next visit starts on it without asking the server.
 // Keys: the filters it was picked under; a change of player (sign in or out) drops both.
+// Settled players (no "?") instead keep a queue of puzzles picked BATCH at a time at their rating (as Lichess's app
+// does): one request per batch instead of a pair per puzzle, refilled when REFILL_AT are left, and re-picked once
+// their rating drifts more than DRIFT from the batch's (the puzzle already chosen is still played meanwhile).
 let pair = null, prefetched = null; // pair: { id, key, req -> { win, loss } }; prefetched: { key, req -> { puzzle } }
 const filterKey = () => [prefs.difficulty, prefs.size || '', prefs.theme || ''].join('|');
 const playerKey = () => (token ? token.slice(0, 8) : '');
 const NEXT_TTL = 12 * 3600e3; // a stored puzzle older than this is asked for again (ratings and imports move on)
+const BATCH = 10, REFILL_AT = 2, DRIFT = 50;
+let queue = store.get('queue', null), filling = null; // queue: { key, who, rating, at, puzzles: [upcoming, not shown yet] }
+const settled = () => !!(token && me && !me.provisional);
+const queueOk = () => !!queue && queue.key === filterKey() && queue.who === playerKey() && Date.now() - queue.at < NEXT_TTL;
+const drifted = () => !me || Math.abs(me.rating - queue.rating) > DRIFT;
+// Fetch a batch: appended to what's queued, or in its place once the rating has drifted (or the queue is stale).
+function fillQueue(taken) {
+  if (filling) return filling;
+  const key = filterKey(), who = playerKey();
+  const keep = queueOk() && !drifted() ? queue.puzzles : [];
+  const exclude = [...keep.map((p) => p.id), S?.p?.id, taken, store.get('next', null)?.puzzle?.id].filter(Boolean);
+  const req = filling = api(`/api/next?${nextQuery()}&n=${BATCH}${exclude.length ? '&exclude=' + exclude.join(',') : ''}`, null, { quiet: true })
+    .then((r) => {
+      if (!r?.puzzles || key !== filterKey() || who !== playerKey()) return;
+      queue = { key, who, rating: r.rating, at: Date.now(), puzzles: [...(queueOk() && !drifted() ? queue.puzzles : []), ...r.puzzles] };
+      store.set('queue', queue);
+    })
+    .catch(() => {}).finally(() => { if (filling === req) filling = null; });
+  return req;
+}
+// The next puzzle from the queue (waiting for a batch only when it's empty), topping it up or re-picking it as needed.
+async function fromQueue() {
+  if (!queueOk() || !queue.puzzles.length) { queue = null; await fillQueue(); }
+  if (!queueOk() || !queue.puzzles.length) return null;
+  const puzzle = queue.puzzles.shift();
+  store.set('queue', queue);
+  if (drifted() || queue.puzzles.length <= REFILL_AT) fillQueue(puzzle.id);
+  return { puzzle };
+}
 function prefetchPair(p) {
+  if (settled()) {
+    // Queues overlap: the next batch is asked for while puzzles are still queued (REFILL_AT), so there's always one
+    // ready. Only when nothing is queued for after this puzzle does it also get the pair, so a slow or failed batch
+    // never means waiting.
+    const have = queueOk() && queue.puzzles.length > 0;
+    if (!have || drifted() || queue.puzzles.length <= REFILL_AT) fillQueue();
+    if (have) return;
+  }
   pair = { id: p.id, key: filterKey(), req: api('/api/next?' + nextQuery() + '&for=' + encodeURIComponent(p.id), null, { quiet: true }).catch(() => null) };
 }
 function prefetchNext(win, usePair) {
   store.del('next'); // the stored one was this puzzle: it's played now
   const key = filterKey();
-  const req = usePair && pair?.key === key ? pair.req.then((r) => r && { puzzle: win ? r.win : r.loss })
-    : api('/api/next?' + nextQuery(), null, { quiet: true }).catch(() => null);
+  const fromPair = usePair && pair?.key === key && pair.req.then((r) => r && { puzzle: win ? r.win : r.loss });
+  let req;
+  if (settled() && queueOk() && queue.puzzles.length) req = fromQueue();
+  else if (fromPair) req = settled() ? fromPair.then((r) => { fillQueue(r?.puzzle?.id); return r; }) : fromPair; // queue empty (just settled, batch slow or failed)
+  else req = settled() ? fromQueue() : api('/api/next?' + nextQuery(), null, { quiet: true }).catch(() => null);
   pair = null;
   prefetched = { key, req };
   req.then((r) => { if (r?.puzzle && prefetched?.req === req) store.set('next', { key, who: playerKey(), at: Date.now(), puzzle: r.puzzle }); });
 }
-const forgetNext = () => { pair = null; prefetched = null; store.del('next'); }; // another player now
+const forgetNext = () => { pair = null; prefetched = null; queue = null; store.del('next'); store.del('queue'); }; // another player now
 async function loadNext() {
   const t = ++loadSeq;
   const pre = prefetched?.key === filterKey() ? prefetched.req : null;
