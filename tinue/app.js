@@ -1,11 +1,11 @@
-import { Game } from './shared/tak.js?v=1794782555';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794782555';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794782555';
-import { Board, buildPTN } from './board.js?v=1794782555';
-import * as engine from './engine.js?v=1794782555';
-import * as tiltak from './tiltak.js?v=1794782555';
-import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794782555';
-import { createNext } from './next.js?v=1794782555';
+import { Game } from './shared/tak.js?v=1794784116';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794784116';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794784116';
+import { Board, buildPTN } from './board.js?v=1794784116';
+import * as engine from './engine.js?v=1794784116';
+import * as tiltak from './tiltak.js?v=1794784116';
+import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794784116';
+import { createNext } from './next.js?v=1794784116';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -59,7 +59,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794782555')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794784116')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -403,6 +403,9 @@ async function userMove(ptn) {
       if (wins) {
         logMove('slow', canon, tMove);
         S.slower = canon;
+        // Finding a forced win, even a slower one, means this puzzle can't cost rating any more: a later miss or
+        // Solution is sent unrated; finding the fastest win still counts as a solve (rabbitboy84/entropy, 2026-11-15).
+        if (!S.resultSent) S.foundSlower = true;
         renderAll();
         setTimeout(() => { if (S !== s) return; S.busy = false; restoreBoard().then(() => flushHint(s)); }, 700);
         return;
@@ -446,12 +449,14 @@ async function userMove(ptn) {
 async function report(win) {
   if (S.resultSent) return;
   S.resultSent = true;
-  S.casual = S.hinted; // a hint before the result makes the attempt unrated
+  // Unrated: a hint before the result, or a miss after finding a slower win (it can't cost rating).
+  S.casual = S.hinted || (!win && !!S.foundSlower);
+  S.casualWhy = S.hinted ? 'hint' : S.casual ? 'slower' : null;
   const s = S, p = S.p, timing = { ms: (s.decidedMs ?? elapsed(s)) ?? undefined, log: s.log.length ? s.log : undefined };
   let answered = false;
   try { // a failed upload (network, server restart) loses this result, not the session
     // noWait: a slow upload mustn't swap the card (and its Hint button) for the waiting notice; a failed one still says so
-    const r = await api('/api/result', { puzzleId: p.id, win, ...(s.hinted ? { casual: true } : { theme: s.theme || undefined }), ...timing,
+    const r = await api('/api/result', { puzzleId: p.id, win, ...(s.casual ? { casual: true } : { theme: s.theme || undefined }), ...timing,
       ...(token ? {} : { guest: guestSeed() }) }, { noWait: true }); // the first result makes a first-time visitor a guest
     if (r.token) setToken(r.token);
     // Refused: 429 (too many results, or too many new guests from one address) or any other error; nothing was rated.
@@ -467,8 +472,8 @@ async function report(win) {
   } catch { s.delta = null; }
   session.push({ id: p.id, win, delta: s.delta });
   renderAll();
-  // The pair assumed this result counts (or is a repeat, which it allows for); after a hint or a lost upload, ask again.
-  if (S === s) nextQ.prefetchNext(win, p.id, !s.hinted && answered);
+  // The pair assumed this result counts (or is a repeat, which it allows for); if unrated or lost, ask again.
+  if (S === s) nextQ.prefetchNext(win, p.id, !s.casual && answered);
 }
 
 // Proven slower wins at the current attacker node: alts at the root, altsAt[path of moves so far] deeper in.
@@ -784,6 +789,7 @@ function renderFeedback(mood, delta) {
   // The server refused the result: say so instead of "counts as a miss", and nothing is rated.
   const NOT_COUNTED = notCountedText();
   const missNote = (already) => S.notCounted ? `${NOT_COUNTED} Keep trying or view the solution.`
+    : S.casualWhy === 'slower' ? 'You found a slower win, so this costs no rating. Keep trying or view the solution.'
     : `This puzzle ${already ? 'already' : 'now'} counts as a miss; keep trying or view the solution.`;
   let fbHtml;
   if (notice) {
@@ -794,8 +800,9 @@ function renderFeedback(mood, delta) {
       <p>That isn’t the puzzle’s line; checking whether it still forces a win.</p></div>${playActions}`;
   } else if (S.status === 'solved') {
     const title = solvedTitle();
-    const note = (S.notCounted ? NOT_COUNTED + ' ' : S.casual ? 'You used a hint, so this one didn’t count toward your rating. ' : '')
-      + (shownOver() ? overNote(shownOver()) : S.casual ? '' : `Play any move to explore${finePointer.matches ? ', or step through the line with ← and →' : ''}.`);
+    const note = (S.notCounted ? NOT_COUNTED + ' ' : S.casualWhy === 'slower' ? 'You found a slower win, so this one didn’t cost rating. '
+      : S.casual ? 'You used a hint, so this one didn’t count toward your rating. ' : '')
+      + (shownOver() ? overNote(shownOver()) : S.casualWhy === 'hint' ? '' : `Play any move to explore${finePointer.matches ? ', or step through the line with ← and →' : ''}.`);
     fbHtml = `<div class="icon ${S.outcome === 'clean' ? 'good' : 'bad'}">${S.outcome === 'clean' ? '✓' : '✗'}</div><div class="body">
       <h2>${title}<span class="dslot"></span></h2><p>${note}</p></div>
       <div class="actions"><button class="primary" data-act="next">Next puzzle</button></div>`;
@@ -810,7 +817,7 @@ function renderFeedback(mood, delta) {
   } else {
     const good = mood === 'good';
     if (S.slower) fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>That wins too, but slower</h2>
-      <p>${hintNote}${esc(S.slower)} also forces a win, but there’s a faster one. Find it; this doesn’t count as a miss.</p></div>${playActions}`;
+      <p>${hintNote}${esc(S.slower)} also forces a win, but there’s a faster one. Find it${S.foundSlower ? '; this puzzle can’t cost you rating now' : '; this doesn’t count as a miss'}.</p></div>${playActions}`;
     else fbHtml = `<div class="icon ${good ? 'good' : 'turn p' + S.solver}">${good ? '✓' : ''}</div><div class="body">
       <h2>${good ? 'Best move!' : 'Your turn'}</h2>
       <p>${hintNote}${good ? 'Keep going.' : `You play ${colorName(S.solver)}`}</p></div>${playActions}`;
@@ -929,7 +936,7 @@ function renderMoves(docked, delta, focusNext) {
   // A server notice (slow or unreachable) replaces the result, so a Next puzzle that's waiting doesn't look dead.
   const dockHead = notice ? `<span class="icon bad" aria-hidden="true">!</span><b>${esc(notice.title)}</b>`
     : `<span class="icon ${clean ? 'good' : 'bad'}" aria-hidden="true">${clean ? '✓' : '✗'}</span><b>${solvedTitle()}${delta}</b>`;
-  const dockNote = notice ? esc(notice.body) : S.notCounted ? notCountedText() : S.casual ? 'You used a hint, so this one didn’t count.' : shownOver() ? 'Game over here. Step back with ◀ to explore.' : '';
+  const dockNote = notice ? esc(notice.body) : S.notCounted ? notCountedText() : S.casualWhy === 'slower' ? 'You found a slower win, so this one didn’t cost rating.' : S.casual ? 'You used a hint, so this one didn’t count.' : shownOver() ? 'Game over here. Step back with ◀ to explore.' : '';
   const engSlot = `<div class="eng-slot">${engineHtml}</div>`;
   const scroller = `<div class="mscroll" role="group" aria-label="Moves"><div class="mtable">${rows}</div></div>`;
   const nav = `<div class="nav"><button data-step="first" title="Start" aria-label="Start">⏮</button><button data-step="prev" title="Back (←)" aria-label="Back">◀</button><button data-step="next" title="Forward (→)" aria-label="Forward">▶</button><button data-step="last" title="Current position" aria-label="Current position">⏭</button>${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
