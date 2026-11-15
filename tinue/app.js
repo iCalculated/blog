@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794772090';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794772090';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794772090';
-import { Board, buildPTN } from './board.js?v=1794772090';
-import * as engine from './engine.js?v=1794772090';
-import * as tiltak from './tiltak.js?v=1794772090';
+import { Game } from './shared/tak.js?v=1794772574';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794772574';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794772574';
+import { Board, buildPTN } from './board.js?v=1794772574';
+import * as engine from './engine.js?v=1794772574';
+import * as tiltak from './tiltak.js?v=1794772574';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -21,15 +21,11 @@ const puzzlePath = (id) => APP + 'puzzle/' + encodeURIComponent(id) + location.s
 const showPuzzleURL = (id) => { if (location.pathname + location.search + location.hash !== puzzlePath(id)) history.replaceState(null, '', puzzlePath(id)); };
 const showHashURL = (h) => { if (location.pathname !== APP || location.hash !== h) history.replaceState(null, '', APP + location.search + h); };
 
-// Share: the puzzle's own address (see above). Phones get the system share sheet; elsewhere it is copied.
-async function sharePuzzle(p, btn) {
-  const url = location.origin + puzzlePath(p.id);
-  const say = (t) => { btn.textContent = t; clearTimeout(btn._t); btn._t = setTimeout(() => { btn.textContent = 'Share'; }, 2500); };
-  if (navigator.share && matchMedia('(pointer: coarse)').matches) {
-    try { await navigator.share({ title: 'tinue puzzle', url }); return; } catch (e) { if (e.name === 'AbortError') return; }
-  }
-  try { await navigator.clipboard.writeText(url); say('Link copied'); }
-  catch { window.prompt('Copy this link:', url); }
+// Share (phones only): the system share sheet with the puzzle's own address (see above). On desktop the address bar
+// already shows that address, so there's no button (Shy, 2026-11-15).
+const canShare = () => !!navigator.share && matchMedia('(pointer: coarse)').matches;
+async function sharePuzzle(p) {
+  try { await navigator.share({ title: 'tinue puzzle', url: location.origin + puzzlePath(p.id) }); } catch {}
 }
 // timeout: one try with that budget (no retry), for callers with a fallback; signal: the caller may abort.
 const api = async (path, body, { quiet = false, noWait = quiet, timeout, signal } = {}) => {
@@ -123,7 +119,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794772090')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794772574')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -906,7 +902,7 @@ function renderInfo(done) {
     const player = (c, name, r) => `<div><span class="dot p${c}"></span>${esc(name)}${r ? ` <span class="sub">(${r})</span>` : ''}</div>`;
     const game = p.sourceRef?.startsWith('http') ? `<a href="${esc(p.sourceRef)}" target="_blank" rel="noopener">PlayTak game</a>` : esc(p.source);
     info.innerHTML = `<dl>
-        <dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}">#${esc(p.id)}</a>, ${p.size}×${p.size}${p.komi ? ` with komi ${p.komi}` : ''} · <button class="link" id="share-link" title="Copy a link that shows this board when pasted into Discord or a chat">Share</button></dd>
+        <dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}">#${esc(p.id)}</a>, ${p.size}×${p.size}${p.komi ? ` with komi ${p.komi}` : ''}${canShare() ? ' · <button class="link" id="share-link">Share</button>' : ''}</dd>
         <dt>Rating</dt><dd>${Math.round(p.rating)}</dd>
         <dt>Played</dt><dd>${p.attempts ? `${p.attempts} time${p.attempts === 1 ? '' : 's'}` : 'Not rated by anyone yet'}</dd>
         <dt>From</dt><dd>${game}</dd>
@@ -915,7 +911,7 @@ function renderInfo(done) {
       ${m.white ? `<div class="players">${player(1, m.white, m.ratingWhite)}${player(2, m.black, m.ratingBlack)}</div>` : ''}
       <hr><div>${themes.map((t) => `<a class="tag" href="#/glossary/${t}" title="${esc(THEMES[t].desc)}">${THEMES[t].name}</a>`).join('') || '<span class="sub">No themes</span>'}</div>`;
     const sb = $('#share-link');
-    if (sb) sb.onclick = () => sharePuzzle(p, sb);
+    if (sb) sb.onclick = () => sharePuzzle(p);
   }
 
 }
