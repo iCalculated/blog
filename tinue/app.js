@@ -1,9 +1,9 @@
-import { Game } from './shared/tak.js?v=1794772574';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794772574';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794772574';
-import { Board, buildPTN } from './board.js?v=1794772574';
-import * as engine from './engine.js?v=1794772574';
-import * as tiltak from './tiltak.js?v=1794772574';
+import { Game } from './shared/tak.js?v=1794772921';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794772921';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794772921';
+import { Board, buildPTN } from './board.js?v=1794772921';
+import * as engine from './engine.js?v=1794772921';
+import * as tiltak from './tiltak.js?v=1794772921';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -119,7 +119,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794772574')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794772921')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -135,7 +135,7 @@ function renderUser() {
       <div class="pop" role="menu"><a href="#/me" role="menuitem">History</a><button class="link" id="logout" role="menuitem">Log out</button>
         <div class="confirm hidden" id="logout-confirm"><p>You’ll need your login token (on your History page) to sign back in on this device.</p><button class="danger" id="logout-yes">Log out</button></div></div></div>`;
     $('#logout').onclick = () => { $('#logout-confirm').classList.remove('hidden'); $('#logout').classList.add('hidden'); };
-    $('#logout-yes').onclick = async () => { await api('/api/logout', {}); setToken(null); me = null; session.length = 0; renderUser(); refreshPage(); };
+    $('#logout-yes').onclick = async () => { await api('/api/logout', {}); setToken(null); forgetNext(); me = null; session.length = 0; renderUser(); refreshPage(); };
   } else {
     // One quiet button; claiming a name (or pasting a token) happens in a small popover.
     box.innerHTML = `<div class="menu click"><button class="link name" id="claim-open" aria-haspopup="dialog" aria-expanded="false">Claim a username</button>
@@ -171,7 +171,7 @@ function renderUser() {
       const t = $('#tok-in').value.trim();
       const r = await api('/api/login', { token: t });
       if (r.error) return showErr('#tok-err', 'That token doesn’t match an account.');
-      setToken(t); me = r.user; session.length = 0; renderUser(); refreshPage();
+      setToken(t); forgetNext(); me = r.user; session.length = 0; renderUser(); refreshPage();
     };
   }
 }
@@ -202,17 +202,32 @@ const nextQuery = () => {
   if (!token) { q.set('rating', Math.round(myRating().rating)); if (legacySeen.length) q.set('exclude', legacySeen.slice(-200).join(',')); }
   return q.toString();
 };
-// The next puzzle is fetched as soon as this one's result is in, so Continue doesn't wait on the network.
-let prefetched = null; // { key, req }
-const nextKey = () => (token ? 't:' + token.slice(0, 8) : 'g') + '|' + nextQuery();
-function prefetchNext() {
-  const key = nextKey();
-  prefetched = { key, req: api('/api/next?' + nextQuery(), null, { quiet: true }).catch(() => null) };
+// Next puzzle without waiting on the network. While a puzzle is played, the server picks what comes after it both
+// ways, at the rating a solve or a miss will leave (pair, from /api/next?for=); the result chooses one (prefetched).
+// Without a usable pair (a hint, a failed upload) the next one is fetched as soon as the result is in. The chosen
+// puzzle is also kept in storage until it has been played, so the next visit starts on it without asking the server.
+// Keys: the filters it was picked under; a change of player (sign in or out) drops both.
+let pair = null, prefetched = null; // pair: { id, key, req -> { win, loss } }; prefetched: { key, req -> { puzzle } }
+const filterKey = () => [prefs.difficulty, prefs.size || '', prefs.theme || ''].join('|');
+const playerKey = () => (token ? token.slice(0, 8) : '');
+const NEXT_TTL = 12 * 3600e3; // a stored puzzle older than this is asked for again (ratings and imports move on)
+function prefetchPair(p) {
+  pair = { id: p.id, key: filterKey(), req: api('/api/next?' + nextQuery() + '&for=' + encodeURIComponent(p.id), null, { quiet: true }).catch(() => null) };
 }
+function prefetchNext(win, usePair) {
+  store.del('next'); // the stored one was this puzzle: it's played now
+  const key = filterKey();
+  const req = usePair && pair?.key === key ? pair.req.then((r) => r && { puzzle: win ? r.win : r.loss })
+    : api('/api/next?' + nextQuery(), null, { quiet: true }).catch(() => null);
+  pair = null;
+  prefetched = { key, req };
+  req.then((r) => { if (r?.puzzle && prefetched?.req === req) store.set('next', { key, who: playerKey(), at: Date.now(), puzzle: r.puzzle }); });
+}
+const forgetNext = () => { pair = null; prefetched = null; store.del('next'); }; // another player now
 async function loadNext() {
   const t = ++loadSeq;
-  const pre = prefetched?.key === nextKey() ? prefetched.req : null;
-  prefetched = null;
+  const pre = prefetched?.key === filterKey() ? prefetched.req : null;
+  prefetched = null; // (a stored one stays until this puzzle's result: leaving halfway comes back to it)
   // A prefetch still in flight gets 3 s (it is quiet: no waiting notice), then a normal request takes over.
   let r = pre && (await Promise.race([pre, new Promise((res) => setTimeout(() => res(null), 3000))]));
   if (!r?.puzzle || r.puzzle.id === S?.p.id) { // (a "no match" answer is re-asked too)
@@ -348,6 +363,7 @@ async function start(p, theme = '') {
   const s = S = { p, g, node: p.tree, solver: g.toMove, hist, moves: [], snaps: [g.toTPS()], view: null, status: 'play', resultSent: false, hinted: false, delta: null, busy: true,
         misses: [], outcome: null, branch: null, onBranch: false, theme: theme && (p.themes || []).includes(theme) ? theme : '',
         t0: null, hiddenMs: 0, hiddenAt: null, log: [] };
+  prefetchPair(p);
   notice = null;
   setTitle();
   renderAll(); // side panel right away
@@ -506,12 +522,14 @@ async function report(win) {
   S.resultSent = true;
   S.casual = S.hinted; // a hint before the result makes the attempt unrated
   const s = S, p = S.p, timing = { ms: (s.decidedMs ?? elapsed(s)) ?? undefined, log: s.log.length ? s.log : undefined };
+  let answered = false;
   try { // a failed upload (network, server restart) loses this result, not the session
     // noWait: a slow upload mustn't swap the card (and its Hint button) for the waiting notice; a failed one still says so
     const r = await api('/api/result', { puzzleId: p.id, win, ...(s.hinted ? { casual: true } : { theme: s.theme || undefined }), ...timing,
       ...(token ? {} : { guest: guestSeed() }) }, { noWait: true }); // the first result makes a first-time visitor a guest
     if (r.token) setToken(r.token);
     if (r.user) {
+      answered = true;
       s.delta = r.rated ? r.userDelta : null;
       // Like Lichess, the info panel keeps the rating the puzzle had when you played it (what you were up
       // against), not the one your result just moved it to.
@@ -521,7 +539,8 @@ async function report(win) {
   } catch { s.delta = null; }
   session.push({ id: p.id, win, delta: s.delta });
   renderAll();
-  if (S === s) prefetchNext();
+  // The pair assumed this result counts (or is a repeat, which it allows for); after a hint or a lost upload, ask again.
+  if (S === s) prefetchNext(win, pair?.id === p.id && !s.hinted && answered);
 }
 
 // Proven slower wins at the current attacker node: alts at the root, altsAt[path of moves so far] deeper in.
@@ -1189,6 +1208,9 @@ window.addEventListener('hashchange', route);
 
 (async () => {
   const cached = store.get('me', null);
+  // The puzzle picked after the last result here, if still fresh: the first puzzle needs no request.
+  const nx = store.get('next', null);
+  if (nx?.puzzle && nx.who === playerKey() && nx.key === filterKey() && Date.now() - nx.at < NEXT_TTL) prefetched = { key: nx.key, req: Promise.resolve({ puzzle: nx.puzzle }) };
   if (cached && token) { me = { ...cached, rating: store.get('myRating', PLAYER_START.rating), provisional: store.get('myProv', true), games: 0, wins: 0 }; }
   renderUser();
   themeDesc();
