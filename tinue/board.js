@@ -1,8 +1,8 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794778649';
-import { parsePTN } from './shared/ptn.js?v=1794778649';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794782165';
+import { parsePTN } from './shared/ptn.js?v=1794782165';
 
 const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
@@ -91,6 +91,12 @@ function roadOf(g, color) {
   }
   return { set, ns, ew };
 }
+
+// Elements that got focus from a pointer press (a click leaves buttons focused in Chrome and Firefox).
+const pointerFocused = new WeakSet();
+let lastPointer = -1e9;
+document.addEventListener('pointerdown', () => { lastPointer = performance.now(); }, true);
+document.addEventListener('focusin', (e) => { if (performance.now() - lastPointer < 500) pointerFocused.add(e.target); else pointerFocused.delete(e.target); }, true);
 
 export class Board {
   constructor(el, { onMove } = {}) {
@@ -407,7 +413,9 @@ export class Board {
     if (e.ctrlKey || e.metaKey || e.altKey || !this.el.getClientRects().length) return; // modified, or the board is hidden
     if (e.target.closest?.('input, select, textarea, [contenteditable]')) return;
     if (e.key in OPS) { e.preventDefault(); return this.orient(e.key); }
-    if (e.key === 'Enter' && e.target.closest?.('a, button, summary')) return;
+    // Enter on a button/link the keyboard focused presses it; one merely left focused by a mouse click doesn't take it
+    // (Chrome marks it :focus-visible on any key press, so that can't tell the two apart)
+    if (e.key === 'Enter' && e.target.closest?.('a, button, summary') && !pointerFocused.has(e.target)) return;
     const k = e.key === 'Enter' ? 'all' : e.key === '`' ? 'own' : /^[1-8]$/.test(e.key) ? +e.key : 0;
     if (k && this._keyCount(k)) e.preventDefault();
   }

@@ -16,8 +16,8 @@
 if (/(^|&)board=ninja(&|$)/.test(location.search.slice(1))) document.head.append(Object.assign(document.createElement('link'), { rel: 'preconnect', href: 'https://ptn.ninja' }));</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="board.css?v=1794778649">
-<link rel="stylesheet" href="style.css?v=1794778649">
+<link rel="stylesheet" href="board.css?v=1794782165">
+<link rel="stylesheet" href="style.css?v=1794782165">
 <style>.booting main, .booting .credits { visibility: hidden; }</style>
 <script>setTimeout(() => document.documentElement.classList.remove("booting"), 2000);</script>
 <meta name="googlebot" content="noindex"><meta name="bingbot" content="noindex">
@@ -45,7 +45,10 @@ if (/(^|&)board=ninja(&|$)/.test(location.search.slice(1))) document.head.append
         const b = document.getElementById('board'), f = document.createElement('iframe');
         b.style.cssText = 'background:#262421;border-radius:var(--corner,6px)'; // placeholder until it's shown
         f.style.cssText = 'display:block;width:100%;aspect-ratio:1/1.3;border:0;opacity:0';
-        f.src = 'https://ptn.ninja/?moveNumber=false&unplayedPieces=true&disableStoneCycling=true&showBoardPrefsBtn=false&disableNavigation=true&disablePTN=true&disableText=true&flatCounts=true&turnIndicator=true&gameTimer=false&showHeader=false&showEval=false&showRoads=false&stackCounts=false&notifyGame=false&disableUndo=true&showPTN=false&showText=false&showControls=false&showScrubber=false&animateBoard=true'; // same settings as UI in ninja.js
+        f.allow = 'fullscreen; clipboard-write';
+        // PTN Ninja says it's up once (GAME_STATE), possibly before ninja.js has loaded to hear it
+        addEventListener('message', function up(e) { if (e.source === f.contentWindow && e.data && e.data.action === 'GAME_STATE') { window.__ninjaUp = true; removeEventListener('message', up); } });
+        f.src = 'https://ptn.ninja/&moveNumber=false&unplayedPieces=true&disableStoneCycling=true&showBoardPrefsBtn=false&disableNavigation=true&disablePTN=true&disableText=true&flatCounts=true&turnIndicator=true&gameTimer=false&showHeader=false&showEval=false&showRoads=false&stackCounts=false&notifyGame=false&disableUndo=true&showPTN=false&showText=false&showControls=false&showScrubber=false&animateBoard=true'; // same settings as UI in ninja.js
         b.append(f);
       }
     </script>
@@ -87,7 +90,7 @@ if (/(^|&)board=ninja(&|$)/.test(location.search.slice(1))) document.head.append
   <p>tinue is free software under the <a href="LICENSE.txt">GNU GPL v3</a>. <a href="https://github.com/iCalculated/blog/tree/main/tinue">Source code</a>.</p>
 </footer>
 
-<script src="config.js?v=1794778649"></script>
-<script type="module" src="app.js?v=1794778649"></script>
+<script src="config.js?v=1794782165"></script>
+<script type="module" src="app.js?v=1794782165"></script>
 </body>
 </html>

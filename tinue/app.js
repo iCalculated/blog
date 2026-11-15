@@ -1,11 +1,11 @@
-import { Game } from './shared/tak.js?v=1794778649';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794778649';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794778649';
-import { Board, buildPTN } from './board.js?v=1794778649';
-import * as engine from './engine.js?v=1794778649';
-import * as tiltak from './tiltak.js?v=1794778649';
-import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794778649';
-import { createNext } from './next.js?v=1794778649';
+import { Game } from './shared/tak.js?v=1794782165';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794782165';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794782165';
+import { Board, buildPTN } from './board.js?v=1794782165';
+import * as engine from './engine.js?v=1794782165';
+import * as tiltak from './tiltak.js?v=1794782165';
+import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794782165';
+import { createNext } from './next.js?v=1794782165';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -59,7 +59,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794778649')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794782165')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
