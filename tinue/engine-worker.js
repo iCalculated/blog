@@ -3,8 +3,8 @@
 //   refute:  why was a move wrong? Find the opponent's reply after which the attack fails.
 //   analyze: does the side to move have a forced win (road or flats), and how?
 // It's a forced-win prover, not an evaluator: it answers "win in N" or "nothing forced within N".
-import { Game, Solver } from './shared/tak.js?v=1794808991';
-import { shortestTinue, TinueSearch } from './shared/pns.js?v=1794808991';
+import { Game, Solver } from './shared/tak.js?v=1794817280';
+import { shortestTinue, TinueSearch } from './shared/pns.js?v=1794817280';
 
 function gameFrom({ size, komi, tps, plies }) {
   const g = tps ? Game.fromTPS(tps, komi || 0) : Object.assign(new Game(size), { komi: komi || 0 });
@@ -68,7 +68,9 @@ self.onmessage = ({ data }) => {
   try {
     if (type === 'still') {
       // Position after the player's off-tree move, defender to move: does the attacker still force a road (at any
-      // length)? df-pn over threat moves, then confirmed with every defender reply considered, so "wins" is a proof.
+      // length, Tak-threat attacker moves only)? df-pn over threat moves, then confirmed with every defender reply
+      // considered, so "wins" is a proof. "no" only means no win made of Tak threats exists: a win that needs a quiet
+      // attacker move or a flat count is invisible to it.
       const g = gameFrom(data);
       if (g.result()) { self.postMessage({ id, kind: 'no' }); return; }
       const run = (n, full) => { const s = new TinueSearch(g.clone(), { maxNodes: n, fullDefense: full }); s.att = data.attacker; try { return s.solve(Infinity); } catch (e) { if (e.message === 'budget') return null; throw e; } };
@@ -80,6 +82,8 @@ self.onmessage = ({ data }) => {
       for (const [a, b] of data.budgets || [[3e4, 3e5]]) {
         if (!threatOk) {
           const quick = run(a, false);
+          // (The trade-off: a 'no' is charged as a rated miss (app.js), though a quiet or flat win would be missed here.
+          // The puzzles' own lines and alts are threat wins too, and no such case turned up in 1,181 sampled moves.)
           if (quick === false) { kind = 'no'; break; }
           if (quick !== true) continue;
           threatOk = true;

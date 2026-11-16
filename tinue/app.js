@@ -1,11 +1,13 @@
-import { Game } from './shared/tak.js?v=1794808991';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794808991';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794808991';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1794808991';
-import * as engine from './engine.js?v=1794808991';
-import * as tiltak from './tiltak.js?v=1794808991';
-import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794808991';
-import { createNext } from './next.js?v=1794808991';
+import { Game } from './shared/tak.js?v=1794817280';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794817280';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794817280';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1794817280';
+import * as engine from './engine.js?v=1794817280';
+import * as tiltak from './tiltak.js?v=1794817280';
+import * as syntaks from './syntaks.js?v=1794817280';
+import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794817280';
+import { createNext } from './next.js?v=1794817280';
+import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, stalls, heldResend } from './playon.js?v=1794817280';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -35,12 +37,34 @@ let me = null;
 // next puzzle and show as "your rating".
 const legacyGuest = token ? null : store.get('guest', null), legacySeen = token ? [] : store.get('seen', null) || [];
 const guestSeed = () => ({ gid: guestId() ?? undefined });
-// A result held while its check runs, kept per tab (sessionStorage survives this tab's reload; other tabs can't see
-// it, so they can't send it out from under this one).
+// A result held while its check runs (or settled but not yet acknowledged by the server), kept per tab: sessionStorage
+// survives this tab's reload, and flushHeld sends it then (playon.js heldResend). Other tabs can't see it, except one
+// duplicated from this tab, which copies it: the record names this page (pageId, in memory only), and from its first
+// record until it goes away this page holds a Web Lock of that name, so a copy whose page is still alive is dropped, not
+// sent out from under it. (Not released when the record goes: the page may settle it while a copy waits for the lock,
+// and its result may not be sent yet.) It also carries the build that wrote it and whose result it is (owner: a hash
+// of the token, never the token).
+const pageId = (() => { try { return crypto.randomUUID(); } catch { return Math.random().toString(36).slice(2) + Date.now().toString(36); } })();
+const owner = () => { let h = 0x811c9dc5; for (const c of token || '') h = Math.imul(h ^ c.charCodeAt(0), 0x01000193); return token ? (h >>> 0).toString(36) : ''; };
+let pageLock = false; // this page holds its lock (taken with its first record, kept for the page's life)
 const heldRec = {
   get() { try { return JSON.parse(sessionStorage.getItem('tinue.held')); } catch { return null; } },
-  set(v) { try { sessionStorage.setItem('tinue.held', JSON.stringify(v)); } catch {} },
+  set(v) {
+    if (!pageLock && navigator.locks) { pageLock = true; navigator.locks.request('tinue.held.' + pageId, () => new Promise(() => {})).catch(() => {}); }
+    try { sessionStorage.setItem('tinue.held', JSON.stringify({ ...v, b: BUILD, owner: owner(), page: pageId })); } catch {}
+  },
   del(id) { try { if (id == null || heldRec.get()?.id === id) sessionStorage.removeItem('tinue.held'); } catch {} },
+};
+// A token a result just made for this browser (its first result made it a guest): a record held from before it had
+// one is this guest's, so it is stamped as theirs (only the owner: its build stays the one that wrote it).
+const ownHeld = () => { try { const h = heldRec.get(); if (h?.id && h.owner === '') sessionStorage.setItem('tinue.held', JSON.stringify({ ...h, owner: owner() })); } catch {} };
+// Whether the page that wrote a held record is still open (its lock is taken). A lock a reload has just let go of may
+// take a moment to free, so it gets 1.5 s; without Web Locks, as before (sent).
+const pageAlive = (page) => {
+  if (!page || page === pageId || !navigator.locks) return Promise.resolve(false);
+  const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 1500);
+  return navigator.locks.request('tinue.held.' + page, { signal: ctl.signal }, () => false)
+    .catch((e) => e?.name === 'AbortError').finally(() => clearTimeout(t));
 };
 // Your rating as shown: the server's, else (no result yet) the browser's from before, else the start.
 const myRating = () => me || (legacyGuest?.games ? { rating: legacyGuest.rating, provisional: provisional(legacyGuest) } : { rating: PLAYER_START.rating, provisional: true });
@@ -69,7 +93,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794808991')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794817280')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -86,7 +110,7 @@ function renderUser() {
       <div class="pop" role="menu"><a href="#/me" role="menuitem">History</a><button class="link" id="logout" role="menuitem">Log out</button>
         <div class="confirm hidden" id="logout-confirm"><p>You’ll need your login token (on your History page) to sign back in on this device.</p><button class="danger" id="logout-yes">Log out</button></div></div></div>`;
     $('#logout').onclick = () => { $('#logout-confirm').classList.remove('hidden'); $('#logout').classList.add('hidden'); };
-    $('#logout-yes').onclick = async () => { await api('/api/logout', {}); setToken(null); forgetNext(); me = null; session.length = 0; saveSession(); renderUser(); refreshPage(); };
+    $('#logout-yes').onclick = async () => { await abandonCheck(S); restoreLeft(); await api('/api/logout', {}); setToken(null); forgetNext(); me = null; session.length = 0; saveSession(); renderUser(); refreshPage(); };
   } else {
     // One quiet button; claiming a name (or pasting a token) happens in a small popover.
     box.innerHTML = `<div class="menu click"><button class="link name" id="claim-open" aria-haspopup="dialog" aria-expanded="false">Claim a username</button>
@@ -122,6 +146,7 @@ function renderUser() {
       const t = $('#tok-in').value.trim();
       const r = await api('/api/login', { token: t });
       if (r.error) return showErr('#tok-err', 'That token doesn’t match an account.');
+      await abandonCheck(S); restoreLeft(); // a held result goes out under the identity that played it
       setToken(t); forgetNext(); me = r.user; session.length = 0; saveSession(); renderUser(); refreshPage();
     };
   }
@@ -171,7 +196,7 @@ const forgetNext = () => nextQ.forgetNext(); // another player now
 // the queue are in localStorage, so nothing is lost), unless a result is held or still being checked; mid-puzzle or on
 // a result card it only shows the bar. Off on the dev server (no stamp).
 const BUILD = +window.TINUE_BUILD || 0;
-const withBuild = (path) => (BUILD ? path + (path.includes('?') ? '&' : '?') + 'b=' + BUILD : path); // logged by the server
+const withBuild = (path, b = BUILD) => (b ? path + (path.includes('?') ? '&' : '?') + 'b=' + b : path); // logged by the server
 let newBuild = 0, buildBarHidden = false, buildCheck = null, lastBuildCheck = 0;
 // A reload into a build the CDN doesn't serve yet would come back to the old page: one try per build every 2 min.
 const reloadedFor = () => { try { return JSON.parse(sessionStorage.getItem('tinue.reloadedFor')) || {}; } catch { return {}; } };
@@ -194,13 +219,14 @@ if (BUILD) {
   setInterval(() => { if (!document.hidden) checkBuild(); }, 10 * 60e3);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - lastBuildCheck > 30e3) checkBuild(); });
 }
-// The bar never appears in the middle of a puzzle the player has started (it would push the board down under their
-// pointer): it waits for the result card, or shows before the first move. renderAll calls this too.
+// The bar never appears in the middle of a puzzle the player has started, a miss included (it would push the board
+// down under their pointer, and its Reload would leave a held check): it waits for the puzzle's end (solved, or the
+// solution shown), or shows before the first move. renderAll calls this too.
 const BAR_TEXT = 'tinue was updated. Reload to get the fixes. Your rating and puzzle queue are kept.';
 function renderBuildBar() {
   const bar = $('#build-bar'), live = $('#build-live');
   if (!bar) return; // an older index.html
-  const midPuzzle = S && !S.placeholder && S.status === 'play' && S.moves.length > 0;
+  const midPuzzle = S && !S.placeholder && (((S.status === 'play' || S.status === 'retry') && (S.moves.length > 0 || S.misses.length > 0)) || S.status === 'playon');
   const hide = !newBuild || buildBarHidden || midPuzzle;
   if (bar.hidden === hide) return;
   bar.hidden = hide;
@@ -216,7 +242,8 @@ function renderBuildBar() {
 // The Reload button: from a result card on to the next puzzle (a reload of this one would replay it); before the
 // first move, this puzzle again.
 function reloadNow() {
-  if (S && !S.placeholder && (S.resultSent || S.status !== 'play')) loadNext({ reload: true });
+  if (S?.playOn) return; // never in the middle of a play-on game (leaving it is a miss); the bar is hidden then anyway
+  if (S && !S.placeholder && (S.resultSent || S.status !== 'play' || S.quickCheck)) loadNext({ reload: true }); // (a move being checked is sent as it leaves)
   else reloadInto(S?.p?.id, S?.theme);
 }
 // A full page load opening puzzle id (or the start). theme: the Theme its result counts under (see start()).
@@ -234,7 +261,7 @@ async function loadNext({ reload = false } = {}) {
   const t = ++loadSeq;
   // A held result is sent (unrated) first, so the server knows this puzzle was played and won't serve it again; if
   // that upload is slow, the request below excludes it anyway.
-  const leaving = S?.checkPending ? S.p.id : null;
+  const leaving = S?.checkPending || S?.quickCheck ? S.p.id : null;
   const left = abandonCheck(S);
   if (left) await Promise.race([left, new Promise((r) => setTimeout(r, 3000))]);
   const pre = nextQ.take(); // (a stored one stays until this puzzle's result: leaving halfway comes back to it)
@@ -242,7 +269,7 @@ async function loadNext({ reload = false } = {}) {
   let r = pre && (await Promise.race([pre, new Promise((res) => setTimeout(() => res(null), 3000))]));
   if (!r?.puzzle || r.puzzle.id === S?.p.id) { // (a "no match" answer is re-asked too)
     if (pre && !r) { setNotice(WAIT_NOTICE); renderAll(); }
-    try { r = await api('/api/next?' + nextQuery(leaving)); } catch { return; } // api() has shown the error
+    try { r = await api('/api/next?' + nextQuery(leaving)); } catch { restoreLeft(); return; } // api() has shown the error
   }
   const { puzzle } = r;
   if (t !== loadSeq) return; // a newer request superseded this one
@@ -275,7 +302,7 @@ async function loadById(id) {
   // server unreachable), and it keeps the Theme it was picked under (start() checks it against the puzzle's themes).
   const reloaded = reloadTheme?.id === id, stored = reloaded && store.get('next', null)?.puzzle;
   let puzzle = stored?.id === id ? stored : null;
-  if (!puzzle) { try { ({ puzzle } = await api('/api/puzzle/' + encodeURIComponent(id))); } catch { return; } }
+  if (!puzzle) { try { ({ puzzle } = await api('/api/puzzle/' + encodeURIComponent(id))); } catch { restoreLeft(); return; } }
   if (t !== loadSeq) return;
   if (puzzle) { showPuzzleURL(puzzle.id); start(puzzle, reloaded ? reloadTheme.theme : ''); } else loadNext();
 }
@@ -467,6 +494,7 @@ async function restoreBoard() {
 async function userMove(ptn) {
   if (!S || S.placeholder) return; // the board is disabled until a puzzle arrives
   if (S.status === 'solved') return explore(ptn);
+  if (S.playOn) return playOnMove(ptn);
   if (!S || S.placeholder || S.busy || S.view != null || !(S.status === 'play' || S.status === 'retry')) { if (S) restoreBoard(); return; }
   const g = S.g;
   let canon;
@@ -481,13 +509,16 @@ async function userMove(ptn) {
     correct = true; reply = node[canon]?.r; next = node[canon]?.n;
   }
   // A proven win the puzzle's tree doesn't list is slower (the tree has every win at the minimal depth): a solve.
-  // Precomputed lists (alts at the root, altsAt in 5-ply lines) answer at once. Past the root of a deep (7+ ply)
-  // puzzle nothing is precomputed, so the engine gets ~2.5 s to prove it (same search). Unproven by then, the board
-  // carries on as after a miss, but the result is held while the search runs on (≤60 s, settleCheck): a disproof
-  // sends the miss, a proof makes it a solve, and no answer sends it unrated. A timeout is never a miss: Boris's
-  // f5 on pd616580 won but took ~20 s to prove, and was charged (2026-11-15).
-  // A 'win' node (road-in-1 on the board) is checked the same way: a move that still forces the win, e.g. a double
-  // threat instead of the road, is a solve too (Shy, 2026-11-15; alion02 on pd528655).
+  // Precomputed lists (alts at the root, altsAt in 5-ply lines) answer at once. Any other off-tree move, at any node
+  // of any puzzle, gets ~2.5 s of the engine to prove it wins or to find that no Tak-threat win exists (the lists don't
+  // cover 7×7/8×8, the first moves the precompute left undecided, or anything past the root of a deep puzzle: rated
+  // misses on crux 2026-11-15 were real wins there). Undecided by then: where an engine can defend (6×6 Syntaks, 4×4/5×5
+  // Tiltak) the move is played out on the board (startPlayOn); elsewhere the board carries on as after a miss, but the
+  // result is held while the search runs on (≤60 s, settleCheck): a 'no' (no forced win made of Tak threats; quiet or
+  // flat-count wins are invisible to the prover) sends the miss, a proof makes it a solve, and no answer sends it
+  // unrated. A timeout is never a miss: Boris's f5 on pd616580 won but took ~20 s to prove, and was charged.
+  // A 'win' node (road-in-1 on the board) is the same: a move that still forces the win, e.g. a double threat instead
+  // of the road, is a solve too (Shy, 2026-11-15; alion02 on pd528655).
   const s = S;
   if (!correct) {
     g.undo(u);
@@ -499,20 +530,35 @@ async function userMove(ptn) {
     if (!res && node) {
       const key = provenKey(canon), known = S.proven?.get(key);
       let wins = known === 'wins' || (node !== 'win' && slowerWins().includes(canon));
-      if (!wins && !known && (node === 'win' || (S.p.plies >= 7 && S.moves.length))) {
+      const po = playOnDefender();
+      if (!wins && !known) {
         S.checking = canon;
         renderAll();
         // Only the first unsettled check can decide the result; a later one is only worth its quick answer, so it
         // gets a small budget (each worker can take hundreds of MB).
         const minor = !!(S.checkPending || S.resultSent);
         const chk = engine.checkStill({ ...enginePos(plies), attacker: S.solver }, minor ? { budgets: [[3e4, 5e3]] } : {});
+        // Leaving (or reloading) during the quick check mustn't be a free retry: the attempt is held from here
+        // (abandonCheck sends it, unrated: the move was never settled), and the stored next puzzle mustn't be this one.
+        const qc = minor ? null : (S.quickCheck = { miss: canon, chk, tMove });
+        if (qc) { heldRec.set({ id: S.p.id, ms: tMove }); if (store.get('next', null)?.puzzle?.id === S.p.id) store.del('next'); }
         const quick = await chk.quick;
-        if (S !== s) { chk.cancel(); return; }
+        if (S !== s || (qc && s.quickCheck !== qc)) { chk.cancel(); return; } // (left: abandonCheck has sent it)
         S.checking = null;
+        // Decided: sent as usual. A 'no' goes out now (fail); a win only after the board is put back (slowSolve), so its
+        // record stays until report() re-stamps it as the solve (left in between, a reload sends it unrated).
+        if (qc) { S.quickCheck = null; if (quick === 'no') heldRec.del(S.p.id); }
+        // An earlier held check settled the puzzle while this one ran (solved): this move no longer counts for anything.
+        if (S.status !== 'play' && S.status !== 'retry') {
+          chk.cancel();
+          if (S.status === 'solved') { S.loadedKey = null; await showLine(shownLine(), S.view ?? shownLine().length); if (S === s) afterExplore(); }
+          return;
+        }
         wins = quick === 'wins';
         if (quick === 'wins' || quick === 'no') (S.proven ||= new Map()).set(key, quick);
         else if (minor) { chk.cancel(); (S.uncheckedMoves ||= new Set()).add(canon); } else pending = chk;
       }
+      if (pending && po) return startPlayOn(s, canon, plies, pending, tMove);
       if (wins) return slowSolve(canon, tMove, node);
     }
     const hadMs = S.decidedMs != null, logged = S.log.length;
@@ -525,7 +571,7 @@ async function userMove(ptn) {
       // stored next puzzle mustn't be this one (the server will count it as played either way).
       heldRec.set({ id: S.p.id, ms: tMove });
       if (store.get('next', null)?.puzzle?.id === S.p.id) store.del('next');
-      pending.final.then((v) => settleCheck(s, v));
+      pending.final.then((v) => { if (s.checkPending?.chk === pending) settleCheck(s, v); });
     }
     const remaining = pliesLeft();
     S.refutation = { miss: canon, kind: 'thinking' };
@@ -533,7 +579,13 @@ async function userMove(ptn) {
       if (r && S === s && S.refutation?.miss === canon) { S.refutation = { miss: canon, ...r }; renderAll(); }
     });
     fail(tMove);
-    setTimeout(() => { if (S !== s) return; S.busy = false; restoreBoard().then(() => flushHint(s)); }, 700);
+    setTimeout(() => {
+      if (S !== s) return;
+      S.busy = false;
+      // A held check proved a win meanwhile (settleCheck): the puzzle is solved, so its board stays open for exploring.
+      if (S.status === 'solved') { S.loadedKey = null; showLine(shownLine(), S.view ?? shownLine().length).then(() => { if (S === s) afterExplore(); }); return; }
+      restoreBoard().then(() => flushHint(s));
+    }, 700);
     return;
   }
   logMove('ok', canon, tMove);
@@ -546,7 +598,7 @@ async function userMove(ptn) {
   S.busy = true;
   renderAll('good');
   setTimeout(async () => {
-    if (!reply || S !== s) return;
+    if (!reply || S !== s || S.status !== 'play') return; // (a held check may have ended the puzzle meanwhile)
     g.play(reply);
     S.moves.push({ ptn: reply, me: false }); S.snaps.push(g.toTPS());
     await board.append(reply);
@@ -567,29 +619,39 @@ async function report(win, s = S, flags = s, { keepalive = false, ms } = {}) {
   }
   s.resultSent = true;
   // Unrated: a hint before the result, or a miss whose check never answered (it may have been a win).
-  s.casual = flags.hinted || (!win && !!s.unchecked);
-  s.casualWhy = flags.hinted ? 'hint' : !s.casual ? null : 'unchecked';
+  // A game won against Tiltak (playOnRated) is an unrated solve.
+  s.casual = flags.hinted || (!win && !!s.unchecked) || (win && !!flags.playOn?.unrated);
+  s.casualWhy = flags.hinted ? 'hint' : !s.casual ? null : win ? 'tiltak' : 'unchecked';
   const p = s.p, timing = { ms: (s.decidedMs ?? elapsed(s)) ?? undefined, log: s.log.length ? s.log : undefined };
   let answered = false;
-  try { // a failed upload (network, server restart) loses this result, not the session
+  // Sent as the page goes away: this request carries the result, so the held copy isn't flushed again (unrated) on the
+  // next load; otherwise which of the two reached the server first would decide (a play-on left by reloading is rated).
+  if (keepalive) heldRec.del(p.id);
+  // A held result settled now: if the page reloads before the server has it, flushHeld sends this result (under this
+  // build), not an unrated miss (the server keeps only the first, so a resend of one that landed changes nothing).
+  else if (heldRec.get()?.id === p.id) heldRec.set({ id: p.id, ms: timing.ms, win, casual: !!s.casual, theme: s.casual ? undefined : s.theme || undefined });
+  try { // a failed upload (network, server restart) loses this result (a held one waits for a reload), not the session
     // noWait: a slow upload mustn't swap the card (and its Hint button) for the waiting notice; a failed one still says so
     const req = api(withBuild('/api/result'), { puzzleId: p.id, win, ...(s.casual ? { casual: true } : { theme: s.theme || undefined }), ...timing,
       ...(token ? {} : { guest: guestSeed() }) }, { noWait: true, keepalive }); // the first result makes a first-time visitor a guest
     reporting.add(req); req.catch(() => {}).finally(() => reporting.delete(req)); // (a reload for a newer build waits for it)
     const r = await req;
-    if (r.token) setToken(r.token);
+    if (r.token) { setToken(r.token); ownHeld(); }
     // Refused: 429 (too many results, or too many new guests from one address) or any other error; nothing was rated.
     if (!r.user && r.error) s.notCounted = /^too many/i.test(r.error) ? 'rate' : 'error';
     if (r.user) {
+      heldRec.del(p.id); // recorded: nothing left to resend (a failed upload keeps it for the next load)
       answered = true;
-      s.delta = r.rated ? r.userDelta : null;
+      s.delta = r.rated ? r.userDelta : null; s.serverRated = !!r.rated;
+      s.repeat = !r.rated && !s.casual; // played before, or a miss from an out-of-date page (the server doesn't say which)
       // Like Lichess, the info panel keeps the rating the puzzle had when you played it (what you were up
       // against), not the one your result just moved it to.
       if (r.rated) p.attempts++;
       me = r.user; renderUser();
     }
-  } catch { s.delta = null; }
-  heldRec.del(p.id);
+  } catch { s.delta = null; s.notCounted = 'lost'; }
+  // Not recorded, but the held copy is still there: a reload of this tab sends it (flushHeld). The cards say which.
+  s.resend = !answered && !keepalive && heldRec.get()?.id === p.id;
   session.push({ id: p.id, win, delta: s.delta }); saveSession();
   renderAll();
   // The pair assumed this result counts (or is a repeat, which it allows for); if unrated or lost, ask again.
@@ -597,7 +659,8 @@ async function report(win, s = S, flags = s, { keepalive = false, ms } = {}) {
 }
 
 // A held result once its slow check settles (s may no longer be the puzzle on screen). 'wins': the miss was a slower
-// win after all, which is a solve (see below). 'no': the miss is sent as it stood when played. 'unknown': it might have won, so the miss is sent unrated.
+// win after all, which is a solve (see below). 'no': no Tak-threat win was found, so the miss is sent as it stood when
+// played (rated, unless a hint came first). 'unknown': it might have won, so the miss is sent unrated.
 function settleCheck(s, verdict, opts) {
   const c = s.checkPending, held = s.held || [];
   if (!c) return;
@@ -607,18 +670,27 @@ function settleCheck(s, verdict, opts) {
   if (verdict === 'wins') {
     // The "miss" was a slower win, and a slower win is a solve (slowSolve): it is the result, sent as a win at the time
     // it was played; whatever happened after it doesn't count. Still on that puzzle, it ends there as solved.
+    // (Misses after it went in with it, as did any later move left unchecked.)
     const i = s.misses.findIndex((m) => m.ptn === c.miss && m.at === c.at);
-    if (i >= 0) s.misses.splice(i, 1);
+    if (i >= 0) s.misses.length = i;
+    s.uncheckedMoves = null;
     if (c.logEntry) c.logEntry.k = 'slow';
     s.log.length = Math.min(s.log.length, c.logLen);
     if (!c.hadMs) s.decidedMs = held[0]?.ms;
-    s.slowWin = { move: c.miss, fastest: null };
-    if (s.status !== 'solved') { s.status = 'solved'; s.refutation = null; }
-    s.outcome = s.viewed ? 'viewed' : s.misses.length ? 'miss' : 'clean';
+    s.slowWin = { move: c.miss, fastest: c.fastest ?? null, playOn: c.flags.playOn };
+    // The result is this win, whether or not the solution was looked at after it. While the solution is still being
+    // played out, its end (showSolution) finishes the puzzle; the board is left to the animation until then.
+    const viewing = s.status === 'viewing';
+    if (s.status !== 'solved' && !viewing) { s.status = 'solved'; s.refutation = null; }
+    s.outcome = s.misses.length ? 'miss' : 'clean';
     sent = report(true, s, c.flags, opts);
-    if (S === s) { S.busy = false; openExploration(); }
+    if (S === s && !viewing) { S.busy = false; openExploration(); }
   } else {
-    if (verdict !== 'no') s.unchecked = c.miss;
+    // A move played out that wasn't won is a miss whatever the check says: rated only if Syntaks defended throughout
+    // and moved at least once (gameRated: Tiltak, a dropout or no defender move make it unrated). Without play-on,
+    // the check decides.
+    const po = c.playOn, unrated = !po ? verdict !== 'no' : !gameRated(po);
+    if (unrated) { s.unchecked = c.miss; s.uncheckedWhy = po ? { why: po.end === 'noengine' ? 'noengine' : unratedWhy(po), at: po.fallbackAt || 0, engine: defenderName(po) } : null; }
     s.log.length = Math.min(s.log.length, c.logLen); // the miss decided it: nothing after it belongs in its log
     sent = report(false, s, c.flags, opts);
   }
@@ -628,19 +700,224 @@ function settleCheck(s, verdict, opts) {
 
 // Leaving a puzzle (or the page) while its check runs: there's no answer to wait for, so the miss goes in unrated.
 function abandonCheck(s, opts) {
-  if (!s?.checkPending) return null;
+  if (!s?.checkPending) return s?.quickCheck ? abandonQuick(s, opts) : null;
+  // Leaving in the middle of a play-on counts as giving up (rated miss), or leaving would be the way out of a lost game.
+  if (s.playOn && !s.playOn.end) { const sent = endPlayOn(s, 'left', opts); if (!s.checkPending) return sent; }
   s.checkPending.chk.cancel();
   return settleCheck(s, 'unknown', opts);
 }
+// Left during a first move's quick check (userMove): the same, an unrated miss. The move is logged on s itself (S may
+// be on its way to the next puzzle), and if this puzzle stays on screen after all (restoreLeft) it goes on as after a
+// miss; the check's late answer is ignored (userMove sees quickCheck gone).
+function abandonQuick(s, opts) {
+  const { miss, chk, tMove: ms } = s.quickCheck;
+  s.quickCheck = null; s.checking = null; chk.cancel();
+  if (s.resultSent) return null;
+  if (s.t0 != null && s.log.length < 64) s.log.push({ m: miss, ms, k: 'miss' });
+  s.decidedMs ??= ms;
+  s.misses.push({ at: s.moves.length, ptn: miss });
+  s.unchecked = miss; s.status = 'retry'; s.refutation = null; s.needsRestore = true;
+  return report(false, s, s, { ...opts, ms });
+}
 addEventListener('pagehide', () => abandonCheck(S, { keepalive: true }));
-// A result held when the page died (crash, or a keepalive that didn't make it): unrated, before anything is served.
-function flushHeld() {
+// A result held when the page died (crash, a keepalive that didn't make it, or an upload that failed), before anything
+// is served: what it goes as, or whether it's dropped, is playon.js heldResend. Unreachable: kept for the next load.
+async function flushHeld() {
   const h = heldRec.get();
   if (!h?.id) return null;
-  return api(withBuild('/api/result'), { puzzleId: h.id, win: false, casual: true, ms: h.ms, ...(token ? {} : { guest: guestSeed() }) }, { quiet: true })
-    .then((r) => { if (r?.token) setToken(r.token); }).catch(() => {}).finally(() => heldRec.del(h.id));
+  const send = heldResend(h, owner(), await pageAlive(h.page));
+  if (!send) return heldRec.del(h.id);
+  try {
+    const r = await api(withBuild('/api/result', send.build), { ...send.body, ...(token ? {} : { guest: guestSeed() }) }, { quiet: true });
+    if (r?.token) setToken(r.token);
+    heldRec.del(h.id);
+  } catch {}
 }
 
+// ---------- play on ----------
+// A move the still-wins check can't decide in 2.5 s is played out on the board: the move stays and an engine defends
+// (Syntaks on the server for 6×6, Tiltak in the browser for 4×4/5×5; spec agreed with Shy 2026-11-15). Your road or
+// flat win within capMoves (playon.js), or Syntaks resigning, is a solve like any longer win (3421d53): the game
+// becomes the puzzle's line and the puzzle ends there. Syntaks holding (out of moves, its road, flats or a draw), Give
+// up or leaving is a miss. Which of these count toward rating is playon.js's gameRated / winRated (only a game Syntaks
+// defended throughout; Tiltak, a dropout, no defender move or a stalled reply make it unrated both ways, while a proof
+// always counts). The check runs on meanwhile: a proof ends the game as a solve at once, and a 'no' is ignored (the
+// prover only sees road threats; the game decides). The result is held as for a pending check (checkPending with
+// .playOn), so settleCheck sends it, and a reload resends what was settled (flushHeld). No engine at all ('noengine')
+// sets po.fallback: unrated whatever the check says.
+const playOnDefender = () => defender(S.p.size, S.p.komi || 0, tiltak.supports);
+// (6×6 is Syntaks's even where it can't run in this browser (no WebAssembly SIMD): crux answers every reply then.)
+const defenderName = (po) => (po.engine === 'syntaks' && !po.fallback ? 'Syntaks' : 'Tiltak');
+// Whether a game won on the board counts toward rating. A weak reply can let a move that doesn't force the win "win",
+// so only Syntaks's defence is trusted for rating; a win against Tiltak is an unrated solve. (A proof always counts.)
+const playOnRated = (po) => gameRated(po); // (playon.js: only a game Syntaks defended throughout counts, either way)
+
+function startPlayOn(s, canon, plies, chk, tMove) {
+  const hadMs = s.decidedMs != null, logged = s.log.length, left = pliesLeft();
+  logMove('miss', canon, tMove); s.decidedMs ??= tMove;
+  s.misses.push({ at: s.moves.length, ptn: canon });
+  const po = s.playOn = { miss: canon, at: s.moves.length, base: plies.slice(0, -1), line: [canon], g: gameAt(plies),
+    mine: 1, cap: capMoves(left), capNote: capNote(left), engine: playOnDefender(), fallback: false, thinking: false, end: null };
+  s.checkPending = { miss: canon, at: s.moves.length, key: provenKey(canon), chk, hadMs, logLen: s.log.length, playOn: po,
+    fastest: s.node === 'win' ? finisher(s.g) : Object.keys(s.node)[0], // the puzzle's own move here, for the solved card
+    logEntry: s.log.length > logged ? s.log.at(-1) : null, flags: { hinted: s.hinted } };
+  heldRec.set({ id: s.p.id, ms: tMove });
+  if (store.get('next', null)?.puzzle?.id === s.p.id) store.del('next');
+  chk.final.then((v) => {
+    const c = s.checkPending;
+    if (c?.chk !== chk) return;
+    if (c.playOn.end) return settleCheck(s, v); // (only after 'noengine': a lost game stops the check)
+    if (v === 'wins') endPlayOn(s, 'proved'); else c.final = v; // still playing: only a proof ends the game
+  });
+  po.local = po.engine === 'syntaks' && syntaks.supports(s.p.size, s.p.komi || 0);
+  if (po.local) syntaks.load(); // the in-browser engine, fetched on first use (crux answers meanwhile)
+  else if (po.engine === 'tiltak') Promise.resolve().then(tiltak.warmup).catch(() => {}); // it defends here: start it while the board settles
+  // Give up sits where Hint was: it ignores clicks for its first 1.5 s, so one meant for Hint can't end the game
+  po.t0 = performance.now(); setTimeout(() => { if (S === s && s.playOn === po) renderAll(); }, 1600);
+  s.status = 'playon'; s.refutation = null; s.checking = null;
+  s.pendingHint = s.pendingSolution = false; // pressed during the quick check: not meant for after the game
+  report(false, s, s, { ms: tMove }); // held until the game (and the check) settle
+  defenderTurn(s, po);
+}
+
+// Syntaks's reply. It runs in the browser (syntaks.js, loaded when play-on starts; 1.5 s a reply). Until it has loaded,
+// or on a device too slow for a real defence (fewer than LOCAL_MIN_NODES in that time), crux answers (/api/defend,
+// 8 s). With neither, Tiltak in the browser defends the rest of the game, which is then unrated (playOnRated).
+const LOCAL_MIN_NODES = 150e3; // ~100k nodes/s: a fraction of crux's ~2.6M nodes per reply
+async function syntaksReply(s, po, tps, komi, live) {
+  const legal = (r) => (r && legalMove(po.g, r.move) ? r : null);
+  // Each in-browser search gets its 1.5 s plus 3 s (a worker the browser killed never answers); waiting for the
+  // download (crux didn't answer) gets 20 s. Past either, crux or Tiltak defends.
+  const within = (p, ms) => Promise.race([p, new Promise((res) => setTimeout(res, ms, null))]);
+  const local = (wait = 0) => within(syntaks.search({ tps, komi, ms: 1500, nodes: 1.5e6 }), 4500 + wait)
+    .then((r) => legal(r && { ...r, src: 'browser' }), () => null);
+  const server = () => {
+    po.ctl = new AbortController(); // aborted when the game ends, so crux drops the search
+    return api(`/api/defend?tps=${encodeURIComponent(tps)}&komi=${komi}`, null, { quiet: true, timeout: 8000, signal: po.ctl.signal }).then((r) => legal(r && { ...r, src: 'crux' }), () => null);
+  };
+  let r = null;
+  if (po.local && syntaks.status() === 'ready' && !po.slowLocal) {
+    r = await local();
+    if (!live()) return null;
+    // this device: crux for the next replies (only a search that used its time on an undecided position says so)
+    if (r && r.nodes < LOCAL_MIN_NODES && r.mate == null && r.ms >= 1200) po.slowLocal = true;
+  }
+  if (!r) { r = await server(); if (!live()) return null; }
+  if (!r && po.local && syntaks.status() !== 'failed') { r = await local(20e3); if (!live()) return null; } // waits for the download
+  if (r) console.debug(`play-on: Syntaks (${r.src}) ${r.move}, ${r.nodes ?? '?'} nodes, ${r.ms} ms`);
+  return r;
+}
+
+// The defender's reply: Syntaks (syntaksReply), else Tiltak in the browser for the rest of this game.
+async function defenderTurn(s, po) {
+  const live = () => S === s && s.playOn === po && !po.end;
+  const typed = document.activeElement?.id === 'ptn-in'; // a keyboard player gets the move box back after the reply
+  po.thinking = true; po.thinkingSince = performance.now(); s.busy = true;
+  await board.ui({ disableBoard: true });
+  renderAll();
+  const komi = s.p.komi || 0, tps = po.g.toTPS();
+  let mv = null, r = null;
+  if (po.engine === 'syntaks' && !po.fallback) {
+    r = await syntaksReply(s, po, tps, komi, live);
+    if (!live()) return;
+    mv = r && legalMove(po.g, r.move);
+    if (!mv) { po.fallback = true; po.fallbackAt = po.mine; r = null; renderAll(); }
+    // Syntaks's search sees a forced road (or flat win) for you: it resigns. (Its answer is in: not overdue.)
+    else if (resigns(r.mate, s.solver)) { po.thinking = false; return endPlayOn(s, 'resign'); }
+  }
+  if (!mv && tiltak.supports(s.p.size, komi)) {
+    // (a worker that never answers mustn't stall the game: 6 s from when it's up (a cold start, fetching and compiling
+    // the wasm, gets 20 s of its own, as Syntaks's download does), then it's as if no engine could move)
+    const up = await Promise.race([Promise.resolve().then(tiltak.warmup).then(() => true, () => false), new Promise((res) => setTimeout(res, 20e3, false))]);
+    if (!live()) return;
+    const t = up && await Promise.race([tiltak.analyze({ tps, size: s.p.size, komi, ms: 1500 }).catch(() => null), new Promise((res) => setTimeout(res, 6000, null))]);
+    if (!live()) return;
+    mv = legalMove(po.g, t?.bestmove);
+  }
+  if (!mv) { po.fallback = true; return endPlayOn(s, 'noengine'); }
+  po.thinking = false; // the reply is in hand: leaving while the board plays it isn't the defender being overdue (stalls)
+  po.g.play(mv); po.line.push(mv);
+  await board.append(mv); await board.last();
+  if (!live()) return;
+  const end = ending(po.g.result(), s.solver);
+  if (end) return endPlayOn(s, end);
+  po.thinking = false; s.busy = false;
+  await board.setPlayer(s.solver);
+  await board.ui({ disableBoard: false });
+  renderAll();
+  if (typed && live()) $('#ptn-in').focus();
+}
+
+// Your move in the game: checked against the game's own position, then the defender answers.
+async function playOnMove(ptn) {
+  const s = S, po = s.playOn;
+  const back = () => showPlayOn(s);
+  if (po.end || po.thinking || s.busy) return back();
+  let canon;
+  try { canon = po.g.canon(ptn); } catch { return back(); }
+  if (!legalMove(po.g, canon)) return back();
+  po.g.play(canon); po.line.push(canon); po.mine++;
+  logMove('po', canon);
+  const end = ending(po.g.result(), s.solver);
+  if (end) return endPlayOn(s, end);
+  if (po.mine >= po.cap) return endPlayOn(s, 'out');
+  defenderTurn(s, po);
+}
+// Put the board back to the game as played (after a refused move).
+async function showPlayOn(s) {
+  if (S !== s || !s.playOn) return;
+  await board.load(ptnFor([...s.playOn.base, ...s.playOn.line]));
+  S.loadedKey = null;
+  await board.last();
+}
+
+// The game is over. A win (your road, Syntaks resigning, or the check's proof) is a solve; anything else makes it a
+// miss, sent once the check has answered too (a later proof still makes it a solve).
+function endPlayOn(s, kind, opts) {
+  const po = s.playOn, c = s.checkPending;
+  if (!po || po.end) return;
+  // Left while Syntaks was overdue with a reply (Give up, Solution, leaving): that game doesn't count (gameRated).
+  if (stalls(po, kind, performance.now())) po.stalled = true;
+  po.end = kind; po.thinking = false; po.ctl?.abort();
+  if (c?.playOn === po) c.logLen = s.log.length; // the game's moves belong in this result's log
+  if (kind === 'win' || kind === 'resign' || kind === 'proved') {
+    // The game becomes the puzzle's line (the board already shows it) and the puzzle ends there, solved (settleCheck).
+    s.playOn = null; s.loadedKey = null;
+    po.line.forEach((m, j) => { s.g.play(m); s.moves.push({ ptn: m, me: j % 2 === 0, po: j > 0 }); s.snaps.push(s.g.toTPS()); });
+    if (c?.playOn === po) {
+      c.flags.playOn = { how: kind, engine: defenderName(po), unrated: !winRated(po, kind), why: unratedWhy(po) };
+      settleCheck(s, 'wins', opts); c.chk.cancel();
+    }
+    return;
+  }
+  s.playOn = null;
+  s.status = 'retry';
+  // byYou: the last ply was the player's (line[0] is theirs), e.g. a move that completed only the defender's road
+  s.refutation = { miss: po.miss, kind: 'playon', how: kind, n: po.mine, engine: defenderName(po),
+    byYou: po.line.length % 2 === 1 };
+  if (kind === 'noengine') s.refutation = { miss: po.miss, kind: 'unknown' };
+  // A lost game (Syntaks held, out of moves, Give up, left) is final: the check is stopped and the miss sent now, rated
+  // only if gameRated (settleCheck). With no engine at all ('noengine', po.fallback set) the check still runs, so a
+  // proof can make it a solve, but a miss is unrated whatever it says.
+  let sent = null;
+  if (c?.playOn === po) {
+    if (kind !== 'noengine') { c.chk.cancel(); sent = settleCheck(s, 'unknown', opts); }
+    else if (c.final) sent = settleCheck(s, c.final, opts);
+  }
+  if (kind === 'left') { s.needsRestore = true; return sent; } // the board is put back only if this puzzle stays (restoreLeft)
+  s.busy = true;
+  if (S === s) { renderAll(); restoreBoard().then(() => { if (S !== s) return; s.busy = false; renderAll(); flushHint(s); }); }
+  return sent;
+}
+// A puzzle left mid-game that is still on screen after all (Next failed to load, or the page came back from the
+// back/forward cache): put the board back to its accepted moves.
+function restoreLeft() {
+  if (!S?.needsRestore) return;
+  const s = S;
+  s.needsRestore = false; s.busy = false;
+  restoreBoard().then(() => flushHint(s));
+}
+addEventListener('pageshow', (e) => { if (e.persisted) restoreLeft(); });
 // Proven slower wins at the current attacker node: alts at the root, altsAt[path of moves so far] deeper in.
 function slowerWins() {
   const key = S.moves.map((m) => m.ptn).join(' ');
@@ -733,6 +1010,8 @@ async function showSolution() {
   // Pressed while the board is busy (the puzzle's intro, the opponent's reply, the reset after a miss): play it out
   // once the board is free (flushHint), as with Hint.
   if (S && S.busy && (S.status === 'retry' || S.status === 'play') && !S.placeholder) { S.pendingSolution = true; return; }
+  // In the middle of a play-on: give up (a miss), then show it once the board is back
+  if (S?.playOn) { if (!S.playOn.end) { S.pendingSolution = true; endPlayOn(S, 'gaveup'); } return; }
   if (!S || S.placeholder || S.status === 'solved' || S.status === 'viewing' || S.busy) return;
   const s = S;
   if (!S.resultSent) { const at = elapsed(); S.decidedMs ??= at; logMove('view', null, at); report(false, S, S, { ms: at }); }
@@ -749,7 +1028,7 @@ async function showSolution() {
     g.play(mv); S.moves.push({ ptn: mv, me: true, shown: true }); S.snaps.push(g.toTPS());
     await board.append(mv); await board.last();
     if (S !== s) return;
-    if (g.result()) { S.viewed = true; S.status = 'solved'; S.outcome = 'viewed'; S.view = null; await openExploration(); return; }
+    if (g.result()) { S.viewed = true; S.status = 'solved'; S.outcome = S.slowWin ? (S.misses.length ? 'miss' : 'clean') : 'viewed'; S.view = null; await openExploration(); return; } // (a held move proved to win meanwhile: that's the result)
     const { r: reply, n } = node[mv];
     renderAll();
     setTimeout(async () => {
@@ -764,8 +1043,8 @@ async function showSolution() {
   step();
 }
 
-// A Hint (or Solution) pressed while the board is busy (loading, the opponent's reply, the reset after a wrong or slower
-// move) would be lost: remember it and show it once the board is free. Solution wins over a pending hint.
+// A Hint (or Solution) pressed while the board is busy (loading, the opponent's reply, the reset after a wrong move)
+// would be lost: remember it and show it once the board is free. Solution wins over a pending hint.
 function flushHint(s) {
   if (S !== s) return;
   if (s.pendingSolution) { s.pendingSolution = s.pendingHint = false; showSolution(); }
@@ -773,7 +1052,7 @@ function flushHint(s) {
 }
 function showHint() {
   if (S && S.busy && (S.status === 'retry' || S.status === 'play') && !S.placeholder) { S.pendingHint = true; return; }
-  if (!S || S.placeholder || S.busy || S.status === 'solved' || S.status === 'viewing') return;
+  if (!S || S.placeholder || S.busy || S.playOn || S.status === 'solved' || S.status === 'viewing') return;
   // Looking at an earlier position: go back to the live one and show the hint there.
   if (S.view != null) { const s = S; restoreBoard().then(() => { if (S === s && S.view == null) showHint(); }); return; }
   const g = S.g;
@@ -819,6 +1098,7 @@ function moveSquares(ptn) {
 // Browse any earlier position (game history or puzzle moves). Index = number of plies shown.
 async function viewPly(i, branch = S.onBranch) {
   if (!S || S.placeholder || board.holding) return; // stones in hand: finish or cancel the move first
+  if (S.playOn) return; // a play-on game is played, not browsed
   if (S.status === 'solved') {
     S.onBranch = !!(branch && S.branch);
     const line = shownLine();
@@ -907,6 +1187,13 @@ const shownOver = () => {
 };
 const overNote = (r) => `Game over here: ${!r.winner ? 'a draw' : r.dragon ? `${colorName(r.winner)} completed both roads at once, and the player who moved wins (the dragon clause)` : `${colorName(r.winner)} ${r.kind === 'road' ? 'made a road' : 'won on flats'}`}. `
   + `Step back${finePointer.matches ? ' (←)' : ''} or click an earlier move to explore from there.`;
+// A longer win: proven by the search, or won on the board against an engine (play on).
+const slowWinText = (w) => {
+  const m = esc(w.move), po = w.playOn;
+  return po?.how === 'win' ? `${m} won against ${po.engine}, so it counts as solved`
+    : po?.how === 'resign' ? `${m} won: Syntaks resigned, seeing a forced win for you, so it counts as solved`
+    : `${m} forces a win too, so it counts as solved`;
+};
 const solvedTitle = () => S.outcome === 'viewed' ? 'Solution shown' : S.outcome === 'miss' ? 'Solved, after a miss' : 'Solved';
 // Review dock (Shy picked it from mockups): on phones in portrait, once the puzzle is over, the result with Next
 // puzzle, Tiltak's line and the step buttons are pinned to the bottom of the screen. It only exists while pinned;
@@ -958,13 +1245,28 @@ function renderAll(mood) {
   renderMoves(docked, delta, focusNext);
 }
 
-const notCountedText = () => S.notCounted === 'rate' ? 'Not rated: too many results too quickly; try again in a bit.'
-  : S.notCounted ? 'Not rated: the server didn’t record this result.' : '';
+// The result didn't reach the server: refused ('rate', 'error') or no answer ('lost'). A held one with no answer is
+// still in this tab (S.resend), and a reload sends it, so it isn't "not rated" yet. A refusal isn't told to reload: a
+// resend right away is usually refused again (the guest limit is per hour), and flushHeld drops it then.
+const notCountedText = () => {
+  const n = S.notCounted;
+  if (!n) return '';
+  if (S.resend && n === 'lost') return 'Your result isn’t saved yet: the server didn’t answer. Reload the page to send it again.';
+  return n === 'rate' ? 'Not rated: too many results too quickly; try again in a bit.'
+    : n === 'lost' ? 'Your result couldn’t be saved: the server didn’t answer.' : 'Not rated: the server didn’t record this result.';
+};
 // A held result: still checking a move that might win, or the check gave up (then the miss went in unrated).
+// (Solved meanwhile: a game played out is over by then, with no engine ('noengine'), so its miss is unrated anyway.)
 const uncheckedText = () => S.checkPending ? (S.status === 'solved'
-    ? `Still checking whether ${esc(S.checkPending.miss)} forces a win. Wait here for this solve to count; if you move on, it goes in unrated.`
+    ? `Still checking whether ${esc(S.checkPending.miss)} forces a win: if it does, the puzzle counts as solved; if not, ${S.checkPending.playOn || S.checkPending.flags.hinted ? 'the miss goes in unrated' : 'the miss counts'}. If you move on before that’s known, ${S.checkPending.playOn && !S.checkPending.playOn.fallback ? 'the miss counts' : 'it goes in unrated'}.`
     : `Still checking whether ${esc(S.checkPending.miss)} forces a win; your result is sent once that’s known.`)
-  : S.casualWhy === 'unchecked' ? `Not rated: ${esc(S.unchecked)} might win, and there wasn’t time to check.` : '';
+  : S.casualWhy === 'unchecked' ? (S.uncheckedWhy?.why ? playOnUnratedText(S.uncheckedWhy) : `Not rated: ${esc(S.unchecked)} might win, and there wasn’t time to check.`) : '';
+// Why a played-out miss isn't rated (playon.js unratedWhy).
+const playOnUnratedText = (u) => u.why === 'tiltak' ? 'Not rated: Tiltak defended.'
+  : u.why === 'nomove' ? `Not rated: ${u.engine} hadn’t moved yet.`
+  : u.why === 'stalled' ? 'Not rated: Syntaks didn’t answer in time.'
+  : u.why === 'noengine' ? 'Not rated: no engine could answer.'
+  : `Not rated: Syntaks dropped out ${u.at > 1 ? `after ${u.at} moves` : 'at the start'}, so Tiltak defended.`;
 // The feedback card (a live region). Returns whether Next puzzle should take keyboard focus once it is drawn.
 function renderFeedback(mood, delta) {
   const fb = $('#feedback');
@@ -980,12 +1282,15 @@ function renderFeedback(mood, delta) {
   // A move whose still-wins check is running or gave up gets no "why it fails": it may yet be a (slower) win.
   const unsure = (m) => m != null && (m === S.checkPending?.miss || m === S.unchecked || !!S.uncheckedMoves?.has(m));
   const hintNote = S.hint?.note && S.hint.node === S.node && S.hint.at === S.moves.length ? `<b>Hint:</b> ${esc(S.hint.note)} ` : '';
-  // The server refused the result: say so instead of "counts as a miss", and nothing is rated.
+  // The result didn't reach the server (refused, or no answer): say so instead of "counts as a miss".
   const NOT_COUNTED = notCountedText(), UNCHECKED = uncheckedText();
-  const missNote = (already) => S.notCounted ? `${NOT_COUNTED} Keep trying or view the solution.`
+  const missNote = () => S.notCounted ? `${NOT_COUNTED} Keep trying or view the solution.`
     : S.checkPending ? `Still checking whether ${esc(S.checkPending.miss)} forces a win; if it does, it isn’t a miss. Keep trying or view the solution.`
     : S.casualWhy === 'unchecked' ? `${UNCHECKED} Keep trying or view the solution.`
-    : `This puzzle ${already ? 'already' : 'now'} counts as a miss; keep trying or view the solution.`;
+    : S.casualWhy === 'hint' ? 'You used a hint, so this one doesn’t count toward your rating. Keep trying or view the solution.'
+    // (the server's own answer: a repeat attempt or an out-of-date page is recorded unrated, and it doesn't say which)
+    : S.repeat ? 'It isn’t rated: you’ve played this puzzle before, or this page is out of date. Keep trying or view the solution.'
+    : 'This puzzle now counts as a miss; keep trying or view the solution.';
   let fbHtml;
   if (notice) {
     $('#feedback').classList.remove('is-loading');
@@ -993,17 +1298,38 @@ function renderFeedback(mood, delta) {
   } else if (S.checking) {
     fbHtml = `<div class="icon turn p${S.solver}">…</div><div class="body"><h2>Checking ${esc(S.checking)}</h2>
       <p>That isn’t the puzzle’s line; checking whether it still forces a win.</p></div>${playActions}`;
+  } else if (S.playOn) {
+    // Play on (see startPlayOn). The wording is Shy's approved spec (2026-11-15).
+    const po = S.playOn, E = defenderName(po), m = esc(po.miss);
+    {
+      const n = po.thinking ? po.mine : po.mine + 1;
+      fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>Play it out</h2>
+        <p>We couldn’t check ${m} in time, so show it on the board: ${E} defends. Win within <span class="cap" title="${esc(po.capNote)}">${po.cap}</span> of your moves (counting ${m}) and it counts as solved. If ${E} holds, it’s a miss.${po.engine !== 'syntaks' ? ' Against Tiltak, how the game ends doesn’t count toward your rating (a proof that your move wins still does).' : ''}${po.fallback && po.engine === 'syntaks' ? '<span class="po-line">Syntaks is unreachable; Tiltak, in your browser, defends now, so how this game ends doesn’t count toward your rating (a proof that your move wins still does).</span>' : ''}<span class="po-line po-status">Move ${n} of ${po.cap}${po.thinking ? ` · ${E} is thinking…` : ''}</span></p></div>
+        <div class="actions"><button data-act="giveup"${performance.now() - po.t0 < 1500 ? ' disabled' : ''}>Give up</button><button data-act="solution" title="Give up and view the solution">Solution</button></div>`;
+    }
   } else if (S.status === 'solved') {
     const title = solvedTitle();
-    const slow = S.slowWin ? `${esc(S.slowWin.move)} forces a win too, so it counts as solved${S.slowWin.fastest ? `; the puzzle’s faster line starts with ${esc(S.slowWin.fastest)}` : ''}. ` : '';
-    const note = slow + (S.notCounted ? NOT_COUNTED + ' ' : UNCHECKED ? UNCHECKED + ' ' : S.casual ? 'You used a hint, so this one didn’t count toward your rating. ' : '')
+    const slow = S.slowWin ? `${slowWinText(S.slowWin)}${S.slowWin.fastest ? `; the puzzle’s faster line starts with ${esc(S.slowWin.fastest)}` : ''}. ` : '';
+    const note = slow + (S.notCounted ? NOT_COUNTED + ' ' : UNCHECKED ? UNCHECKED + ' ' : S.casualWhy === 'tiltak' ? 'Not rated: Tiltak defended. '
+      : S.casual ? 'You used a hint, so this one didn’t count toward your rating. ' : '')
       + (shownOver() ? overNote(shownOver()) : S.casualWhy === 'hint' ? '' : `Play any move to explore${finePointer.matches ? ', or step through the line with ← and →' : ''}.`);
     fbHtml = `<div class="icon ${S.outcome === 'clean' ? 'good' : 'bad'}">${S.outcome === 'clean' ? '✓' : '✗'}</div><div class="body">
       <h2>${title}<span class="dslot"></span></h2><p>${note}</p></div>
       <div class="actions"><button class="primary" data-act="next">Next puzzle</button></div>`;
+  } else if (S.status === 'retry' && S.refutation?.kind === 'playon') {
+    const r = S.refutation, E = r.engine, mv = `${r.n} move${r.n === 1 ? '' : 's'}`;
+    const h2 = r.how === 'gaveup' || r.how === 'left' ? 'You gave up' : r.how === 'out' ? 'Out of moves'
+      : r.how === 'road' ? (r.byYou ? `Your move completed ${E}’s road` : `${E} made a road`) : `${E} held`;
+    const lead = r.how === 'gaveup' || r.how === 'left' ? `You gave up on ${esc(r.miss)} after ${mv}` : `${E} defended ${esc(r.miss)} for ${mv}`;
+    // (the server's own answer decides "counts": a repeat attempt or an out-of-date page is recorded unrated: missNote)
+    const rated = !S.checkPending && !S.notCounted && !S.casualWhy && S.serverRated !== false;
+    const rest = rated ? ', so it counts as a miss. Keep trying or view the solution.'
+      : '. ' + (S.casualWhy === 'unchecked' && S.uncheckedWhy?.why ? `${playOnUnratedText(S.uncheckedWhy)} Keep trying or view the solution.` : missNote());
+    fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>${h2}<span class="dslot"></span></h2>
+      <p>${hintNote}${lead}${rest}</p></div>${playActions}`;
   } else if (S.status === 'retry') {
     fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>That’s not the move<span class="dslot"></span></h2>
-      <p>${hintNote}${unsure(S.refutation?.miss) ? '' : (refText(S.refutation) || 'Try another move.') + ' '}${missNote(false)}</p></div>${playActions}`;
+      <p>${hintNote}${unsure(S.refutation?.miss) ? '' : (refText(S.refutation) || 'Try another move.') + ' '}${missNote()}</p></div>${playActions}`;
   } else if (S.status === 'viewing') {
     fbHtml = `<div class="icon bad">…</div><div class="body"><h2>Solution</h2><p>Watch the winning line.</p></div>`;
   } else {
@@ -1084,15 +1410,18 @@ function renderMoves(docked, delta, focusNext) {
   const startPly = S.hist.length ? 0 : Game.fromTPS(p.tps).ply;
   const viewIdx = S.view ?? shownLine().length;
   const onShared = (i) => !S.onBranch || (S.branch && i + 1 <= S.branch.at); // official moves also on your line
-  const missesAt = (k) => S.misses.filter((x) => x.at === k).map((x) => `<span class="miss" title="Not the move">${esc(x.ptn)}</span>`).join('');
+  const po = S.playOn; // a play-on game shows after the puzzle's moves, in italics, instead of its move as a miss
+  const missesAt = (k) => S.misses.filter((x) => x.at === k && !(po && x.at === po.at && x.ptn === po.miss)).map((x) => `<span class="miss" title="Not the move">${esc(x.ptn)}</span>`).join('');
   const cells = []; // one entry per ply slot: { ply, html }
   official.forEach((m, i) => {
     const k = i - S.hist.length;
     const mvObj = k >= 0 ? S.moves[k] : null;
-    const cls = ['mv', k < 0 ? 'past' : mvObj?.shown ? 'me shown' : mvObj?.me ? 'me ok' : 'opp', onShared(i) && i + 1 === viewIdx ? 'cur' : ''].join(' ');
+    const cls = ['mv', k < 0 ? 'past' : mvObj?.po ? 'po' : mvObj?.shown ? 'me shown' : mvObj?.me ? 'me ok' : 'opp', onShared(i) && i + 1 === viewIdx ? 'cur' : ''].join(' ');
     cells.push({ ply: startPly + i, i, html: `${k >= 0 ? missesAt(k) : ''}<span class="${cls}" data-i="${i + 1}">${esc(m)}</span>` });
   });
-  if (S.misses.some((x) => x.at === S.moves.length)) cells.push({ ply: startPly + official.length, i: official.length, html: missesAt(S.moves.length) });
+  if (po) po.line.forEach((m, j) => cells.push({ ply: startPly + official.length + j, i: official.length + j,
+    html: `${j ? '' : missesAt(S.moves.length)}<span class="mv po" title="Played out against ${defenderName(po)}">${esc(m)}</span>` }));
+  else if (S.misses.some((x) => x.at === S.moves.length)) cells.push({ ply: startPly + official.length, i: official.length, html: missesAt(S.moves.length) });
   const branchRow = () => {
     const b0 = S.branch.at;
     const moves = S.branch.moves.map((m, j) => {
@@ -1126,7 +1455,7 @@ function renderMoves(docked, delta, focusNext) {
   // A server notice (slow or unreachable) replaces the result, so a Next puzzle that's waiting doesn't look dead.
   const dockHead = notice ? `<span class="icon bad" aria-hidden="true">!</span><b>${esc(notice.title)}</b>`
     : `<span class="icon ${clean ? 'good' : 'bad'}" aria-hidden="true">${clean ? '✓' : '✗'}</span><b>${solvedTitle()}${delta}</b>`;
-  const dockNote = notice ? esc(notice.body) : S.notCounted ? notCountedText() : uncheckedText() ? uncheckedText() : S.slowWin ? `${esc(S.slowWin.move)} forces a win too, so it counts as solved.` : S.casual ? 'You used a hint, so this one didn’t count.' : shownOver() ? 'Game over here. Step back with ◀ to explore.' : '';
+  const dockNote = notice ? esc(notice.body) : S.notCounted ? notCountedText() : uncheckedText() ? uncheckedText() : S.slowWin ? `${slowWinText(S.slowWin)}.${S.casualWhy === 'tiltak' ? ' Not rated: Tiltak defended.' : ''}` : S.casual ? 'You used a hint, so this one didn’t count.' : shownOver() ? 'Game over here. Step back with ◀ to explore.' : '';
   const engSlot = `<div class="eng-slot">${engineHtml}</div>`;
   const scroller = `<div class="mscroll" role="group" aria-label="Moves"><div class="mtable">${rows}</div></div>`;
   const nav = `<div class="nav"><button data-step="first" title="Start" aria-label="Start">⏮</button><button data-step="prev" title="Back (←)" aria-label="Back">◀</button><button data-step="next" title="Forward (→)" aria-label="Forward">▶</button><button data-step="last" title="Current position" aria-label="Current position">⏭</button>${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
@@ -1173,6 +1502,7 @@ $('#feedback').addEventListener('click', async (e) => {
   const act = e.target.closest('[data-act]')?.dataset.act;
   if (act === 'hint') return showHint();
   if (act === 'solution') return showSolution();
+  if (act === 'giveup') { if (performance.now() - (S.playOn?.t0 ?? 0) < 1500) return; return endPlayOn(S, 'gaveup'); }
   if (act === 'next') {
     const kb = e.target.matches(':focus-visible'); // keyboard user: put them back in the move input
     await loadNext();
@@ -1290,11 +1620,14 @@ async function mePage() {
   const el = $('#view-me');
   const claim = 'Claim a username at the top right to be on the leaderboard and to sign in on other devices.';
   if (!me) { el.innerHTML = `<h1>History</h1><div class="panel"><p class="flush">Your puzzles will show up here. ${claim}</p></div>`; return; }
-  const { history: h } = await api('/api/history');
+  // (me fresh too: another tab may have played since this one loaded, and the chart ends at me.rating)
+  const [{ history: h }, fresh] = await Promise.all([api('/api/history'), api(withBuild('/api/me')).catch(() => null)]);
+  if (fresh?.user) { me = fresh.user; renderUser(); }
   const tok = me.name ? token : null; // a guest has no name to sign in as elsewhere: claiming one comes first
   // rating chart
   const rated = h.filter((r) => r.rated).reverse();
   const pts = rated.length ? [rated[0].user_rating, ...rated.map((r) => r.user_rating + r.user_delta)] : [me.rating];
+  if (Math.abs(pts.at(-1) - me.rating) > 0.5) pts.push(me.rating); // ends at the rating shown above (a refund moves it)
   const W = 860, H = 160, lo = Math.min(...pts) - 20, hi = Math.max(...pts) + 20;
   const path = pts.map((v, i) => `${i ? 'L' : 'M'}${(i / Math.max(1, pts.length - 1)) * W},${H - ((v - lo) / (hi - lo)) * H}`).join('');
   el.innerHTML = `<h1>${me.name ? esc(me.name) : 'History'}</h1>${me.name ? '' : `<div class="panel"><p class="flush">You’re playing as a guest: this browser remembers you. ${claim}</p></div>`}<p class="muted">Rating <b class="your-rating">${fmtRating(me.rating, me.provisional)}</b></p>

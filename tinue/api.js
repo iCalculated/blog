@@ -64,7 +64,7 @@ export const api = async (path, body, { quiet = false, noWait = quiet, timeout, 
     clearTimeout(slow);
     const ms = performance.now() - t0;
     // Engine analysis is slow by design (a ~1.2 s search, maybe queued) and aborted on purpose; not a network signal.
-    if ((ms > 2000 || outcome !== 'ok') && path !== '/api/slow' && !path.startsWith('/api/analyze')) reportSlow(path, ms, outcome);
+    if ((ms > 2000 || outcome !== 'ok') && path !== '/api/slow' && !path.startsWith('/api/analyze') && !path.startsWith('/api/defend')) reportSlow(path, ms, outcome);
   }
 };
 

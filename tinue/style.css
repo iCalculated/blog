@@ -178,6 +178,10 @@ a.tag:hover { border-color: var(--accent); color: var(--fg-hi); }
 .mtable .mv.past { color: #8f8c87; } /* 4.6:1 on panels */
 .mtable .mv.opp, .mtable .mv.me { color: var(--fg-hi); font-weight: 600; }
 .mtable .mv.me.ok { color: var(--good); }
+.mtable .mv.po { font-style: italic; color: var(--fg-hi); } /* a play-on game (app.js startPlayOn) */
+#feedback .cap { border-bottom: 1px dotted currentColor; cursor: help; }
+#feedback .po-line { display: block; margin-top: 6px; }
+#feedback .po-status { color: var(--fg-hi); font-variant-numeric: tabular-nums; }
 .mtable .mv.me.shown { color: var(--fg-hi); }
 .mtable .miss { color: var(--bad); text-decoration: line-through; font-size: 12px; opacity: .9; }
 .mtable .dots { color: var(--muted); padding: 0 6px; }
