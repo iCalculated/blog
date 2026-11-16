@@ -1,11 +1,11 @@
-import { Game } from './shared/tak.js?v=1794784116';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794784116';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794784116';
-import { Board, buildPTN } from './board.js?v=1794784116';
-import * as engine from './engine.js?v=1794784116';
-import * as tiltak from './tiltak.js?v=1794784116';
-import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794784116';
-import { createNext } from './next.js?v=1794784116';
+import { Game } from './shared/tak.js?v=1794797222';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794797222';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794797222';
+import { Board, buildPTN } from './board.js?v=1794797222';
+import * as engine from './engine.js?v=1794797222';
+import * as tiltak from './tiltak.js?v=1794797222';
+import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794797222';
+import { createNext } from './next.js?v=1794797222';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -59,7 +59,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794784116')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794797222')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -1127,10 +1127,10 @@ async function mePage() {
 async function leaderPage() {
   show('view-leaderboard');
   const { leaders } = await api('/api/leaderboard');
-  $('#view-leaderboard').innerHTML = `<h1>Leaderboard</h1><p class="muted">Players whose rating has settled (no “?”).</p>` + (leaders.length
+  $('#view-leaderboard').innerHTML = `<h1>Leaderboard</h1><p class="muted">A “?” means the rating is still provisional: it settles after about 15 rated puzzles.</p>` + (leaders.length
     ? `<table class="t"><tr><th>#</th><th>Player</th><th>Rating</th><th>Puzzles</th></tr>${leaders.map((l, i) =>
-      `<tr><td>${i + 1}</td><td>${esc(l.name)}</td><td>${Math.round(l.rating)}</td><td>${l.games}</td></tr>`).join('')}</table>`
-    : `<div class="panel"><p class="flush">Nobody has a settled rating yet. It takes about 15 rated puzzles. Claim a username and you could be first.</p></div>`);
+      `<tr><td>${i + 1}</td><td>${esc(l.name)}</td><td>${fmtRating(l.rating, l.provisional)}</td><td>${l.games}</td></tr>`).join('')}</table>`
+    : `<div class="panel"><p class="flush">Nobody is on the leaderboard yet. Claim a username, solve a puzzle and you could be first.</p></div>`);
 }
 
 // Hash routes (#/, #/puzzle/ID, #/glossary[/term], #/me, #/leaderboard) so it works as static files.
