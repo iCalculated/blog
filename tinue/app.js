@@ -1,13 +1,13 @@
-import { Game } from './shared/tak.js?v=1794817280';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794817280';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794817280';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1794817280';
-import * as engine from './engine.js?v=1794817280';
-import * as tiltak from './tiltak.js?v=1794817280';
-import * as syntaks from './syntaks.js?v=1794817280';
-import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794817280';
-import { createNext } from './next.js?v=1794817280';
-import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, stalls, heldResend } from './playon.js?v=1794817280';
+import { Game } from './shared/tak.js?v=1794851720';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794851720';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794851720';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1794851720';
+import * as engine from './engine.js?v=1794851720';
+import * as tiltak from './tiltak.js?v=1794851720';
+import * as syntaks from './syntaks.js?v=1794851720';
+import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794851720';
+import { createNext } from './next.js?v=1794851720';
+import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, stalls, heldResend } from './playon.js?v=1794851720';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -93,7 +93,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794817280')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794851720')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -412,7 +412,7 @@ async function start(p, theme = '') {
   // theme: the Theme filter this puzzle was picked with (its result is damped as a themed attempt)
   const s = S = { p, g, node: p.tree, solver: g.toMove, hist, moves: [], snaps: [g.toTPS()], view: null, status: 'play', resultSent: false, hinted: false, delta: null, busy: true,
         misses: [], outcome: null, branch: null, onBranch: false, theme: theme && (p.themes || []).includes(theme) ? theme : '',
-        t0: null, hiddenMs: 0, hiddenAt: null, log: [] };
+        t0: null, born: performance.now(), hiddenMs: 0, hiddenAt: null, log: [] };
   nextQ.prefetchPair(p);
   buildBarHidden = false; renderBuildBar(); checkBuild(); // a dismissed bar comes back with the next puzzle
   setNotice(null);
@@ -456,7 +456,33 @@ async function start(p, theme = '') {
 // page of the site pauses the clock). Sent with the result for signed-in players, with each of the solver's moves (and
 // any hint or solution view), to calibrate puzzle ratings later.
 const offScreen = () => document.hidden || $('#view-puzzle').classList.contains('hidden');
-function startClock(s) { if (s.t0 == null) { s.t0 = performance.now(); s.hiddenAt = offScreen() ? s.t0 : null; } }
+function startClock(s) {
+  if (s.t0 != null) return;
+  s.t0 = performance.now(); s.hiddenAt = offScreen() ? s.t0 : null;
+  setTimeout(() => { if (S === s) wakeActions(); }, FRESH_MS + 30); // Hint and Solution come alive (fresh)
+}
+// A new puzzle's Hint and Solution take no presses until it has been playable for FRESH_MS, and they show as disabled
+// until then. Next puzzle sits where they appear (in the card, and on a phone in the dock over the same spot), so the
+// second tap of a double tap on Next landed on Solution: a rated miss 16 ms into a puzzle nobody had looked at
+// (rabbitboy84, 2026-11-16). A press during the intro isn't remembered for later either (see flushHint).
+const FRESH_MS = 1000;
+const fresh = (s) => s.t0 == null || performance.now() - s.t0 < FRESH_MS;
+// Turns the card's Hint and Solution on where they stand once the first second is over. Redrawing the card instead
+// would have a screen reader read it out a second time (it's a live region) and would cut a "Best move!" short.
+// If the card's HTML ever stops matching these strings, the next render simply redraws it.
+function wakeActions() {
+  const fb = $('#feedback');
+  for (const b of fb.querySelectorAll(':scope > .actions > [data-act="hint"], :scope > .actions > [data-act="solution"]')) b.disabled = false;
+  if (fb._html) fb._html = fb._html.replace('data-act="hint" disabled>', 'data-act="hint">').replace('data-act="solution" disabled title=', 'data-act="solution" title=');
+}
+// The same double tap can land on the board instead. On a phone the board grows back into the space the dock held, and
+// a puzzle with no intro is playable at once, so the second tap put down a flat: a miss. A move in a puzzle's first
+// half second is dropped (with an intro the board is still off then anyway).
+const TOO_SOON_MS = 500;
+const tooSoon = (s) => performance.now() - (s.born ?? 0) < TOO_SOON_MS;
+// And the other way round: Next puzzle appears where Solution was pressed, so a double tap on Solution skipped the
+// solution it asked for. Next takes no press for a moment after Solution.
+const justViewed = () => S?.viewT0 != null && performance.now() - S.viewT0 < 600;
 function elapsed(s = S) {
   if (s?.t0 == null) return null;
   const t = performance.now();
@@ -495,6 +521,7 @@ async function userMove(ptn) {
   if (!S || S.placeholder) return; // the board is disabled until a puzzle arrives
   if (S.status === 'solved') return explore(ptn);
   if (S.playOn) return playOnMove(ptn);
+  if (tooSoon(S)) { restoreBoard(); return; } // a tap meant for the last puzzle's Next, landing on the new board
   if (!S || S.placeholder || S.busy || S.view != null || !(S.status === 'play' || S.status === 'retry')) { if (S) restoreBoard(); return; }
   const g = S.g;
   let canon;
@@ -1015,7 +1042,7 @@ async function showSolution() {
   if (!S || S.placeholder || S.status === 'solved' || S.status === 'viewing' || S.busy) return;
   const s = S;
   if (!S.resultSent) { const at = elapsed(); S.decidedMs ??= at; logMove('view', null, at); report(false, S, S, { ms: at }); }
-  S.status = 'viewing';
+  S.status = 'viewing'; S.viewT0 = performance.now(); // (justViewed)
   await restoreBoard();
   if (S !== s) return;
   await board.ui({ disableBoard: true });
@@ -1043,8 +1070,9 @@ async function showSolution() {
   step();
 }
 
-// A Hint (or Solution) pressed while the board is busy (loading, the opponent's reply, the reset after a wrong move)
-// would be lost: remember it and show it once the board is free. Solution wins over a pending hint.
+// A Hint (or Solution) pressed while the board is busy (the opponent's reply, the reset after a wrong move) would be
+// lost: remember it and show it once the board is free. Solution wins over a pending hint. Not during a new puzzle's
+// intro or its first second: those presses are dropped (fresh), since they are usually meant for the last puzzle.
 function flushHint(s) {
   if (S !== s) return;
   if (s.pendingSolution) { s.pendingSolution = s.pendingHint = false; showSolution(); }
@@ -1270,7 +1298,7 @@ const playOnUnratedText = (u) => u.why === 'tiltak' ? 'Not rated: Tiltak defende
 // The feedback card (a live region). Returns whether Next puzzle should take keyboard focus once it is drawn.
 function renderFeedback(mood, delta) {
   const fb = $('#feedback');
-  const dis = S.placeholder ? ' disabled tabindex="-1"' : '';
+  const dis = S.placeholder ? ' disabled tabindex="-1"' : fresh(S) ? ' disabled' : ''; // (fresh: a new puzzle's first second)
   const playActions = `<div class="actions"><button data-act="hint"${dis}>Hint</button><button data-act="solution"${dis} title="View the solution">Solution</button></div>`;
   const other = colorName(3 - S.solver);
   const refText = (r) => !r ? '' : r.kind === 'thinking' ? `Checking why ${esc(r.miss)} fails…`
@@ -1489,7 +1517,7 @@ $('#moves').addEventListener('click', (e) => {
   const b = e.target.closest('[data-b]');
   if (b) return viewPly(+b.dataset.b, true);
   const nx = e.target.closest('[data-act="next"]'); // the phone dock's Next puzzle
-  if (nx) { const kb = nx.matches(':focus-visible'); return loadNext().then(() => { if (kb) $('#ptn-in')?.focus(); }); }
+  if (nx) { if (justViewed()) return; const kb = nx.matches(':focus-visible'); return loadNext().then(() => { if (kb) $('#ptn-in')?.focus(); }); }
   const total = shownLine().length, cur = S.view ?? total;
   const n = e.target.closest('[data-step]')?.dataset.step;
   if (n) viewPly({ first: 0, prev: cur - 1, next: cur + 1, last: total }[n]);
@@ -1500,10 +1528,12 @@ $('#moves').addEventListener('click', (e) => {
 $('#feedback').addEventListener('click', async (e) => {
   if (!S || S.placeholder) return;
   const act = e.target.closest('[data-act]')?.dataset.act;
+  if ((act === 'hint' || act === 'solution') && fresh(S)) return; // a tap meant for the last puzzle's Next
   if (act === 'hint') return showHint();
   if (act === 'solution') return showSolution();
   if (act === 'giveup') { if (performance.now() - (S.playOn?.t0 ?? 0) < 1500) return; return endPlayOn(S, 'gaveup'); }
   if (act === 'next') {
+    if (justViewed()) return;
     const kb = e.target.matches(':focus-visible'); // keyboard user: put them back in the move input
     await loadNext();
     if (kb) $('#ptn-in')?.focus();
