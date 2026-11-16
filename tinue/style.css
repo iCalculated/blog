@@ -89,6 +89,13 @@ button.danger { background: var(--bad-fill); border-color: var(--bad-fill); colo
 /* ---------- layout ---------- */
 .puzzle-page { display: grid; grid-template-columns: minmax(300px, 640px) minmax(280px, 380px); gap: var(--gap) 24px; justify-content: center; padding: 22px 16px; }
 .board-col { min-width: 0; }
+/* "tinue was updated": a newer build is out (app.js); spans the board and the side panel */
+.build-bar { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 6px 8px 6px 14px; background: var(--bg3); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--r-panel); font-size: 13px; }
+.build-bar[hidden] { display: none; }
+.build-bar .msg { flex: 1; min-width: 0; color: var(--fg-hi); }
+.build-bar button { flex: none; height: 30px; }
+.build-bar .x { width: 30px; padding: 0; background: none; border: 0; color: var(--muted); font-size: 18px; }
+.build-bar .x:hover { color: var(--fg-hi); }
 .side { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
 .panel { background: var(--bg2); border-radius: var(--r-panel); padding: var(--pad); box-shadow: 0 2px 2px rgba(0,0,0,.25); }
 .page { max-width: 900px; margin: 24px auto; padding: 0 16px; }

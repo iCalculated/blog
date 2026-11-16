@@ -3,8 +3,8 @@
 //   refute:  why was a move wrong? Find the opponent's reply after which the attack fails.
 //   analyze: does the side to move have a forced win (road or flats), and how?
 // It's a forced-win prover, not an evaluator: it answers "win in N" or "nothing forced within N".
-import { Game, Solver } from './shared/tak.js?v=1794804105';
-import { shortestTinue, TinueSearch } from './shared/pns.js?v=1794804105';
+import { Game, Solver } from './shared/tak.js?v=1794808991';
+import { shortestTinue, TinueSearch } from './shared/pns.js?v=1794808991';
 
 function gameFrom({ size, komi, tps, plies }) {
   const g = tps ? Game.fromTPS(tps, komi || 0) : Object.assign(new Game(size), { komi: komi || 0 });
@@ -94,7 +94,7 @@ self.onmessage = ({ data }) => {
       // Position after the player's wrong move; the defender is to move.
       const g = gameFrom(data);
       const res = g.result();
-      if (res) { self.postMessage({ id, kind: res.winner === data.attacker ? 'wins' : 'lost' }); return; }
+      if (res) { self.postMessage({ id, kind: res.winner === data.attacker ? 'wins' : 'lost', winner: res.winner, how: res.kind }); return; }
       const theirWin = immediateWin(g);
       if (theirWin) { self.postMessage({ id, kind: 'gives-road', reply: theirWin }); return; }
       const left = Math.max(1, data.remaining - 2); // attacker plies left after the defender's reply

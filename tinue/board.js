@@ -1,8 +1,8 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794804105';
-import { parsePTN } from './shared/ptn.js?v=1794804105';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794808991';
+import { parsePTN } from './shared/ptn.js?v=1794808991';
 
 const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
@@ -97,6 +97,7 @@ const pointerFocused = new WeakSet();
 let lastPointer = -1e9;
 document.addEventListener('pointerdown', () => { lastPointer = performance.now(); }, true);
 document.addEventListener('focusin', (e) => { if (performance.now() - lastPointer < 500) pointerFocused.add(e.target); else pointerFocused.delete(e.target); }, true);
+export const focusedByPointer = (el) => pointerFocused.has(el);
 
 export class Board {
   constructor(el, { onMove } = {}) {
@@ -251,6 +252,15 @@ export class Board {
   _show(i, animate = false) {
     this.cur = i; this.sel = null; this.peekHl = null;
     this._render(animate);
+  }
+
+  // A number key (or `) pressed while the board is briefly busy (the intro, the reply, the reset after a miss) is
+  // kept and played once input opens, if that's within 1.5 s.
+  _flushKey() {
+    const pk = this.pendKey;
+    if (!pk || !this._canInput()) return;
+    this.pendKey = null;
+    if (performance.now() - pk.t < 1500) this._keyCount(pk.k);
   }
 
   _canInput() {
@@ -417,7 +427,11 @@ export class Board {
     // (Chrome marks it :focus-visible on any key press, so that can't tell the two apart)
     if (e.key === 'Enter' && e.target.closest?.('a, button, summary') && !pointerFocused.has(e.target)) return;
     const k = e.key === 'Enter' ? 'all' : e.key === '`' ? 'own' : /^[1-8]$/.test(e.key) ? +e.key : 0;
-    if (k && this._keyCount(k)) e.preventDefault();
+    if (!k) return;
+    if (k !== 'all' && !this._canInput() && this.cur === this.snaps.length - 1 && !this.snaps[this.cur].g.result() && this.hover >= 0) {
+      this.pendKey = { k, t: performance.now() }; e.preventDefault(); return;
+    }
+    if (this._keyCount(k)) e.preventDefault();
   }
 
   // How many of `ids` (bottom first) a key means: k, all of them, or 'own': up to and including the first stone
@@ -503,6 +517,8 @@ export class Board {
 
   _render(animate = true) {
     if (!this.root) return;
+    // (a task later: the app's own follow-up calls, e.g. last() after append(), would drop the lift)
+    if (this.pendKey && this._canInput()) setTimeout(() => this._flushKey());
     const anim = animate && this.opts.animateBoard;
     if (!anim) this.root.classList.add('na');
     const v = this._view(), { s, st, ty } = v, g = s.g, n = this.n, P = this.P;

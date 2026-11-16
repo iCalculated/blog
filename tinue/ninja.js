@@ -2,9 +2,9 @@
 // embeds it. Same API as Board (board.js), so app.js doesn't care which one it has. Only loaded via import()
 // when the flag is set: everyone else fetches nothing from here or from ptn.ninja.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1794804105';
-import { parsePTN } from './shared/ptn.js?v=1794804105';
-import { buildPTN } from './board.js?v=1794804105';
+import { Game } from './shared/tak.js?v=1794808991';
+import { parsePTN } from './shared/ptn.js?v=1794808991';
+import { buildPTN, focusedByPointer } from './board.js?v=1794808991';
 
 const ORIGIN = 'https://ptn.ninja';
 // tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses).
@@ -92,6 +92,18 @@ export class NinjaBoard {
     this._settle();
   }
 
+  // PTN Ninja's hotkeys (number keys, Enter, `) only work while its iframe has keyboard focus, so a puzzle that
+  // becomes playable gets it, unless the player has focus somewhere on purpose (a field, a button reached by
+  // keyboard). Once the puzzle is over (exploring, or the board off) the page takes it back, so Enter = Continue.
+  _focus(on) {
+    if (this.fb) return;
+    const a = document.activeElement, f = this.iframe;
+    if (!on) { if (a === f) f.blur(); return; }
+    if (!matchMedia('(any-pointer: fine)').matches) return; // phones: nothing to type with
+    if (a === f || !(a == null || a === document.body || (focusedByPointer(a) && a.closest('button, a, summary')))) return;
+    this.ready.then(() => { if (!this.fb && !this.opts.disableBoard && !this.opts.dropOnStray) f.focus({ preventScroll: true }); });
+  }
+
   // ---------- messaging ----------
   _post(action, value) { if (!this.fb) this.iframe.contentWindow.postMessage(value === undefined ? { action } : { action, value }, ORIGIN); }
   async _send(action, value) { await this.ready; this._post(action, value); }
@@ -111,7 +123,7 @@ export class NinjaBoard {
   // PTN Ninja never came up: put tinue's own board in its place, in the same state, and hand it every call.
   async _fallback() {
     if (this.fb || !this._resolve) return;
-    const { Board } = await import('./board.js?v=1794804105');
+    const { Board } = await import('./board.js?v=1794808991');
     this.el.style.cssText = ''; // index.html's placeholder background
     const fb = new Board(this.el, { onMove: this.onMove });
     this.fb = fb;
@@ -185,6 +197,7 @@ export class NinjaBoard {
   setPlayer(p) { this.player = p; return this._send('SET_PLAYER', p); }
   ui(v = {}) {
     Object.assign(this.opts, v);
+    if ('disableBoard' in v || 'dropOnStray' in v) this._focus(!this.opts.disableBoard && !this.opts.dropOnStray);
     const out = {};
     for (const k of ['disableBoard', 'showRoads', 'animateBoard']) if (k in v) out[k] = v[k];
     return Object.keys(out).length ? this._send('SET_UI', out) : this.ready;
