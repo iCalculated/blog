@@ -1,5 +1,5 @@
-// Main-thread handle for the tactics engine. One worker per request type ('still', 'refute', 'analyze'), so a new
-// request can kill a stale search of the same type immediately without disturbing the other.
+// Main-thread handle for the tactics engine. One worker per request type ('refute', 'analyze'), so a new request can
+// kill a stale search of the same type immediately without disturbing the other. 'still' checks get a worker each.
 const workers = {}, pending = {};
 let seq = 0;
 
@@ -42,8 +42,36 @@ export const refute = (pos, ms = 8000) => Promise.race([ask('refute', { ...pos, 
     stop('refute');
     return partial ? { kind: partial.kind, reply: partial.reply, exact: false } : { kind: 'unknown' };
   });
-// Proof that an off-tree move still wins, or null after `ms` (the search is killed: a miss shouldn't wait long).
-export const stillWins = (pos, ms = 2500) => Promise.race([ask('still', pos), new Promise((r) => setTimeout(r, ms, null))])
-  .then((r) => { stop('still'); return r?.kind === 'wins'; });
+// Does an off-tree move still force a win? `quick` settles within `quickMs`: 'wins', 'no', or 'pending' when the
+// search hasn't finished. `final` lets the same search run on with bigger budgets for up to `maxMs`: 'wins', 'no', or
+// 'unknown' (out of time or budget). A timeout is never a 'no': a real win can take ~20 s on a slow device
+// (pd616580). Each check has its own worker, so a later check can't kill it; cancel() ends it. The budgets are small
+// because the search keeps every node (~28 KB per full-defense node: 25k nodes is ~700 MB), and the clock only runs
+// while the page is visible (a locked phone freezes the search, not the deadline).
+export function checkStill(pos, { quickMs = 2500, maxMs = 60e3, budgets = [[3e4, 2.5e4], [1e5, 2.5e4]] } = {}) {
+  const v = import.meta.url.match(/\?v=\d+/)?.[0] || '';
+  const w = new Worker(new URL('./engine-worker.js' + v, import.meta.url), { type: 'module' });
+  let end;
+  const final = new Promise((resolve) => {
+    let t, left = maxMs, from = performance.now();
+    // Only visible time counts: `from` is re-anchored on every visibility change, and a span is subtracted only if
+    // the page was visible through it.
+    const used = () => { const now = performance.now(); if (!document.hidden) left -= now - from; from = now; };
+    const tick = () => {
+      used();
+      if (left <= 0) return end('unknown');
+      t = setTimeout(tick, Math.max(left, 2e3));
+    };
+    t = setTimeout(tick, maxMs);
+    const vis = () => { const now = performance.now(); if (document.hidden) left -= now - from; from = now; };
+    document.addEventListener('visibilitychange', vis);
+    end = (kind) => { clearTimeout(t); document.removeEventListener('visibilitychange', vis); w.terminate(); resolve(kind); end = () => {}; };
+    w.onmessage = ({ data }) => end(data.kind === 'wins' || data.kind === 'no' ? data.kind : 'unknown');
+    w.onerror = () => end('unknown');
+    w.postMessage({ id: 1, type: 'still', ...pos, budgets });
+  });
+  const quick = Promise.race([final, new Promise((r) => setTimeout(r, quickMs, 'pending'))]);
+  return { quick, final, cancel: () => end('unknown') };
+}
 export const analyze = (pos) => ask('analyze', pos);
 export const interrupt = () => { stop('refute'); stop('analyze'); };

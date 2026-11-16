@@ -1,10 +1,10 @@
 // Tactics engine in a Web Worker: our own Tak solver, running locally in the browser.
-//   still:   does a move outside the solution still force a win (just slower)? Proof or 'no'.
+//   still:   does a move outside the solution still force a win (just slower)? 'wins', 'no' or 'unknown'.
 //   refute:  why was a move wrong? Find the opponent's reply after which the attack fails.
 //   analyze: does the side to move have a forced win (road or flats), and how?
 // It's a forced-win prover, not an evaluator: it answers "win in N" or "nothing forced within N".
-import { Game, Solver } from './shared/tak.js?v=1794797222';
-import { shortestTinue, TinueSearch } from './shared/pns.js?v=1794797222';
+import { Game, Solver } from './shared/tak.js?v=1794804105';
+import { shortestTinue, TinueSearch } from './shared/pns.js?v=1794804105';
 
 function gameFrom({ size, komi, tps, plies }) {
   const g = tps ? Game.fromTPS(tps, komi || 0) : Object.assign(new Game(size), { komi: komi || 0 });
@@ -72,8 +72,24 @@ self.onmessage = ({ data }) => {
       const g = gameFrom(data);
       if (g.result()) { self.postMessage({ id, kind: 'no' }); return; }
       const run = (n, full) => { const s = new TinueSearch(g.clone(), { maxNodes: n, fullDefense: full }); s.att = data.attacker; try { return s.solve(Infinity); } catch (e) { if (e.message === 'budget') return null; throw e; } };
-      const won = run(3e4, false) === true && run(3e5, true) === true;
-      self.postMessage({ id, kind: won ? 'wins' : 'no' });
+      // Each budget pair: threat-only first, then the proof with every defender reply. A search that runs out of
+      // budget proves nothing, so it moves on to the next pair; only a finished search says 'wins' or 'no'.
+      // The search is deterministic, so a stage that finished isn't run again and a full proof is only retried
+      // with a bigger budget than one that already ran out.
+      let kind = 'unknown', threatOk = false, fullOver = 0;
+      for (const [a, b] of data.budgets || [[3e4, 3e5]]) {
+        if (!threatOk) {
+          const quick = run(a, false);
+          if (quick === false) { kind = 'no'; break; }
+          if (quick !== true) continue;
+          threatOk = true;
+        }
+        if (b <= fullOver) continue;
+        const full = run(b, true);
+        if (full != null) { kind = full ? 'wins' : 'no'; break; }
+        fullOver = b;
+      }
+      self.postMessage({ id, kind });
     } else if (type === 'refute') {
       // Position after the player's wrong move; the defender is to move.
       const g = gameFrom(data);

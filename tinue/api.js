@@ -27,7 +27,8 @@ let redraw = () => {};
 export const onNotice = (fn) => { redraw = fn; }; // how api() redraws the page after changing the notice
 
 // timeout: one try with that budget (no retry), for callers with a fallback; signal: the caller may abort.
-export const api = async (path, body, { quiet = false, noWait = quiet, timeout, signal } = {}) => {
+// keepalive: the request may outlive the page (a result sent as the tab closes).
+export const api = async (path, body, { quiet = false, noWait = quiet, timeout, signal, keepalive = false } = {}) => {
   // If the server can't be reached, say so instead of showing a blank page. (On Shy's tailnet, Chrome asks for
   // "local network access" before a public page may call crux's private address; that prompt also stalls here.)
   const slow = noWait ? null : setTimeout(() => { notice = WAIT_NOTICE; redraw(); }, 4000);
@@ -41,7 +42,7 @@ export const api = async (path, body, { quiet = false, noWait = quiet, timeout, 
     signal?.addEventListener('abort', cancel);
     try {
       const r = await fetch(API + path, body
-        ? { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify(body), credentials: 'include', signal: ctl.signal }
+        ? { method: 'POST', headers: { 'content-type': 'application/json', ...authHeaders() }, body: JSON.stringify(body), credentials: 'include', signal: ctl.signal, keepalive }
         : { headers: authHeaders(), credentials: 'include', signal: ctl.signal });
       return await r.json();
     } finally { clearTimeout(timer); signal?.removeEventListener('abort', cancel); }
