@@ -1,10 +1,10 @@
 // Tactics engine in a Web Worker: our own Tak solver, running locally in the browser.
-//   still:   does a move outside the solution still force a win (just slower)? 'wins', 'no' or 'unknown'.
+//   still:   does a move outside the solution still force a win (at any length)? 'wins', 'no' or 'unknown'.
 //   refute:  why was a move wrong? Find the opponent's reply after which the attack fails.
 //   analyze: does the side to move have a forced win (road or flats), and how?
 // It's a forced-win prover, not an evaluator: it answers "win in N" or "nothing forced within N".
-import { Game, Solver } from './shared/tak.js?v=1794851720';
-import { shortestTinue, TinueSearch } from './shared/pns.js?v=1794851720';
+import { Game, Solver } from './shared/tak.js?v=1794862978';
+import { shortestTinue, TinueSearch } from './shared/pns.js?v=1794862978';
 
 function gameFrom({ size, komi, tps, plies }) {
   const g = tps ? Game.fromTPS(tps, komi || 0) : Object.assign(new Game(size), { komi: komi || 0 });

@@ -1,13 +1,13 @@
-import { Game } from './shared/tak.js?v=1794851720';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794851720';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794851720';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1794851720';
-import * as engine from './engine.js?v=1794851720';
-import * as tiltak from './tiltak.js?v=1794851720';
-import * as syntaks from './syntaks.js?v=1794851720';
-import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794851720';
-import { createNext } from './next.js?v=1794851720';
-import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, stalls, heldResend } from './playon.js?v=1794851720';
+import { Game } from './shared/tak.js?v=1794862978';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794862978';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794862978';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1794862978';
+import * as engine from './engine.js?v=1794862978';
+import * as tiltak from './tiltak.js?v=1794862978';
+import * as syntaks from './syntaks.js?v=1794862978';
+import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794862978';
+import { createNext } from './next.js?v=1794862978';
+import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, stalls, heldResend } from './playon.js?v=1794862978';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -93,7 +93,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794851720')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794862978')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -535,7 +535,10 @@ async function userMove(ptn) {
   else if (node !== 'win' && node && Object.prototype.hasOwnProperty.call(node, canon) && !res) {
     correct = true; reply = node[canon]?.r; next = node[canon]?.n;
   }
-  // A proven win the puzzle's tree doesn't list is slower (the tree has every win at the minimal depth): a solve.
+  // A proven win the puzzle's tree doesn't list is a solve, whatever its length. Where 7+ plies are left (the root of
+  // a deep puzzle included) the tree has Tak threats only, so such a win can be slower, the same length or (a quiet
+  // move: pd575074 38. 4c3+, alion 2026-11-16) faster; only where ≤5 plies are left is the tree exhaustive, so there
+  // it is slower.
   // Precomputed lists (alts at the root, altsAt in 5-ply lines) answer at once. Any other off-tree move, at any node
   // of any puzzle, gets ~2.5 s of the engine to prove it wins or to find that no Tak-threat win exists (the lists don't
   // cover 7×7/8×8, the first moves the precompute left undecided, or anything past the root of a deep puzzle: rated
@@ -685,7 +688,7 @@ async function report(win, s = S, flags = s, { keepalive = false, ms } = {}) {
   if (S === s) nextQ.prefetchNext(win, p.id, !s.casual && answered);
 }
 
-// A held result once its slow check settles (s may no longer be the puzzle on screen). 'wins': the miss was a slower
+// A held result once its slow check settles (s may no longer be the puzzle on screen). 'wins': the miss was a proven
 // win after all, which is a solve (see below). 'no': no Tak-threat win was found, so the miss is sent as it stood when
 // played (rated, unless a hint came first). 'unknown': it might have won, so the miss is sent unrated.
 function settleCheck(s, verdict, opts) {
@@ -695,7 +698,7 @@ function settleCheck(s, verdict, opts) {
   let sent;
   if (verdict === 'wins' || verdict === 'no') (s.proven ||= new Map()).set(c.key, verdict);
   if (verdict === 'wins') {
-    // The "miss" was a slower win, and a slower win is a solve (slowSolve): it is the result, sent as a win at the time
+    // The "miss" was a proven win, and any proven win is a solve (slowSolve): it is the result, sent as a win at the time
     // it was played; whatever happened after it doesn't count. Still on that puzzle, it ends there as solved.
     // (Misses after it went in with it, as did any later move left unchecked.)
     const i = s.misses.findIndex((m) => m.ptn === c.miss && m.at === c.at);
@@ -764,7 +767,7 @@ async function flushHeld() {
 // ---------- play on ----------
 // A move the still-wins check can't decide in 2.5 s is played out on the board: the move stays and an engine defends
 // (Syntaks on the server for 6×6, Tiltak in the browser for 4×4/5×5; spec agreed with Shy 2026-11-15). Your road or
-// flat win within capMoves (playon.js), or Syntaks resigning, is a solve like any longer win (3421d53): the game
+// flat win within capMoves (playon.js), or Syntaks resigning, is a solve like any other proven win (3421d53): the game
 // becomes the puzzle's line and the puzzle ends there. Syntaks holding (out of moves, its road, flats or a draw), Give
 // up or leaving is a miss. Which of these count toward rating is playon.js's gameRated / winRated (only a game Syntaks
 // defended throughout; Tiltak, a dropout, no defender move or a stalled reply make it unrated both ways, while a proof
@@ -945,7 +948,7 @@ function restoreLeft() {
   restoreBoard().then(() => flushHint(s));
 }
 addEventListener('pageshow', (e) => { if (e.persisted) restoreLeft(); });
-// Proven slower wins at the current attacker node: alts at the root, altsAt[path of moves so far] deeper in.
+// Proven off-tree wins at the current attacker node: alts at the root, altsAt[path of moves so far] deeper in.
 function slowerWins() {
   const key = S.moves.map((m) => m.ptn).join(' ');
   return (key ? S.p.altsAt?.[key] : S.p.alts) || [];
@@ -962,9 +965,11 @@ async function solved() {
   await openExploration();
 }
 
-// A proven forced win the puzzle's line doesn't take (it's slower: the tree has every fastest win) is a solve: longer
-// wins count as wins (Shy, 2026-11-15: "People don't like having to play for shortest"). The move stays on the board,
-// the puzzle ends there, and the card names the puzzle's faster move. node: the attacker node the move was played at.
+// A proven forced win the puzzle's line doesn't take is a solve, whatever its length (with 7+ plies left the tree has
+// Tak threats only, so it can be slower, the same length or faster: see userMove); longer wins count as wins (Shy,
+// 2026-11-15: "People don't like having to play for shortest"). The move stays on the board, the puzzle ends there,
+// and the card names the move the puzzle's line plays at that node (not claimed faster: the page doesn't know the
+// lengths). node: the attacker node the move was played at.
 function slowSolve(canon, tMove, node) {
   const g = S.g;
   logMove('slow', canon, tMove); S.decidedMs ??= tMove;
@@ -1215,7 +1220,7 @@ const shownOver = () => {
 };
 const overNote = (r) => `Game over here: ${!r.winner ? 'a draw' : r.dragon ? `${colorName(r.winner)} completed both roads at once, and the player who moved wins (the dragon clause)` : `${colorName(r.winner)} ${r.kind === 'road' ? 'made a road' : 'won on flats'}`}. `
   + `Step back${finePointer.matches ? ' (←)' : ''} or click an earlier move to explore from there.`;
-// A longer win: proven by the search, or won on the board against an engine (play on).
+// A win outside the puzzle's line: proven by the search, or won on the board against an engine (play on).
 const slowWinText = (w) => {
   const m = esc(w.move), po = w.playOn;
   return po?.how === 'win' ? `${m} won against ${po.engine}, so it counts as solved`
@@ -1307,7 +1312,7 @@ function renderFeedback(mood, delta) {
       : r.how === 'flat' ? `${esc(r.miss)} ends the game, and ${other} wins on flats.` : `${esc(r.miss)} ends the game in a draw.`)
     : r.kind === 'refuted' ? `After ${esc(r.miss)}, ${other} answers <b>${esc(r.reply)}</b> and ${r.exact ? 'the forced win is gone' : 'the solver finds no forced win'}.`
     : `${esc(r.miss)} doesn’t force the win.`;
-  // A move whose still-wins check is running or gave up gets no "why it fails": it may yet be a (slower) win.
+  // A move whose still-wins check is running or gave up gets no "why it fails": it may yet be a win.
   const unsure = (m) => m != null && (m === S.checkPending?.miss || m === S.unchecked || !!S.uncheckedMoves?.has(m));
   const hintNote = S.hint?.note && S.hint.node === S.node && S.hint.at === S.moves.length ? `<b>Hint:</b> ${esc(S.hint.note)} ` : '';
   // The result didn't reach the server (refused, or no answer): say so instead of "counts as a miss".
@@ -1337,7 +1342,7 @@ function renderFeedback(mood, delta) {
     }
   } else if (S.status === 'solved') {
     const title = solvedTitle();
-    const slow = S.slowWin ? `${slowWinText(S.slowWin)}${S.slowWin.fastest ? `; the puzzle’s faster line starts with ${esc(S.slowWin.fastest)}` : ''}. ` : '';
+    const slow = S.slowWin ? `${slowWinText(S.slowWin)}${S.slowWin.fastest ? `; the puzzle’s line plays ${esc(S.slowWin.fastest)} instead` : ''}. ` : '';
     const note = slow + (S.notCounted ? NOT_COUNTED + ' ' : UNCHECKED ? UNCHECKED + ' ' : S.casualWhy === 'tiltak' ? 'Not rated: Tiltak defended. '
       : S.casual ? 'You used a hint, so this one didn’t count toward your rating. ' : '')
       + (shownOver() ? overNote(shownOver()) : S.casualWhy === 'hint' ? '' : `Play any move to explore${finePointer.matches ? ', or step through the line with ← and →' : ''}.`);
