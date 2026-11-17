@@ -1,14 +1,14 @@
-import { Game } from './shared/tak.js?v=1794901217';
-import { unplayedPlies } from './shared/ptn.js?v=1794901217';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794901217';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794901217';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1794901217';
-import * as engine from './engine.js?v=1794901217';
-import * as tiltak from './tiltak.js?v=1794901217';
-import * as syntaks from './syntaks.js?v=1794901217';
-import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794901217';
-import { createNext } from './next.js?v=1794901217';
-import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, mayResign, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1794901217';
+import { Game } from './shared/tak.js?v=1794953575';
+import { unplayedPlies } from './shared/ptn.js?v=1794953575';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794953575';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794953575';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1794953575';
+import * as engine from './engine.js?v=1794953575';
+import * as tiltak from './tiltak.js?v=1794953575';
+import * as syntaks from './syntaks.js?v=1794953575';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794953575';
+import { createNext } from './next.js?v=1794953575';
+import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, mayResign, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1794953575';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -113,7 +113,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794901217')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794953575')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -377,7 +377,12 @@ async function runEngine() {
     const ctl = anaCtl = new AbortController();
     const fallback = () => { if (live()) runTiltak(s, key, g, line.slice(0, at)); };
     // 6 s covers the search plus a short queue on crux; past that, the browser engine answers sooner.
-    api(`/api/analyze?tps=${encodeURIComponent(g.toTPS())}&komi=${komi}`, null, { quiet: true, timeout: 6000, signal: ctl.signal })
+    // A plain GET without the Authorization header: no CORS preflight (every position is a new URL, so a preflight
+    // was never reused). The server knows the player by the cookie when the page sends one, else by address.
+    const tmo = new AbortController(), timer = setTimeout(() => tmo.abort(), 6000), stop = () => tmo.abort();
+    ctl.signal.addEventListener('abort', stop);
+    fetch(`${API}/api/analyze?tps=${encodeURIComponent(g.toTPS())}&komi=${komi}`, { credentials: 'include', signal: tmo.signal })
+      .then((r) => r.json()).finally(() => { clearTimeout(timer); ctl.signal.removeEventListener('abort', stop); })
       .then((r) => { if (!live()) return; if (r?.engine === 'syntaks') { S.tk = { ...r, src: 'syntaks' }; renderEngine(); } else fallback(); }, fallback);
     return;
   }

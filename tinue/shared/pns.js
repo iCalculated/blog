@@ -18,7 +18,7 @@
 //   winMove(g, color) / threatMoves(g) / defenderMoves(g, attacker) / TinueSearch (low level)
 // result is 'proved' | 'disproved' (no Tak-threat tinue) | 'unknown' (budget). maxNodes counts df-pn
 // MID calls; one node costs roughly 0.2–0.5 ms CPU on 6x6 midgames.
-import { colorOf, typeOf, FLAT, WALL, CAP, DIRS } from './tak.js?v=1794901217';
+import { colorOf, typeOf, FLAT, WALL, CAP, DIRS } from './tak.js?v=1794953575';
 
 const INF = 1e9;
 const DIR_LIST = ['+', '-', '>', '<'];
@@ -400,8 +400,8 @@ class Budget extends Error { constructor() { super('budget'); } }
 const WIN = [0, INF], LOSS = [INF, 0];
 
 export class TinueSearch {
-  constructor(g, { maxNodes = 2e5, epsilon = 0.25, init = 'flat', fullDefense = false } = {}) {
-    this.init = init; this.ply = 0; this.fullDefense = fullDefense;
+  constructor(g, { maxNodes = 2e5, epsilon = 0.25, fullDefense = false } = {}) {
+    this.fullDefense = fullDefense;
     this.g = g; this.att = g.toMove;
     this.tts = new Map(); this.info = new Map();
     this.nodes = 0; this.maxNodes = maxNodes; this.eps = epsilon;
@@ -454,22 +454,13 @@ export class TinueSearch {
     return undefined;
   }
 
-  // Initial bounds for an unexplored node. 'topaz': proof numbers grow with depth (favours short
-  // proofs) and stack-move replies look cheaper to refute, after Topaz's init_pns.
-  _init(isOr, kd) {
-    if (this.init === 'flat') return [1, 1];
-    const d = this.ply + 1, d2 = d * d;
-    if (!isOr) return [1, 30 + d2];
-    return [kd && kd.mv.kind === 'm' ? 10 + d2 : 20 + d2, 1];
-  }
-
-  // Value of a position (key k, side to move isOr) at depth p, without searching.
-  value(k, p, isOr, kd) {
+  // Value of a position (key k, side to move isOr) at depth p, without searching. An unexplored node starts at [1, 1].
+  value(k, p, isOr) {
     const I = this.info.get(k);
     const st = I && this._static(I, p, isOr);
     if (st) return st;
     if (p === Infinity && this.path.has(k)) return isOr ? LOSS : WIN; // repetition: defender holds
-    return this._lookup(k, p, isOr) || this._init(isOr, kd);
+    return this._lookup(k, p, isOr) || [1, 1];
   }
 
   _store(k, p, phi, delta) {
@@ -491,7 +482,7 @@ export class TinueSearch {
         let phi = INF, delta = 0, best = -1, d1 = INF, d2 = INF, bestPhi = 0;
         for (let i = 0; i < kids.length; i++) {
           const kd = kids[i];
-          const v = kd.term || this.value(kd.key, cp, childOr, kd);
+          const v = kd.term || this.value(kd.key, cp, childOr);
           if (v[1] < phi) phi = v[1];
           delta += v[0];
           if (v[1] < d1) { d2 = d1; d1 = v[1]; best = i; bestPhi = v[0]; } else if (v[1] < d2) d2 = v[1];
@@ -503,8 +494,7 @@ export class TinueSearch {
         const cPhiTh = Math.min(INF, thDelta + bestPhi - delta);
         const cDeltaTh = Math.min(thPhi, d2 >= INF ? INF : Math.max(d2 + 1, Math.ceil(d2 * (1 + this.eps))));
         const u = g.apply(c.mv);
-        this.ply++;
-        try { this.mid(cp, cPhiTh, cDeltaTh); } finally { g.undo(u); this.ply--; }
+        try { this.mid(cp, cPhiTh, cDeltaTh); } finally { g.undo(u); }
       }
     } finally { if (p === Infinity) this.path.delete(k); }
   }

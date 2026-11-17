@@ -2,11 +2,17 @@
 // New players start at 1500 ± 500 (as on Lichess) and puzzles at their prior ± 250: uncertain ratings move fast,
 // settled ones slowly, and a result from an uncertain player moves a puzzle less.
 // scripts/simulate-newcomers.mjs (and, for Glicko over Elo, scripts/archive/simulate-glicko.mjs) show why these numbers were picked.
-import { update, cap, blend, PLAYER_START, PUZZLE_START, provisional } from './glicko.js?v=1794901217';
+import { update, cap, blend, PLAYER_START, PUZZLE_START, PROVISIONAL_RD, provisional } from './glicko.js?v=1794953575';
 
 const CLUELESS_RD = 230;
 
 export { PLAYER_START, provisional };
+
+// The one deviation test for "settled", for players and puzzles alike: a rating is provisional (shown "1650?") while
+// rd >= PROVISIONAL_RD, and the picker treats a played puzzle as still needing data (server.js PLAYED) on the same
+// test. UNSETTLED_SQL is that test in SQL, for a table with an rd column.
+export const settled = (r) => !provisional(r);
+export const UNSETTLED_SQL = `rd >= ${PROVISIONAL_RD}`;
 
 // Drilling a theme gives part of the answer away (you know it's a fork, or a forced win in 2), so a themed
 // result moves ratings less, and a win far less than a loss: it's still telling when you miss despite the

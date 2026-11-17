@@ -3,8 +3,8 @@
 //   refute:  why was a move wrong? Find the opponent's reply after which the attack fails.
 //   analyze: does the side to move have a forced win (road or flats), and how?
 // It's a forced-win prover, not an evaluator: it answers "win in N" or "nothing forced within N".
-import { Game, Solver } from './shared/tak.js?v=1794901217';
-import { shortestTinue, TinueSearch, proofTreeLine } from './shared/pns.js?v=1794901217';
+import { Game, Solver } from './shared/tak.js?v=1794953575';
+import { shortestTinue, TinueSearch, proofTreeLine } from './shared/pns.js?v=1794953575';
 
 function gameFrom({ size, komi, tps, plies }) {
   const g = tps ? Game.fromTPS(tps, komi || 0) : Object.assign(new Game(size), { komi: komi || 0 });
@@ -80,7 +80,7 @@ self.onmessage = ({ data }) => {
       // The search is deterministic, so a stage that finished isn't run again and a full proof is only retried
       // with a bigger budget than one that already ran out.
       let kind = 'unknown', threatOk = false, fullOver = 0;
-      for (const [a, b] of data.budgets || [[3e4, 3e5]]) {
+      for (const [a, b] of data.budgets) {
         if (!threatOk) {
           const quick = run(a, false);
           // (The trade-off: a 'no' is charged as a rated miss (app.js), though a quiet or flat win would be missed here.
@@ -104,7 +104,7 @@ self.onmessage = ({ data }) => {
       const g = gameFrom(data);
       let plies = null;
       if (!g.result()) {
-        const s = new TinueSearch(g.clone(), { maxNodes: data.budget || 1e5, fullDefense: false }); s.att = data.attacker;
+        const s = new TinueSearch(g.clone(), { maxNodes: data.budget, fullDefense: false }); s.att = data.attacker;
         try { if (s.solve(Infinity)) plies = proofTreeLine(s).plies; } catch (e) { if (e.message !== 'budget') throw e; }
       }
       self.postMessage({ id, kind: 'length', plies: Number.isFinite(plies) ? plies : null });
