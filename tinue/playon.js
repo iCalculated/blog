@@ -147,3 +147,8 @@ export const resendAfterUpload = (settled) => !settled.ok || !settled.r?.user;
 // login, logout or account switch since it was displaced (authEpoch, app.js; a first token minted for this browser
 // isn't a switch), and only if the first upload didn't land (resendAfterUpload).
 export const deferredResendOk = (settled, epochThen, epochNow) => epochThen === epochNow && resendAfterUpload(settled);
+
+// A result's answer can carry a token minted for this browser (its first result made it a guest). Stored (and `me`
+// taken from the answer) only if nobody signed in, out or claimed a name while it was on its way (signIn, app.js),
+// else the late guest token would replace the account just signed into.
+export const answerOwnsToken = (signInThen, signInNow) => signInThen === signInNow;

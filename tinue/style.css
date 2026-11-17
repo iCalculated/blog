@@ -179,6 +179,10 @@ a.tag:hover { border-color: var(--accent); color: var(--fg-hi); }
 .mtable .mv.opp, .mtable .mv.me { color: var(--fg-hi); font-weight: 600; }
 .mtable .mv.me.ok { color: var(--good); }
 .mtable .mv.po { font-style: italic; color: var(--fg-hi); } /* a play-on game (app.js startPlayOn) */
+/* a line the source game never played (app.js unplayedPlies): normal weight like the game, but brighter and dashed
+   so it doesn't pass for the game's own moves; the divider above it says what it is */
+.mtable .mv.unplayed { color: var(--fg); text-decoration: underline dashed var(--muted); text-underline-offset: 4px; } /* 8:1 on panels */
+.mtable .game-end { margin: 4px 0 6px 2.6em; padding: 4px 0 0 4px; border-top: 1px dashed var(--muted); font: var(--fs-xs)/1.4 "Noto Sans", -apple-system, sans-serif; color: var(--muted); }
 #feedback .cap { border-bottom: 1px dotted currentColor; cursor: help; }
 #feedback .po-line { display: block; margin-top: 6px; }
 #feedback .po-status { color: var(--fg-hi); font-variant-numeric: tabular-nums; }

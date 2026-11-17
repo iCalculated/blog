@@ -1,13 +1,14 @@
-import { Game } from './shared/tak.js?v=1794894404';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794894404';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794894404';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1794894404';
-import * as engine from './engine.js?v=1794894404';
-import * as tiltak from './tiltak.js?v=1794894404';
-import * as syntaks from './syntaks.js?v=1794894404';
-import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794894404';
-import { createNext } from './next.js?v=1794894404';
-import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, mayResign, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, stalls, heldResend } from './playon.js?v=1794894404';
+import { Game } from './shared/tak.js?v=1794896311';
+import { unplayedPlies } from './shared/ptn.js?v=1794896311';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794896311';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794896311';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1794896311';
+import * as engine from './engine.js?v=1794896311';
+import * as tiltak from './tiltak.js?v=1794896311';
+import * as syntaks from './syntaks.js?v=1794896311';
+import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794896311';
+import { createNext } from './next.js?v=1794896311';
+import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, mayResign, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1794896311';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -55,8 +56,8 @@ const heldRec = {
     // If its first upload is still on its way, only resend when that one fails (else it would be sent twice).
     const prev = heldRec.get(), send = heldDisplaced(prev, v.id, owner()), epoch = authEpoch;
     if (send) {
-      const go = () => api(withBuild('/api/result', send.build), { ...send.body, ...(token ? {} : { guest: guestSeed() }) }, { quiet: true })
-        .then((r) => { if (r?.token) { setToken(r.token); ownHeld(); } }, () => {});
+      const go = (si = signIn) => api(withBuild('/api/result', send.build), { ...send.body, ...(token ? {} : { guest: guestSeed() }) }, { quiet: true })
+        .then((r) => { if (r?.token && answerOwnsToken(si, signIn)) { setToken(r.token); ownHeld(); } }, () => {});
       const first = uploading.get(prev.id);
       if (first) first.then((r) => ({ ok: true, r }), () => ({ ok: false })).then((u) => { if (deferredResendOk(u, epoch, authEpoch)) go(); });
       else go();
@@ -96,6 +97,10 @@ const uploading = new Map(); // puzzle id -> its result upload while on its way 
 // Bumped when the player signed in, out, or switched accounts (not when a first result mints this browser's token):
 // a result held from before mustn't go out under the new identity (heldRec.set's deferred resend).
 let authEpoch = 0;
+// Bumped whenever the page signs in, out or claims a name (a first claim included, whether its token comes back in the
+// answer or only as the cookie):
+// a result's answer that left before keeps its own minted token and user to itself (answerOwnsToken).
+let signIn = 0;
 // A random id for this browser (null if storage or crypto is unavailable). It links a guest's server row to the
 // anonymous results older clients sent, and lets a guest whose token got lost on the way get its row back.
 const guestId = () => {
@@ -108,7 +113,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794894404')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794896311')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -125,7 +130,7 @@ function renderUser() {
       <div class="pop" role="menu"><a href="#/me" role="menuitem">History</a><button class="link" id="logout" role="menuitem">Log out</button>
         <div class="confirm hidden" id="logout-confirm"><p>You’ll need your login token (on your History page) to sign back in on this device.</p><button class="danger" id="logout-yes">Log out</button></div></div></div>`;
     $('#logout').onclick = () => { $('#logout-confirm').classList.remove('hidden'); $('#logout').classList.add('hidden'); };
-    $('#logout-yes').onclick = async () => { await abandonCheck(S); restoreLeft(); await api('/api/logout', {}); authEpoch++; setToken(null); forgetNext(); me = null; session.length = 0; saveSession(); renderUser(); refreshPage(); };
+    $('#logout-yes').onclick = async () => { await abandonCheck(S); restoreLeft(); await api('/api/logout', {}); authEpoch++; signIn++; setToken(null); forgetNext(); me = null; session.length = 0; saveSession(); renderUser(); refreshPage(); };
   } else {
     // One quiet button; claiming a name (or pasting a token) happens in a small popover.
     box.innerHTML = `<div class="menu click"><button class="link name" id="claim-open" aria-haspopup="dialog" aria-expanded="false">Claim a username</button>
@@ -154,6 +159,7 @@ function renderUser() {
       const r = await api('/api/register', { name: $('#claim-name').value.trim(), ...(token ? {} : { guest: guestSeed() }) });
       if (r.error) return showErr('#claim-err', r.error);
       if (r.token && token && r.token !== token) authEpoch++; // another account now (a guest naming its own row isn't)
+      signIn++; // signed in as the named account now (its token may come only as a cookie): an answer on its way stays out
       if (r.token) setToken(r.token);
       me = r.user; renderUser(); refreshPage();
     };
@@ -163,7 +169,7 @@ function renderUser() {
       const r = await api('/api/login', { token: t });
       if (r.error) return showErr('#tok-err', 'That token doesn’t match an account.');
       await abandonCheck(S); restoreLeft(); // a held result goes out under the identity that played it
-      authEpoch++; setToken(t); forgetNext(); me = r.user; session.length = 0; saveSession(); renderUser(); refreshPage();
+      authEpoch++; signIn++; setToken(t); forgetNext(); me = r.user; session.length = 0; saveSession(); renderUser(); refreshPage();
     };
   }
 }
@@ -331,9 +337,12 @@ function currentPTN() { return ptnFor(S.hist.length ? officialLine() : S.moves.m
 // ---- lines: the official line (game history + puzzle moves) and, after the puzzle, your own exploration ----
 const officialLine = () => [...S.hist, ...S.moves.map((m) => m.ptn)];
 const shownLine = () => (S.branch && S.onBranch ? [...officialLine().slice(0, S.branch.at), ...S.branch.moves] : officialLine());
+// The source game's players go in the PTN's headers, unless the history ends in a line they never played (a dragon
+// sub-position): then the PTN would credit them with moves they didn't make, so it gets the default White/Black.
+const gameNames = (p) => (p.meta?.white && !unplayedPlies(p.meta) ? { white: p.meta.white, black: p.meta.black } : {});
 function ptnFor(plies) {
   const { p } = S;
-  const names = p.meta?.white ? { white: p.meta.white, black: p.meta.black } : {};
+  const names = gameNames(p);
   return S.hist.length ? buildPTN({ size: p.size, komi: p.komi, moves: plies, ...names }) : buildPTN({ size: p.size, komi: p.komi, tps: p.tps, moves: plies, ...names });
 }
 function gameAt(plies) {
@@ -438,7 +447,7 @@ async function start(p, theme = '') {
   if (S !== s) return;
   if (hist.length) {
     // Show the game up to just before the opponent's last move, then play that move (Lichess-style).
-    const names = p.meta?.white ? { white: p.meta.white, black: p.meta.black } : {};
+    const names = gameNames(p);
     await board.load(buildPTN({ size: p.size, komi: p.komi, moves: hist.slice(0, -1), ...names }));
     await board.last();
     if (S !== s) return;
@@ -685,12 +694,14 @@ async function report(win, s = S, flags = s, { keepalive = false, ms } = {}) {
   else if (heldRec.get()?.id === p.id) heldRec.set({ id: p.id, ms: timing.ms, win, casual: !!s.casual, theme: s.casual ? undefined : s.theme || undefined });
   try { // a failed upload (network, server restart) loses this result (a held one waits for a reload), not the session
     // noWait: a slow upload mustn't swap the card (and its Hint button) for the waiting notice; a failed one still says so
+    const si = signIn; // (a sign-in while this is on its way keeps its token: answerOwnsToken)
     const req = api(withBuild('/api/result'), { puzzleId: p.id, win, ...(s.casual ? { casual: true } : { theme: s.theme || undefined }), ...timing,
       ...(token ? {} : { guest: guestSeed() }) }, { noWait: true, keepalive }); // the first result makes a first-time visitor a guest
     reporting.add(req); req.catch(() => {}).finally(() => reporting.delete(req)); // (a reload for a newer build waits for it)
     uploading.set(p.id, req); req.catch(() => {}).finally(() => { if (uploading.get(p.id) === req) uploading.delete(p.id); });
     const r = await req;
-    if (r.token) { setToken(r.token); ownHeld(); }
+    const ours = answerOwnsToken(si, signIn);
+    if (r.token && ours) { setToken(r.token); ownHeld(); }
     // Refused: 429 (too many results, or too many new guests from one address) or any other error; nothing was rated.
     if (!r.user && r.error) s.notCounted = /^too many/i.test(r.error) ? 'rate' : 'error';
     if (r.user) {
@@ -701,7 +712,7 @@ async function report(win, s = S, flags = s, { keepalive = false, ms } = {}) {
       // Like Lichess, the info panel keeps the rating the puzzle had when you played it (what you were up
       // against), not the one your result just moved it to.
       if (r.rated) p.attempts++;
-      me = r.user; renderUser();
+      if (ours) { me = r.user; renderUser(); } // (else it's the guest this result went in under, not who's signed in now)
     }
   } catch { s.delta = null; s.notCounted = 'lost'; }
   // Not recorded, but the held copy is still there: a reload of this tab sends it (flushHeld). The cards say which.
@@ -786,10 +797,11 @@ async function flushHeld() {
   if (!send) return heldRec.del(h.id);
   try {
     // (registered like report()'s, so a record that is still being flushed when the first puzzle displaces it waits)
+    const si = signIn;
     const req = api(withBuild('/api/result', send.build), { ...send.body, ...(token ? {} : { guest: guestSeed() }) }, { quiet: true });
     uploading.set(h.id, req); req.catch(() => {}).finally(() => { if (uploading.get(h.id) === req) uploading.delete(h.id); });
     const r = await req;
-    if (r?.token) setToken(r.token);
+    if (r?.token && answerOwnsToken(si, signIn)) setToken(r.token);
     heldRec.del(h.id);
   } catch {}
 }
@@ -1542,12 +1554,17 @@ function renderInfo(done) {
     const m = p.meta || {};
     const player = (c, name, r) => `<div><span class="dot p${c}"></span>${esc(name)}${r ? ` <span class="sub">(${r})</span>` : ''}</div>`;
     const game = p.sourceRef?.startsWith('http') ? `<a href="${esc(p.sourceRef)}" target="_blank" rel="noopener">PlayTak game</a>` : esc(p.source);
+    // A dragon sub-position comes from a line that leaves the game (unplayedPlies): the game is where the line starts,
+    // not a game that reached this position, so say so before naming its players.
+    const off = unplayedPlies(m);
+    const from = off ? `a line from this ${p.sourceRef?.startsWith('http') ? game : `${esc(p.source)} game`}` : game;
     info.innerHTML = `<dl>
         <dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}">#${esc(p.id)}</a>, ${p.size}×${p.size}${p.komi ? ` with komi ${p.komi}` : ''}${canShare() ? ' · <button class="link" id="share-link">Share</button>' : ''}</dd>
         <dt>Rating</dt><dd>${Math.round(p.rating)}</dd>
         <dt>Played</dt><dd>${p.attempts ? `${p.attempts} time${p.attempts === 1 ? '' : 's'}` : 'Not rated by anyone yet'}</dd>
-        <dt>From</dt><dd>${game}</dd>
-      </dl>
+        <dt>From</dt><dd>${from}</dd>
+      </dl>${off ? `
+      <div class="sub">${off === 1 ? 'The last move before the puzzle was' : `The last ${off} moves before the puzzle were`} not played in the game.</div>` : ''}
       ${p.turn === 1 ? `<div class="sub">Turning point: ${p.pre0 != null && p.pre0 < 0.4 ? 'you were behind' : 'the game was even'} until your opponent’s last move.</div>` : ''}
       ${m.white ? `<div class="players">${player(1, m.white, m.ratingWhite)}${player(2, m.black, m.ratingBlack)}</div>` : ''}
       <hr><div>${themes.map((t) => `<a class="tag" href="#/glossary/${t}" title="${esc(THEMES[t].desc)}">${THEMES[t].name}</a>`).join('') || '<span class="sub">No themes</span>'}</div>`;
@@ -1558,7 +1575,8 @@ function renderInfo(done) {
 }
 
 // Move list, Lichess-style: a fixed-height scrolling table (number | White | Black). The game so far is
-// dim, a divider marks where the puzzle starts, your misses sit struck-through in the cell of the move you
+// dim; when its last plies are a line the game never played (unplayedPlies), a divider marks where the game
+// leaves off and those plies are dashed-underlined; your misses sit struck-through in the cell of the move you
 // were looking for, and your own line is an indented row at its branch point. Click any move to see it.
 // On phones, after the puzzle, the result, engine and step buttons dock below it (docked).
 function renderMoves(docked, delta, focusNext) {
@@ -1569,12 +1587,14 @@ function renderMoves(docked, delta, focusNext) {
   const onShared = (i) => !S.onBranch || (S.branch && i + 1 <= S.branch.at); // official moves also on your line
   const po = S.playOn; // a play-on game shows after the puzzle's moves, in italics, instead of its move as a miss
   const missesAt = (k) => S.misses.filter((x) => x.at === k && !(po && x.at === po.at && x.ptn === po.miss)).map((x) => `<span class="miss" title="Not the move">${esc(x.ptn)}</span>`).join('');
+  const off = unplayedPlies(p.meta), cut = off ? S.hist.length - off : -1; // cut: index of the first unplayed ply
   const cells = []; // one entry per ply slot: { ply, html }
   official.forEach((m, i) => {
     const k = i - S.hist.length;
     const mvObj = k >= 0 ? S.moves[k] : null;
-    const cls = ['mv', k < 0 ? 'past' : mvObj?.po ? 'po' : mvObj?.shown ? 'me shown' : mvObj?.me ? 'me ok' : 'opp', onShared(i) && i + 1 === viewIdx ? 'cur' : ''].join(' ');
-    cells.push({ ply: startPly + i, i, html: `${k >= 0 ? missesAt(k) : ''}<span class="${cls}" data-i="${i + 1}">${esc(m)}</span>` });
+    const cls = ['mv', k < 0 ? (cut >= 0 && i >= cut ? 'unplayed' : 'past') : mvObj?.po ? 'po' : mvObj?.shown ? 'me shown' : mvObj?.me ? 'me ok' : 'opp', onShared(i) && i + 1 === viewIdx ? 'cur' : ''].join(' ');
+    const tip = k < 0 && cut >= 0 && i >= cut ? ' title="Not played in the game"' : '';
+    cells.push({ ply: startPly + i, i, html: `${k >= 0 ? missesAt(k) : ''}<span class="${cls}"${tip} data-i="${i + 1}">${esc(m)}</span>` });
   });
   if (po) po.line.forEach((m, j) => cells.push({ ply: startPly + official.length + j, i: official.length + j,
     html: `${j ? '' : missesAt(S.moves.length)}<span class="mv po" title="Played out against ${defenderName(po)}">${esc(m)}</span>` }));
@@ -1588,14 +1608,18 @@ function renderMoves(docked, delta, focusNext) {
     }).join(' ');
     return `<div class="mrow branch"><span class="branch-label">Your line</span> ${moves} <button class="link back" data-act2="back">Back to the solution</button></div>`;
   };
-  let rows = '';
+  const gameEnd = `<div class="mrow game-end">Below: a line not played in the game</div>`;
+  let rows = cut === 0 ? gameEnd : ''; // the whole history is the line (clamped): divider before the first move
   for (let c = 0; c < cells.length; ) {
     const first = cells[c];
     if (!first) break;
     const moveNo = Math.floor(first.ply / 2) + 1;
     const white = first.ply % 2 === 0 ? first : null;
-    const black = white ? (cells[c + 1] && cells[c + 1].ply === first.ply + 1 ? cells[c + 1] : null) : first;
+    // If the game leaves off after White's move, the row ends there and Black's unplayed reply starts the next one
+    // ("12. … b2", as Lichess splits a row for a comment), so the divider falls between them.
+    const black = white ? (cells[c + 1] && cells[c + 1].ply === first.ply + 1 && cells[c + 1].i !== cut ? cells[c + 1] : null) : first;
     rows += `<span class="mnum">${moveNo}</span><span class="mcell">${white ? white.html : '<span class="dots">…</span>'}</span><span class="mcell">${black ? black.html : ''}</span>`;
+    if (cut > 0 && [white, black].some((x) => x && x.i + 1 === cut)) rows += gameEnd;
     // Your line goes under the row it branches from, including from White's move (replacing Black's reply).
     if (S.branch && [white, black].some((x) => x && S.branch.at === x.i + 1)) rows += branchRow();
     c += white && black ? 2 : 1;

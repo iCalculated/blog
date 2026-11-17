@@ -1,5 +1,5 @@
 // Parse a PTN game (headers + moves) and replay it.
-import { Game } from './tak.js?v=1794894404';
+import { Game } from './tak.js?v=1794896311';
 
 export function parsePTN(text) {
   const headers = {};
@@ -43,4 +43,12 @@ export function canonPTN(m) {
   const count = c ? +c : 1;
   if (drops.length === 1 && +drops === count) drops = '';
   return (count > 1 ? count : '') + sq + dir + drops;
+}
+
+// How many of the last plies of meta.history were never played in the source game. A dragon sub-position is reached
+// by a line of analysis (meta.dragon.path) that leaves the real game; its history is the game so far plus that line,
+// so the game's players and moves are credited only up to history.length minus this. 0 for every ordinary puzzle.
+export function unplayedPlies(meta) {
+  const path = meta?.dragon?.path, n = Array.isArray(meta?.history) ? meta.history.length : 0;
+  return Array.isArray(path) && path.length ? Math.min(path.length, n) : 0;
 }
