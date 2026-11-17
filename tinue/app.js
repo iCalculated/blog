@@ -1,13 +1,13 @@
-import { Game } from './shared/tak.js?v=1794862978';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794862978';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794862978';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1794862978';
-import * as engine from './engine.js?v=1794862978';
-import * as tiltak from './tiltak.js?v=1794862978';
-import * as syntaks from './syntaks.js?v=1794862978';
-import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794862978';
-import { createNext } from './next.js?v=1794862978';
-import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, stalls, heldResend } from './playon.js?v=1794862978';
+import { Game } from './shared/tak.js?v=1794889144';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794889144';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794889144';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1794889144';
+import * as engine from './engine.js?v=1794889144';
+import * as tiltak from './tiltak.js?v=1794889144';
+import * as syntaks from './syntaks.js?v=1794889144';
+import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794889144';
+import { createNext } from './next.js?v=1794889144';
+import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, stalls, heldResend } from './playon.js?v=1794889144';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -93,7 +93,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794862978')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794889144')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
