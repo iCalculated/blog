@@ -1,13 +1,13 @@
-import { Game } from './shared/tak.js?v=1794889144';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794889144';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794889144';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1794889144';
-import * as engine from './engine.js?v=1794889144';
-import * as tiltak from './tiltak.js?v=1794889144';
-import * as syntaks from './syntaks.js?v=1794889144';
-import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794889144';
-import { createNext } from './next.js?v=1794889144';
-import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, stalls, heldResend } from './playon.js?v=1794889144';
+import { Game } from './shared/tak.js?v=1794894404';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794894404';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794894404';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1794894404';
+import * as engine from './engine.js?v=1794894404';
+import * as tiltak from './tiltak.js?v=1794894404';
+import * as syntaks from './syntaks.js?v=1794894404';
+import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794894404';
+import { createNext } from './next.js?v=1794894404';
+import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, mayResign, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, stalls, heldResend } from './playon.js?v=1794894404';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -50,6 +50,17 @@ let pageLock = false; // this page holds its lock (taken with its first record, 
 const heldRec = {
   get() { try { return JSON.parse(sessionStorage.getItem('tinue.held')); } catch { return null; } },
   set(v) {
+    // A settled record of another puzzle (its upload failed, kept for a resend) mustn't be lost by this one replacing it:
+    // send it now, as flushHeld would (quiet, not awaited; its page is this one, so it isn't checked for being alive).
+    // If its first upload is still on its way, only resend when that one fails (else it would be sent twice).
+    const prev = heldRec.get(), send = heldDisplaced(prev, v.id, owner()), epoch = authEpoch;
+    if (send) {
+      const go = () => api(withBuild('/api/result', send.build), { ...send.body, ...(token ? {} : { guest: guestSeed() }) }, { quiet: true })
+        .then((r) => { if (r?.token) { setToken(r.token); ownHeld(); } }, () => {});
+      const first = uploading.get(prev.id);
+      if (first) first.then((r) => ({ ok: true, r }), () => ({ ok: false })).then((u) => { if (deferredResendOk(u, epoch, authEpoch)) go(); });
+      else go();
+    }
     if (!pageLock && navigator.locks) { pageLock = true; navigator.locks.request('tinue.held.' + pageId, () => new Promise(() => {})).catch(() => {}); }
     try { sessionStorage.setItem('tinue.held', JSON.stringify({ ...v, b: BUILD, owner: owner(), page: pageId })); } catch {}
   },
@@ -81,6 +92,10 @@ store.set('prefs', prefs);
 const session = (() => { try { return JSON.parse(sessionStorage.getItem('tinue.session')) || []; } catch { return []; } })();
 const saveSession = () => { try { sessionStorage.setItem('tinue.session', JSON.stringify(session.slice(-200))); } catch {} };
 const reporting = new Set(); // result uploads still on their way
+const uploading = new Map(); // puzzle id -> its result upload while on its way (heldRec.set: no double send)
+// Bumped when the player signed in, out, or switched accounts (not when a first result mints this browser's token):
+// a result held from before mustn't go out under the new identity (heldRec.set's deferred resend).
+let authEpoch = 0;
 // A random id for this browser (null if storage or crypto is unavailable). It links a guest's server row to the
 // anonymous results older clients sent, and lets a guest whose token got lost on the way get its row back.
 const guestId = () => {
@@ -93,7 +108,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794889144')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794894404')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -110,7 +125,7 @@ function renderUser() {
       <div class="pop" role="menu"><a href="#/me" role="menuitem">History</a><button class="link" id="logout" role="menuitem">Log out</button>
         <div class="confirm hidden" id="logout-confirm"><p>You’ll need your login token (on your History page) to sign back in on this device.</p><button class="danger" id="logout-yes">Log out</button></div></div></div>`;
     $('#logout').onclick = () => { $('#logout-confirm').classList.remove('hidden'); $('#logout').classList.add('hidden'); };
-    $('#logout-yes').onclick = async () => { await abandonCheck(S); restoreLeft(); await api('/api/logout', {}); setToken(null); forgetNext(); me = null; session.length = 0; saveSession(); renderUser(); refreshPage(); };
+    $('#logout-yes').onclick = async () => { await abandonCheck(S); restoreLeft(); await api('/api/logout', {}); authEpoch++; setToken(null); forgetNext(); me = null; session.length = 0; saveSession(); renderUser(); refreshPage(); };
   } else {
     // One quiet button; claiming a name (or pasting a token) happens in a small popover.
     box.innerHTML = `<div class="menu click"><button class="link name" id="claim-open" aria-haspopup="dialog" aria-expanded="false">Claim a username</button>
@@ -138,6 +153,7 @@ function renderUser() {
       // A guest's row just gets the name (rating and history stay); a first-time visitor's is created like a guest's.
       const r = await api('/api/register', { name: $('#claim-name').value.trim(), ...(token ? {} : { guest: guestSeed() }) });
       if (r.error) return showErr('#claim-err', r.error);
+      if (r.token && token && r.token !== token) authEpoch++; // another account now (a guest naming its own row isn't)
       if (r.token) setToken(r.token);
       me = r.user; renderUser(); refreshPage();
     };
@@ -147,7 +163,7 @@ function renderUser() {
       const r = await api('/api/login', { token: t });
       if (r.error) return showErr('#tok-err', 'That token doesn’t match an account.');
       await abandonCheck(S); restoreLeft(); // a held result goes out under the identity that played it
-      setToken(t); forgetNext(); me = r.user; session.length = 0; saveSession(); renderUser(); refreshPage();
+      authEpoch++; setToken(t); forgetNext(); me = r.user; session.length = 0; saveSession(); renderUser(); refreshPage();
     };
   }
 }
@@ -535,7 +551,8 @@ async function userMove(ptn) {
   else if (node !== 'win' && node && Object.prototype.hasOwnProperty.call(node, canon) && !res) {
     correct = true; reply = node[canon]?.r; next = node[canon]?.n;
   }
-  // A proven win the puzzle's tree doesn't list is a solve, whatever its length. Where 7+ plies are left (the root of
+  // A proven win the puzzle's tree doesn't list is a solve, whatever its length; where Syntaks defends (6×6) it is first
+  // played out to a road (a proven play-out: startPlayOn with proven; playon.js provenPlayOut / lossRated). Where 7+ plies are left (the root of
   // a deep puzzle included) the tree has Tak threats only, so such a win can be slower, the same length or (a quiet
   // move: pd575074 38. 4c3+, alion 2026-11-16) faster; only where ≤5 plies are left is the tree exhaustive, so there
   // it is slower.
@@ -585,11 +602,17 @@ async function userMove(ptn) {
           return;
         }
         wins = quick === 'wins';
-        if (quick === 'wins' || quick === 'no') (S.proven ||= new Map()).set(key, quick);
-        else if (minor) { chk.cancel(); (S.uncheckedMoves ||= new Set()).add(canon); } else pending = chk;
+        const out = quickOutcome(quick, minor);
+        if (out === 'wins' || out === 'no') (S.proven ||= new Map()).set(key, out);
+        if (out === 'wins') (S.proofPlies ||= new Map()).set(key, chk.info?.plies ?? null); // (for a proven play-out's cap)
+        else if (out === 'unchecked') { chk.cancel(); (S.uncheckedMoves ||= new Set()).add(canon); }
+        else if (out === 'pending') pending = chk;
       }
       if (pending && po) return startPlayOn(s, canon, plies, pending, tMove);
-      if (wins) return slowSolve(canon, tMove, node);
+      // A proven win is played out to a road where Syntaks defends (a proven play-out, 6×6); with Tiltak (4×4/5×5) or no
+      // defender (7×7/8×8) it is solved on the spot. (Not while another move's check is still held: that one owns the
+      // held result.)
+      if (wins) return provenPlayOut(po) && !S.checkPending ? startPlayOn(s, canon, plies, null, tMove, true, S.proofPlies?.get(key)) : slowSolve(canon, tMove, node);
     }
     const hadMs = S.decidedMs != null, logged = S.log.length;
     logMove('miss', canon, tMove); S.decidedMs ??= tMove;
@@ -665,6 +688,7 @@ async function report(win, s = S, flags = s, { keepalive = false, ms } = {}) {
     const req = api(withBuild('/api/result'), { puzzleId: p.id, win, ...(s.casual ? { casual: true } : { theme: s.theme || undefined }), ...timing,
       ...(token ? {} : { guest: guestSeed() }) }, { noWait: true, keepalive }); // the first result makes a first-time visitor a guest
     reporting.add(req); req.catch(() => {}).finally(() => reporting.delete(req)); // (a reload for a newer build waits for it)
+    uploading.set(p.id, req); req.catch(() => {}).finally(() => { if (uploading.get(p.id) === req) uploading.delete(p.id); });
     const r = await req;
     if (r.token) { setToken(r.token); ownHeld(); }
     // Refused: 429 (too many results, or too many new guests from one address) or any other error; nothing was rated.
@@ -719,8 +743,9 @@ function settleCheck(s, verdict, opts) {
     // A move played out that wasn't won is a miss whatever the check says: rated only if Syntaks defended throughout
     // and moved at least once (gameRated: Tiltak, a dropout or no defender move make it unrated). Without play-on,
     // the check decides.
-    const po = c.playOn, unrated = !po ? verdict !== 'no' : !gameRated(po);
-    if (unrated) { s.unchecked = c.miss; s.uncheckedWhy = po ? { why: po.end === 'noengine' ? 'noengine' : unratedWhy(po), at: po.fallbackAt || 0, engine: defenderName(po) } : null; }
+    // (a proven play-out: lossRated, see playon.js)
+    const po = c.playOn, unrated = !po ? verdict !== 'no' : !lossRated(po, po.end);
+    if (unrated) { s.unchecked = c.miss; s.uncheckedWhy = po ? { why: po.end === 'noengine' ? 'noengine' : lossWhy(po, po.end), at: po.fallbackAt || 0, engine: defenderName(po) } : null; }
     s.log.length = Math.min(s.log.length, c.logLen); // the miss decided it: nothing after it belongs in its log
     sent = report(false, s, c.flags, opts);
   }
@@ -732,7 +757,9 @@ function settleCheck(s, verdict, opts) {
 function abandonCheck(s, opts) {
   if (!s?.checkPending) return s?.quickCheck ? abandonQuick(s, opts) : null;
   // Leaving in the middle of a play-on counts as giving up (rated miss), or leaving would be the way out of a lost game.
-  if (s.playOn && !s.playOn.end) { const sent = endPlayOn(s, 'left', opts); if (!s.checkPending) return sent; }
+  // ('unload': the page itself is going away (pagehide); 'left': on to another puzzle in this page. Ordinary play-on
+  // treats them alike; a proven play-out lost to the page going away is unrated: playon.js lossRated.)
+  if (s.playOn && !s.playOn.end) { const sent = endPlayOn(s, opts?.keepalive ? 'unload' : 'left', opts); if (!s.checkPending) return sent; }
   s.checkPending.chk.cancel();
   return settleCheck(s, 'unknown', opts);
 }
@@ -758,7 +785,10 @@ async function flushHeld() {
   const send = heldResend(h, owner(), await pageAlive(h.page));
   if (!send) return heldRec.del(h.id);
   try {
-    const r = await api(withBuild('/api/result', send.build), { ...send.body, ...(token ? {} : { guest: guestSeed() }) }, { quiet: true });
+    // (registered like report()'s, so a record that is still being flushed when the first puzzle displaces it waits)
+    const req = api(withBuild('/api/result', send.build), { ...send.body, ...(token ? {} : { guest: guestSeed() }) }, { quiet: true });
+    uploading.set(h.id, req); req.catch(() => {}).finally(() => { if (uploading.get(h.id) === req) uploading.delete(h.id); });
+    const r = await req;
     if (r?.token) setToken(r.token);
     heldRec.del(h.id);
   } catch {}
@@ -782,22 +812,27 @@ const defenderName = (po) => (po.engine === 'syntaks' && !po.fallback ? 'Syntaks
 // so only Syntaks's defence is trusted for rating; a win against Tiltak is an unrated solve. (A proof always counts.)
 const playOnRated = (po) => gameRated(po); // (playon.js: only a game Syntaks defended throughout counts, either way)
 
-function startPlayOn(s, canon, plies, chk, tMove) {
+// proven: the move is already proven to win (a proven play-out: playon.js winRated / lossRated); chk is then null.
+// proofPlies: that proof's length if known (the cap covers it: provenCap); unknown, it's measured now (proofLength).
+function startPlayOn(s, canon, plies, chk, tMove, proven = false, proofPlies) {
   const hadMs = s.decidedMs != null, logged = s.log.length, left = pliesLeft();
-  logMove('miss', canon, tMove); s.decidedMs ??= tMove;
-  s.misses.push({ at: s.moves.length, ptn: canon });
-  const po = s.playOn = { miss: canon, at: s.moves.length, base: plies.slice(0, -1), line: [canon], g: gameAt(plies),
-    mine: 1, cap: capMoves(left), capNote: capNote(left), engine: playOnDefender(), fallback: false, thinking: false, end: null };
+  logMove(proven ? 'slow' : 'miss', canon, tMove); s.decidedMs ??= tMove;
+  if (!proven) s.misses.push({ at: s.moves.length, ptn: canon }); // (a proven play-out's move is a miss only if it fails)
+  chk ||= { final: new Promise(() => {}), cancel() {} }; // nothing left to check
+  const po = s.playOn = { miss: canon, at: s.moves.length, base: plies.slice(0, -1), line: [canon], g: gameAt(plies), proven,
+    mine: 1, cap: capMoves(left), capNote: capNote(left), left, proofPlies: null, key: provenKey(canon), engine: playOnDefender(), fallback: false, thinking: false, end: null };
+  if (proven) setProofLength(s, po, proofPlies);
   s.checkPending = { miss: canon, at: s.moves.length, key: provenKey(canon), chk, hadMs, logLen: s.log.length, playOn: po,
     fastest: s.node === 'win' ? finisher(s.g) : Object.keys(s.node)[0], // the puzzle's own move here, for the solved card
     logEntry: s.log.length > logged ? s.log.at(-1) : null, flags: { hinted: s.hinted } };
-  heldRec.set({ id: s.p.id, ms: tMove });
+  // (a page that dies mid-game: an unrated miss, flushHeld; none once the result is in, e.g. a proven move after a miss)
+  if (!s.resultSent) heldRec.set({ id: s.p.id, ms: tMove });
   if (store.get('next', null)?.puzzle?.id === s.p.id) store.del('next');
   chk.final.then((v) => {
     const c = s.checkPending;
     if (c?.chk !== chk) return;
     if (c.playOn.end) return settleCheck(s, v); // (only after 'noengine': a lost game stops the check)
-    if (v === 'wins') endPlayOn(s, 'proved'); else c.final = v; // still playing: only a proof ends the game
+    if (v === 'wins') makeProven(s, po); else c.final = v; // a proof makes it a proven play-out; anything else waits
   });
   po.local = po.engine === 'syntaks' && syntaks.supports(s.p.size, s.p.komi || 0);
   if (po.local) syntaks.load(); // the in-browser engine, fetched on first use (crux answers meanwhile)
@@ -808,6 +843,60 @@ function startPlayOn(s, canon, plies, chk, tMove) {
   s.pendingHint = s.pendingSolution = false; // pressed during the quick check: not meant for after the game
   report(false, s, s, { ms: tMove }); // held until the game (and the check) settle
   defenderTurn(s, po);
+}
+
+// A timeout that counts only time the page is visible (as checkStill's deadline does): { done, cancel }.
+function visibleTimeout(ms) {
+  let t, left = ms, from = performance.now(), finish;
+  const done = new Promise((resolve) => {
+    const vis = () => { const now = performance.now(); if (document.hidden) left -= now - from; from = now; };
+    const tick = () => {
+      const now = performance.now(); if (!document.hidden) left -= now - from; from = now;
+      if (left <= 0) return finish(); t = setTimeout(tick, Math.max(left, 1e3));
+    };
+    finish = () => { clearTimeout(t); document.removeEventListener('visibilitychange', vis); resolve(); };
+    document.addEventListener('visibilitychange', vis);
+    t = setTimeout(tick, ms);
+  });
+  return { done, cancel: () => finish() };
+}
+
+// The check proved the move wins in the middle of the game. Against Syntaks it goes on as a proven play-out (to a road;
+// the win always counts; failing it, giving up, the solution or leaving is a rated miss once Syntaks has defended and
+// moved, the page going away isn't: lossRated), its cap raised to cover the proof if need be. Against Tiltak (from the
+// start, or after Syntaks dropped out) there's no proven play-out: it ends as a solve now.
+function makeProven(s, po) {
+  const c = s.checkPending;
+  if (po.proven || po.end || c?.playOn !== po) return;
+  if (!provenPlayOut(po.engine) || po.fallback) return endPlayOn(s, 'proved');
+  po.proven = po.provedLate = true; c.final = 'wins';
+  (s.proven ||= new Map()).set(c.key, 'wins');
+  if (c.logEntry) c.logEntry.k = 'slow';
+  const i = s.misses.findIndex((m) => m.ptn === po.miss && m.at === po.at);
+  if (i >= 0) s.misses.splice(i, 1);
+  const plies = c.chk.info?.plies;
+  if (Number.isFinite(plies)) (s.proofPlies ||= new Map()).set(c.key, plies); // (a retry of this move uses it)
+  setProofLength(s, po, plies);
+  if (S === s) renderAll();
+}
+// A proven play-out's cap covers its proof (playon.js provenCap; never lower than the cap already shown). A length not
+// known yet is measured in the engine worker; until it is (or if it can't be), running out of moves is unrated.
+function setProofLength(s, po, plies) {
+  if (Number.isFinite(plies)) {
+    po.proofPlies = plies;
+    po.cap = provenCap(po.left, plies, po.cap); po.capNote = provenCapNote(po.left, plies);
+    if (S === s) renderAll();
+    return;
+  }
+  if (plies === null) return; // measured, but not measurable: stays unknown
+  // (po.lengthP while it's measured: at the cap the game waits for it, playOnMove; a result is kept for a retry)
+  const lp = po.lengthP = engine.proofLength({ ...enginePos([...po.base, po.miss]), attacker: s.solver, budget: 1e5 }).then((r) => {
+    if (po.lengthP === lp) po.lengthP = null;
+    if (!r) return; // superseded or stopped (another puzzle): not measured
+    (s.proofPlies ||= new Map()).set(po.key, Number.isFinite(r.plies) ? r.plies : null);
+    if (S !== s || s.playOn !== po || po.end) return;
+    if (Number.isFinite(r.plies)) setProofLength(s, po, r.plies);
+  }, () => { if (po.lengthP === lp) po.lengthP = null; });
 }
 
 // Syntaks's reply. It runs in the browser (syntaks.js, loaded when play-on starts; 1.5 s a reply). Until it has loaded,
@@ -851,9 +940,11 @@ async function defenderTurn(s, po) {
     r = await syntaksReply(s, po, tps, komi, live);
     if (!live()) return;
     mv = r && legalMove(po.g, r.move);
+    // Syntaks dropped out of a proven play-out: no playing it out against Tiltak; the proven move is the solve.
+    if (!mv && po.proven) { po.thinking = false; return endPlayOn(s, 'proved'); }
     if (!mv) { po.fallback = true; po.fallbackAt = po.mine; r = null; renderAll(); }
     // Syntaks's search sees a forced road (or flat win) for you: it resigns. (Its answer is in: not overdue.)
-    else if (resigns(r.mate, s.solver)) { po.thinking = false; return endPlayOn(s, 'resign'); }
+    else if (mayResign(po) && resigns(r.mate, s.solver)) { po.thinking = false; return endPlayOn(s, 'resign'); }
   }
   if (!mv && tiltak.supports(s.p.size, komi)) {
     // (a worker that never answers mustn't stall the game: 6 s from when it's up (a cold start, fetching and compiling
@@ -890,7 +981,23 @@ async function playOnMove(ptn) {
   logMove('po', canon);
   const end = ending(po.g.result(), s.solver);
   if (end) return endPlayOn(s, end);
-  if (po.mine >= po.cap) return endPlayOn(s, 'out');
+  if (po.mine >= po.cap) {
+    // Out of moves, unless what's still being worked out would raise the cap: the proof's length (proven) or the
+    // proof itself (unproven, Syntaks). Wait for it (moves blocked; Give up, Solution and leaving still work, and the
+    // wait isn't the defender being overdue), then go on if the cap rose.
+    const c = s.checkPending;
+    const why = capWait(po, { lengthPending: !!po.lengthP, checkLive: c?.playOn === po && c.final === undefined });
+    if (why) {
+      po.waiting = why; s.busy = true; await board.ui({ disableBoard: true }); renderAll();
+      const timeout = visibleTimeout(CAP_WAIT_MS[why]); // (a locked phone freezes the check, so it freezes this too)
+      await Promise.race([why === 'length' ? po.lengthP : c.chk.final, timeout.done]);
+      timeout.cancel();
+      await Promise.resolve(); // (the check's own handler, makeProven, runs first)
+      if (S !== s || s.playOn !== po || po.end) return;
+      po.waiting = null;
+    }
+    if (po.mine >= po.cap) return endPlayOn(s, 'out');
+  }
   defenderTurn(s, po);
 }
 // Put the board back to the game as played (after a refused move).
@@ -915,15 +1022,16 @@ function endPlayOn(s, kind, opts) {
     s.playOn = null; s.loadedKey = null;
     po.line.forEach((m, j) => { s.g.play(m); s.moves.push({ ptn: m, me: j % 2 === 0, po: j > 0 }); s.snaps.push(s.g.toTPS()); });
     if (c?.playOn === po) {
-      c.flags.playOn = { how: kind, engine: defenderName(po), unrated: !winRated(po, kind), why: unratedWhy(po) };
+      c.flags.playOn = { how: kind, engine: defenderName(po), unrated: !winRated(po, kind), why: unratedWhy(po), proven: !!po.proven };
       settleCheck(s, 'wins', opts); c.chk.cancel();
     }
     return;
   }
   s.playOn = null;
   s.status = 'retry';
+  if (po.proven) s.misses.push({ at: po.at, ptn: po.miss }); // a proven play-out not finished: a miss on the card
   // byYou: the last ply was the player's (line[0] is theirs), e.g. a move that completed only the defender's road
-  s.refutation = { miss: po.miss, kind: 'playon', how: kind, n: po.mine, engine: defenderName(po),
+  s.refutation = { miss: po.miss, kind: 'playon', how: kind, n: po.mine, engine: defenderName(po), proven: !!po.proven,
     byYou: po.line.length % 2 === 1 };
   if (kind === 'noengine') s.refutation = { miss: po.miss, kind: 'unknown' };
   // A lost game (Syntaks held, out of moves, Give up, left) is final: the check is stopped and the miss sent now, rated
@@ -931,10 +1039,10 @@ function endPlayOn(s, kind, opts) {
   // proof can make it a solve, but a miss is unrated whatever it says.
   let sent = null;
   if (c?.playOn === po) {
-    if (kind !== 'noengine') { c.chk.cancel(); sent = settleCheck(s, 'unknown', opts); }
+    if (kind !== 'noengine' || po.proven) { c.chk.cancel(); sent = settleCheck(s, 'unknown', opts); } // (proven: nothing to wait for)
     else if (c.final) sent = settleCheck(s, c.final, opts);
   }
-  if (kind === 'left') { s.needsRestore = true; return sent; } // the board is put back only if this puzzle stays (restoreLeft)
+  if (kind === 'left' || kind === 'unload') { s.needsRestore = true; return sent; } // the board is put back only if this puzzle stays (restoreLeft)
   s.busy = true;
   if (S === s) { renderAll(); restoreBoard().then(() => { if (S !== s) return; s.busy = false; renderAll(); flushHint(s); }); }
   return sent;
@@ -1223,7 +1331,8 @@ const overNote = (r) => `Game over here: ${!r.winner ? 'a draw' : r.dragon ? `${
 // A win outside the puzzle's line: proven by the search, or won on the board against an engine (play on).
 const slowWinText = (w) => {
   const m = esc(w.move), po = w.playOn;
-  return po?.how === 'win' ? `${m} won against ${po.engine}, so it counts as solved`
+  return po?.proven && po.how !== 'proved' ? `${m} forces a win, and you played it out against ${po.engine}, so it counts as solved`
+    : po?.how === 'win' ? `${m} won against ${po.engine}, so it counts as solved`
     : po?.how === 'resign' ? `${m} won: Syntaks resigned, seeing a forced win for you, so it counts as solved`
     : `${m} forces a win too, so it counts as solved`;
 };
@@ -1299,6 +1408,8 @@ const playOnUnratedText = (u) => u.why === 'tiltak' ? 'Not rated: Tiltak defende
   : u.why === 'nomove' ? `Not rated: ${u.engine} hadn’t moved yet.`
   : u.why === 'stalled' ? 'Not rated: Syntaks didn’t answer in time.'
   : u.why === 'noengine' ? 'Not rated: no engine could answer.'
+  : u.why === 'proven-length' ? `Not rated: ${esc(S.unchecked)} is proven to win, and its length wasn’t known in time to set the move limit.`
+  : u.why === 'proven-unload' ? `Not rated: ${esc(S.unchecked)} is proven to win, and the page closed during the play-out.`
   : `Not rated: Syntaks dropped out ${u.at > 1 ? `after ${u.at} moves` : 'at the start'}, so Tiltak defended.`;
 // The feedback card (a live region). Returns whether Next puzzle should take keyboard focus once it is drawn.
 function renderFeedback(mood, delta) {
@@ -1336,8 +1447,16 @@ function renderFeedback(mood, delta) {
     const po = S.playOn, E = defenderName(po), m = esc(po.miss);
     {
       const n = po.thinking ? po.mine : po.mine + 1;
-      fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>Play it out</h2>
-        <p>We couldn’t check ${m} in time, so show it on the board: ${E} defends. Win within <span class="cap" title="${esc(po.capNote)}">${po.cap}</span> of your moves (counting ${m}) and it counts as solved. If ${E} holds, it’s a miss.${po.engine !== 'syntaks' ? ' Against Tiltak, how the game ends doesn’t count toward your rating (a proof that your move wins still does).' : ''}${po.fallback && po.engine === 'syntaks' ? '<span class="po-line">Syntaks is unreachable; Tiltak, in your browser, defends now, so how this game ends doesn’t count toward your rating (a proof that your move wins still does).</span>' : ''}<span class="po-line po-status">Move ${n} of ${po.cap}${po.thinking ? ` · ${E} is thinking…` : ''}</span></p></div>
+      const cap = `<span class="cap" title="${esc(po.capNote)}">${po.cap}</span>`;
+      // at the cap, waiting for something that could give more moves (playOnMove)
+      const waitLine = po.waiting === 'length' ? `Out of moves at ${po.cap} unless the proven win is longer: measuring it…`
+        : po.waiting === 'proof' ? `Out of moves at ${po.cap} unless ${m} is proven to win: still checking…` : '';
+      // A proven play-out (Syntaks only): the move wins, and the game shows it. A hold is a rated miss (lossRated).
+      if (po.proven) fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>${po.provedLate ? 'Proved: play it out' : 'That wins: play it out'}</h2>
+        <p>${m} forces a win. Now show it on the board: ${E} defends to the end. Make a road (or win on flats) within ${cap} of your moves, counting ${m}, and it counts as solved. If ${E} holds${gameRated(po) ? ', or you give up or view the solution' : ''}, it’s a miss.<span class="po-line po-status">${waitLine || `Move ${n} of ${po.cap}${po.thinking ? ` · ${E} is thinking…` : ''}`}</span></p></div>
+        <div class="actions"><button data-act="giveup"${performance.now() - po.t0 < 1500 ? ' disabled' : ''}>Give up</button><button data-act="solution" title="Give up and view the solution">Solution</button></div>`;
+      else fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>Play it out</h2>
+        <p>We couldn’t check ${m} in time, so show it on the board: ${E} defends. Win within <span class="cap" title="${esc(po.capNote)}">${po.cap}</span> of your moves (counting ${m}) and it counts as solved. If ${E} holds, it’s a miss.${po.engine !== 'syntaks' ? ' Against Tiltak, how the game ends doesn’t count toward your rating (a proof that your move wins still does).' : ''}${po.fallback && po.engine === 'syntaks' ? '<span class="po-line">Syntaks is unreachable; Tiltak, in your browser, defends now, so how this game ends doesn’t count toward your rating (a proof that your move wins still does).</span>' : ''}<span class="po-line po-status">${waitLine || `Move ${n} of ${po.cap}${po.thinking ? ` · ${E} is thinking…` : ''}`}</span></p></div>
         <div class="actions"><button data-act="giveup"${performance.now() - po.t0 < 1500 ? ' disabled' : ''}>Give up</button><button data-act="solution" title="Give up and view the solution">Solution</button></div>`;
     }
   } else if (S.status === 'solved') {
@@ -1351,9 +1470,14 @@ function renderFeedback(mood, delta) {
       <div class="actions"><button class="primary" data-act="next">Next puzzle</button></div>`;
   } else if (S.status === 'retry' && S.refutation?.kind === 'playon') {
     const r = S.refutation, E = r.engine, mv = `${r.n} move${r.n === 1 ? '' : 's'}`;
-    const h2 = r.how === 'gaveup' || r.how === 'left' ? 'You gave up' : r.how === 'out' ? 'Out of moves'
+    const gaveUp = r.how === 'gaveup' || r.how === 'left' || r.how === 'unload';
+    const h2 = gaveUp ? 'You gave up' : r.how === 'out' ? 'Out of moves'
       : r.how === 'road' ? (r.byYou ? `Your move completed ${E}’s road` : `${E} made a road`) : `${E} held`;
-    const lead = r.how === 'gaveup' || r.how === 'left' ? `You gave up on ${esc(r.miss)} after ${mv}` : `${E} defended ${esc(r.miss)} for ${mv}`;
+    const lead = gaveUp ? `You gave up on ${esc(r.miss)} after ${mv}`
+      : r.proven ? { unfinished: `${esc(r.miss)} wins, but you didn’t finish it in ${mv}: ${E} held`,
+        escaped: `${esc(r.miss)} wins, but ${E} got out of it after ${mv}`,
+        'own-road': `${esc(r.miss)} wins, but your move ${r.n} completed ${E}’s road` }[provenLossLead(r.how, r.byYou)]
+      : `${E} defended ${esc(r.miss)} for ${mv}`;
     // (the server's own answer decides "counts": a repeat attempt or an out-of-date page is recorded unrated: missNote)
     const rated = !S.checkPending && !S.notCounted && !S.casualWhy && S.serverRated !== false;
     const rest = rated ? ', so it counts as a miss. Keep trying or view the solution.'

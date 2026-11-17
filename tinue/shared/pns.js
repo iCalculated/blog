@@ -18,7 +18,7 @@
 //   winMove(g, color) / threatMoves(g) / defenderMoves(g, attacker) / TinueSearch (low level)
 // result is 'proved' | 'disproved' (no Tak-threat tinue) | 'unknown' (budget). maxNodes counts df-pn
 // MID calls; one node costs roughly 0.2–0.5 ms CPU on 6x6 midgames.
-import { colorOf, typeOf, FLAT, WALL, CAP, DIRS } from './tak.js?v=1794889144';
+import { colorOf, typeOf, FLAT, WALL, CAP, DIRS } from './tak.js?v=1794894404';
 
 const INF = 1e9;
 const DIR_LIST = ['+', '-', '>', '<'];
@@ -542,7 +542,9 @@ export class TinueSearch {
 // transpositions and cycles can't poison the depths the way a memoised DFS with an on-path cut can.
 // An AND node whose pruned move list is empty (no defender move touches the attacker's win) has
 // depth 2: any reply, then the win.
-function proofTreeLine(s) {
+// The proof's length (plies, the attacker taking its fastest proven move, the defender its longest-lasting reply) and
+// that line. Exported for play-on's proven play-out (its move cap must cover the proof).
+export function proofTreeLine(s) {
   const g = s.g, nodes = new Map(), order = [];
   // iterative DFS over proven edges (the graph can be deep; avoid recursion limits)
   const open = (frames) => {

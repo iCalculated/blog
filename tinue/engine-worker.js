@@ -3,8 +3,8 @@
 //   refute:  why was a move wrong? Find the opponent's reply after which the attack fails.
 //   analyze: does the side to move have a forced win (road or flats), and how?
 // It's a forced-win prover, not an evaluator: it answers "win in N" or "nothing forced within N".
-import { Game, Solver } from './shared/tak.js?v=1794889144';
-import { shortestTinue, TinueSearch } from './shared/pns.js?v=1794889144';
+import { Game, Solver } from './shared/tak.js?v=1794894404';
+import { shortestTinue, TinueSearch, proofTreeLine } from './shared/pns.js?v=1794894404';
 
 function gameFrom({ size, komi, tps, plies }) {
   const g = tps ? Game.fromTPS(tps, komi || 0) : Object.assign(new Game(size), { komi: komi || 0 });
@@ -73,7 +73,8 @@ self.onmessage = ({ data }) => {
       // attacker move or a flat count is invisible to it.
       const g = gameFrom(data);
       if (g.result()) { self.postMessage({ id, kind: 'no' }); return; }
-      const run = (n, full) => { const s = new TinueSearch(g.clone(), { maxNodes: n, fullDefense: full }); s.att = data.attacker; try { return s.solve(Infinity); } catch (e) { if (e.message === 'budget') return null; throw e; } };
+      let proof = null; // the search that proved it, for the proof's length (proofTreeLine)
+      const run = (n, full) => { const s = new TinueSearch(g.clone(), { maxNodes: n, fullDefense: full }); s.att = data.attacker; try { const ok = s.solve(Infinity); if (ok && full) proof = s; return ok; } catch (e) { if (e.message === 'budget') return null; throw e; } };
       // Each budget pair: threat-only first, then the proof with every defender reply. A search that runs out of
       // budget proves nothing, so it moves on to the next pair; only a finished search says 'wins' or 'no'.
       // The search is deterministic, so a stage that finished isn't run again and a full proof is only retried
@@ -93,7 +94,20 @@ self.onmessage = ({ data }) => {
         if (full != null) { kind = full ? 'wins' : 'no'; break; }
         fullOver = b;
       }
-      self.postMessage({ id, kind });
+      // A proof says how long it is (plies from the position after the move, defender to move), so a proven play-out's
+      // move cap can cover it.
+      let plies = null;
+      if (kind === 'wins' && proof) try { plies = proofTreeLine(proof).plies; } catch { plies = null; }
+      self.postMessage({ id, kind, plies: Number.isFinite(plies) ? plies : null });
+    } else if (type === 'length') {
+      // A move already known to win (a precomputed alt, or proven earlier): how long its proof is, as for 'still'.
+      const g = gameFrom(data);
+      let plies = null;
+      if (!g.result()) {
+        const s = new TinueSearch(g.clone(), { maxNodes: data.budget || 1e5, fullDefense: false }); s.att = data.attacker;
+        try { if (s.solve(Infinity)) plies = proofTreeLine(s).plies; } catch (e) { if (e.message !== 'budget') throw e; }
+      }
+      self.postMessage({ id, kind: 'length', plies: Number.isFinite(plies) ? plies : null });
     } else if (type === 'refute') {
       // Position after the player's wrong move; the defender is to move.
       const g = gameFrom(data);

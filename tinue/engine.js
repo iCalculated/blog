@@ -49,6 +49,7 @@ export const refute = (pos, ms = 8000) => Promise.race([ask('refute', { ...pos, 
 // because the search keeps every node (~28 KB per full-defense node: 25k nodes is ~700 MB), and the clock only runs
 // while the page is visible (a locked phone freezes the search, not the deadline).
 export function checkStill(pos, { quickMs = 2500, maxMs = 60e3, budgets = [[3e4, 2.5e4], [1e5, 2.5e4]] } = {}) {
+  const info = { plies: undefined };
   const v = import.meta.url.match(/\?v=\d+/)?.[0] || '';
   const w = new Worker(new URL('./engine-worker.js' + v, import.meta.url), { type: 'module' });
   let end;
@@ -66,12 +67,15 @@ export function checkStill(pos, { quickMs = 2500, maxMs = 60e3, budgets = [[3e4,
     const vis = () => { const now = performance.now(); if (document.hidden) left -= now - from; from = now; };
     document.addEventListener('visibilitychange', vis);
     end = (kind) => { clearTimeout(t); document.removeEventListener('visibilitychange', vis); w.terminate(); resolve(kind); end = () => {}; };
-    w.onmessage = ({ data }) => end(data.kind === 'wins' || data.kind === 'no' ? data.kind : 'unknown');
+    w.onmessage = ({ data }) => { if (data.kind === 'wins') info.plies = data.plies ?? null; end(data.kind === 'wins' || data.kind === 'no' ? data.kind : 'unknown'); };
     w.onerror = () => end('unknown');
     w.postMessage({ id: 1, type: 'still', ...pos, budgets });
   });
   const quick = Promise.race([final, new Promise((r) => setTimeout(r, quickMs, 'pending'))]);
-  return { quick, final, cancel: () => end('unknown') };
+  // info.plies: a proof's length (plies after the move), set before 'wins' resolves; null if it couldn't be measured
+  return { quick, final, cancel: () => end('unknown'), info };
 }
 export const analyze = (pos) => ask('analyze', pos);
-export const interrupt = () => { stop('refute'); stop('analyze'); };
+// How long a known win's proof is (plies after the move, defender to move), or null: { plies } | null if superseded.
+export const proofLength = (pos) => ask('length', pos);
+export const interrupt = () => { stop('refute'); stop('analyze'); stop('length'); };
