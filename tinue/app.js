@@ -1,14 +1,14 @@
-import { Game } from './shared/tak.js?v=1794896311';
-import { unplayedPlies } from './shared/ptn.js?v=1794896311';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794896311';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794896311';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1794896311';
-import * as engine from './engine.js?v=1794896311';
-import * as tiltak from './tiltak.js?v=1794896311';
-import * as syntaks from './syntaks.js?v=1794896311';
-import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794896311';
-import { createNext } from './next.js?v=1794896311';
-import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, mayResign, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1794896311';
+import { Game } from './shared/tak.js?v=1794901217';
+import { unplayedPlies } from './shared/ptn.js?v=1794901217';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794901217';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794901217';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1794901217';
+import * as engine from './engine.js?v=1794901217';
+import * as tiltak from './tiltak.js?v=1794901217';
+import * as syntaks from './syntaks.js?v=1794901217';
+import { api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794901217';
+import { createNext } from './next.js?v=1794901217';
+import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, mayResign, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1794901217';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -113,7 +113,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794896311')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794901217')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
