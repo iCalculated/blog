@@ -16,12 +16,18 @@
 <link rel="manifest" href="manifest.webmanifest">
 <script>/* pin the icon and manifest addresses now: the page address later becomes puzzle/<id>, where relative links would 404 */
 for (const l of document.querySelectorAll('link[rel="apple-touch-icon"], link[rel="manifest"]')) l.href = l.href;</script>
-<script>/* ?board=ninja: connect to ptn.ninja now (the iframe itself starts below, once the stylesheets are in) */
-if (/(^|&)board=ninja(&|$)/.test(location.search.slice(1))) document.head.append(Object.assign(document.createElement('link'), { rel: 'preconnect', href: 'https://ptn.ninja' }));</script>
+<script>/* PTN Ninja's board, by ?board= (which wins) or the Board style setting (settings.js boardFrom makes the same choice):
+connect to ptn.ninja now (the iframe itself starts below, once the stylesheets are in) */
+window.__tinueNinja = (function () {
+  var q = new URLSearchParams(location.search);
+  if (q.has('board')) return q.get('board') === 'ninja';
+  try { var p = JSON.parse(localStorage.getItem('tinue.prefs')); return !!p && p.board === 'ninja'; } catch (e) { return false; }
+})();
+if (window.__tinueNinja) document.head.append(Object.assign(document.createElement('link'), { rel: 'preconnect', href: 'https://ptn.ninja' }));</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="board.css?v=1795030704">
-<link rel="stylesheet" href="style.css?v=1795030704">
+<link rel="stylesheet" href="board.css?v=1795035273">
+<link rel="stylesheet" href="style.css?v=1795035273">
 <style>.booting main, .booting .credits { visibility: hidden; }</style>
 <script>setTimeout(() => document.documentElement.classList.remove("booting"), 2000);</script>
 <meta name="googlebot" content="noindex"><meta name="bingbot" content="noindex">
@@ -44,9 +50,9 @@ if (/(^|&)board=ninja(&|$)/.test(location.search.slice(1))) document.head.append
   <section class="board-col">
     <div class="board-wrap" id="board-wrap"><div id="board" class="board-host"></div></div>
     <script>
-      // ?board=ninja: start PTN Ninja right away, while tinue's own modules are still loading (ninja.js takes this
-      // iframe over and shows it once the puzzle is drawn). Without the flag this does nothing and fetches nothing.
-      if (/(^|&)board=ninja(&|$)/.test(location.search.slice(1))) {
+      // PTN Ninja's board (see the head): start it right away, while tinue's own modules are still loading (ninja.js
+      // takes this iframe over and shows it once the puzzle is drawn). Otherwise this does nothing and fetches nothing.
+      if (window.__tinueNinja) {
         const b = document.getElementById('board'), f = document.createElement('iframe');
         b.style.cssText = 'background:#262421;border-radius:var(--corner,6px)'; // placeholder until it's shown
         f.style.cssText = 'display:block;width:100%;aspect-ratio:1/1.3;border:0;opacity:0';
@@ -57,6 +63,7 @@ if (/(^|&)board=ninja(&|$)/.test(location.search.slice(1))) document.head.append
         b.append(f);
       }
     </script>
+    <div id="confirm-bar" class="confirm-bar idle" hidden><span class="msg" id="confirm-msg"></span><button type="button" id="confirm-no">Cancel</button><button type="button" class="primary" id="confirm-yes">Confirm</button></div>
     <form id="ptn-form" class="ptn-form"><input id="ptn-in" class="ptn-in" aria-label="Type a move" placeholder="Type a move, e.g. c3 or 2a1>11" autocomplete="off" autocapitalize="off" spellcheck="false" disabled></form>
   </section>
 
@@ -82,6 +89,18 @@ if (/(^|&)board=ninja(&|$)/.test(location.search.slice(1))) document.head.append
           <select id="size"><option value="6">6×6</option></select>
         </label>
       </div>
+      <div class="settings">
+        <h2>Settings</h2>
+        <div class="row">
+          <label class="field"><span>Board style</span>
+            <select id="set-board"><option value="tinue">tinue</option><option value="ninja">PTN Ninja</option></select>
+          </label>
+          <label class="field"><span>Confirm moves</span>
+            <select id="set-confirm"><option value="off">Off</option><option value="on">On</option></select>
+          </label>
+        </div>
+        <p class="theme-desc hidden" id="settings-note"></p>
+      </div>
     </div>
   </aside>
 </main>
@@ -95,7 +114,7 @@ if (/(^|&)board=ninja(&|$)/.test(location.search.slice(1))) document.head.append
   <p>tinue is free software under the <a href="LICENSE.txt">GNU GPL v3</a>. <a href="https://github.com/iCalculated/blog/tree/main/tinue">Source code</a>.</p>
 </footer>
 
-<script src="config.js?v=1795030704"></script>
-<script type="module" src="app.js?v=1795030704"></script>
+<script src="config.js?v=1795035273"></script>
+<script type="module" src="app.js?v=1795035273"></script>
 </body>
 </html>

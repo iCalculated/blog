@@ -132,6 +132,18 @@ a.tag:hover { border-color: var(--accent); color: var(--fg-hi); }
 .controls { display: flex; flex-direction: column; gap: 12px; }
 .controls .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .theme-desc { margin: -4px 0 0; color: var(--muted); font-size: var(--fs-xs); }
+/* Settings (Board style, Confirm moves): kept in this browser with the filters above */
+.settings { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+.settings h2 { margin: 0; font-size: var(--fs-xs); font-weight: 600; color: var(--fg); }
+.settings .theme-desc { margin: -2px 0 0; }
+/* Confirm moves: a held move's bar under the board. Its room is kept while the setting is on (idle: invisible, and
+   takes no taps), so nothing moves when a move is held; on a phone it sits under the thumb and off the board. */
+.confirm-bar { display: flex; align-items: center; gap: 8px; margin-top: 8px; min-height: 44px; }
+.confirm-bar[hidden] { display: none; }
+.confirm-bar.idle { visibility: hidden; }
+.confirm-bar .msg { flex: 1; min-width: 0; color: var(--fg-hi); font-size: var(--fs-sm); }
+.confirm-bar button { height: 44px; min-width: 92px; }
+.board-wrap.pending { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: var(--r-panel); }
 
 .session { min-height: 64px; display: flex; flex-direction: column; gap: 10px; }
 .session .label { font-size: var(--fs-xs); color: var(--muted); }

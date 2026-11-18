@@ -1,8 +1,8 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795030704';
-import { parsePTN } from './shared/ptn.js?v=1795030704';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795035273';
+import { parsePTN } from './shared/ptn.js?v=1795035273';
 
 const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
@@ -180,6 +180,9 @@ export class Board {
   // Another puzzle: drop whatever input was under way on the last one (stones in hand, a number key kept for when input
   // opens (_flushKey), a touch or long press in progress), so none of it lands on the new position.
   forget() { this.sel = null; this.pendKey = null; this.gen++; this.forgotAt = performance.now(); this._render(false); }
+  // A touch under way ends here without a tap or a long press (app.js takes the taps while a move is held for
+  // confirmation: settings.js holdTaps). The position and anything in hand stay.
+  dropGesture() { this.gen++; }
   // A new puzzle's first moments (app.js start: busy.js 'board'): no tap, long press, tray pick or Enter at all, not just
   // no finished move. A stack lifted or a cap picked then (the second tap of a double tap on Next, landing where the
   // dock was) stayed in hand and turned the player's first deliberate tap into another move, a miss. A number key is

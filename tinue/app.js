@@ -1,16 +1,17 @@
-import { Game } from './shared/tak.js?v=1795030704';
-import { unplayedPlies } from './shared/ptn.js?v=1795030704';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795030704';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795030704';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795030704';
-import * as engine from './engine.js?v=1795030704';
-import * as tiltak from './tiltak.js?v=1795030704';
-import * as syntaks from './syntaks.js?v=1795030704';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795030704';
-import { createNext } from './next.js?v=1795030704';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795030704';
-import { createOutbox } from './outbox.js?v=1795030704';
-import { capMoves, capNote, defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1795030704';
+import { Game } from './shared/tak.js?v=1795035273';
+import { unplayedPlies } from './shared/ptn.js?v=1795035273';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795035273';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795035273';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795035273';
+import * as engine from './engine.js?v=1795035273';
+import * as tiltak from './tiltak.js?v=1795035273';
+import * as syntaks from './syntaks.js?v=1795035273';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795035273';
+import { createNext } from './next.js?v=1795035273';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795035273';
+import { createOutbox } from './outbox.js?v=1795035273';
+import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795035273';
+import { capMoves, capNote, defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1795035273';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -135,10 +136,11 @@ const guestId = () => {
   return store.get('gid', null) === id ? id : null;
 };
 
-// ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
-const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795030704')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
-  : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
+// PTN Ninja in an iframe instead of tinue's board (same API), by the Board style setting or ?board=ninja (which wins:
+// settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
+const NINJA = boardFrom(location.search, prefs) === 'ninja';
+const board = NINJA ? new (await import('./ninja.js?v=1795035273')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
+  : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
 onNotice(() => renderAll()); // api() shows and clears the server notice
@@ -295,12 +297,12 @@ function reloadNow() {
   else reloadInto(S?.p?.id, S?.theme);
 }
 // A full page load opening puzzle id (or the start). theme: the Theme its result counts under (see start()).
-function reloadInto(id, theme = '') {
+function reloadInto(id, theme = '', search = location.search) {
   try {
     sessionStorage.setItem('tinue.reloadedFor', JSON.stringify({ v: newBuild, at: Date.now() }));
     if (id) sessionStorage.setItem('tinue.reloadTheme', JSON.stringify({ id, theme: theme || '' }));
   } catch {}
-  history.replaceState(null, '', APP + location.search + (id ? '#/puzzle/' + encodeURIComponent(id) : '#/'));
+  history.replaceState(null, '', APP + search + (id ? '#/puzzle/' + encodeURIComponent(id) : '#/'));
   location.reload();
 }
 const reloadTheme = (() => { try { const t = JSON.parse(sessionStorage.getItem('tinue.reloadTheme')); sessionStorage.removeItem('tinue.reloadTheme'); return t; } catch { return null; } })();
@@ -333,10 +335,13 @@ async function loadNext({ reload = false } = {}) {
   // Between puzzles, a newer build (as last checked: Next doesn't wait on the network) reloads into this one. Not while
   // a result is held or still uploading (the reload would cut it off), unless the player pressed Reload: then an
   // upload in flight gets 3 s, and a held one is sent at the reload anyway (flushHeld).
-  if (newBuild && (reload || (!leaving && !heldRec.get() && !reporting.size))) {
+  // A Board style switched mid-puzzle (boardSwitch) reloads here too, when nothing is held or still uploading (else at
+  // the Next after this one).
+  const switching = switchAtNext({ wanted: boardSwitch, leaving, held: !!heldRec.get(), uploading: reporting.size });
+  if ((newBuild && (reload || (!leaving && !heldRec.get() && !reporting.size))) || switching) {
     if (reporting.size) await Promise.race([Promise.allSettled([...reporting]), new Promise((res) => setTimeout(res, 3000))]);
     if (t !== loadSeq) return;
-    reloadInto(puzzle.id, prefs.theme); return;
+    reloadInto(puzzle.id, prefs.theme, switching ? withoutBoardFlag(location.search) : location.search); return;
   }
   showPuzzleURL(puzzle.id);
   start(puzzle, prefs.theme);
@@ -463,6 +468,7 @@ async function showLine(line, idx) {
 async function start(p, theme = '') {
   abandonCheck(S); // leaving a puzzle whose check is still running (any route: Next, a link, a filter change)
   board.forget(); // nothing begun on the last puzzle's board (stones in hand, a held number key, a touch) carries over
+  dropPending(); // a move held on the last puzzle is gone with it (the new position is loaded below)
   engine.interrupt(); tiltak.stop(); anaCtl?.abort(); // nothing from the previous puzzle should still be thinking
   const g = Game.fromTPS(p.tps, p.komi || 0);
   const hist = p.meta?.history || [];
@@ -1436,6 +1442,8 @@ function renderAll(mood) {
   const loading = !!S.placeholder;
   // The render that first draws Next puzzle starts its lock (justEnded): every way to 'solved' renders, so none is missed.
   if (S.status === 'solved' && S.endT0 == null && !loading) S.endT0 = performance.now();
+  // A held move whose puzzle changed under it (a check settled it, the play-out ended, ...): every change renders.
+  if (pend) pendingEvent({ type: 'phase', key: S === pend.s ? phaseKey(S) : null });
   for (const id of ['#feedback', '#moves']) $(id).classList.toggle('is-loading', loading);
   const delta = S.delta != null ? deltaSpan(S.delta) : '';
   const focusNext = renderFeedback(mood, delta);
@@ -1730,6 +1738,84 @@ $('#moves').addEventListener('click', (e) => {
   if (n) viewPly({ first: 0, prev: cur - 1, next: cur + 1, last: total }[n]);
 });
 
+// ---------- confirm moves (Settings) ----------
+// settings.js has the rules. The board shows the held move (it's already played there, and the opponent is to move,
+// so the board takes no more input); the bar under the board says which move, its room kept while the setting is on
+// so nothing moves when it appears, and the board gets a ring. Registered before the Enter = Continue key handler.
+let pend = null; // the held move, with its puzzle state (s)
+function moveIn(ptn) {
+  if (!holds(confirmOn(prefs), S, S && !S.placeholder && tooSoon(S))) return userMove(ptn);
+  pend = { ...pending(ptn, S, performance.now()), s: S };
+  board.ui({ disableBoard: true }); // (PTN Ninja: also hands keyboard focus back to the page, for Enter and Esc)
+  renderPending();
+}
+function renderPending() {
+  const bar = $('#confirm-bar');
+  bar.hidden = !confirmOn(prefs);
+  bar.classList.toggle('idle', !pend);
+  $('#board-wrap').classList.toggle('pending', !!pend);
+  $('#confirm-msg').innerHTML = pend ? `Confirm <b>${esc(pend.ptn)}</b>?` : '';
+}
+// Confirmed: the move goes to the solving flow now, timed now, exactly as an unconfirmed move would have.
+function confirmPending() {
+  const p = pend;
+  pend = null; renderPending();
+  if (!p || S !== p.s) return;
+  board.ui({ disableBoard: false });
+  userMove(p.ptn);
+}
+// Cancelled: the board goes back to the position before the move (as after a refused move); nothing else changed.
+function cancelPending() {
+  const p = pend, s = p?.s;
+  pend = null; renderPending();
+  if (!p || S !== s) return;
+  if (s.playOn && !s.playOn.end) return showPlayOn(s).then(() => { if (S === s && s.playOn && !s.busy && !pend) board.ui({ disableBoard: false }); });
+  else if (s.status === 'play' || s.status === 'retry') return restoreBoard();
+  else if (s.status === 'solved') { s.loadedKey = null; showLine(shownLine(), s.view ?? shownLine().length).then(() => { if (S === s) openExploration(); }); }
+}
+// Enter on a move typed while another is held: the held one is cancelled and, once the board is back, the typed one is
+// played there, to be held in turn (settings.js pendingAct 'replace'). Only ever held, never sent: if anything changed
+// meanwhile (another puzzle, another move, the text edited) or the move wouldn't be held now, the text stays in the box.
+function replacePending(text) {
+  const s = pend?.s;
+  Promise.resolve(cancelPending()).then(() => {
+    if (S !== s || pend || $('#ptn-in').value.trim() !== text) return;
+    if (!holds(confirmOn(prefs), S, S && !S.placeholder && tooSoon(S))) return; // only ever held
+    typedMove();
+  });
+}
+const dropPending = () => { if (pend) { pend = null; renderPending(); } };
+function pendingEvent(ev) {
+  const a = pendingAct(pend, ev, performance.now());
+  if (a === 'confirm') confirmPending(); else if (a === 'cancel') cancelPending(); else if (a === 'replace') replacePending(ev.text);
+  return a;
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) pendingEvent({ type: 'leave' }); });
+$('#confirm-yes').addEventListener('click', () => pendingEvent({ type: 'button', which: 'confirm' }));
+$('#confirm-no').addEventListener('click', () => pendingEvent({ type: 'button', which: 'cancel' }));
+// Taps on tinue's board: its final square confirms, anything else on it cancels (settings.js holdTaps).
+const tapAt = (el) => {
+  const sq = el?.closest?.('.tb-sq');
+  pendingEvent({ type: 'tap', sq: sq && S?.p ? squareName(+sq.dataset.sq, S.p.size) : null });
+};
+holdTaps($('#board'), board, { held: () => pend, tap: tapAt });
+// A tap anywhere else on the page cancels, and does only that (Hint, a move in the list, a link: press again).
+document.addEventListener('click', (e) => {
+  if (!pend || e.target.closest?.('#confirm-bar') || $('#board').contains(e.target)) return;
+  e.stopPropagation(); e.preventDefault();
+  pendingEvent({ type: 'elsewhere' });
+}, true);
+// Enter confirms, Esc cancels, the board's other keys wait (settings.js takesHeldKey says which keys, where).
+window.addEventListener('keydown', (e) => {
+  if (!pend || e.ctrlKey || e.metaKey || e.altKey) return;
+  const t = e.target;
+  const typed = t?.id === 'ptn-in';
+  if (!takesHeldKey({ key: e.key, typed, field: !!t?.closest?.('input, select, textarea, [contenteditable]'),
+    bar: !!t?.closest?.('#confirm-bar'), control: !!t?.closest?.('a, button, summary') && !focusedByPointer(t) })) return;
+  e.preventDefault(); e.stopImmediatePropagation();
+  pendingEvent({ type: 'key', key: e.key, repeat: e.repeat, text: typed ? t.value.trim() : '' }); // (a move typed there: 'replace')
+}, { capture: true });
+
 // ---------- controls ----------
 // buttons inside the feedback card
 $('#feedback').addEventListener('click', async (e) => {
@@ -1750,10 +1836,39 @@ const themeDesc = () => { $('#theme-desc').textContent = prefs.theme && THEMES[p
 $('#difficulty').value = prefs.difficulty;
 // A filter changed with the mouse lets go of focus, or number keys meant for the board would go to it (on Board size,
 // 4–8 even pick a size). Changed from the keyboard, it keeps focus.
-for (const id of ['#difficulty', '#size', '#theme']) $(id).addEventListener('change', (e) => { if (focusedByPointer(e.target)) e.target.blur(); });
+for (const id of ['#difficulty', '#size', '#theme', '#set-board', '#set-confirm']) $(id).addEventListener('change', (e) => { if (focusedByPointer(e.target)) e.target.blur(); });
 $('#difficulty').onchange = (e) => { prefs.difficulty = e.target.value; store.set('prefs', prefs); loadNext(); };
 $('#size').onchange = (e) => { prefs.size = e.target.value; store.set('prefs', prefs); renderFilters(); loadNext(); };
 $('#theme').onchange = (e) => { prefs.theme = e.target.value; store.set('prefs', prefs); themeDesc(); loadNext(); };
+// Settings. Board style: the board is chosen at boot, so a switch reloads (signed in as before: the token is kept in
+// this browser), now if nothing is under way (settings.js switchNow), else when the next puzzle loads (loadNext), so
+// a switch never sends a result or ends a play-out. The reload drops ?board= from the address, or it would win.
+// The select shows the setting; a ?board= link that overrides it says so in the note.
+let boardSwitch = false, unsaved = false;
+const BOARD = NINJA ? 'ninja' : 'tinue', LINK_BOARD = new URLSearchParams(location.search).has('board') ? BOARD : null;
+const showNote = () => {
+  const note = settingsNote({ unsaved, switching: boardSwitch, linkBoard: LINK_BOARD, ninja: NINJA, confirm: confirmOn(prefs) });
+  $('#settings-note').textContent = note;
+  $('#settings-note').classList.toggle('hidden', !note);
+};
+$('#set-board').value = boardFrom('', prefs);
+$('#set-confirm').value = confirmOn(prefs) ? 'on' : 'off';
+$('#set-board').onchange = (e) => {
+  const was = prefs.board;
+  prefs.board = e.target.value; store.set('prefs', prefs);
+  // Not stored (site storage blocked): no switch, the reload would come back on this board and signed out.
+  unsaved = !boardSaved(store.get('prefs', {}), prefs.board);
+  if (unsaved) { if (was === undefined) delete prefs.board; else prefs.board = was; e.target.value = boardFrom('', prefs); boardSwitch = false; return showNote(); }
+  boardSwitch = prefs.board !== BOARD;
+  if (boardSwitch && switchNow(S, reporting.size)) return reloadInto(S && !S.placeholder ? S.p.id : null, S?.theme, withoutBoardFlag(location.search));
+  showNote();
+};
+$('#set-confirm').onchange = (e) => {
+  prefs.confirm = e.target.value === 'on'; store.set('prefs', prefs);
+  if (!prefs.confirm) pendingEvent({ type: 'leave' });
+  renderPending(); showNote();
+};
+renderPending(); showNote();
 // Stepping in half-moves, as in PTN Ninja: h = 2·plies shown, +1 while the next move's squares are only
 // highlighted (Shift+arrow). Plain steps land on whole moves.
 async function navTo(h) {
@@ -1787,7 +1902,7 @@ window.addEventListener('keydown', (e) => {
 // Scroll wheel over the board steps through moves (mouse and trackpad only; a phone's swipe still scrolls the page).
 let wheelAcc = 0;
 $('#board').addEventListener('wheel', (e) => {
-  if (!finePointer.matches || !S || S.placeholder || board.holding || e.ctrlKey) return;
+  if (!finePointer.matches || !S || S.placeholder || board.holding || pend || e.ctrlKey) return;
   e.preventDefault();
   const step = devicePixelRatio * 100, d = (e.deltaY || e.deltaX) * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? 800 : 1);
   if (Math.sign(d) !== Math.sign(wheelAcc)) wheelAcc = 0;
@@ -1799,14 +1914,14 @@ $('#board').addEventListener('wheel', (e) => {
   navTo(e.shiftKey ? h + times : 2 * ((h + (times > 0 ? 0 : 1)) >> 1) + 2 * times);
 }, { passive: false });
 // Typed moves (keyboard / screen reader): played on the board exactly as if clicked.
-$('#ptn-form').addEventListener('submit', (e) => {
-  e.preventDefault();
+$('#ptn-form').addEventListener('submit', (e) => { e.preventDefault(); typedMove(); });
+function typedMove() {
   const inp = $('#ptn-in'), ptn = inp.value.trim();
   if (!ptn) return;
   const ok = board.play(ptn);
   inp.setAttribute('aria-invalid', ok ? 'false' : 'true');
   if (ok) inp.value = ''; else inp.select();
-});
+}
 $('#ptn-in').addEventListener('input', (e) => e.target.removeAttribute('aria-invalid'));
 
 async function renderFilters() {
@@ -1836,6 +1951,7 @@ function setTitle() {
   document.title = page ? `${TITLES[page]} — tinue` : S && !S.placeholder ? `Puzzle #${S.p.id} — tinue` : 'tinue — Tak puzzles';
 }
 function show(id) {
+  if (id !== 'view-puzzle') pendingEvent({ type: 'leave' });
   for (const v of ['view-puzzle', 'view-glossary', 'view-me', 'view-leaderboard']) $('#' + v).classList.toggle('hidden', v !== id);
   setTitle();
   fitDock(); // the dock (and the room reserved for it) belongs to the puzzle page only
