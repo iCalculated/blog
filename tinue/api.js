@@ -24,7 +24,11 @@ const authHeaders = () => (token ? { authorization: 'Bearer ' + token } : {});
 
 export const WAIT_NOTICE = { kind: 'wait', title: 'Waiting for the puzzle server…', body: 'The server may be down; try again in a bit.' };
 export let notice = null; // a message that replaces the turn card: {kind: 'wait' | 'net' | 'none', title, body}
-export const setNotice = (n) => { notice = n; };
+// When the browser says it is offline at the moment the wait or can't-reach notice is shown, that notice says so
+// instead (same kind, so it shows and clears exactly as before).
+const offlineOr = (n) => ((n?.kind === 'wait' || n?.kind === 'net') && navigator.onLine === false
+  ? { kind: n.kind, title: 'You seem to be offline', body: 'Puzzles will load again when your connection is back.' } : n);
+export const setNotice = (n) => { notice = offlineOr(n); };
 let redraw = () => {};
 export const onNotice = (fn) => { redraw = fn; }; // how api() redraws the page after changing the notice
 
@@ -33,7 +37,7 @@ export const onNotice = (fn) => { redraw = fn; }; // how api() redraws the page 
 export const api = async (path, body, { quiet = false, noWait = quiet, timeout, signal, keepalive = false } = {}) => {
   // If the server can't be reached, say so instead of showing a blank page. (On Shy's tailnet, Chrome asks for
   // "local network access" before a public page may call crux's private address; that prompt also stalls here.)
-  const slow = noWait ? null : setTimeout(() => { notice = WAIT_NOTICE; redraw(); }, 4000);
+  const slow = noWait ? null : setTimeout(() => { notice = offlineOr(WAIT_NOTICE); redraw(); }, 4000);
   const t0 = performance.now();
   let outcome = 'ok', tries = 0, err; // err: the name of the last failed try's error (for the slow report)
   // A request stuck on a dead connection (e.g. the tailnet path to crux re-forming after sleep) is abandoned
@@ -61,7 +65,7 @@ export const api = async (path, body, { quiet = false, noWait = quiet, timeout, 
     err = e?.name;
     outcome = 'failed';
     if (quiet) throw e;
-    notice = { kind: 'net', title: 'Can’t reach the puzzle server', body: 'Check your connection and reload. If it keeps happening, the server may be down.' };
+    notice = offlineOr({ kind: 'net', title: 'Can’t reach the puzzle server', body: 'Check your connection and reload. If it keeps happening, the server may be down.' });
     redraw();
     throw e;
   } finally {
