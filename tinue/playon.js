@@ -3,8 +3,8 @@
 
 // The rules the judge needs (the move cap, who defends, how a game ends, which games count) live in shared/judge.js
 // (plan step S1) and are re-exported here unchanged, so the page and scripts/test-playon.mjs see the same functions.
-import { capMoves, proofMoves, provenCap } from './shared/judge.js?v=1794972588';
-export { capMoves, proofMoves, provenCap, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls } from './shared/judge.js?v=1794972588';
+import { capMoves, proofMoves, provenCap } from './shared/judge.js?v=1794974072';
+export { capMoves, proofMoves, provenCap, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls } from './shared/judge.js?v=1794974072';
 
 export const capNote = (pliesLeft) => {
   const left = Math.max(1, Math.ceil(pliesLeft / 2)), extra = capMoves(pliesLeft) - left;

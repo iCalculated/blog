@@ -5,11 +5,11 @@ export const THEMES = {
   tinueIn3:  { name: 'Tinuë in 3',    group: 'Length', desc: 'Force a road in three of your moves.' },
   tinueIn4:  { name: 'Tinuë in 4+',   group: 'Length', desc: 'Longer forced wins.' },
   gaelet:    { name: 'Flat win',      group: 'Goal',   desc: 'Win on flat count instead of a road: the board fills up or someone runs out of pieces, and you have more flats on top. Tak players call a forced flat win a "gaelet".' },
-  fork:      { name: 'Double threat', group: 'Motif',  desc: 'Your move creates two road threats through two different empty squares. The opponent can only block one.' },
+  fork:      { name: 'Fork',          group: 'Motif',  desc: 'Your move creates two road threats through two different empty squares. The opponent can only block one.' }, // USTA's term; was 'Double threat'
   quietMove: { name: 'Non-Tak tinuë', group: 'Motif',  desc: 'A forced road where at least one of your moves isn’t Tak: it threatens no road next turn, yet the opponent still can’t escape. Usually the hardest kind.' },
   smash:     { name: 'Smash',         group: 'Motif',  desc: 'Your capstone moves onto a wall and flattens it, opening a path for your road.' },
-  spread:    { name: 'Spread',        group: 'Motif',  desc: 'You pick up a stack and drop pieces along a line so that every square you drop on ends up showing your colour. You gain several squares at once.' },
-  throw:     { name: 'Throw',         group: 'Motif',  desc: 'Like a spread, but you don’t care about the near squares — some end up showing your opponent’s colour. What matters is the piece that lands at the far end.' },
+  spread:    { name: 'Spread',        group: 'Motif',  desc: 'You pick up a stack and drop pieces along a line. The puzzles here use a regular spread: every square you drop on ends up showing your colour, so you gain several squares at once. A spread that leaves some of your opponent’s colour behind is an irregular spread; those are under Throw.' },
+  throw:     { name: 'Throw',         group: 'Motif',  desc: 'An irregular spread: you don’t care about the near squares, and some end up showing your opponent’s colour. What matters is the piece that lands at the far end.' },
   stackRoad: { name: 'Stack road',    group: 'Motif',  desc: 'The winning move unrolls a stack into two or more squares of the road itself.' },
   reveal:    { name: 'Drawbridge',    group: 'Motif',  desc: 'A wall of yours stands on your own flat. You move the wall off, uncovering the flat, which completes the road.' }, // key stays 'reveal' (stored on puzzles); USTA's term is drawbridge
   capture:   { name: 'Capture',       group: 'Motif',  desc: 'Your first move lands on top of an opponent’s piece, taking that square over.' },
