@@ -1,15 +1,15 @@
-import { Game } from './shared/tak.js?v=1794960613';
-import { unplayedPlies } from './shared/ptn.js?v=1794960613';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794960613';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794960613';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1794960613';
-import * as engine from './engine.js?v=1794960613';
-import * as tiltak from './tiltak.js?v=1794960613';
-import * as syntaks from './syntaks.js?v=1794960613';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794960613';
-import { createNext } from './next.js?v=1794960613';
-import { BUSY_MS, busy } from './busy.js?v=1794960613';
-import { capMoves, capNote, defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1794960613';
+import { Game } from './shared/tak.js?v=1794960939';
+import { unplayedPlies } from './shared/ptn.js?v=1794960939';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794960939';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794960939';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1794960939';
+import * as engine from './engine.js?v=1794960939';
+import * as tiltak from './tiltak.js?v=1794960939';
+import * as syntaks from './syntaks.js?v=1794960939';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794960939';
+import { createNext } from './next.js?v=1794960939';
+import { BUSY_MS, busy } from './busy.js?v=1794960939';
+import { capMoves, capNote, defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1794960939';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -114,7 +114,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794960613')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794960939')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
