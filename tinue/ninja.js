@@ -2,9 +2,9 @@
 // embeds it. Same API as Board (board.js), so app.js doesn't care which one it has. Only loaded via import()
 // when the flag is set: everyone else fetches nothing from here or from ptn.ninja.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1794978308';
-import { parsePTN } from './shared/ptn.js?v=1794978308';
-import { buildPTN, focusedByPointer } from './board.js?v=1794978308';
+import { Game } from './shared/tak.js?v=1795030704';
+import { parsePTN } from './shared/ptn.js?v=1795030704';
+import { buildPTN, focusedByPointer } from './board.js?v=1795030704';
 
 const ORIGIN = 'https://ptn.ninja';
 // tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses).
@@ -44,6 +44,7 @@ export class NinjaBoard {
   constructor(el, { onMove } = {}) {
     this.el = el; this.onMove = onMove;
     this.opts = { disableBoard: false, showRoads: false, animateBoard: true, dropOnStray: false };
+    this.lockUntil = 0;
     this.games = [new Game(5)]; this.snaps = [{}]; this.cur = 0; this.peeking = false;
     this.ptn = null; this.player = null; this.hl = [];
     // index.html usually started the iframe already (before the page's modules loaded); otherwise start it now
@@ -123,7 +124,7 @@ export class NinjaBoard {
   // PTN Ninja never came up: put tinue's own board in its place, in the same state, and hand it every call.
   async _fallback() {
     if (this.fb || !this._resolve) return;
-    const { Board } = await import('./board.js?v=1794978308');
+    const { Board } = await import('./board.js?v=1795030704');
     this.el.style.cssText = ''; // index.html's placeholder background
     const fb = new Board(this.el, { onMove: this.onMove });
     this.fb = fb;
@@ -197,13 +198,25 @@ export class NinjaBoard {
   setPlayer(p) { this.player = p; return this._send('SET_PLAYER', p); }
   ui(v = {}) {
     Object.assign(this.opts, v);
-    if ('disableBoard' in v || 'dropOnStray' in v) this._focus(!this.opts.disableBoard && !this.opts.dropOnStray);
     const out = {};
     for (const k of ['disableBoard', 'showRoads', 'animateBoard']) if (k in v) out[k] = v[k];
+    // A new puzzle's first moments (lock): PTN Ninja's taps never reach the page, so its board is turned on only then.
+    const wait = this.lockUntil - performance.now();
+    if (out.disableBoard === false && wait > 0) {
+      out.disableBoard = true; clearTimeout(this._lockT);
+      this._lockT = setTimeout(() => { if (!this.opts.disableBoard) this.ui({ disableBoard: false }); }, wait + 1);
+    }
+    if ('disableBoard' in v || 'dropOnStray' in v) this._focus(!(out.disableBoard ?? this.opts.disableBoard) && !this.opts.dropOnStray);
     return Object.keys(out).length ? this._send('SET_UI', out) : this.ready;
   }
   highlight(squares = []) { this.hl = squares || []; return this._send('HIGHLIGHT_SQUARES', this.hl); }
   cancel() { return this._send('CANCEL_MOVE'); }
+  // Another puzzle (Board's forget): a move half-entered on PTN Ninja's board is dropped. Its taps and keys never reach
+  // the page, so nothing else of it can be held here; the new position (SET_CURRENT_PTN) follows anyway.
+  forget() { return this.cancel(); }
+  // Board's lock: here the board stays off until then (ui), as it is during an intro. A move typed meanwhile still
+  // reaches app.js, whose tooSoon drops it.
+  lock(until) { this.lockUntil = until; }
   // A typed move: checked here, then played on PTN Ninja's board, which reports it back like a click.
   play(ptn) {
     // the same checks as Board's _canInput: input on, the mover's turn, game not over

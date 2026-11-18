@@ -1,16 +1,16 @@
-import { Game } from './shared/tak.js?v=1794978308';
-import { unplayedPlies } from './shared/ptn.js?v=1794978308';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794978308';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794978308';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1794978308';
-import * as engine from './engine.js?v=1794978308';
-import * as tiltak from './tiltak.js?v=1794978308';
-import * as syntaks from './syntaks.js?v=1794978308';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794978308';
-import { createNext } from './next.js?v=1794978308';
-import { BUSY_MS, busy } from './busy.js?v=1794978308';
-import { createOutbox } from './outbox.js?v=1794978308';
-import { capMoves, capNote, defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1794978308';
+import { Game } from './shared/tak.js?v=1795030704';
+import { unplayedPlies } from './shared/ptn.js?v=1795030704';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795030704';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795030704';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795030704';
+import * as engine from './engine.js?v=1795030704';
+import * as tiltak from './tiltak.js?v=1795030704';
+import * as syntaks from './syntaks.js?v=1795030704';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795030704';
+import { createNext } from './next.js?v=1795030704';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795030704';
+import { createOutbox } from './outbox.js?v=1795030704';
+import { capMoves, capNote, defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1795030704';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -137,7 +137,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794978308')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1795030704')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -267,13 +267,14 @@ if (BUILD) {
 }
 // The bar never appears in the middle of a puzzle the player has started, a miss included (it would push the board
 // down under their pointer, and its Reload would leave a held check): it waits for the puzzle's end (solved, or the
-// solution shown), or shows before the first move. renderAll calls this too.
+// solution shown). Before the first move it stays if it was up as the puzzle started (fresh: start()), but doesn't
+// newly appear: the check answers after the board is playable, maybe as the player taps (busy.js barHide).
+// renderAll calls this too.
 const BAR_TEXT = 'tinue was updated. Reload to get the fixes. Your rating and puzzle queue are kept.';
-function renderBuildBar() {
+function renderBuildBar(fresh = false) {
   const bar = $('#build-bar'), live = $('#build-live');
   if (!bar) return; // an older index.html
-  const midPuzzle = S && !S.placeholder && (((S.status === 'play' || S.status === 'retry') && (S.moves.length > 0 || S.misses.length > 0)) || S.status === 'playon');
-  const hide = !newBuild || buildBarHidden || midPuzzle;
+  const hide = barHide({ newBuild, dismissed: buildBarHidden, s: S, shown: !bar.hidden, fresh });
   if (bar.hidden === hide) return;
   bar.hidden = hide;
   if (!hide && !bar.firstChild) {
@@ -288,6 +289,7 @@ function renderBuildBar() {
 // The Reload button: from a result card on to the next puzzle (a reload of this one would replay it); before the
 // first move, this puzzle again.
 function reloadNow() {
+  if (justEnded()) return; // the bar shows once the result does, pushing the board down: a tap aimed at the board
   if (S?.playOn) return; // never in the middle of a play-on game (leaving it is a miss); the bar is hidden then anyway
   if (S && !S.placeholder && (S.resultSent || S.status !== 'play' || S.quickCheck)) loadNext({ reload: true }); // (a move being checked is sent as it leaves)
   else reloadInto(S?.p?.id, S?.theme);
@@ -460,6 +462,7 @@ async function showLine(line, idx) {
 
 async function start(p, theme = '') {
   abandonCheck(S); // leaving a puzzle whose check is still running (any route: Next, a link, a filter change)
+  board.forget(); // nothing begun on the last puzzle's board (stones in hand, a held number key, a touch) carries over
   engine.interrupt(); tiltak.stop(); anaCtl?.abort(); // nothing from the previous puzzle should still be thinking
   const g = Game.fromTPS(p.tps, p.komi || 0);
   const hist = p.meta?.history || [];
@@ -467,9 +470,10 @@ async function start(p, theme = '') {
   const s = S = { p, g, node: p.tree, solver: g.toMove, hist, moves: [], snaps: [g.toTPS()], view: null, status: 'play', resultSent: false, hinted: false, delta: null, busy: true,
         misses: [], outcome: null, branch: null, onBranch: false, theme: theme && (p.themes || []).includes(theme) ? theme : '',
         t0: null, born: performance.now(), hiddenMs: 0, hiddenAt: null, log: [] };
+  board.lock(busyUntil('board', s.born)); // the same lock on the board itself: no stack lifted or cap picked meanwhile
   shadow((o) => { s.ob = o.open(p, s.theme); });
   nextQ.prefetchPair(p);
-  buildBarHidden = false; renderBuildBar(); checkBuild(); // a dismissed bar comes back with the next puzzle
+  buildBarHidden = false; renderBuildBar(true); checkBuild(); // a dismissed bar comes back with the next puzzle
   setNotice(null);
   setTitle();
   renderAll(); // side panel right away
@@ -530,12 +534,20 @@ function wakeActions() {
   if (fb._html) fb._html = fb._html.replace('data-act="hint" disabled>', 'data-act="hint">').replace('data-act="solution" disabled title=', 'data-act="solution" title=');
 }
 // The same double tap can land on the board instead. On a phone the board grows back into the space the dock held, and
-// a puzzle with no intro is playable at once, so the second tap put down a flat: a miss. A move in a puzzle's first
-// half second is dropped (with an intro the board is still off then anyway).
+// a puzzle with no intro is playable at once, so the second tap put down a flat: a miss. So does the tap after one
+// that hit the dock's Next by accident (the player sees their board change and taps again). A move in a puzzle's
+// first 700 ms is dropped (busy.js 'board'; with an intro the board is still off for 650 ms of that anyway), on either
+// board: both report moves through userMove, and the restore puts PTN Ninja's back too. Only a new puzzle starts it:
+// the defender's reply and the reset after a miss stay on the same puzzle, whose result is already sent.
 const tooSoon = (s) => busy('board', s.born ?? 0);
 // And the other way round: Next puzzle appears where Solution was pressed, so a double tap on Solution skipped the
 // solution it asked for. Next takes no press for a moment after Solution.
 const justViewed = () => S?.viewT0 != null && busy('next', S.viewT0);
+// And when the result first shows (busy.js 'ended'): on a phone the dock with Next puzzle appears over the board's
+// lower rows and the tray (fitDock shrinks the board above it), so a tap aimed at the board as a play-out ends on the
+// defender's instant last move pressed Next, and the tap after that landed on the new puzzle: a rated miss. Next
+// (card, dock), Enter and the update bar's Reload take no press until the result has been up for a second.
+const justEnded = () => S?.status === 'solved' && !S.placeholder && endLocked(S.endT0);
 function elapsed(s = S) {
   if (s?.t0 == null) return null;
   const t = performance.now();
@@ -1422,6 +1434,8 @@ const deltaSpan = (d) => `<span class="delta ${d >= 0 ? 'up' : 'down'}">${signed
 function renderAll(mood) {
   if (!S) S = PLACEHOLDER;
   const loading = !!S.placeholder;
+  // The render that first draws Next puzzle starts its lock (justEnded): every way to 'solved' renders, so none is missed.
+  if (S.status === 'solved' && S.endT0 == null && !loading) S.endT0 = performance.now();
   for (const id of ['#feedback', '#moves']) $(id).classList.toggle('is-loading', loading);
   const delta = S.delta != null ? deltaSpan(S.delta) : '';
   const focusNext = renderFeedback(mood, delta);
@@ -1710,7 +1724,7 @@ $('#moves').addEventListener('click', (e) => {
   const b = e.target.closest('[data-b]');
   if (b) return viewPly(+b.dataset.b, true);
   const nx = e.target.closest('[data-act="next"]'); // the phone dock's Next puzzle
-  if (nx) { if (justViewed()) return; const kb = nx.matches(':focus-visible'); return loadNext().then(() => { if (kb) $('#ptn-in')?.focus(); }); }
+  if (nx) { if (justViewed() || justEnded()) return; const kb = nx.matches(':focus-visible'); return loadNext().then(() => { if (kb) $('#ptn-in')?.focus(); }); }
   const total = shownLine().length, cur = S.view ?? total;
   const n = e.target.closest('[data-step]')?.dataset.step;
   if (n) viewPly({ first: 0, prev: cur - 1, next: cur + 1, last: total }[n]);
@@ -1726,7 +1740,7 @@ $('#feedback').addEventListener('click', async (e) => {
   if (act === 'solution') return showSolution();
   if (act === 'giveup') { if (busy('giveup', S.playOn?.t0 ?? 0)) return; return endPlayOn(S, 'gaveup'); }
   if (act === 'next') {
-    if (justViewed()) return;
+    if (justViewed() || justEnded()) return;
     const kb = e.target.matches(':focus-visible'); // keyboard user: put them back in the move input
     await loadNext();
     if (kb) $('#ptn-in')?.focus();
@@ -1757,7 +1771,12 @@ window.addEventListener('keydown', (e) => {
   if (S.placeholder || $('#view-puzzle').classList.contains('hidden')) return;
   if (e.key === 'Enter') {
     // Enter = Continue, unless it's meant for whatever has focus (a button, a link, a field) or stones are in hand.
-    if (S.status === 'solved' && !board.holding && !e.target.closest?.('a, button, input, select, textarea, [contenteditable]')) { e.preventDefault(); loadNext(); }
+    // Kept: a key pressed on purpose. Not a held key's repeat, nor in the result's first second (justEnded): the Enter
+    // that dropped the last stones of the winning move, held or pressed twice, would skip the result unseen.
+    if (S.status === 'solved' && !board.holding && !e.target.closest?.('a, button, input, select, textarea, [contenteditable]')) {
+      e.preventDefault();
+      if (!e.repeat && !justEnded()) loadNext();
+    }
     return;
   }
   const dir = e.key === 'ArrowLeft' ? -1 : e.key === 'ArrowRight' ? 1 : 0;

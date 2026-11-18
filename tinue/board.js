@@ -1,8 +1,8 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1794978308';
-import { parsePTN } from './shared/ptn.js?v=1794978308';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795030704';
+import { parsePTN } from './shared/ptn.js?v=1795030704';
 
 const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
@@ -105,6 +105,8 @@ export class Board {
     el.classList.add('tb-host');
     this.opts = { disableBoard: false, showRoads: false, animateBoard: true, dropOnStray: false };
     this.player = null; this.M = loadOrient(); this.sel = null; this.hlSquares = []; this.hover = -1; this.peekHl = null;
+    this.gen = 0; // bumped by forget(): a touch begun before it is not a tap on what came after
+    this.lockUntil = 0; this.forgotAt = -Infinity; this.keysDown = new Map(); // lock(), forget(): a new puzzle's first moments
     this.ready = Promise.resolve();
     this._setup(new Game(5), []);
     el.addEventListener('click', (e) => this._onClick(e, false));
@@ -118,8 +120,8 @@ export class Board {
     el.addEventListener('touchstart', (e) => {
       const t = e.changedTouches[0];
       clearTimeout(lp); lastTouch = Date.now();
-      const s = t0 = e.touches.length === 1 ? { x: t.clientX, y: t.clientY, long: false } : null;
-      if (s) lp = setTimeout(() => { if (t0 !== s) return; s.long = true; const target = at(s.x, s.y); if (target) this._onClick({ target }, true); }, 500);
+      const s = t0 = e.touches.length === 1 ? { x: t.clientX, y: t.clientY, long: false, gen: this.gen } : null;
+      if (s) lp = setTimeout(() => { if (t0 !== s || s.gen !== this.gen) return; s.long = true; const target = at(s.x, s.y); if (target) this._onClick({ target }, true); }, 500);
     }, { passive: true });
     el.addEventListener('touchmove', (e) => {
       const t = e.touches[0];
@@ -129,7 +131,8 @@ export class Board {
     el.addEventListener('touchend', (e) => {
       const t = e.changedTouches[0], s = t0;
       clearTimeout(lp); lastTouch = Date.now(); t0 = null;
-      if (s?.long) { if (e.cancelable) e.preventDefault(); return; }
+      // (begun before forget(): swallowed, so it isn't a click on the new position either)
+      if (s?.long || (s && s.gen !== this.gen)) { if (e.cancelable) e.preventDefault(); return; }
       if (!s || e.touches.length || Math.hypot(t.clientX - s.x, t.clientY - s.y) > 10) return;
       const target = document.elementFromPoint(t.clientX, t.clientY);
       if (!target || !el.contains(target)) return;
@@ -140,7 +143,8 @@ export class Board {
     el.addEventListener('contextmenu', (e) => { e.preventDefault(); if (e.pointerType !== 'touch' && !t0 && Date.now() - lastTouch > 800) this._onClick(e, true); });
     el.addEventListener('mouseover', (e) => { const sq = this._sqAt(e); if (sq !== this.hover) { this.hover = sq; this._render(); } });
     el.addEventListener('mouseleave', () => { if (this.hover >= 0) { this.hover = -1; this._render(); } });
-    window.addEventListener('keydown', (e) => this._onKey(e));
+    window.addEventListener('keydown', (e) => { if (!e.repeat) this.keysDown.set(e.key, performance.now()); this._onKey(e); });
+    window.addEventListener('keyup', (e) => this.keysDown.delete(e.key));
   }
 
   // ---------- public API ----------
@@ -173,6 +177,18 @@ export class Board {
     this._render();
   }
   async cancel() { this.sel = null; this._render(); }
+  // Another puzzle: drop whatever input was under way on the last one (stones in hand, a number key kept for when input
+  // opens (_flushKey), a touch or long press in progress), so none of it lands on the new position.
+  forget() { this.sel = null; this.pendKey = null; this.gen++; this.forgotAt = performance.now(); this._render(false); }
+  // A new puzzle's first moments (app.js start: busy.js 'board'): no tap, long press, tray pick or Enter at all, not just
+  // no finished move. A stack lifted or a cap picked then (the second tap of a double tap on Next, landing where the
+  // dock was) stayed in hand and turned the player's first deliberate tap into another move, a miss. A number key is
+  // kept for the lock's end, as during an intro (_flushKey). Nothing is drawn differently meanwhile.
+  lock(until) {
+    this.lockUntil = until; clearTimeout(this._lockT);
+    this._lockT = setTimeout(() => this._flushKey(), Math.max(0, until - performance.now()) + 1);
+  }
+  _locked() { return performance.now() < this.lockUntil; }
   get holding() { return !!this.sel; } // stones in hand (or a tray stone picked): navigation waits
   get peeking() { return !!this.peekHl; }
   // Half-step: keep this position but highlight the squares the next move touches (Shift+arrow, as in PTN Ninja).
@@ -258,7 +274,7 @@ export class Board {
   // kept and played once input opens, if that's within 1.5 s.
   _flushKey() {
     const pk = this.pendKey;
-    if (!pk || !this._canInput()) return;
+    if (!pk || !this._canInput() || this._locked()) return;
     this.pendKey = null;
     if (performance.now() - pk.t < 1500) this._keyCount(pk.k);
   }
@@ -330,6 +346,7 @@ export class Board {
   _sqAt(e) { const d = e.target.closest?.('.tb-sq'); return d && this.el.contains(d) ? +d.dataset.sq : -1; }
 
   _onClick(e, alt) {
+    if (this._locked()) return;
     if (e.target.closest('.tb-tray')) { if (this.sel?.t === 'tray' || this._unmovedStack()) this.cancel(); return; }
     const st = e.target.closest('.tb-st.pick');
     if (st) return this._trayClick(+st.parentNode.dataset.id, alt);
@@ -419,6 +436,8 @@ export class Board {
   // ---------- keys ----------
   _onKey(e) {
     if (e.defaultPrevented) return;
+    // a key held down since the last puzzle (Enter = Continue held, or a number key) repeats into nothing here
+    if (e.repeat && !(this.keysDown.get(e.key) > this.forgotAt)) return;
     if (e.key === 'Escape') { if (this.sel) this.cancel(); return; }
     if (e.ctrlKey || e.metaKey || e.altKey || !this.el.getClientRects().length) return; // modified, or the board is hidden
     if (e.target.closest?.('input, select, textarea, [contenteditable]')) return;
@@ -428,7 +447,8 @@ export class Board {
     if (e.key === 'Enter' && e.target.closest?.('a, button, summary') && !pointerFocused.has(e.target)) return;
     const k = e.key === 'Enter' ? 'all' : e.key === '`' ? 'own' : /^[1-8]$/.test(e.key) ? +e.key : 0;
     if (!k) return;
-    if (k !== 'all' && !this._canInput() && this.cur === this.snaps.length - 1 && !this.snaps[this.cur].g.result() && this.hover >= 0) {
+    if (k === 'all' && this._locked()) return; // (the second press of a double Enter = Continue)
+    if (k !== 'all' && (!this._canInput() || this._locked()) && this.cur === this.snaps.length - 1 && !this.snaps[this.cur].g.result() && this.hover >= 0) {
       this.pendKey = { k, t: performance.now() }; e.preventDefault(); return;
     }
     if (this._keyCount(k)) e.preventDefault();
@@ -447,7 +467,7 @@ export class Board {
   // square under the pointer until the first drop, then on the next square along the line. Never place a stone.
   _keyCount(k) {
     const sel = this.sel, s = this.snaps[this.cur], g = s.g, n = this.n;
-    if (!this._canInput() || sel?.t === 'tray') return false;
+    if (!this._canInput() || this._locked() || sel?.t === 'tray') return false;
     if (!sel) {
       const sq = this.hover, st = s.st[sq];
       if (sq < 0 || !st.length || !this._valid(this._view()).has(sq)) return false;
