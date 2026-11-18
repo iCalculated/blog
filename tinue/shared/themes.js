@@ -11,7 +11,7 @@ export const THEMES = {
   spread:    { name: 'Spread',        group: 'Motif',  desc: 'You pick up a stack and drop pieces along a line so that every square you drop on ends up showing your colour. You gain several squares at once.' },
   throw:     { name: 'Throw',         group: 'Motif',  desc: 'Like a spread, but you don’t care about the near squares — some end up showing your opponent’s colour. What matters is the piece that lands at the far end.' },
   stackRoad: { name: 'Stack road',    group: 'Motif',  desc: 'The winning move unrolls a stack into two or more squares of the road itself.' },
-  reveal:    { name: 'Reveal',        group: 'Motif',  desc: 'You move a wall off its stack, uncovering your own flat underneath, which completes the road.' },
+  reveal:    { name: 'Drawbridge',    group: 'Motif',  desc: 'A wall of yours stands on your own flat. You move the wall off, uncovering the flat, which completes the road.' }, // key stays 'reveal' (stored on puzzles); USTA's term is drawbridge
   capture:   { name: 'Capture',       group: 'Motif',  desc: 'Your first move lands on top of an opponent’s piece, taking that square over.' },
   wallBlock: { name: 'Defend first',  group: 'Motif',  desc: 'The opponent is threatening a road too. Your winning line has to deal with that threat while building yours.' },
   placement: { name: 'Placement only', group: 'Motif', desc: 'Every move in the solution places a new piece; no stack moves needed.' },

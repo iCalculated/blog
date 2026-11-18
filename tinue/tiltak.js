@@ -15,7 +15,7 @@
 // stop() ends the current search early and its promise resolves with what was found so far.
 // Supported: sizes 4, 5, 6; komi 0 and 2 (the only komi Tiltak has trained weights for). Other komi
 // values are rounded to the nearest of those and reported in komiUsed / komiApprox.
-import { canonPTN } from './shared/ptn.js?v=1794962948';
+import { canonPTN } from './shared/ptn.js?v=1794972588';
 
 export const SUPPORTED = Object.freeze({ sizes: [4, 5, 6], komi: [0, 2] });
 export const supports = (size, komi = 0) => SUPPORTED.sizes.includes(size) && (komi == null || komi >= -5 && komi <= 5);
