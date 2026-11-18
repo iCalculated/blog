@@ -1,15 +1,15 @@
-import { Game } from './shared/tak.js?v=1794974072';
-import { unplayedPlies } from './shared/ptn.js?v=1794974072';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794974072';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794974072';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1794974072';
-import * as engine from './engine.js?v=1794974072';
-import * as tiltak from './tiltak.js?v=1794974072';
-import * as syntaks from './syntaks.js?v=1794974072';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794974072';
-import { createNext } from './next.js?v=1794974072';
-import { BUSY_MS, busy } from './busy.js?v=1794974072';
-import { capMoves, capNote, defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1794974072';
+import { Game } from './shared/tak.js?v=1794976956';
+import { unplayedPlies } from './shared/ptn.js?v=1794976956';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794976956';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794976956';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1794976956';
+import * as engine from './engine.js?v=1794976956';
+import * as tiltak from './tiltak.js?v=1794976956';
+import * as syntaks from './syntaks.js?v=1794976956';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794976956';
+import { createNext } from './next.js?v=1794976956';
+import { BUSY_MS, busy } from './busy.js?v=1794976956';
+import { capMoves, capNote, defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1794976956';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -114,7 +114,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794974072')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794976956')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -829,7 +829,7 @@ const defenderName = (po) => (po.engine === 'syntaks' && !po.fallback ? 'Syntaks
 const playOnRated = (po) => gameRated(po); // (playon.js: only a game Syntaks defended throughout counts, either way)
 
 // proven: the move is already proven to win (a proven play-out: playon.js winRated / lossRated); chk is then null.
-// proofPlies: that proof's length if known (the cap covers it: provenCap); unknown, it's measured now (proofLength).
+// proofPlies: that proof's length if known (the cap is at least its moves: provenCap); unknown, it's measured now (proofLength).
 function startPlayOn(s, canon, plies, chk, tMove, proven = false, proofPlies) {
   const hadMs = s.decidedMs != null, logged = s.log.length, left = pliesLeft();
   logMove(proven ? 'slow' : 'miss', canon, tMove); s.decidedMs ??= tMove;
@@ -895,12 +895,17 @@ function makeProven(s, po) {
   setProofLength(s, po, plies);
   if (S === s) renderAll();
 }
-// A proven play-out's cap covers its proof (playon.js provenCap; never lower than the cap already shown). A length not
-// known yet is measured in the engine worker; until it is (or if it can't be), running out of moves is unrated.
+// A proven play-out's cap: the puzzle's moves left plus spare, or the proof's own moves if more (playon.js provenCap;
+// never lower than the cap already shown, whose note then stays). A length not known yet is measured in the engine
+// worker; until it is (or if it can't be), running out of moves is unrated.
 function setProofLength(s, po, plies) {
   if (Number.isFinite(plies)) {
     po.proofPlies = plies;
-    po.cap = provenCap(po.left, plies, po.cap); po.capNote = provenCapNote(po.left, plies);
+    const cap = provenCap(po.left, plies, po.cap);
+    // Today the cap shown here is always capMoves(po.left) (no earlier length raised it), so this always rewrites the
+    // note. If a later change lets the cap rise twice, a cap above both bounds keeps the note that set it.
+    if (cap === provenCap(po.left, plies)) po.capNote = provenCapNote(po.left, plies, po.miss); // (else the shown cap and its note stay)
+    po.cap = cap;
     if (S === s) renderAll();
     return;
   }
@@ -1461,15 +1466,16 @@ function renderFeedback(mood, delta) {
     {
       const n = po.thinking ? po.mine : po.mine + 1;
       const cap = `<span class="cap" title="${esc(po.capNote)}">${po.cap}</span>`;
+      const why = `<span class="po-line">${esc(po.capNote)}</span>`; // where the cap comes from (playon.js capNote)
       // at the cap, waiting for something that could give more moves (playOnMove)
       const waitLine = po.waiting === 'length' ? `Out of moves at ${po.cap} unless the proven win is longer: measuring it…`
         : po.waiting === 'proof' ? `Out of moves at ${po.cap} unless ${m} is proven to win: still checking…` : '';
       // A proven play-out (Syntaks only): the move wins, and the game shows it. A hold is a rated miss (lossRated).
       if (po.proven) fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>${po.provedLate ? 'Proved: play it out' : 'That wins: play it out'}</h2>
-        <p>${m} forces a win. Now show it on the board: ${E} defends to the end. Make a road (or win on flats) within ${cap} of your moves, counting ${m}, and it counts as solved. If ${E} holds${gameRated(po) ? ', or you give up or view the solution' : ''}, it’s a miss.<span class="po-line po-status">${waitLine || `Move ${n} of ${po.cap}${po.thinking ? ` · ${E} is thinking…` : ''}`}</span></p></div>
+        <p>${m} forces a win. Now show it on the board: ${E} defends to the end. Make a road (or win on flats) within ${cap} of your moves, counting ${m}, and it counts as solved. If ${E} holds${gameRated(po) ? ', or you give up or view the solution' : ''}, it’s a miss.${why}<span class="po-line po-status">${waitLine || `Move ${n} of ${po.cap}${po.thinking ? ` · ${E} is thinking…` : ''}`}</span></p></div>
         <div class="actions"><button data-act="giveup"${busy('giveup', po.t0) ? ' disabled' : ''}>Give up</button><button data-act="solution" title="Give up and view the solution">Solution</button></div>`;
       else fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>Play it out</h2>
-        <p>We couldn’t check ${m} in time, so show it on the board: ${E} defends. Win within <span class="cap" title="${esc(po.capNote)}">${po.cap}</span> of your moves (counting ${m}) and it counts as solved. If ${E} holds, it’s a miss.${po.engine !== 'syntaks' ? ' Against Tiltak, how the game ends doesn’t count toward your rating (a proof that your move wins still does).' : ''}${po.fallback && po.engine === 'syntaks' ? '<span class="po-line">Syntaks is unreachable; Tiltak, in your browser, defends now, so how this game ends doesn’t count toward your rating (a proof that your move wins still does).</span>' : ''}<span class="po-line po-status">${waitLine || `Move ${n} of ${po.cap}${po.thinking ? ` · ${E} is thinking…` : ''}`}</span></p></div>
+        <p>We couldn’t check ${m} in time, so show it on the board: ${E} defends. Win within ${cap} of your moves (counting ${m}) and it counts as solved. If ${E} holds, it’s a miss.${po.engine !== 'syntaks' ? ' Against Tiltak, how the game ends doesn’t count toward your rating (a proof that your move wins still does).' : ''}${po.fallback && po.engine === 'syntaks' ? '<span class="po-line">Syntaks is unreachable; Tiltak, in your browser, defends now, so how this game ends doesn’t count toward your rating (a proof that your move wins still does).</span>' : ''}${why}<span class="po-line po-status">${waitLine || `Move ${n} of ${po.cap}${po.thinking ? ` · ${E} is thinking…` : ''}`}</span></p></div>
         <div class="actions"><button data-act="giveup"${busy('giveup', po.t0) ? ' disabled' : ''}>Give up</button><button data-act="solution" title="Give up and view the solution">Solution</button></div>`;
     }
   } else if (S.status === 'solved') {

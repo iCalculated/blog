@@ -16,14 +16,17 @@ export function capMoves(pliesLeft) {
   const left = Math.max(1, Math.ceil(pliesLeft / 2));
   return left + Math.max(3, Math.ceil(0.3 * left - 1e-9));
 }
-// A proven play-out's cap must cover its proof, which can be longer than the puzzle's own line (a proof has no length
-// bound): proofPlies is the proof's length after the move (defender to move, proofTreeLine), so the player's moves it
-// takes, counting the move itself, are 1 + ⌈plies/2⌉, and the cap is the larger of the usual one and those moves plus
-// the same margin (3, or 30%). proofPlies null: not known (yet), the usual cap. Never smaller than `shown`.
+// A proven play-out's cap. The spare moves (capMoves: 3, or 30%) apply once, to the moves the PUZZLE had left at the
+// node where the move was played (Sasha, 2026-11-17: a proof's own length plus spare gave 8 moves where the puzzle had
+// 2 left). The proof's length only acts as a floor, so a proven win is never out of reach: proofPlies is the proof's
+// length after the move (defender to move, proofTreeLine), so the player's moves it takes, counting the move itself,
+// are 1 + ⌈plies/2⌉ (proofMoves; the proof isn't minimal, so this can exceed the shortest win). The cap is the larger
+// of capMoves(pliesLeft) and those moves, never smaller than `shown` (a cap already on screen is never lowered).
+// proofPlies null: not known (yet), the usual cap (and running out is then unrated: lossRated / capWait).
+//   left 3 plies (cap 5), proof 8 plies (5 moves) -> 5; proof 12 plies (7 moves) -> 7.
 export const proofMoves = (proofPlies) => (Number.isFinite(proofPlies) && proofPlies >= 0 ? 1 + Math.ceil(proofPlies / 2) : null);
 export function provenCap(pliesLeft, proofPlies, shown = 0) {
-  const pm = proofMoves(proofPlies);
-  return Math.max(shown, capMoves(pliesLeft), pm == null ? 0 : pm + Math.max(3, Math.ceil(0.3 * pm - 1e-9)));
+  return Math.max(shown, capMoves(pliesLeft), proofMoves(proofPlies) ?? 0);
 }
 
 // Who defends: Syntaks on the server for 6×6 (any half-point komi it knows), else Tiltak in the browser where it plays

@@ -3,18 +3,25 @@
 
 // The rules the judge needs (the move cap, who defends, how a game ends, which games count) live in shared/judge.js
 // (plan step S1) and are re-exported here unchanged, so the page and scripts/test-playon.mjs see the same functions.
-import { capMoves, proofMoves, provenCap } from './shared/judge.js?v=1794974072';
-export { capMoves, proofMoves, provenCap, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls } from './shared/judge.js?v=1794974072';
+import { capMoves, proofMoves, provenCap } from './shared/judge.js?v=1794976956';
+export { capMoves, proofMoves, provenCap, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls } from './shared/judge.js?v=1794976956';
 
+// The cap's explanation, one plain sentence shown on the card (and as the number's tooltip). capNote: the puzzle's
+// bound (the moves it had left at that node, plus the spare: capMoves).
+const moves = (n) => (n === 1 ? '1 move of yours' : `${n} of your moves`);
 export const capNote = (pliesLeft) => {
   const left = Math.max(1, Math.ceil(pliesLeft / 2)), extra = capMoves(pliesLeft) - left;
-  return `The puzzle had ${left} of your moves left; you get ${extra} more (3, or 30% when that is more).`;
+  return `The puzzle had ${moves(left)} left, and you get ${extra} spare.`;
 };
-// The cap's explanation (the card's tooltip), true for whichever bound set it.
-export function provenCapNote(pliesLeft, proofPlies) {
-  const pm = proofMoves(proofPlies), cap = provenCap(pliesLeft, proofPlies);
-  if (pm == null || cap === capMoves(pliesLeft)) return capNote(pliesLeft);
-  return `The proven win takes ${pm} of your moves against the longest defence; you get ${cap - pm} more (3, or 30% when that is more).`;
+// A proven play-out's: true for whichever bound set the cap (provenCap). The puzzle's bound wins ties; a proof longer
+// than it sets the cap to the proof's own moves. (The proof isn't minimal, so its length is an upper bound on the
+// shortest forced win, and the sentence says "at most".) `shown`: the cap already on screen when the proof's length arrived;
+// if it is more than both bounds it stays, and the note says so (the page keeps its earlier note then: app.js).
+export function provenCapNote(pliesLeft, proofPlies, move, shown = 0) {
+  const pm = proofMoves(proofPlies), usual = capMoves(pliesLeft), cap = provenCap(pliesLeft, proofPlies, shown);
+  if (cap > Math.max(usual, pm ?? 0)) return `You keep the ${cap} moves you were already given.`;
+  if (pm == null || cap === usual) return capNote(pliesLeft);
+  return `Our proof that ${move} wins needs at most ${moves(pm)}, counting ${move}, so you get ${pm}.`;
 }
 
 // An engine's move, checked and canonical in this game; null if it isn't a legal move here.
