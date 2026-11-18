@@ -1,14 +1,15 @@
-import { Game } from './shared/tak.js?v=1794953575';
-import { unplayedPlies } from './shared/ptn.js?v=1794953575';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1794953575';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1794953575';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1794953575';
-import * as engine from './engine.js?v=1794953575';
-import * as tiltak from './tiltak.js?v=1794953575';
-import * as syntaks from './syntaks.js?v=1794953575';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794953575';
-import { createNext } from './next.js?v=1794953575';
-import { capMoves, capNote, defender, ending, resigns, legalMove, gameRated, unratedWhy, winRated, mayResign, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1794953575';
+import { Game } from './shared/tak.js?v=1794960613';
+import { unplayedPlies } from './shared/ptn.js?v=1794960613';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1794960613';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1794960613';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1794960613';
+import * as engine from './engine.js?v=1794960613';
+import * as tiltak from './tiltak.js?v=1794960613';
+import * as syntaks from './syntaks.js?v=1794960613';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1794960613';
+import { createNext } from './next.js?v=1794960613';
+import { BUSY_MS, busy } from './busy.js?v=1794960613';
+import { capMoves, capNote, defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1794960613';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -113,7 +114,7 @@ const guestId = () => {
 
 // ?board=ninja: PTN Ninja in an iframe instead of tinue's board (same API). Loaded only when asked for.
 const NINJA = new URLSearchParams(location.search).get('board') === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1794953575')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1794960613')).NinjaBoard($('#board'), { onMove: (ptn) => userMove(ptn) })
   : new Board($('#board'), { onMove: (ptn) => userMove(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -489,14 +490,13 @@ const offScreen = () => document.hidden || $('#view-puzzle').classList.contains(
 function startClock(s) {
   if (s.t0 != null) return;
   s.t0 = performance.now(); s.hiddenAt = offScreen() ? s.t0 : null;
-  setTimeout(() => { if (S === s) wakeActions(); }, FRESH_MS + 30); // Hint and Solution come alive (fresh)
+  setTimeout(() => { if (S === s) wakeActions(); }, BUSY_MS.actions + 30); // Hint and Solution come alive (fresh)
 }
-// A new puzzle's Hint and Solution take no presses until it has been playable for FRESH_MS, and they show as disabled
+// A new puzzle's Hint and Solution take no presses until it has been playable for a second (busy.js 'actions'), and they show as disabled
 // until then. Next puzzle sits where they appear (in the card, and on a phone in the dock over the same spot), so the
 // second tap of a double tap on Next landed on Solution: a rated miss 16 ms into a puzzle nobody had looked at
 // (rabbitboy84, 2026-11-16). A press during the intro isn't remembered for later either (see flushHint).
-const FRESH_MS = 1000;
-const fresh = (s) => s.t0 == null || performance.now() - s.t0 < FRESH_MS;
+const fresh = (s) => s.t0 == null || busy('actions', s.t0);
 // Turns the card's Hint and Solution on where they stand once the first second is over. Redrawing the card instead
 // would have a screen reader read it out a second time (it's a live region) and would cut a "Best move!" short.
 // If the card's HTML ever stops matching these strings, the next render simply redraws it.
@@ -508,11 +508,10 @@ function wakeActions() {
 // The same double tap can land on the board instead. On a phone the board grows back into the space the dock held, and
 // a puzzle with no intro is playable at once, so the second tap put down a flat: a miss. A move in a puzzle's first
 // half second is dropped (with an intro the board is still off then anyway).
-const TOO_SOON_MS = 500;
-const tooSoon = (s) => performance.now() - (s.born ?? 0) < TOO_SOON_MS;
+const tooSoon = (s) => busy('board', s.born ?? 0);
 // And the other way round: Next puzzle appears where Solution was pressed, so a double tap on Solution skipped the
 // solution it asked for. Next takes no press for a moment after Solution.
-const justViewed = () => S?.viewT0 != null && performance.now() - S.viewT0 < 600;
+const justViewed = () => S?.viewT0 != null && busy('next', S.viewT0);
 function elapsed(s = S) {
   if (s?.t0 == null) return null;
   const t = performance.now();
@@ -814,7 +813,7 @@ async function flushHeld() {
 // ---------- play on ----------
 // A move the still-wins check can't decide in 2.5 s is played out on the board: the move stays and an engine defends
 // (Syntaks on the server for 6×6, Tiltak in the browser for 4×4/5×5; spec agreed with Shy 2026-11-15). Your road or
-// flat win within capMoves (playon.js), or Syntaks resigning, is a solve like any other proven win (3421d53): the game
+// flat win within capMoves (playon.js) is a solve like any other proven win (3421d53): the game
 // becomes the puzzle's line and the puzzle ends there. Syntaks holding (out of moves, its road, flats or a draw), Give
 // up or leaving is a miss. Which of these count toward rating is playon.js's gameRated / winRated (only a game Syntaks
 // defended throughout; Tiltak, a dropout, no defender move or a stalled reply make it unrated both ways, while a proof
@@ -855,7 +854,7 @@ function startPlayOn(s, canon, plies, chk, tMove, proven = false, proofPlies) {
   if (po.local) syntaks.load(); // the in-browser engine, fetched on first use (crux answers meanwhile)
   else if (po.engine === 'tiltak') Promise.resolve().then(tiltak.warmup).catch(() => {}); // it defends here: start it while the board settles
   // Give up sits where Hint was: it ignores clicks for its first 1.5 s, so one meant for Hint can't end the game
-  po.t0 = performance.now(); setTimeout(() => { if (S === s && s.playOn === po) renderAll(); }, 1600);
+  po.t0 = performance.now(); setTimeout(() => { if (S === s && s.playOn === po) renderAll(); }, BUSY_MS.giveup + 100);
   s.status = 'playon'; s.refutation = null; s.checking = null;
   s.pendingHint = s.pendingSolution = false; // pressed during the quick check: not meant for after the game
   report(false, s, s, { ms: tMove }); // held until the game (and the check) settle
@@ -960,8 +959,6 @@ async function defenderTurn(s, po) {
     // Syntaks dropped out of a proven play-out: no playing it out against Tiltak; the proven move is the solve.
     if (!mv && po.proven) { po.thinking = false; return endPlayOn(s, 'proved'); }
     if (!mv) { po.fallback = true; po.fallbackAt = po.mine; r = null; renderAll(); }
-    // Syntaks's search sees a forced road (or flat win) for you: it resigns. (Its answer is in: not overdue.)
-    else if (mayResign(po) && resigns(r.mate, s.solver)) { po.thinking = false; return endPlayOn(s, 'resign'); }
   }
   if (!mv && tiltak.supports(s.p.size, komi)) {
     // (a worker that never answers mustn't stall the game: 6 s from when it's up (a cold start, fetching and compiling
@@ -1025,7 +1022,7 @@ async function showPlayOn(s) {
   await board.last();
 }
 
-// The game is over. A win (your road, Syntaks resigning, or the check's proof) is a solve; anything else makes it a
+// The game is over. A win (your road or the check's proof) is a solve; anything else makes it a
 // miss, sent once the check has answered too (a later proof still makes it a solve).
 function endPlayOn(s, kind, opts) {
   const po = s.playOn, c = s.checkPending;
@@ -1034,7 +1031,7 @@ function endPlayOn(s, kind, opts) {
   if (stalls(po, kind, performance.now())) po.stalled = true;
   po.end = kind; po.thinking = false; po.ctl?.abort();
   if (c?.playOn === po) c.logLen = s.log.length; // the game's moves belong in this result's log
-  if (kind === 'win' || kind === 'resign' || kind === 'proved') {
+  if (kind === 'win' || kind === 'proved') {
     // The game becomes the puzzle's line (the board already shows it) and the puzzle ends there, solved (settleCheck).
     s.playOn = null; s.loadedKey = null;
     po.line.forEach((m, j) => { s.g.play(m); s.moves.push({ ptn: m, me: j % 2 === 0, po: j > 0 }); s.snaps.push(s.g.toTPS()); });
@@ -1350,7 +1347,6 @@ const slowWinText = (w) => {
   const m = esc(w.move), po = w.playOn;
   return po?.proven && po.how !== 'proved' ? `${m} forces a win, and you played it out against ${po.engine}, so it counts as solved`
     : po?.how === 'win' ? `${m} won against ${po.engine}, so it counts as solved`
-    : po?.how === 'resign' ? `${m} won: Syntaks resigned, seeing a forced win for you, so it counts as solved`
     : `${m} forces a win too, so it counts as solved`;
 };
 const solvedTitle = () => S.outcome === 'viewed' ? 'Solution shown' : S.outcome === 'miss' ? 'Solved, after a miss' : 'Solved';
@@ -1471,10 +1467,10 @@ function renderFeedback(mood, delta) {
       // A proven play-out (Syntaks only): the move wins, and the game shows it. A hold is a rated miss (lossRated).
       if (po.proven) fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>${po.provedLate ? 'Proved: play it out' : 'That wins: play it out'}</h2>
         <p>${m} forces a win. Now show it on the board: ${E} defends to the end. Make a road (or win on flats) within ${cap} of your moves, counting ${m}, and it counts as solved. If ${E} holds${gameRated(po) ? ', or you give up or view the solution' : ''}, it’s a miss.<span class="po-line po-status">${waitLine || `Move ${n} of ${po.cap}${po.thinking ? ` · ${E} is thinking…` : ''}`}</span></p></div>
-        <div class="actions"><button data-act="giveup"${performance.now() - po.t0 < 1500 ? ' disabled' : ''}>Give up</button><button data-act="solution" title="Give up and view the solution">Solution</button></div>`;
+        <div class="actions"><button data-act="giveup"${busy('giveup', po.t0) ? ' disabled' : ''}>Give up</button><button data-act="solution" title="Give up and view the solution">Solution</button></div>`;
       else fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>Play it out</h2>
         <p>We couldn’t check ${m} in time, so show it on the board: ${E} defends. Win within <span class="cap" title="${esc(po.capNote)}">${po.cap}</span> of your moves (counting ${m}) and it counts as solved. If ${E} holds, it’s a miss.${po.engine !== 'syntaks' ? ' Against Tiltak, how the game ends doesn’t count toward your rating (a proof that your move wins still does).' : ''}${po.fallback && po.engine === 'syntaks' ? '<span class="po-line">Syntaks is unreachable; Tiltak, in your browser, defends now, so how this game ends doesn’t count toward your rating (a proof that your move wins still does).</span>' : ''}<span class="po-line po-status">${waitLine || `Move ${n} of ${po.cap}${po.thinking ? ` · ${E} is thinking…` : ''}`}</span></p></div>
-        <div class="actions"><button data-act="giveup"${performance.now() - po.t0 < 1500 ? ' disabled' : ''}>Give up</button><button data-act="solution" title="Give up and view the solution">Solution</button></div>`;
+        <div class="actions"><button data-act="giveup"${busy('giveup', po.t0) ? ' disabled' : ''}>Give up</button><button data-act="solution" title="Give up and view the solution">Solution</button></div>`;
     }
   } else if (S.status === 'solved') {
     const title = solvedTitle();
@@ -1689,7 +1685,7 @@ $('#feedback').addEventListener('click', async (e) => {
   if ((act === 'hint' || act === 'solution') && fresh(S)) return; // a tap meant for the last puzzle's Next
   if (act === 'hint') return showHint();
   if (act === 'solution') return showSolution();
-  if (act === 'giveup') { if (performance.now() - (S.playOn?.t0 ?? 0) < 1500) return; return endPlayOn(S, 'gaveup'); }
+  if (act === 'giveup') { if (busy('giveup', S.playOn?.t0 ?? 0)) return; return endPlayOn(S, 'gaveup'); }
   if (act === 'next') {
     if (justViewed()) return;
     const kb = e.target.matches(':focus-visible'); // keyboard user: put them back in the move input
