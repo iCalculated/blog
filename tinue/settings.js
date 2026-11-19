@@ -2,7 +2,7 @@
 // waits to be confirmed. Both live in the browser's prefs with the others (not synced to the account); off and tinue's
 // own board are the defaults, under which the page behaves as it did before. What app.js decides is here, so node can
 // test it (scripts/test-settings.mjs).
-import { busy } from './busy.js?v=1795059611';
+import { busy } from './busy.js?v=1795067895';
 
 // ---- board ----
 // ?board= in the address wins, so a shared ?board=ninja link keeps working (any other value is tinue's board, as

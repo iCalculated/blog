@@ -26,8 +26,8 @@ window.__tinueNinja = (function () {
 if (window.__tinueNinja) document.head.append(Object.assign(document.createElement('link'), { rel: 'preconnect', href: 'https://ptn.ninja' }));</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="board.css?v=1795059611">
-<link rel="stylesheet" href="style.css?v=1795059611">
+<link rel="stylesheet" href="board.css?v=1795067895">
+<link rel="stylesheet" href="style.css?v=1795067895">
 <style>.booting main, .booting .credits { visibility: hidden; }</style>
 <script>setTimeout(() => document.documentElement.classList.remove("booting"), 2000);</script>
 <meta name="googlebot" content="noindex"><meta name="bingbot" content="noindex">
@@ -40,6 +40,7 @@ if (window.__tinueNinja) document.head.append(Object.assign(document.createEleme
     <a href="#/glossary" data-nav>Glossary</a>
     <a href="#/me" data-nav>History</a>
     <a href="#/leaderboard" data-nav>Leaderboard</a>
+    <a href="#/rush" data-nav>Rush</a>
   </nav>
   <div id="userbox" class="userbox"></div>
 </header>
@@ -108,13 +109,14 @@ if (window.__tinueNinja) document.head.append(Object.assign(document.createEleme
 <main id="view-glossary" class="page hidden"></main>
 <main id="view-me" class="page hidden"></main>
 <main id="view-leaderboard" class="page hidden"></main>
+<main id="view-rush" class="page rush-page hidden"></main>
 
 <footer class="credits">
   <p>Puzzles come from games played on <a href="https://playtak.com">PlayTak</a>. 6×6 positions are evaluated by <a href="https://github.com/Ciekce/syntaks">Syntaks</a>, Ciekce’s engine, which also defends when you play a move out, running in your browser with his <a href="https://github.com/Ciekce/syntaks-nets">cnet023 net</a> (<a href="syntaks/NOTICE.txt">licence</a>); other sizes by <a href="https://github.com/MortenLohne/tiltak">Tiltak</a>, Morten Lohne’s engine. The board is modeled on <a href="https://ptn.ninja">PTN Ninja</a>’s, and theme names follow the <a href="https://ustak.org/tak-terminology/">USTA glossary</a>.</p>
   <p>tinue is free software under the <a href="LICENSE.txt">GNU GPL v3</a>. <a href="https://github.com/iCalculated/blog/tree/main/tinue">Source code</a>.</p>
 </footer>
 
-<script src="config.js?v=1795059611"></script>
-<script type="module" src="app.js?v=1795059611"></script>
+<script src="config.js?v=1795067895"></script>
+<script type="module" src="app.js?v=1795067895"></script>
 </body>
 </html>
