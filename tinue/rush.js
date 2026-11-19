@@ -1,12 +1,20 @@
 // The Rush page (#/rush): Rush (3 minutes, as many puzzles as you can) and Streak (until the first mistake), as
 // Lichess's Puzzle Storm and Puzzle Streak. This module owns the run; the rules are in rush-rules.js (pure, tested),
 // the board is tinue's own (PTN Ninja's iframe isn't used here: its round trips would cost clock time), and the
-// server's part is server/rush.js. Nothing here is rated, and nothing here touches the puzzle page's state.
+// server's part is server/rush.js. A move off the puzzle's line is adjudicated with the puzzle page's own rules and
+// engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused while they work. Nothing here is rated,
+// and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { Board, buildPTN } from './board.js?v=1795073685';
-import { api, store, token } from './api.js?v=1795073685';
-import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795073685';
-import * as R from './rush-rules.js?v=1795073685';
+import { Board, buildPTN } from './board.js?v=1795079670';
+import { api, store, token } from './api.js?v=1795079670';
+import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795079670';
+import * as R from './rush-rules.js?v=1795079670';
+import * as engine from './engine.js?v=1795079670';
+import * as tiltak from './tiltak.js?v=1795079670';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795079670';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795079670';
+import { busy, BUSY_MS } from './busy.js?v=1795079670';
+import * as SYM from './shared/sym.js?v=1795079670';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -71,6 +79,7 @@ function build() {
       <div class="rush-under">
         <p class="rush-note muted" id="rush-note"></p>
         <button type="button" id="rush-skip" class="hidden">Skip</button>
+        <button type="button" id="rush-giveup" class="hidden">Give up</button>
         <span class="rush-last" id="rush-last"></span>
       </div>
       <ol class="rush-strip" id="rush-strip" aria-label="Puzzles so far"></ol>
@@ -80,6 +89,7 @@ function build() {
   board = new Board($('#rush-board'), { onMove: (ptn) => moveIn(ptn) });
   board.ui({ disableBoard: true });
   $('#rush-skip').onclick = skip;
+  $('#rush-giveup').onclick = giveUp;
   $('#rush-confirm-yes').onclick = confirmHeld;
   $('#rush-confirm-no').onclick = cancelHeld;
   // A held move (Confirm moves): a tap on its final square confirms, anywhere else on the board cancels. Captured, so
@@ -213,14 +223,14 @@ const abandonedBody = (s) => {
   return b && { ...b, run: s.token, pages: s.pages, ...(s.who ? {} : { guest: { gid: gid() } }) };
 };
 function abandon(s, keepalive = false) {
-  if (!s || s.ended || s.gone || !R.canAbandon(s.run)) return;
+  if (!s || s.ended || s.gone || !R.canAbandon(s.run, s.cur)) return;
   const body = abandonedBody(s);
   if (!body) return; // (a Rush timed out before finishing a puzzle: nothing to send)
   s.gone = body.abandoned ? 'left' : 'ended'; // (ended: its clock had run out, so it went as a finished run)
   enqueue(body, s.who);
   if (R.who(token) === s.who) api('/api/rush/result', body, { quiet: true, keepalive }).then((r) => { if (R.postOutcome(r) !== 'keep') unqueue(body.run); }).catch(() => {});
 }
-function snapshot(s) { const b = s && !s.ended && !s.gone && R.canAbandon(s.run) && abandonedBody(s); if (b) { s.snap = true; enqueue(b, s.who, true); } }
+function snapshot(s) { const b = s && !s.ended && !s.gone && R.canAbandon(s.run, s.cur) && abandonedBody(s); if (b) { s.snap = true; enqueue(b, s.who, true); } }
 function unsnapshot(s) { if (s?.snap && !s.gone) { s.snap = false; unqueue(s.token); } }
 async function flushQueue() {
   if (flushing || navigator.onLine === false) return;
@@ -288,7 +298,8 @@ async function startRun() {
     got = { puzzles: r.puzzles, token: r.run, pages: [{ start: r.start, ids: r.puzzles.map((p) => p.id), sig: r.sig }] };
   }
   abandon(st); // a run left for a new one
-  st = { who: R.who(token), run: R.newRun(mode), puzzles: [...got.puzzles], idx: -1, cur: null, more: null, timer: null, ended: false, g, inputs: new Set(),
+  if (st?.cur?.adj) stopAdj(st.cur, 'left');
+  st = { who: R.who(token), run: R.newRun(mode), puzzles: got.puzzles.map(turned), idx: -1, cur: null, more: null, timer: null, ended: false, g, inputs: new Set(),
     env: { confirm: confirmOn(store.get('prefs', {})), calm: calm(), width: R.widthClass(innerWidth) },
     token: got.token, pages: [...got.pages] };
   section('rush-run');
@@ -313,6 +324,11 @@ async function startRun() {
   topUp(); // the spare just used, or the first, is replaced in the background
 }
 
+// Each puzzle of a run is shown under one of the board's 8 symmetries, picked here at random (shared/sym.js), so a
+// remembered picture doesn't give the answer away. The run works in that orientation throughout (the board, the
+// judging, the check and the defender all see the turned position); only what is posted is turned back (resultBody).
+const turned = (p) => SYM.orient(p, SYM.pick());
+
 function morePuzzles() {
   if (!st || st.ended || st.more || (st.puzzles.length >= NEED && st.puzzles.length - st.idx > MORE_AT)) return;
   const s = st, ids = s.puzzles.map((p) => p.id).join(',');
@@ -320,7 +336,7 @@ function morePuzzles() {
     .then((r) => {
       if (st !== s || !r?.puzzles) return;
       s.pages.push({ start: r.start, ids: r.puzzles.map((p) => p.id), sig: r.sig });
-      const fresh = r.puzzles.filter((p) => !s.puzzles.some((q) => q.id === p.id));
+      const fresh = r.puzzles.filter((p) => !s.puzzles.some((q) => q.id === p.id)).map(turned);
       s.puzzles.push(...fresh);
       if (fresh.length) s.chain = true; // (the pool still had some: keep filling to NEED)
     })
@@ -365,10 +381,11 @@ async function restore() {
   const c = st?.cur;
   if (!c || c.opening) return;
   if (c.reply) { c.reply = null; c.ready = performance.now(); board.lock(c.ready); R.openMove(c, c.ready); } // (a reply still due is in c.line: drawn below)
-  const from = R.boardFrom(c.p, c.line);
+  const a = c.adj; // (a move being adjudicated stays on the board, and a play-out's game with it)
+  const from = R.boardFrom(c.p, a ? [...c.line, ...(a.po ? a.po.line : [a.canon])] : c.line);
   await board.load(buildPTN({ size: c.p.size, komi: c.p.komi || 0, tps: from.tps, moves: from.moves }));
   await board.last();
-  await board.ui({ disableBoard: !!st.ended });
+  await board.ui({ disableBoard: !!st.ended || (!!a && !a.turn) });
 }
 
 // ---------- Confirm moves (the puzzle page's setting) ----------
@@ -406,10 +423,13 @@ function play(ptn) {
   const s = st, now = performance.now();
   if (!s || s.ended || !s.cur) return;
   if (R.expired(s.run, now)) return endRun(); // the clock ran out before this move: it doesn't count
-  if (now < s.cur.ready) return restore(); // a tap meant for the last puzzle, or made during the intro
+  if (!R.takesMove(s.cur, now)) return restore(); // a tap meant for the last puzzle, made during the intro, or during a pause
+  if (s.cur.adj) return playOutMove(s, s.cur, ptn, now); // a move in a play-out
   const c = s.cur, v = R.judge(c.p, c.line, ptn);
   if (v.kind === 'illegal') return restore();
   R.startClock(s.run, now); // the clock starts with the first move
+  if (s.head) { s.head = null; render(); } // (the last play-out's ending, shown until this move)
+  if (v.kind === 'off') return adjudicate(s, c, v.canon, now);
   R.closeMove(c, now, R.weight(v.canon), v.kind !== 'wrong', v.canon);
   if (v.kind === 'wrong') {
     R.wrong(s.run, now);
@@ -445,6 +465,204 @@ function reply(c, ptn) {
   board.append(ptn).then(() => board.last());
   R.openMove(c, t);
 }
+// ---------- a move off the line, adjudicated as the puzzle page does (app.js userMove, startPlayOn, defenderTurn,
+// playOnMove, makeProven, endPlayOn; the rules are playon.js's and shared/judge.js's, the engines engine.js's and
+// defend.js's) ----------
+// Rush's part is only the driver: its own state (c.adj), its clock, its screen. The clock is paused from the move until
+// the player is to move again (the check, the defender thinking, an engine loading, a wait at the move limit), each
+// wait bounded by the puzzle page's own limits; nothing else pauses it, and the board takes no move meanwhile
+// (R.takesMove). c.adj: { canon, m (its timing row), at (when it was made), phase: 'check' | 'play' | 'wait', chk,
+// po (the play-out, playon.js playOutOf), turn (the player's move in the play-out), final, look }.
+const komiOf = (p) => p.komi || 0;
+const adjLive = (s, c, a) => st === s && s.cur === c && c.adj === a && !s.ended;
+// The pause up to now goes to the move's row (and to its play-out's, once one is going); the clock runs again. No more
+// is credited than the move's bound (R.pauseMax: a page frozen past it has the rest charged to the clock), so a
+// defender's reply recorded in this pause is held to what was credited. False when the clock ran out that way: the
+// caller ends the run (the move stays open, as any move the clock beat).
+function unpause(s, c, a, now) {
+  const d = R.resume(s.run, now, R.pauseMax(a.m, !!c.hidden) - (a.m.paused || 0));
+  a.m.paused = (a.m.paused || 0) + d;
+  if (a.m.po && a.phase === 'play') a.m.po.paused += d;
+  if (a.reply) { a.reply.ms = Math.min(a.reply.ms, d); a.reply = null; }
+  return !R.expired(s.run, now);
+}
+function hold(s, c, now) { // the engine's turn: the clock stops and the board takes nothing
+  R.pause(s.run, now);
+  c.ready = Infinity; board.lock(Infinity); board.ui({ disableBoard: true });
+}
+// The turn line's text: the card's heading (and, in a play-out, its status line), as the puzzle page words them.
+const adjText = (a) => R.adjHead(a, a.po && defenderName(a.po));
+// The check's final answer, kept on the move while it is open (R.finalAnswer).
+const noteFinal = (c, a, v) => R.finalAnswer(a.m, v, performance.now() - a.t0, !!c.hidden);
+
+async function adjudicate(s, c, canon, now) {
+  const p = c.p, plies = [...c.line, canon], node = R.nodeAt(p, c.line);
+  // A listed alternative is a known win, no check needed (app.js slowerWins); a 'win' node lists none.
+  const alt = node !== 'win' && slowerWinsAt(p, c.line).includes(canon);
+  // (open until decided: R.decide; posted with the position it was judged in, and 'checking' until the check answers)
+  const a = c.adj = { canon, m: R.openAdj(c, now, R.weight(canon), canon, alt), at: now, phase: 'check', turn: false };
+  hold(s, c, now);
+  const def = defender(p.size, komiOf(p), tiltak.supports);
+  let quick = null;
+  if (!alt) {
+    render(); say(R.cardHead('checking', { move: canon }));
+    // the puzzle page's first check, with its budgets (2.5 s quick; it runs on up to 60 s for a play-out or a wait)
+    a.t0 = performance.now();
+    a.chk = engine.checkStill({ size: p.size, komi: komiOf(p), tps: p.tps, plies, attacker: c.solver });
+    quick = await a.chk.quick;
+    if (!adjLive(s, c, a)) return a.chk.cancel();
+    R.checked(a.m, quick, performance.now() - a.t0, !!c.hidden); // ('unknown' as it came: the worker failed)
+  }
+  const way = R.route({ alt, quick, def });
+  if (way === 'mistake' || way === 'solved') { a.chk?.cancel(); return settle(s, c, way); }
+  if (way === 'wait') return waitFinal(s, c);
+  startPlayOut(s, c, way === 'proven');
+}
+// No engine to play it out against (or none answered an unproven game): the check's final answer decides (settleCheck),
+// within its own 60 s.
+async function waitFinal(s, c) {
+  const a = c.adj;
+  a.phase = 'wait'; render(); say(R.cardHead('wait', { move: a.canon }));
+  const v = await a.chk.final;
+  if (!adjLive(s, c, a)) return;
+  noteFinal(c, a, v);
+  settle(s, c, R.finalOutcome(v));
+}
+
+function startPlayOut(s, c, proven) {
+  const a = c.adj, p = c.p, now = performance.now();
+  if (!unpause(s, c, a, now)) return endRun();
+  R.pause(s.run, now); // (the play-out's own pauses are counted from here)
+  const po = a.po = playOutOf({ miss: a.canon, at: c.line.length, base: [...c.line], g: R.startGame(p, [...c.line, a.canon]), proven,
+    left: pliesLeftOf(R.nodeAt(p, c.line)), key: a.canon, engine: defender(p.size, komiOf(p), tiltak.supports) });
+  a.phase = 'play';
+  a.m.po = { proven, cap: po.cap, end: null, paused: 0, line: [] }; // what is posted of it (R.resultBody)
+  if (proven) proofLength(s, c, po, a.chk?.info?.plies); // (a listed alternative's length is measured, as on the puzzle page)
+  else a.chk.final.then((v) => { if (!adjLive(s, c, a)) return; noteFinal(c, a, v); if (!po.end) { if (v === 'wins') lateProof(s, c, po); else a.final = v; } }); // the game decides
+  warmDefender(po, p.size, komiOf(p));
+  po.t0 = performance.now(); setTimeout(() => { if (adjLive(s, c, a)) render(); }, BUSY_MS.giveup + 100); // Give up wakes
+  render(); say(R.cardHead('play', { proven }));
+  defenderTurn(s, c, po);
+}
+// app.js setProofLength: the cap rises to cover the proof (playon.js applyProofLength); a length not known is measured
+// in the engine worker (playon.js measureProof).
+function proofLength(s, c, po, plies) {
+  const a = c.adj;
+  if (applyProofLength(po, plies)) { a.m.po.cap = po.cap; return render(); }
+  if (plies === null) return;
+  measureProof(po, () => engine.proofLength({ size: c.p.size, komi: komiOf(c.p), tps: c.p.tps, plies: [...po.base, po.miss], attacker: c.solver, budget: 1e5 }), (r) => {
+    if (r && Number.isFinite(r.plies) && adjLive(s, c, a) && !po.end) proofLength(s, c, po, r.plies);
+  });
+}
+// app.js makeProven: a proof mid-game makes it a proven play-out against Syntaks, or a solve now against Tiltak
+// (playon.js upgradeToProven).
+function lateProof(s, c, po) {
+  const a = c.adj;
+  if (po.proven || po.end) return;
+  if (!upgradeToProven(po)) return endPlayOut(s, c, 'proved');
+  a.final = 'wins'; a.m.po.proven = true;
+  proofLength(s, c, po, a.chk.info?.plies);
+  render(); say(R.cardHead('play', { proven: true, late: true }));
+}
+// app.js defenderTurn, with the clock paused for it.
+async function defenderTurn(s, c, po) {
+  const a = c.adj, live = () => adjLive(s, c, a) && !po.end;
+  po.thinking = true; po.thinkingSince = performance.now(); a.turn = false;
+  hold(s, c, po.thinkingSince);
+  render();
+  const t0 = performance.now();
+  const d = await defenderMove(po, { size: c.p.size, komi: komiOf(c.p), tps: po.g.toTPS(), live, onFallback: render });
+  if (!d) return;
+  if (d.end === 'proved') { po.thinking = false; return endPlayOut(s, c, 'proved'); }
+  if (d.end) return endPlayOut(s, c, 'noengine');
+  po.thinking = false;
+  po.g.play(d.mv); po.line.push(d.mv);
+  // (its time is held to the reply's bound here, and to the pause credited for it in unpause)
+  a.m.po.line.push(a.reply = { m: d.mv, ms: Math.min(performance.now() - t0, R.PAUSE_MS.reply + (c.hidden ? R.PAUSE_MS.hidden : 0)) });
+  await board.append(d.mv); await board.last();
+  if (!live()) return;
+  const end = ending(po.g.result(), c.solver);
+  if (end) return endPlayOut(s, c, end);
+  // the player's turn: the clock runs again, and the board takes their move
+  const t = performance.now();
+  if (!unpause(s, c, a, t)) return endRun();
+  a.turn = true; a.mvT0 = c.ready = t; board.lock(t);
+  await board.setPlayer(c.solver);
+  await board.ui({ disableBoard: false, showRoads: false, dropOnStray: false });
+  render();
+}
+// app.js playOnMove: the player's move in the game, then the defender's, or a wait at the move limit for what could
+// raise it (capWait: the proof's length, or the proof), or the end.
+async function playOutMove(s, c, ptn, now) {
+  const a = c.adj, po = a.po;
+  if (!po || po.end || po.thinking || !a.turn) return restore();
+  const canon = legalMove(po.g, ptn);
+  if (!canon) return restore();
+  po.g.play(canon); po.line.push(canon); po.mine++;
+  a.m.po.line.push({ m: canon, ms: now - a.mvT0 });
+  a.turn = false;
+  const end = ending(po.g.result(), c.solver);
+  if (end) return endPlayOut(s, c, end);
+  hold(s, c, now);
+  if (po.mine >= po.cap) {
+    const why = capWait(po, { lengthPending: !!po.lengthP, checkLive: !!a.chk && !po.proven && a.final === undefined });
+    if (why) {
+      po.waiting = why; render();
+      await waitAtCap(po, why, a.chk.final); // (defend.js, as the puzzle page waits; lateProof runs first)
+      if (!adjLive(s, c, a) || po.end) return;
+      po.waiting = null;
+    }
+    if (po.mine >= po.cap) return endPlayOut(s, c, 'out');
+  }
+  defenderTurn(s, c, po);
+}
+// Give up (the puzzle page's button and word): a mistake. Not in the play-out's first 1.5 s (busy.js giveup).
+function giveUp() {
+  const s = st, c = s?.cur, po = c?.adj?.po;
+  if (!po || po.end || s.ended || busy('giveup', po.t0)) return;
+  endPlayOut(s, c, 'gaveup');
+}
+// app.js endPlayOn: the game is over; how it counts is R.playOutOutcome.
+function endPlayOut(s, c, kind) {
+  const a = c.adj, po = a.po;
+  if (!po || po.end) return;
+  po.end = kind; po.thinking = false; po.waiting = null; po.ctl?.abort();
+  a.m.po.end = kind; a.m.po.cap = po.cap;
+  a.look = R.playOutLook(po, defenderName(po));
+  const out = R.playOutOutcome(kind, po.proven);
+  if (out === 'wait') return waitFinal(s, c); // (no engine moved in an unproven game: the check decides)
+  a.chk?.cancel();
+  settle(s, c, out);
+}
+// Rush's own end of a move's adjudication: the pause ends, the move counts one way or the other. A won play-out counts
+// as the one correct move it started from, with that move's weight toward the combo (the game's later moves add
+// nothing: they show the win, as the line's own replies do); anything else is a mistake, as today.
+function settle(s, c, out) {
+  const a = c.adj, now = performance.now();
+  if (!unpause(s, c, a, now)) return endRun(); // (the clock ran out over a frozen page's pause: the move stays open)
+  c.adj = null;
+  R.decide(c, out === 'solved');
+  if (out === 'solved') {
+    const bonus = R.correct(s.run, a.m.weight);
+    R.stampMove(c, s.run, now, a.at);
+    $('#rush-combo-fill').classList.remove('drain');
+    if (bonus) { c.gained = (c.gained || 0) + bonus; flash(`+${bonus / 1000}s`, 'good', true); fillCombo(s); }
+    return done(true, now, null, a);
+  }
+  R.wrong(s.run, now);
+  R.stampMove(c, s.run, now, a.at);
+  if (s.run.mode === 'rush') { comboHold = false; clearTimeout(comboT); $('#rush-combo-fill').classList.add('drain'); }
+  flash('−10s', 'bad', s.run.mode === 'rush');
+  done(false, now, a.canon, a);
+}
+// The run ends or is left mid-adjudication: the engines stop, the move stays open (posted as such, the puzzle
+// unfinished). kind: 'time' (the clock ran out on the player's turn) or 'left'.
+function stopAdj(c, kind) {
+  const a = c.adj;
+  a.chk?.cancel();
+  if (a.po && !a.po.end) { a.po.end = kind; a.po.thinking = false; a.po.ctl?.abort(); a.m.po.end = kind; a.look = R.playOutLook(a.po, defenderName(a.po)); }
+}
+
 // A bonus fills the bar for COMBO_HOLD_MS, then it snaps to what the next bonus needs (render() leaves it meanwhile).
 const COMBO_HOLD_MS = 300;
 let comboHold = false, comboT = 0;
@@ -462,20 +680,22 @@ function fillCombo(s) {
   }, COMBO_HOLD_MS);
 }
 
-function done(solved, now, wrong = null) {
+// a: the adjudication that decided it (a move off the line): the move, and its play-out's ending when there was one.
+function done(solved, now, wrong = null, a = null) {
   const s = st, c = s.cur;
-  R.finish(s.run, { id: c.p.id, rating: c.p.rating, solved, ms: now - c.born, mv: c.moves || [], hidden: !!c.hidden, ...(wrong ? { wrong, at: c.line.slice() } : {}),
+  R.finish(s.run, { id: c.p.id, rating: c.p.rating, solved, ms: now - c.born, mv: c.moves || [], hidden: !!c.hidden, sym: c.p.sym ?? 0, ...(wrong ? { wrong, at: c.line.slice() } : {}),
+    ...(a ? { played: a.canon, at: c.line.slice(), ...(a.look ? { po: a.look } : {}) } : {}),
     ...(s.run.mode === 'rush' ? { clock: R.timeLeft(s.run, now), combo: s.run.combo } : {}) });
-  mark(solved, c.gained || 0);
-  if (s.run.over) return endRun(wrong);
+  mark(solved, c.gained || 0, a);
+  if (s.run.over) return endRun(wrong, !!a?.po);
   nextPuzzle();
 }
 
 function skip() {
   const s = st;
-  if (!s || s.ended || s.run.mode !== 'streak' || s.run.skipUsed || !s.cur) return;
+  if (!s || s.ended || s.run.mode !== 'streak' || s.run.skipUsed || !s.cur || s.cur.adj) return; // (not mid-adjudication)
   s.run.skipUsed = true;
-  R.finish(s.run, { id: s.cur.p.id, rating: s.cur.p.rating, solved: false, skipped: true, ms: performance.now() - s.cur.born, mv: s.cur.moves || [], hidden: !!s.cur.hidden });
+  R.finish(s.run, { id: s.cur.p.id, rating: s.cur.p.rating, solved: false, skipped: true, sym: s.cur.p.sym ?? 0, ms: performance.now() - s.cur.born, mv: s.cur.moves || [], hidden: !!s.cur.hidden });
   mark(null);
   $('#rush-skip').disabled = true; $('#rush-skip').textContent = 'Skip used';
   nextPuzzle();
@@ -515,9 +735,17 @@ function render() {
     $('#rush-combo-next').textContent = `+${nb.ms / 1000}s at ${nb.at}`;
     if (!comboHold) $('#rush-combo-fill').style.width = `${Math.round(nb.frac * 100)}%`;
   }
-  // the text the stone and ring say, for screen readers and as a small second line
-  const toMove = s.cur ? R.turn(s.cur.solver).text : '';
-  $('#rush-note').textContent = s.run.startedAt == null && s.run.mode === 'rush' ? `${toMove} The clock starts with your first move.` : toMove;
+  // the text the stone and ring say, for screen readers and as a small second line; while a move is adjudicated, the
+  // puzzle page's card heading and status in its place (adjText)
+  const toMove = s.cur ? R.turn(s.cur.solver).text : '', note = $('#rush-note');
+  const a = s.cur?.adj;
+  note.textContent = a ? adjText(a) : s.head ? `${s.head}. ${toMove}` : s.run.startedAt == null && s.run.mode === 'rush' ? `${toMove} The clock starts with your first move.` : toMove;
+  note.title = a?.po ? a.po.capNote : '';
+  $('#rush-clock').classList.toggle('paused', s.run.pausedAt != null);
+  const gb = $('#rush-giveup'), po = a?.po;
+  gb.classList.toggle('hidden', !po);
+  gb.disabled = !po || !!po.end || busy('giveup', po.t0); // (its first 1.5 s: a tap aimed at the board, as on the puzzle page)
+  if (s.run.mode === 'streak') $('#rush-skip').disabled = s.run.skipUsed || !!a;
 }
 // The colour to move without reading: the stone on a board square left of the clock, swelling once on a change.
 function showTurn(t) {
@@ -525,7 +753,7 @@ function showTurn(t) {
   el.classList.remove('white', 'black', 'flip');
   el.classList.add(t.color);
   if (t.changed) { void el.offsetWidth; el.classList.add('flip'); } // (a reflow restarts the animation)
-  if (sayNext) { say(R.sayText({ ...sayNext, next: t.text })); sayNext = null; }
+  if (sayNext) { say((sayNext.head ? sayNext.head + '. ' : '') + R.sayText({ ...sayNext, next: t.text })); sayNext = null; }
 }
 // The puzzle just finished and its rating, until the next one finishes (Storm's corner). It pops in only when a new
 // result arrives, so two close ratings in a row still read as two results.
@@ -535,10 +763,12 @@ function showLast(r) {
   el.innerHTML = v ? `<span class="sr-only">${esc(v.label)}</span><span aria-hidden="true">${esc(v.text)}</span>` : '';
   if (v) { void el.offsetWidth; el.classList.add('in'); }
 }
-function mark(solved, gained = 0) {
+function mark(solved, gained = 0, a = null) {
   const r = st.run.results.at(-1);
   showLast(r);
-  sayNext = { r, mode: st.run.mode, bonus: gained };
+  // a play-out's ending, in the puzzle page's words: on the turn line until the next move, and said with the result
+  st.head = a?.look ? R.endingHead(a.look, a.canon) : null;
+  sayNext = { r, mode: st.run.mode, bonus: gained, head: st.head };
   const li = document.createElement('li');
   li.className = solved == null ? 'skip' : solved ? 'good' : 'bad';
   li.setAttribute('aria-label', solved == null ? 'skipped' : solved ? 'solved' : 'failed');
@@ -562,16 +792,17 @@ const sec = (ms) => (ms == null ? '–' : ms >= 60e3 ? R.clockText(ms) : (ms / 1
 // The board stays for END_BEAT_MS before the end screen, dimmed (a Streak's losing move on it in red): the moment is
 // seen, and a tap already on its way doesn't land on Play again. A pause, not motion: kept under reduced motion.
 const END_BEAT_MS = 500;
-async function endRun(wrong = null) {
+async function endRun(wrong = null, played = false) {
   const s = st;
   if (!s || s.ended) return;
+  if (s.cur?.adj) stopAdj(s.cur, 'time'); // (the clock ran out on the player's turn in a play-out: unfinished)
   s.ended = true;
   R.end(s.run, performance.now());
   clearInterval(s.timer);
   dropHeld();
   board.ui({ disableBoard: true });
   const mode = s.run.mode;
-  say(R.sayText({ ...(sayNext || {}), mode, over: true })); sayNext = null;
+  say((sayNext?.head ? sayNext.head + '. ' : '') + R.sayText({ ...(sayNext || {}), mode, over: true })); sayNext = null;
   if (mode === 'rush') $('#rush-clock-t').textContent = '0:00';
   const wrap = $('#rush-board-wrap');
   wrap.classList.add('rush-over');
@@ -579,7 +810,8 @@ async function endRun(wrong = null) {
   if (s.cur) s.cur.reply = null; // (a reply still due stays off the board)
   if (wrong && mode === 'streak') {
     wrap.classList.add('miss');
-    (board.snaps?.at(-1)?.ptn === wrong ? board.last() : board.append(wrong).then(() => board.last())).catch?.(() => {});
+    // (a play-out's game is already on the board, its last move not this one)
+    if (!played) (board.snaps?.at(-1)?.ptn === wrong ? board.last() : board.append(wrong).then(() => board.last())).catch?.(() => {});
   }
   R.closeOpen(s.run, s.cur); // (a Rush out of time keeps the puzzle on the board, as unfinished)
   const rec = R.recordOf(s.run, s.puzzles, Date.now());
@@ -601,12 +833,12 @@ async function endRun(wrong = null) {
 // The end screen for a run: s, the run just played (Play again, its best and the post's answer to come), or null for
 // one from the recent runs (when it was played, Back only; at, its row there, which Back gives the focus to).
 function showEnd(rec, s, at = null) {
-  const sum = rec.sum, mode = rec.mode;
+  const sum = rec.sum, mode = rec.mode, played = sum.clockMs ?? sum.ms; // (time on the clock: the engine's pauses aren't the player's)
   section('rush-end');
   const stats = mode === 'rush'
     ? [['Moves', sum.moves], ['Accuracy', pct(sum.accuracy)], ['Best combo', sum.bestCombo],
-      ['Time played', sec(sum.ms)], ['Per move', sec(sum.perMove)], ['Hardest solved', sum.highest ?? '–']]
-    : [['Hardest solved', sum.highest ?? '–'], ['Time played', sec(sum.ms)]];
+      ['Time played', sec(played)], ['Per move', sec(sum.perMove)], ['Hardest solved', sum.highest ?? '–']]
+    : [['Hardest solved', sum.highest ?? '–'], ['Time played', sec(played)]];
   const hint = window.matchMedia?.('(hover: hover)').matches ? 'Hover or click a puzzle to see it.' : 'Tap a puzzle to see it.';
   $('#rush-end').innerHTML = (s ? `<h1 tabindex="-1">${mode === 'rush' ? 'Time’s up' : 'Streak over'}</h1>
     <p class="rush-newbest" id="rush-newbest" aria-live="polite"></p>` : `<h1 tabindex="-1">${MODE[mode].name}</h1><p class="rush-newbest rush-when">${esc(when(rec.t))}</p>`) + `
@@ -648,7 +880,7 @@ function lookHTML(rec, i) {
   return `<div class="rush-look"><div class="rush-mini" style="--n:${v.size}" aria-hidden="true">${v.cells.map((c) =>
     `<i class="${c.dark ? 'dk' : 'lt'}${mk(c.sq)}">${co(c.sq)}${c.top ? `<b class="p${c.top.color} k${c.top.type}"></b>${c.h > 1 ? `<em>${c.h}</em>` : ''}` : ''}</i>`).join('')}</div>
     <div class="rush-look-txt"><p><span class="rush-turn sm ${t.color}" aria-hidden="true"><i></i></span>${t.text}</p>
-    ${v.you ? `<p class="${r.skipped || r.unfinished ? 'muted' : 'bad'}">${r.skipped || r.unfinished ? '' : g('✗')}${esc(v.you)}</p>` : ''}${v.want ? `<p class="good">${g('✓')}${esc(v.want)}</p>` : ''}</div></div>`;
+    ${v.you ? `<p class="${r.skipped || r.unfinished ? 'muted' : r.solved ? 'good' : 'bad'}">${r.skipped || r.unfinished ? '' : g(r.solved ? '✓' : '✗')}${esc(v.you)}</p>` : ''}${v.want ? `<p class="${r.solved && r.played != null ? 'muted' : 'good'}">${r.solved && r.played != null ? '' : g('✓')}${esc(v.want)}</p>` : ''}</div></div>`;
 }
 function lookBack(rec) {
   const wrap = $('#rush-list-wrap'), peek = $('#rush-peek');
@@ -692,5 +924,6 @@ async function showBest(r, mode, s, out = null) {
 export function leave() {
   gen++;
   abandon(st);
+  if (st?.cur?.adj) stopAdj(st.cur, 'left');
   if (st) { clearInterval(st.timer); st = null; dropHeld(); board?.ui({ disableBoard: true }); }
 }

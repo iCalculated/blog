@@ -1,8 +1,11 @@
 // Rush and Streak rules (Lichess Puzzle Storm / Puzzle Streak), pure so node can test them (scripts/test-rush.mjs):
-// judging a move without an engine, the clock, the combo and its time bonuses, and the end-of-run numbers.
-// public/rush.js owns the screen and calls these with the time it read.
-import { Game, colorOf, typeOf } from './shared/tak.js?v=1795073685';
-import { finalSquare } from './settings.js?v=1795073685';
+// judging a move by the puzzle's line, where an off-line move goes next (the puzzle page's adjudication: route,
+// playOutOutcome), the clock and its pauses, the combo and its time bonuses, and the end-of-run numbers.
+// public/rush.js owns the screen and the engines and calls these with the time it read.
+import { Game, colorOf, typeOf } from './shared/tak.js?v=1795079670';
+import { finalSquare } from './settings.js?v=1795079670';
+import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795079670';
+import * as SYM from './shared/sym.js?v=1795079670';
 
 export const SIZE = 6; // Rush and Streak are 6×6 only (server/rush.js refuses any other size)
 export const RUSH_MS = 180e3; // 3:00
@@ -26,9 +29,10 @@ export function nextBonus(combo) {
 // What a puzzle needs: { tps, komi, tree } (GET /api/rush/run). The solver is the side to move.
 // line: the moves played in this puzzle so far, both sides, canonical PTN. Returns one of
 //   { kind: 'illegal' }                      not a legal move here (the board puts it back; nothing counted)
-//   { kind: 'wrong', canon }                 a mistake
+//   { kind: 'wrong', canon }                 a mistake: the move ends the game without the player's win
 //   { kind: 'solved', canon, how: 'road' }   wins on the spot (or ends the stored line)
 //   { kind: 'ok', canon, reply }             in the tree; the reply is played and the puzzle goes on
+//   { kind: 'off', canon }                   any other legal move: adjudicated as the puzzle page does (route)
 export function startGame(p, line = []) {
   const g = Game.fromTPS(p.tps, p.komi || 0);
   for (const m of line) g.play(m);
@@ -59,33 +63,119 @@ export function judge(p, line, ptn) {
     if (!e?.r) return { kind: 'solved', canon, how: 'road' };
     return { kind: 'ok', canon, reply: e.r };
   }
-  // Anything else is a mistake, a different winning move included: one move proves nothing about the rest of the line,
-  // and there's no time to play it out (the puzzle page does). Puzzles that list other winning moves (alts / altsAt)
-  // are never in a run (server/rush.js pools), so this only meets moves no one has found to win.
-  return { kind: 'wrong', canon };
+  // Anything else is judged as the puzzle page judges it (Sasha, 2026-11-18: "use the same adjudication flows"): a listed
+  // alternative or a proof is a win to play out, a refutation a mistake, and an undecided move is played out (route).
+  return { kind: 'off', canon };
+}
+
+// ---------- adjudicating a move off the line (app.js userMove, step for step) ----------
+// Where an off-line move goes, from what the puzzle page would know at that point:
+//   alt    the move is a listed alternative here (playon.js slowerWinsAt: no check runs, as on the puzzle page)
+//   quick  the first still-wins check's quick answer ('wins' | 'no' | 'pending'), when one ran
+//   def    who defends (playon.js defender: 'syntaks' | 'tiltak' | null)
+// Returns 'mistake' (refuted), 'solved' (proven where there is no proven play-out: the puzzle page's slowSolve),
+// 'proven' (a proven play-out: "That wins: play it out"), 'playout' (undecided: "Play it out"), or 'wait' (undecided
+// with no engine to defend: the check's final answer decides, as settleCheck does).
+export function route({ alt = false, quick = null, def = null }) {
+  const out = alt ? 'wins' : quickOutcome(quick, false);
+  if (out === 'no') return 'mistake';
+  if (out === 'wins') return provenPlayOut(def) ? 'proven' : 'solved';
+  return def ? 'playout' : 'wait';
+}
+// How a play-out's ending (its kind, as the puzzle page's endPlayOn gets it) counts in a run: 'solved' for the
+// player's win ('win') or a proof ('proved': Syntaks dropped out of a proven play-out, or a proof landed while Tiltak
+// defended); 'wait' when no engine could move in an unproven game ('noengine': the check's final answer decides, as
+// on the puzzle page); 'mistake' for anything else (the defender's road, flats or draw: 'road' / 'held'; out of
+// moves: 'out'; Give up: 'gaveup'). Rush's own 'left' (the run left mid-game) and 'time' (the clock ran out on the
+// player's turn) leave the puzzle unfinished: 'open'.
+export function playOutOutcome(kind, proven = false) {
+  if (kind === 'win' || kind === 'proved') return 'solved';
+  if (kind === 'noengine') return proven ? 'solved' : 'wait';
+  if (kind === 'left' || kind === 'time') return 'open';
+  return 'mistake';
+}
+// The check's final answer, where it decides ('wait'): a proof is a solve; 'no' or no answer is a mistake (Rush has
+// no unrated miss: nothing in it is rated).
+export const finalOutcome = (v) => (v === 'wins' ? 'solved' : 'mistake');
+
+// The most engine time a move off the line can have paused the clock for (ms), by what it went through: the puzzle
+// page's own engine limits (playon.js ENGINE_MS, CAP_WAIT_MS) plus slack. Shared with the server (server/rush.js),
+// which refuses more; the client credits no more (resume's room). m: the move as posted ({ check, po: { line, end } }).
+//   check     'alt' (no check ran) next to nothing; 'checking' (left before it answered), 'no', 'wins' the quick
+//             check; 'pending' or 'unknown' with no play-out, or one no engine could play ('noengine'), the check's
+//             run-on, which then decided (its 60 s count from the check's start).
+//   play-out  each defender reply (one more may have been on its way), and the waits at the move limit (a proof, then
+//             its length).
+//   hidden    a page hidden meanwhile stretches the engines' clocks (they count visible time only): 10 minutes more.
+const SLACK_MS = 5000;
+export const PAUSE_MS = { slack: SLACK_MS, check: ENGINE_MS.quick + SLACK_MS, final: ENGINE_MS.final + SLACK_MS,
+  reply: ENGINE_MS.local + ENGINE_MS.crux + ENGINE_MS.local + ENGINE_MS.download + ENGINE_MS.tiltakUp + ENGINE_MS.tiltak + SLACK_MS,
+  capWait: Object.values(CAP_WAIT_MS).reduce((t, x) => t + x, 0) + SLACK_MS, hidden: 10 * 60e3 };
+export const CHECKS = ['checking', 'wins', 'no', 'pending', 'unknown', 'alt'], FINALS = ['wins', 'no', 'unknown'];
+export const waitsOnFinal = (m) => (m.check === 'pending' || m.check === 'unknown') && (!m.po || m.po.end === 'noengine');
+export function pauseMax(m, hidden = false) {
+  const check = m.check === 'alt' ? PAUSE_MS.slack : waitsOnFinal(m) ? PAUSE_MS.final : PAUSE_MS.check;
+  const game = m.po ? (Math.ceil(m.po.line.length / 2) + 1) * PAUSE_MS.reply + PAUSE_MS.capWait : 0;
+  return check + game + (hidden ? PAUSE_MS.hidden : 0);
+}
+// A move off the line as it is made (rush.js adjudicate): closed open (decide() settles it), with the position it was
+// judged in (path: the puzzle's moves before it) and the check's state: 'alt' (a listed alternative, none runs) or
+// 'checking' until the quick answer comes (checked), so a run left meanwhile posts it as it stood.
+export function openAdj(c, now, weight, canon, alt = false) {
+  closeMove(c, now, weight, null, canon);
+  const m = c.moves.at(-1);
+  m.path = [...(c.line || [])]; m.check = alt ? 'alt' : 'checking';
+  return m;
+}
+// The check's quick answer as it came ('wins' | 'no' | 'pending' | 'unknown': the worker failed or was stopped) and
+// its time, within the bound the server takes (a frozen page's longer wait isn't the engine's).
+export function checked(m, quick, ms, hidden = false) {
+  m.check = quick; m.checkMs = Math.min(Math.round(ms), PAUSE_MS.check + (hidden ? PAUSE_MS.hidden : 0));
+}
+// The check's final answer, once it came while the move was still open (an unproven play-out's proof or refutation, or
+// the answer that decided a wait), and its time from the check's start, bounded as above.
+export function finalAnswer(m, v, ms, hidden = false) {
+  m.final = FINALS.includes(v) ? v : 'unknown'; m.finalMs = Math.min(Math.round(ms), PAUSE_MS.final + (hidden ? PAUSE_MS.hidden : 0));
 }
 
 // ---------- the run ----------
 // mode 'rush': the clock starts at the first move; 'streak': no clock, the first wrong move ends it, one skip.
 export function newRun(mode) {
   return { mode, startedAt: null, endedAt: null, over: false, bonusMs: 0, penaltyMs: 0, combo: 0, bestCombo: 0,
-    moves: 0, errors: 0, score: 0, skipUsed: false, results: [], units: 0 }; // units: combo earned in all (see weight)
+    moves: 0, errors: 0, score: 0, skipUsed: false, results: [], units: 0, // units: combo earned in all (see weight)
+    pausedMs: 0, pausedAt: null }; // the engine's time, never charged (pause / resume)
 }
 export function startClock(run, now) { if (run.startedAt == null) run.startedAt = now; }
+// Engine time isn't the player's (Sasha, 2026-11-18: "time that Syntaks spends thinking should not be held against the
+// user"): the clock stops while a check runs or the defender thinks, and runs whenever it is the player's turn. Only a
+// move that needs the engine pauses it (rush.js). In Streak, with no clock, the pauses are still counted (data).
+export function pause(run, now) { if (run.pausedAt == null && !run.over) run.pausedAt = now; }
+// Ends a pause; returns the time credited to it (0 if none was running). room: the most it may credit (pauseMax less
+// what the move already had): a pause past its bound, e.g. a page frozen while the engine worked, is charged to the
+// clock beyond it, so a post never claims more engine time than the server takes.
+export function resume(run, now, room = Infinity) {
+  if (run.pausedAt == null) return 0;
+  const d = Math.max(0, Math.min(now - run.pausedAt, room));
+  run.pausedMs += d; run.pausedAt = null;
+  return d;
+}
+// Real time paused up to `now` (the one running included).
+export const pausedTo = (run, now) => run.pausedMs + (run.pausedAt != null ? Math.max(0, (run.endedAt ?? now) - run.pausedAt) : 0);
+// Clock time used by `now`: real time since the first move less the pauses.
+export const clockUsed = (run, now) => (run.startedAt == null ? 0 : Math.max(0, (run.endedAt ?? now) - run.startedAt - pausedTo(run, now)));
 // Rush time left (ms) at `now`; the full 3:00 until the first move.
 export function timeLeft(run, now) {
   if (run.mode !== 'rush') return Infinity;
-  const used = run.startedAt == null ? 0 : (run.endedAt ?? now) - run.startedAt;
-  return Math.max(0, RUSH_MS + run.bonusMs - run.penaltyMs - used);
+  return Math.max(0, RUSH_MS + run.bonusMs - run.penaltyMs - clockUsed(run, now));
 }
 // Called before acting on a move, with the time it was made: true when the clock ran out first, which ends the run
-// (the move doesn't count).
+// (the move doesn't count). A paused clock never runs out.
 export function expired(run, now) {
   if (run.mode !== 'rush' || run.over || run.startedAt == null || timeLeft(run, now) > 0) return run.over;
-  end(run, run.startedAt + RUSH_MS + run.bonusMs - run.penaltyMs);
+  end(run, run.startedAt + run.pausedMs + RUSH_MS + run.bonusMs - run.penaltyMs);
   return true;
 }
-export function end(run, now) { if (!run.over) { run.over = true; run.endedAt = now; } }
+export function end(run, now) { if (!run.over) { if (run.pausedAt != null) resume(run, now); run.over = true; run.endedAt = now; } }
 
 // A move's weight toward the combo (Shy, 2026-11-18: each placement in a stack counts): the squares a stack move drops
 // on, e.g. 4a2>112 is 3 and a2> (one square, its count implied) is 1; a placement is 1. At most MAX_DROPS on 6×6.
@@ -118,23 +208,35 @@ export function finish(run, r) {
 }
 
 // The end screen's numbers, and the body of POST /api/rush/result.
+// ms is real time from the first move (posted: the server bounds it with paused); clockMs leaves out the engine's
+// pauses, and is what the end screen shows as time played (and per move).
 export function summary(run) {
-  const played = run.startedAt == null ? 0 : (run.endedAt ?? run.startedAt) - run.startedAt;
+  const played = run.startedAt == null ? 0 : (run.endedAt ?? run.startedAt) - run.startedAt, clock = Math.max(0, played - (run.pausedMs || 0));
   const solved = run.results.filter((r) => r.solved);
   return {
     score: run.score, moves: run.moves, errors: run.errors, bestCombo: run.bestCombo,
     accuracy: run.moves ? (run.moves - run.errors) / run.moves : null,
-    ms: Math.max(0, Math.round(played)), perMove: run.moves ? played / run.moves : null,
+    ms: Math.max(0, Math.round(played)), clockMs: Math.round(clock), perMove: run.moves ? clock / run.moves : null,
     highest: solved.length ? Math.max(...solved.map((r) => r.rating)) : null,
   };
 }
+// Moves are posted in the puzzle's own orientation (sym: the symmetry it was shown under, shared/sym.js), so rows from
+// different runs line up; the player saw them turned. paused: the run's engine time, never on its clock.
 export function resultBody(run, build = 0, env = null) {
   const s = summary(run);
   return { mode: run.mode, size: SIZE, score: s.score, moves: s.moves, errors: s.errors, bestCombo: s.bestCombo, units: run.units || 0, ms: s.ms, build,
-    ...(env ? { env } : {}),
-    puzzles: run.results.map((r) => ({ id: r.id, solved: r.solved, ...(r.skipped ? { skipped: true } : {}), ...(r.unfinished ? { unfinished: true } : {}), ms: Math.round(r.ms),
-      ...(r.wrong ? { wrong: r.wrong } : {}), ...(r.clock != null ? { clock: Math.round(r.clock) } : {}), ...(r.combo != null ? { combo: r.combo } : {}),
-      ...(r.mv ? { mv: r.mv } : {}), ...(r.hidden != null ? { hidden: r.hidden } : {}) })) };
+    paused: Math.round(run.pausedMs || 0), ...(env ? { env } : {}),
+    puzzles: run.results.map((r) => { const back = (m) => SYM.move(SYM.inverse(r.sym || 0), SIZE, m); return { id: r.id, solved: r.solved, ...(r.skipped ? { skipped: true } : {}), ...(r.unfinished ? { unfinished: true } : {}), ms: Math.round(r.ms),
+      ...(r.wrong ? { wrong: back(r.wrong) } : {}), ...(r.clock != null ? { clock: Math.round(r.clock) } : {}), ...(r.combo != null ? { combo: r.combo } : {}),
+      ...(r.mv ? { mv: r.mv.map((m) => postMove(m, back)) } : {}), ...(r.hidden != null ? { hidden: r.hidden } : {}), ...(r.sym != null ? { sym: r.sym } : {}) }; }) };
+}
+// A move as posted: its PTN and its play-out's moves turned back (back), times whole.
+function postMove(m, back) {
+  const { po, ...rest } = m, out = { ...rest, ...(m.ptn ? { ptn: back(m.ptn) } : {}), ...(m.path ? { path: m.path.map(back) } : {}) };
+  if (out.checkMs != null) out.checkMs = Math.round(out.checkMs);
+  if (out.paused != null) out.paused = Math.round(out.paused);
+  if (po) out.po = { proven: !!po.proven, cap: po.cap, end: po.end ?? null, paused: Math.round(po.paused || 0), line: po.line.map((x) => ({ m: back(x.m), ms: Math.round(x.ms) })) };
+  return out;
 }
 
 // ---------- timing data, for calibrating puzzle difficulty (server/rush.js rush_moves) ----------
@@ -144,18 +246,30 @@ export function resultBody(run, build = 0, env = null) {
 export function openMove(c, t0) { c.moves ||= []; c.mv = { t0, first: null, held: null }; }
 export function touchMove(c, now) { if (c?.mv && c.mv.first == null && now >= c.mv.t0) c.mv.first = now; }
 export function holdMove(c, now) { if (c?.mv && c.mv.held == null) c.mv.held = now; }
+// correct null: a move off the line, being adjudicated (rush.js): open until decide() says which (an open move left
+// with the run is posted as open, neither right nor wrong).
 export function closeMove(c, now, weight, correct, ptn = null) {
   const m = c.mv, t0 = m ? m.t0 : now, d = (t) => Math.max(0, Math.round(Math.min(t, now) - t0));
-  (c.moves ||= []).push({ first: m?.first != null ? d(m.first) : null, ms: d(now), ...(m?.held != null ? { held: d(m.held) } : {}), weight, correct,
-    ...(ptn ? { ptn } : {}) });
+  (c.moves ||= []).push({ first: m?.first != null ? d(m.first) : null, ms: d(now), ...(m?.held != null ? { held: d(m.held) } : {}), weight,
+    ...(correct == null ? { correct: false, open: true } : { correct }), ...(ptn ? { ptn } : {}) });
   c.mv = null;
 }
+// The adjudicated move once decided: right or wrong, and no longer open.
+export function decide(c, correct) {
+  const m = c.moves?.findLast((x) => x.open);
+  if (m) { m.correct = correct; delete m.open; }
+  return m;
+}
+// Whether the board takes a move now: not during the intro, the reply beat, or a pause (c.ready is Infinity while the
+// engine works: rush.js), and not while a move is being adjudicated outside a play-out's turn.
+export const takesMove = (c, now) => !!c && now >= c.ready && !(c.adj && !c.adj.turn);
 // The trajectory of the move just made, once the run has counted it (after correct / wrong): at, whole ms from the
 // run's clock start (its first move), and in Rush the clock left with any bonus or penalty applied.
-export function stampMove(c, run, now) {
+// at: when the move was made, if earlier than now (an adjudicated move is stamped once decided, its at still the move's).
+export function stampMove(c, run, now, at = now) {
   const m = c.moves?.at(-1);
   if (!m || run.startedAt == null) return;
-  m.at = Math.max(0, Math.round(now - run.startedAt));
+  m.at = Math.max(0, Math.round(at - run.startedAt));
   if (run.mode === 'rush') m.clock = Math.round(timeLeft(run, now));
 }
 // Who played, as a queued result remembers it: a fingerprint of the token (not the token), or null without one. A
@@ -172,16 +286,28 @@ export const widthClass = (w) => (w < 600 ? 'phone' : w < 1024 ? 'tablet' : 'des
 export const inputKind = (kinds) => (kinds.has('touch') && kinds.has('mouse') ? 'both' : kinds.has('touch') ? 'touch' : kinds.has('mouse') ? 'mouse' : undefined);
 // A run left unfinished (the view left, the tab closed) is posted as abandoned once a move was made: its finished
 // puzzles, and the one it was left on if a move was made there (unfinished). Never a best, never in Recent runs.
-export const canAbandon = (run) => !run.over && run.moves > 0;
+// (cur: the puzzle on the board; a move on it being adjudicated counts, though not decided yet)
+export const canAbandon = (run, cur = null) => !run.over && (run.moves > 0 || !!cur?.adj);
 // A Rush whose clock had already run out (a tab hidden or closed past it) is no abandoned run but a finished one: it
 // ends where its clock did, without the puzzle open then (as any time-out), and null when nothing was finished, so it
 // never replaces a queued snapshot with a body the server would refuse as too long. wall: Date.now() at `now`, for
 // playedAt (when the run ended, wall clock).
 export function abandonBody(run, cur, now, build = 0, env = null, wall = null) {
   const r = { ...run, results: [...run.results] };
+  // (a move still being adjudicated goes as open, with the engine time paused on it so far: its pause is running, and
+  // is credited as resume would, within the move's bound, the rest on the clock; a play-out going on ends 'left', or
+  // 'time' if the clock ran out over a frozen page's pause, the pause its own too)
+  const open = cur?.moves?.findLast((m) => m.open), hidden = !!cur?.hidden;
+  const running = run.pausedAt != null && open ? Math.max(0, Math.min(now - run.pausedAt, pauseMax(open, hidden) - (open.paused || 0))) : 0;
+  r.pausedMs += running; r.pausedAt = null;
   const out = expired(r, now);
-  if (out) { closeOpen(r, cur); if (!r.results.length) return null; } else {
-    if (cur?.moves?.length) r.results.push({ id: cur.p.id, rating: cur.p.rating, solved: false, unfinished: true, ms: now - cur.born, mv: cur.moves, hidden: !!cur.hidden });
+  const mv = cur?.moves?.map((m) => {
+    if (m !== open) return m;
+    const po = m.po && (m.po.end == null || m.po.end === 'left') ? { ...m.po, end: out ? 'time' : 'left', paused: (m.po.paused || 0) + running } : m.po;
+    return { ...m, paused: (m.paused || 0) + running, ...(po ? { po } : {}) };
+  });
+  if (out) { closeOpen(r, cur && { ...cur, moves: mv }); if (!r.results.length) return null; } else {
+    if (mv?.length) r.results.push({ id: cur.p.id, rating: cur.p.rating, solved: false, unfinished: true, ms: now - cur.born, mv, hidden, ...(cur.p.sym != null ? { sym: cur.p.sym } : {}) });
     end(r, now);
   }
   return { ...resultBody(r, build, env), ...(out ? {} : { abandoned: true }), ...(wall != null ? { playedAt: playedAtOf(r.endedAt, now, wall) } : {}) };
@@ -193,7 +319,8 @@ export function abandonBody(run, cur, now, build = 0, env = null, wall = null) {
 export function closeOpen(run, cur) {
   if (run.mode !== 'rush' || !cur?.p || run.results.some((x) => x.id === cur.p.id)) return run;
   finish(run, { id: cur.p.id, rating: cur.p.rating, solved: false, unfinished: true, ms: Math.max(0, (run.endedAt ?? cur.born) - cur.born),
-    mv: cur.moves || [], hidden: !!cur.hidden, at: [...(cur.line || [])], clock: 0, combo: run.combo });
+    mv: cur.moves || [], hidden: !!cur.hidden, at: [...(cur.line || [])], clock: 0, combo: run.combo, ...(cur.p.sym != null ? { sym: cur.p.sym } : {}),
+    ...(cur.adj ? { played: cur.adj.canon, ...(cur.adj.look ? { po: cur.adj.look } : {}) } : {}) });
   return run;
 }
 // A result's mark on the end screen's list: the glyph, its colour, its word for screen readers, and any text after it.
@@ -289,19 +416,73 @@ export function moveSquares(ptn) {
 // `answer` when already known (a stored run keeps it, not the puzzle's tree).
 // Returns { size, toMove, cells (rank size first, file a first: { sq, dark, top: { color, type } | null, h }), last
 // (the move that led to the position, tinted as the board does), played, answer (each [start, final] squares), you (what was played, '' for a solve), want (the puzzle's move), text (both) }.
+// A move adjudicated off the line (played: the move; po: how its play-out went, playOutLook) shows the position it was
+// played in and how the game ended, solved or not.
 export function review(p, r) {
-  const at = r.solved || r.skipped ? [] : r.at || [];
+  const off = r.played != null;
+  const at = off ? r.at || [] : r.solved || r.skipped ? [] : r.at || [];
   const g = startGame(p, at), answer = r.answer !== undefined ? r.answer : answerAt(p, at), n = p.size, cells = [];
   for (let row = n - 1; row >= 0; row--) for (let col = 0; col < n; col++) {
     const sq = row * n + col, stack = g.board[sq], t = stack.length ? stack[stack.length - 1] : -1;
     cells.push({ sq: g.sqName(sq), dark: col % 2 === row % 2, top: t < 0 ? null : { color: colorOf(t), type: typeOf(t) }, h: stack.length });
   }
-  const you = r.solved ? '' : r.skipped ? 'Skipped' : r.unfinished ? (at.length ? `After ${at.join(' ')}, time ran out` : 'Time ran out')
+  const after = at.length ? `After ${at.join(' ')}, ` : '';
+  const you = off ? (r.unfinished ? `${after ? after + 'you' : 'You'} played ${r.played}${r.po ? ` (move ${r.po.n} of ${r.po.cap})` : ''}; time ran out` : (after ? after + 'y' : 'Y') + 'ou played ' + r.played + '. ' + gameText(r.po, r.played, r.solved) + '.')
+    : r.solved ? '' : r.skipped ? 'Skipped' : r.unfinished ? (at.length ? `After ${at.join(' ')}, time ran out` : 'Time ran out')
     : (at.length ? `After ${at.join(' ')}, you played ` : 'You played ') + (r.wrong || '?');
-  const want = !answer ? '' : r.solved || r.skipped ? `The first move was ${answer}` : `The move was ${answer}`;
+  const want = !answer ? '' : (r.solved && !off) || r.skipped ? `The first move was ${answer}` : off && r.solved ? `The puzzle’s line plays ${answer}` : `The move was ${answer}`;
   const led = at.length ? at.at(-1) : p.last; // the move that led here (none: no game on record)
-  return { size: n, toMove: g.toMove, cells, last: moveSquares(led), played: r.solved || r.skipped ? [] : moveSquares(r.wrong), answer: moveSquares(answer),
+  return { size: n, toMove: g.toMove, cells, last: moveSquares(led), // (a move off the line that won is the one marked good: the line's own move is only named)
+    played: off && !r.solved ? moveSquares(r.played) : r.solved || r.skipped ? [] : moveSquares(r.wrong), answer: moveSquares(off && r.solved ? r.played : answer),
     you, want, text: [you, want].filter(Boolean).join(' · ') };
+}
+
+// ---------- the puzzle page's words for a play-out (app.js renderFeedback: the cards and their endings) ----------
+// What the look-back and the run screen keep of a play-out: { end (its kind), engine ('Syntaks' | 'Tiltak'), proven,
+// n (the player's moves in it, counting the move played out), cap, byYou (the last ply was the player's) }.
+export const playOutLook = (po, engine) => ({ end: po.end, engine, proven: !!po.proven, n: po.mine, cap: po.cap, byYou: po.line.length % 2 === 1 });
+// Rush's turn line while a move is adjudicated (a: rush.js c.adj): the check's heading while it runs or decides (a wait,
+// also after a game no engine could answer), else the play-out's heading and status line, as the puzzle page's card.
+export function adjHead(a, engine) {
+  if (!a.po || a.phase === 'wait') return cardHead(a.phase === 'wait' ? 'wait' : 'checking', { move: a.canon });
+  return `${cardHead('play', { proven: a.po.proven, late: a.po.provedLate })}. ${playOutStatus(a.po, engine)}`;
+}
+// The card's heading for each state (app.js renderFeedback), as Rush's turn line shows it.
+export function cardHead(state, { move = '', proven = false, late = false } = {}) {
+  if (state === 'checking') return `Checking ${move}`;
+  if (state === 'wait') return `Checking ${move}`;
+  return proven ? (late ? 'Proved: play it out' : 'That wins: play it out') : 'Play it out';
+}
+// The card's status line in a play-out: move n of cap, the defender thinking, or a wait at the cap (app.js).
+export function playOutStatus(po, engine) {
+  if (po.waiting === 'length') return `Out of moves at ${po.cap} unless the proven win is longer: measuring it…`;
+  if (po.waiting === 'proof') return `Out of moves at ${po.cap} unless ${po.miss} is proven to win: still checking…`;
+  return `Move ${po.thinking ? po.mine : po.mine + 1} of ${po.cap}${po.thinking ? ` · ${engine} is thinking…` : ''}`;
+}
+// How it ended, as the card's heading says it after a lost game (app.js renderFeedback), or the solved card's words.
+export function endingHead(look, move) {
+  if (!look) return '';
+  const E = look.engine, how = look.end;
+  if (how === 'win' || how === 'proved') return look.proven && how !== 'proved' ? `${move} forces a win, and you played it out against ${E}, so it counts as solved`
+    : how === 'win' ? `${move} won against ${E}, so it counts as solved` : `${move} forces a win too, so it counts as solved`;
+  if (how === 'gaveup' || how === 'left') return 'You gave up';
+  if (how === 'out') return 'Out of moves';
+  if (how === 'road') return look.byYou ? `Your move completed ${E}’s road` : `${E} made a road`;
+  if (how === 'noengine') return 'No engine could answer';
+  return `${E} held`;
+}
+// The look-back's sentence for a move adjudicated off the line: the card's lead after a lost game, the solved card's
+// words after a win (app.js renderFeedback / slowWinText). look null: decided without a play-out (a proof where no
+// proven play-out is played, or no engine to defend: the check decided).
+export function gameText(look, move, solved) {
+  if (!look) return solved ? `${move} forces a win too, so it counts as solved` : `${move} doesn’t force the win`;
+  const how = look.end, E = look.engine, mv = `${look.n} move${look.n === 1 ? '' : 's'}`;
+  if (how === 'win' || how === 'proved' || solved) return endingHead({ ...look, end: how === 'noengine' ? 'proved' : how }, move);
+  if (how === 'gaveup' || how === 'left') return `You gave up on ${move} after ${mv}`;
+  if (how === 'noengine') return `${move} doesn’t force the win: no engine could answer`;
+  if (look.proven) return { unfinished: `${move} wins, but you didn’t finish it in ${mv}: ${E} held`, escaped: `${move} wins, but ${E} got out of it after ${mv}`,
+    'own-road': `${move} wins, but your move ${look.n} completed ${E}’s road` }[provenLossLead(how, look.byYou)];
+  return `${E} defended ${move} for ${mv}`;
 }
 
 // ---------- this browser's history of runs (local only: never posted, not tied to an account) ----------
@@ -313,11 +494,13 @@ export const HIST_V = 1, HIST_MAX = 30, HIST_CHARS = 400e3;
 export function recordOf(run, puzzles, t) {
   const byId = new Map(puzzles.map((p) => [p.id, p]));
   return { v: HIST_V, t, mode: run.mode, score: run.score, sum: summary(run), puzzles: run.results.map((r) => {
-    const p = byId.get(r.id) || {}, at = r.solved || r.skipped ? [] : r.at || [];
+    const p = byId.get(r.id) || {}, at = r.played != null ? r.at || [] : r.solved || r.skipped ? [] : r.at || [];
     let answer = null;
     try { answer = answerAt(p, at); } catch {}
+    // (as the player saw it: p is the puzzle under its symmetry; the link to the puzzle page opens it as it is)
     return { id: r.id, rating: Math.round(r.rating), solved: r.solved, ...(r.skipped ? { skipped: true } : {}), ms: Math.round(r.ms),
-      ...(r.wrong ? { wrong: r.wrong, at } : {}), ...(r.unfinished ? { unfinished: true, at } : {}), answer, size: p.size, tps: p.tps, komi: p.komi || 0, ...(p.last ? { last: p.last } : {}) };
+      ...(r.wrong ? { wrong: r.wrong, at } : {}), ...(r.unfinished ? { unfinished: true, at } : {}), ...(r.played != null ? { played: r.played, at, ...(r.po ? { po: r.po } : {}) } : {}),
+      answer, size: p.size, tps: p.tps, komi: p.komi || 0, ...(p.last ? { last: p.last } : {}) };
   }) };
 }
 const str = (v, max) => typeof v === 'string' && v.length > 0 && v.length <= max;
@@ -328,8 +511,12 @@ function validPuzzle(q) {
     && Number.isInteger(q.size) && q.size >= 3 && q.size <= 8 && str(q.tps, 400) && num(q.komi ?? 0)
     && (q.skipped === undefined || typeof q.skipped === 'boolean') && (q.unfinished === undefined || typeof q.unfinished === 'boolean') && (q.wrong === undefined || str(q.wrong, 24))
     && (q.at === undefined || (Array.isArray(q.at) && q.at.length <= 200 && q.at.every((m) => str(m, 24))))
-    && (q.answer === null || str(q.answer, 24)) && (q.last === undefined || str(q.last, 24));
+    && (q.answer === null || str(q.answer, 24)) && (q.last === undefined || str(q.last, 24))
+    && (q.played === undefined || str(q.played, 24)) && (q.po === undefined || validLook(q.po));
 }
+const ENDS = new Set(['win', 'proved', 'road', 'held', 'out', 'gaveup', 'left', 'time', 'noengine']);
+const validLook = (l) => !!l && typeof l === 'object' && (l.end === null || ENDS.has(l.end)) && (l.engine === 'Syntaks' || l.engine === 'Tiltak')
+  && typeof l.proven === 'boolean' && Number.isInteger(l.n) && Number.isInteger(l.cap) && typeof l.byYou === 'boolean';
 // Whether a stored run can be shown: the current shape, whole. Anything else (an older shape, a hand edit, a cut-off
 // write) is skipped, never repaired.
 export function validRecord(x) {

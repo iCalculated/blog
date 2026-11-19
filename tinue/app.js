@@ -1,18 +1,19 @@
-import { Game } from './shared/tak.js?v=1795073685';
-import { unplayedPlies } from './shared/ptn.js?v=1795073685';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795073685';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795073685';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795073685';
-import * as engine from './engine.js?v=1795073685';
-import * as tiltak from './tiltak.js?v=1795073685';
-import * as syntaks from './syntaks.js?v=1795073685';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795073685';
-import { createNext } from './next.js?v=1795073685';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795073685';
-import { createOutbox } from './outbox.js?v=1795073685';
-import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795073685';
-import { capMoves, capNote, defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1795073685';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795073685';
+import { Game } from './shared/tak.js?v=1795079670';
+import { unplayedPlies } from './shared/ptn.js?v=1795079670';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795079670';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795079670';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795079670';
+import * as engine from './engine.js?v=1795079670';
+import * as tiltak from './tiltak.js?v=1795079670';
+import * as syntaks from './syntaks.js?v=1795079670';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795079670';
+import { createNext } from './next.js?v=1795079670';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795079670';
+import { createOutbox } from './outbox.js?v=1795079670';
+import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795079670';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795079670';
+import * as defend from './defend.js?v=1795079670';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795079670';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -140,7 +141,7 @@ const guestId = () => {
 // PTN Ninja in an iframe instead of tinue's board (same API), by the Board style setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795073685')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1795079670')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -572,10 +573,7 @@ function syncClock() {
 const logMove = (k, m, ms = elapsed()) => { if (S && !S.resultSent && S.t0 != null && S.log.length < 64) S.log.push(m ? { m, ms, k } : { ms, k }); };
 document.addEventListener('visibilitychange', syncClock);
 
-const pliesLeft = () => {
-  const d = (n) => (n === 'win' ? 1 : n == null ? 0 : 2 + Math.max(...Object.values(n).map((v) => (v ? d(v.n) : 0))));
-  return d(S.node);
-};
+const pliesLeft = () => pliesLeftOf(S.node); // (playon.js: Rush's play-outs use it too)
 
 // Put the board back to exactly the moves we've accepted (after a wrong move, or after browsing history).
 async function restoreBoard() {
@@ -874,8 +872,8 @@ async function flushHeld() {
 // .playOn), so settleCheck sends it, and a reload resends what was settled (flushHeld). No engine at all ('noengine')
 // sets po.fallback: unrated whatever the check says.
 const playOnDefender = () => defender(S.p.size, S.p.komi || 0, tiltak.supports);
-// (6×6 is Syntaks's even where it can't run in this browser (no WebAssembly SIMD): crux answers every reply then.)
-const defenderName = (po) => (po.engine === 'syntaks' && !po.fallback ? 'Syntaks' : 'Tiltak');
+// (defenderName, playon.js: 6×6 is Syntaks's even where it can't run in this browser (no WebAssembly SIMD): crux answers
+// every reply then.)
 // Whether a game won on the board counts toward rating. A weak reply can let a move that doesn't force the win "win",
 // so only Syntaks's defence is trusted for rating; a win against Tiltak is an unrated solve. (A proof always counts.)
 const playOnRated = (po) => gameRated(po); // (playon.js: only a game Syntaks defended throughout counts, either way)
@@ -887,8 +885,7 @@ function startPlayOn(s, canon, plies, chk, tMove, proven = false, proofPlies) {
   logMove(proven ? 'slow' : 'miss', canon, tMove); s.decidedMs ??= tMove;
   if (!proven) s.misses.push({ at: s.moves.length, ptn: canon }); // (a proven play-out's move is a miss only if it fails)
   chk ||= { final: new Promise(() => {}), cancel() {} }; // nothing left to check
-  const po = s.playOn = { miss: canon, at: s.moves.length, base: plies.slice(0, -1), line: [canon], g: gameAt(plies), proven,
-    mine: 1, cap: capMoves(left), capNote: capNote(left), left, proofPlies: null, key: provenKey(canon), engine: playOnDefender(), fallback: false, thinking: false, end: null };
+  const po = s.playOn = playOutOf({ miss: canon, at: s.moves.length, base: plies.slice(0, -1), g: gameAt(plies), proven, left, key: provenKey(canon), engine: playOnDefender() });
   if (proven) setProofLength(s, po, proofPlies);
   s.checkPending = { miss: canon, at: s.moves.length, key: provenKey(canon), chk, hadMs, logLen: s.log.length, playOn: po,
     fastest: s.node === 'win' ? finisher(s.g) : Object.keys(s.node)[0], // the puzzle's own move here, for the solved card
@@ -902,31 +899,13 @@ function startPlayOn(s, canon, plies, chk, tMove, proven = false, proofPlies) {
     if (c.playOn.end) return settleCheck(s, v); // (only after 'noengine': a lost game stops the check)
     if (v === 'wins') makeProven(s, po); else c.final = v; // a proof makes it a proven play-out; anything else waits
   });
-  po.local = po.engine === 'syntaks' && syntaks.supports(s.p.size, s.p.komi || 0);
-  if (po.local) syntaks.load(); // the in-browser engine, fetched on first use (crux answers meanwhile)
-  else if (po.engine === 'tiltak') Promise.resolve().then(tiltak.warmup).catch(() => {}); // it defends here: start it while the board settles
+  defend.warmDefender(po, s.p.size, s.p.komi || 0); // (Syntaks fetched on first use, or Tiltak started: defend.js)
   // Give up sits where Hint was: it ignores clicks for its first 1.5 s, so one meant for Hint can't end the game
   po.t0 = performance.now(); setTimeout(() => { if (S === s && s.playOn === po) renderAll(); }, BUSY_MS.giveup + 100);
   s.status = 'playon'; s.refutation = null; s.checking = null;
   s.pendingHint = s.pendingSolution = false; // pressed during the quick check: not meant for after the game
   report(false, s, s, { ms: tMove }); // held until the game (and the check) settle
   defenderTurn(s, po);
-}
-
-// A timeout that counts only time the page is visible (as checkStill's deadline does): { done, cancel }.
-function visibleTimeout(ms) {
-  let t, left = ms, from = performance.now(), finish;
-  const done = new Promise((resolve) => {
-    const vis = () => { const now = performance.now(); if (document.hidden) left -= now - from; from = now; };
-    const tick = () => {
-      const now = performance.now(); if (!document.hidden) left -= now - from; from = now;
-      if (left <= 0) return finish(); t = setTimeout(tick, Math.max(left, 1e3));
-    };
-    finish = () => { clearTimeout(t); document.removeEventListener('visibilitychange', vis); resolve(); };
-    document.addEventListener('visibilitychange', vis);
-    t = setTimeout(tick, ms);
-  });
-  return { done, cancel: () => finish() };
 }
 
 // The check proved the move wins in the middle of the game. Against Syntaks it goes on as a proven play-out (to a road;
@@ -936,8 +915,8 @@ function visibleTimeout(ms) {
 function makeProven(s, po) {
   const c = s.checkPending;
   if (po.proven || po.end || c?.playOn !== po) return;
-  if (!provenPlayOut(po.engine) || po.fallback) return endPlayOn(s, 'proved');
-  po.proven = po.provedLate = true; c.final = 'wins';
+  if (!upgradeToProven(po)) return endPlayOn(s, 'proved'); // (playon.js: Tiltak defends, so no proven play-out)
+  c.final = 'wins';
   (s.proven ||= new Map()).set(c.key, 'wins');
   if (c.logEntry) c.logEntry.k = 'slow';
   const i = s.misses.findIndex((m) => m.ptn === po.miss && m.at === po.at);
@@ -951,54 +930,19 @@ function makeProven(s, po) {
 // never lower than the cap already shown, whose note then stays). A length not known yet is measured in the engine
 // worker; until it is (or if it can't be), running out of moves is unrated.
 function setProofLength(s, po, plies) {
-  if (Number.isFinite(plies)) {
-    po.proofPlies = plies;
-    const cap = provenCap(po.left, plies, po.cap);
-    // Today the cap shown here is always capMoves(po.left) (no earlier length raised it), so this always rewrites the
-    // note. If a later change lets the cap rise twice, a cap above both bounds keeps the note that set it.
-    if (cap === provenCap(po.left, plies)) po.capNote = provenCapNote(po.left, plies, po.miss); // (else the shown cap and its note stay)
-    po.cap = cap;
-    if (S === s) renderAll();
-    return;
-  }
+  if (applyProofLength(po, plies)) { if (S === s) renderAll(); return; } // (playon.js: the cap and its note)
   if (plies === null) return; // measured, but not measurable: stays unknown
   // (po.lengthP while it's measured: at the cap the game waits for it, playOnMove; a result is kept for a retry)
-  const lp = po.lengthP = engine.proofLength({ ...enginePos([...po.base, po.miss]), attacker: s.solver, budget: 1e5 }).then((r) => {
-    if (po.lengthP === lp) po.lengthP = null;
+  measureProof(po, () => engine.proofLength({ ...enginePos([...po.base, po.miss]), attacker: s.solver, budget: 1e5 }), (r) => {
     if (!r) return; // superseded or stopped (another puzzle): not measured
     (s.proofPlies ||= new Map()).set(po.key, Number.isFinite(r.plies) ? r.plies : null);
     if (S !== s || s.playOn !== po || po.end) return;
     if (Number.isFinite(r.plies)) setProofLength(s, po, r.plies);
-  }, () => { if (po.lengthP === lp) po.lengthP = null; });
+  });
 }
 
-// Syntaks's reply. It runs in the browser (syntaks.js, loaded when play-on starts; 1.5 s a reply). Until it has loaded,
-// or on a device too slow for a real defence (fewer than LOCAL_MIN_NODES in that time), crux answers (/api/defend,
-// 8 s). With neither, Tiltak in the browser defends the rest of the game, which is then unrated (playOnRated).
-const LOCAL_MIN_NODES = 150e3; // ~100k nodes/s: a fraction of crux's ~2.6M nodes per reply
-async function syntaksReply(s, po, tps, komi, live) {
-  const legal = (r) => (r && legalMove(po.g, r.move) ? r : null);
-  // Each in-browser search gets its 1.5 s plus 3 s (a worker the browser killed never answers); waiting for the
-  // download (crux didn't answer) gets 20 s. Past either, crux or Tiltak defends.
-  const within = (p, ms) => Promise.race([p, new Promise((res) => setTimeout(res, ms, null))]);
-  const local = (wait = 0) => within(syntaks.search({ tps, komi, ms: 1500, nodes: 1.5e6 }), 4500 + wait)
-    .then((r) => legal(r && { ...r, src: 'browser' }), () => null);
-  const server = () => {
-    po.ctl = new AbortController(); // aborted when the game ends, so crux drops the search
-    return api(`/api/defend?tps=${encodeURIComponent(tps)}&komi=${komi}`, null, { quiet: true, timeout: 8000, signal: po.ctl.signal }).then((r) => legal(r && { ...r, src: 'crux' }), () => null);
-  };
-  let r = null;
-  if (po.local && syntaks.status() === 'ready' && !po.slowLocal) {
-    r = await local();
-    if (!live()) return null;
-    // this device: crux for the next replies (only a search that used its time on an undecided position says so)
-    if (r && r.nodes < LOCAL_MIN_NODES && r.mate == null && r.ms >= 1200) po.slowLocal = true;
-  }
-  if (!r) { r = await server(); if (!live()) return null; }
-  if (!r && po.local && syntaks.status() !== 'failed') { r = await local(20e3); if (!live()) return null; } // waits for the download
-  if (r) console.debug(`play-on: Syntaks (${r.src}) ${r.move}, ${r.nodes ?? '?'} nodes, ${r.ms} ms`);
-  return r;
-}
+// Syntaks's reply: defend.js (in the browser, else crux's /api/defend; Rush's play-outs call the same).
+async function syntaksReply(s, po, tps, komi, live) { return defend.syntaksReply(po, tps, komi, live); }
 
 // The defender's reply: Syntaks (syntaksReply), else Tiltak in the browser for the rest of this game.
 async function defenderTurn(s, po) {
@@ -1008,25 +952,13 @@ async function defenderTurn(s, po) {
   await board.ui({ disableBoard: true });
   renderAll();
   const komi = s.p.komi || 0, tps = po.g.toTPS();
-  let mv = null, r = null;
-  if (po.engine === 'syntaks' && !po.fallback) {
-    r = await syntaksReply(s, po, tps, komi, live);
-    if (!live()) return;
-    mv = r && legalMove(po.g, r.move);
-    // Syntaks dropped out of a proven play-out: no playing it out against Tiltak; the proven move is the solve.
-    if (!mv && po.proven) { po.thinking = false; return endPlayOn(s, 'proved'); }
-    if (!mv) { po.fallback = true; po.fallbackAt = po.mine; r = null; renderAll(); }
-  }
-  if (!mv && tiltak.supports(s.p.size, komi)) {
-    // (a worker that never answers mustn't stall the game: 6 s from when it's up (a cold start, fetching and compiling
-    // the wasm, gets 20 s of its own, as Syntaks's download does), then it's as if no engine could move)
-    const up = await Promise.race([Promise.resolve().then(tiltak.warmup).then(() => true, () => false), new Promise((res) => setTimeout(res, 20e3, false))]);
-    if (!live()) return;
-    const t = up && await Promise.race([tiltak.analyze({ tps, size: s.p.size, komi, ms: 1500 }).catch(() => null), new Promise((res) => setTimeout(res, 6000, null))]);
-    if (!live()) return;
-    mv = legalMove(po.g, t?.bestmove);
-  }
-  if (!mv) { po.fallback = true; return endPlayOn(s, 'noengine'); }
+  // Syntaks, else Tiltak (defend.js; Syntaks dropping out sets po.fallback and redraws)
+  const d = await defend.defenderMove(po, { size: s.p.size, komi, tps, live, onFallback: renderAll, reply: (po, tps, komi, live) => syntaksReply(s, po, tps, komi, live) });
+  if (!d) return;
+  // Syntaks dropped out of a proven play-out: no playing it out against Tiltak; the proven move is the solve.
+  if (d.end === 'proved') { po.thinking = false; return endPlayOn(s, 'proved'); }
+  if (d.end) return endPlayOn(s, 'noengine'); // (no engine moved: po.fallback is set)
+  const mv = d.mv;
   po.thinking = false; // the reply is in hand: leaving while the board plays it isn't the defender being overdue (stalls)
   po.g.play(mv); po.line.push(mv);
   await board.append(mv); await board.last();
@@ -1061,10 +993,7 @@ async function playOnMove(ptn) {
     const why = capWait(po, { lengthPending: !!po.lengthP, checkLive: c?.playOn === po && c.final === undefined });
     if (why) {
       po.waiting = why; s.busy = true; await board.ui({ disableBoard: true }); renderAll();
-      const timeout = visibleTimeout(CAP_WAIT_MS[why]); // (a locked phone freezes the check, so it freezes this too)
-      await Promise.race([why === 'length' ? po.lengthP : c.chk.final, timeout.done]);
-      timeout.cancel();
-      await Promise.resolve(); // (the check's own handler, makeProven, runs first)
+      await defend.waitAtCap(po, why, c.chk.final); // (CAP_WAIT_MS, visible time; makeProven runs first)
       if (S !== s || s.playOn !== po || po.end) return;
       po.waiting = null;
     }
@@ -1261,10 +1190,7 @@ function leaveFree(s, how) {
 }
 // ---------- end free game ----------
 // Proven off-tree wins at the current attacker node: alts at the root, altsAt[path of moves so far] deeper in.
-function slowerWins() {
-  const key = S.moves.map((m) => m.ptn).join(' ');
-  return (key ? S.p.altsAt?.[key] : S.p.alts) || [];
-}
+function slowerWins() { return slowerWinsAt(S.p, S.moves.map((m) => m.ptn)); } // (playon.js: Rush reads them too)
 
 function fail(ms) { S.status = 'retry'; report(false, S, S, { ms }); renderAll(); }
 // Still-wins verdicts already known in this puzzle, by position and move, so a repeat doesn't search again.
@@ -2196,7 +2122,7 @@ async function route() {
   if (page === 'glossary') return glossaryPage();
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795073685')).enter(); } // loaded on first visit
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795079670')).enter(); } // loaded on first visit
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   if (page === 'puzzle' && arg) { if (S?.p.id !== decodeURIComponent(arg)) loadById(decodeURIComponent(arg)); else showPuzzleURL(S.p.id); }

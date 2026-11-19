@@ -435,6 +435,8 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .rush-under { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; min-height: 34px; }
 .rush-note { margin: 0; font-size: var(--fs-sm); }
 #rush-skip:disabled { background: none; border-color: transparent; color: var(--muted); opacity: 1; }
+#rush-giveup { flex: none; }
+.rush-clock.paused { opacity: .55; } /* (the engine's time: never charged) */
 /* the colour to move, without reading: the stone drawn on a board square to the left of the clock. The square is the
    board's dark one, where both stones stand out (white 2.8:1, black 4.4:1; on the light square white is 1.2:1), and the
    square itself shows on the bar (4.9:1). A new colour to move swells the stone once, inside the square. */
