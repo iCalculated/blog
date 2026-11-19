@@ -2,10 +2,10 @@
 // judging a move by the puzzle's line, where an off-line move goes next (the puzzle page's adjudication: route,
 // playOutOutcome), the clock and its pauses, the combo and its time bonuses, and the end-of-run numbers.
 // public/rush.js owns the screen and the engines and calls these with the time it read.
-import { Game, colorOf, typeOf } from './shared/tak.js?v=1795079670';
-import { finalSquare } from './settings.js?v=1795079670';
-import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795079670';
-import * as SYM from './shared/sym.js?v=1795079670';
+import { Game, colorOf, typeOf } from './shared/tak.js?v=1795096090';
+import { finalSquare } from './settings.js?v=1795096090';
+import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795096090';
+import * as SYM from './shared/sym.js?v=1795096090';
 
 export const SIZE = 6; // Rush and Streak are 6×6 only (server/rush.js refuses any other size)
 export const RUSH_MS = 180e3; // 3:00
@@ -183,6 +183,40 @@ export const MAX_DROPS = SIZE - 1;
 export function weight(ptn) {
   const m = /^([1-8])?[a-h][1-8][<>+-]([1-8]*)\*?$/.exec(String(ptn ?? ''));
   return m && m[2] ? m[2].length : 1;
+}
+// The combo a move off the line earns when it counts as solved (a won or proved play-out, or a proof with no play-out;
+// Sasha, 2026-11-19: "play out should get the intended solution combo (minus however many moves have already been
+// made)"): what the puzzle's own solution would still have earned from where the player left it, i.e. the sum of
+// weight() over the solver's moves on the principal line from the node at `path` (that node's own move included). The
+// principal line is the one the puzzle page's View solution plays (app.js showSolution): the first-listed move at each
+// node, and at a 'win' node the first legal move that wins on the spot (its finisher, as answerAt). So a slower win
+// earns what the stored solution would have, however long its play-out; the moves played before it were counted as
+// they were made. Computed in the puzzle's own orientation (a puzzle under a symmetry, p.sym, with path as the board
+// showed it, is turned back first), as the finisher depends on move order, so the credit is the same whichever way it
+// was shown, and the server recomputes it from the stored tree and the posted path (server/rush.js). null when the
+// path leaves the tree or the line can't be followed (the caller then counts the move's own weight).
+export function lineCredit(p, path = []) {
+  if (!p || !Array.isArray(path)) return null;
+  if (p.sym) { const back = SYM.inverse(p.sym); return lineCredit(SYM.unorient(p), path.map((m) => SYM.move(back, p.size, m))); }
+  if (path.length % 2) return null;
+  let node = nodeAt(p, path), credit = 0;
+  const line = [...path];
+  if (node == null) return null;
+  for (let guard = 0; guard < 200; guard++) {
+    if (node === 'win') {
+      let fin = null;
+      try { fin = answerAt(p, line); } catch {}
+      return fin ? credit + weight(fin) : null;
+    }
+    if (typeof node !== 'object') return null;
+    const mv = Object.keys(node)[0];
+    if (mv == null) return credit || null;
+    credit += weight(mv);
+    const e = node[mv];
+    if (!e?.r || e.n == null) return credit; // (the line ends with this move: judge counts it as the end)
+    line.push(mv, e.r); node = e.n;
+  }
+  return null;
 }
 // A correct move: the combo grows by its weight (units), and every bonus threshold it reaches or crosses pays. Returns
 // the bonus in ms (0 for none).

@@ -5,16 +5,16 @@
 // engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused while they work. Nothing here is rated,
 // and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { Board, buildPTN } from './board.js?v=1795079670';
-import { api, store, token } from './api.js?v=1795079670';
-import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795079670';
-import * as R from './rush-rules.js?v=1795079670';
-import * as engine from './engine.js?v=1795079670';
-import * as tiltak from './tiltak.js?v=1795079670';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795079670';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795079670';
-import { busy, BUSY_MS } from './busy.js?v=1795079670';
-import * as SYM from './shared/sym.js?v=1795079670';
+import { Board, buildPTN } from './board.js?v=1795096090';
+import { api, store, token } from './api.js?v=1795096090';
+import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795096090';
+import * as R from './rush-rules.js?v=1795096090';
+import * as engine from './engine.js?v=1795096090';
+import * as tiltak from './tiltak.js?v=1795096090';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795096090';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795096090';
+import { busy, BUSY_MS } from './busy.js?v=1795096090';
+import * as SYM from './shared/sym.js?v=1795096090';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -634,16 +634,18 @@ function endPlayOut(s, c, kind) {
   a.chk?.cancel();
   settle(s, c, out);
 }
-// Rush's own end of a move's adjudication: the pause ends, the move counts one way or the other. A won play-out counts
-// as the one correct move it started from, with that move's weight toward the combo (the game's later moves add
-// nothing: they show the win, as the line's own replies do); anything else is a mistake, as today.
+// Rush's own end of a move's adjudication: the pause ends, the move counts one way or the other. A solve counts as one
+// correct move, earning the combo the puzzle's own line had left from there (R.lineCredit: its credit, posted beside the
+// move's own weight; the game's moves add nothing more); anything else is a mistake, as today.
 function settle(s, c, out) {
   const a = c.adj, now = performance.now();
   if (!unpause(s, c, a, now)) return endRun(); // (the clock ran out over a frozen page's pause: the move stays open)
   c.adj = null;
   R.decide(c, out === 'solved');
   if (out === 'solved') {
-    const bonus = R.correct(s.run, a.m.weight);
+    const credit = R.lineCredit(c.p, a.m.path);
+    if (credit != null) a.m.credit = credit;
+    const bonus = R.correct(s.run, credit ?? a.m.weight);
     R.stampMove(c, s.run, now, a.at);
     $('#rush-combo-fill').classList.remove('drain');
     if (bonus) { c.gained = (c.gained || 0) + bonus; flash(`+${bonus / 1000}s`, 'good', true); fillCombo(s); }
