@@ -122,6 +122,10 @@ button.danger { background: var(--bad-fill); border-color: var(--bad-fill); colo
 .feedback h2 .delta { margin-left: 8px; font-size: var(--fs); font-variant-numeric: tabular-nums; }
 .feedback p { grid-area: text; margin: 0; color: var(--muted); font-size: var(--fs-sm); }
 .feedback .actions { grid-area: act; display: flex; gap: 6px; }
+/* a row of its own under the explanation (Play on after a miss; the free game's Back and Take back), so the title's
+   row keeps only Hint and Solution, at any width */
+.feedback .more { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 8px; }
+.feedback .more span { color: var(--muted); font-size: var(--fs-sm); flex: 1 1 12em; }
 
 .your-rating { color: var(--gold); font-weight: 700; }
 .tag { display: inline-block; font-size: var(--fs-xs); background: var(--bg3); border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px; margin: 2px 4px 2px 0; color: var(--fg); }

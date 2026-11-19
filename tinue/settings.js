@@ -2,7 +2,7 @@
 // waits to be confirmed. Both live in the browser's prefs with the others (not synced to the account); off and tinue's
 // own board are the defaults, under which the page behaves as it did before. What app.js decides is here, so node can
 // test it (scripts/test-settings.mjs).
-import { busy } from './busy.js?v=1795035273';
+import { busy } from './busy.js?v=1795059611';
 
 // ---- board ----
 // ?board= in the address wins, so a shared ?board=ninja link keeps working (any other value is tinue's board, as
@@ -67,11 +67,13 @@ export function finalSquare(ptn) {
 export function holds(on, s, tooSoon) {
   if (!on || !s || s.placeholder || s.busy || s.view != null) return false;
   if (s.playOn) return !s.playOn.end && !s.playOn.thinking;
+  if (s.free) return !s.free.over && !s.free.thinking; // (the free game after a miss: its moves are held the same way)
   return (s.status === 'play' || s.status === 'retry') && !tooSoon;
 }
 // The puzzle's state as far as a held move cares: when it changes, the move was made in a position that's gone.
 export const phaseKey = (s) => !s ? '' : [s.p?.id, s.status, s.moves?.length, s.misses?.length, s.busy ? 1 : 0, s.view ?? '',
-  s.playOn ? `${s.playOn.line.length}:${s.playOn.end || ''}:${s.playOn.thinking ? 1 : 0}` : ''].join('|');
+  s.playOn ? `${s.playOn.line.length}:${s.playOn.end || ''}:${s.playOn.thinking ? 1 : 0}` : '',
+  s.free ? `${s.free.line.length}:${s.free.over ? 1 : 0}:${s.free.thinking ? 1 : 0}` : ''].join('|');
 // A held move: { ptn, sq: its final square, t: when it was held, born: its puzzle's start }.
 export const pending = (ptn, s, now) => ({ ptn, sq: finalSquare(ptn), t: now, born: s?.born ?? 0, key: phaseKey(s) });
 // What an event does to a held move: 'confirm', 'cancel', 'replace' (Enter on a typed move) or 'ignore'. Confirming waits out busy.js 'confirm' after the

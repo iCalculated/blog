@@ -1,17 +1,18 @@
-import { Game } from './shared/tak.js?v=1795035273';
-import { unplayedPlies } from './shared/ptn.js?v=1795035273';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795035273';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795035273';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795035273';
-import * as engine from './engine.js?v=1795035273';
-import * as tiltak from './tiltak.js?v=1795035273';
-import * as syntaks from './syntaks.js?v=1795035273';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795035273';
-import { createNext } from './next.js?v=1795035273';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795035273';
-import { createOutbox } from './outbox.js?v=1795035273';
-import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795035273';
-import { capMoves, capNote, defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1795035273';
+import { Game } from './shared/tak.js?v=1795059611';
+import { unplayedPlies } from './shared/ptn.js?v=1795059611';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795059611';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795059611';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795059611';
+import * as engine from './engine.js?v=1795059611';
+import * as tiltak from './tiltak.js?v=1795059611';
+import * as syntaks from './syntaks.js?v=1795059611';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795059611';
+import { createNext } from './next.js?v=1795059611';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795059611';
+import { createOutbox } from './outbox.js?v=1795059611';
+import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795059611';
+import { capMoves, capNote, defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1795059611';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795059611';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -139,7 +140,7 @@ const guestId = () => {
 // PTN Ninja in an iframe instead of tinue's board (same API), by the Board style setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795035273')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1795059611')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -466,6 +467,7 @@ async function showLine(line, idx) {
 }
 
 async function start(p, theme = '') {
+  if (S?.free) leaveFree(S, 'left'); // (its engine stops; nothing to send)
   abandonCheck(S); // leaving a puzzle whose check is still running (any route: Next, a link, a filter change)
   board.forget(); // nothing begun on the last puzzle's board (stones in hand, a held number key, a touch) carries over
   dropPending(); // a move held on the last puzzle is gone with it (the new position is loaded below)
@@ -591,6 +593,7 @@ async function restoreBoard() {
 async function userMove(ptn) {
   if (!S || S.placeholder) return; // the board is disabled until a puzzle arrives
   if (S.status === 'solved') return explore(ptn);
+  if (S.free) return freeMove(ptn); // the free game after a miss (its own section: nothing there is judged)
   if (S.playOn) return playOnMove(ptn);
   if (tooSoon(S)) { restoreBoard(); return; } // a tap meant for the last puzzle's Next, landing on the new board
   if (!S || S.placeholder || S.busy || S.view != null || !(S.status === 'play' || S.status === 'retry')) { if (S) restoreBoard(); return; }
@@ -751,6 +754,7 @@ async function report(win, s = S, flags = s, { keepalive = false, ms } = {}) {
     reporting.add(req); req.catch(() => {}).finally(() => reporting.delete(req)); // (a reload for a newer build waits for it)
     uploading.set(p.id, req); req.catch(() => {}).finally(() => { if (uploading.get(p.id) === req) uploading.delete(p.id); });
     const r = await req;
+    if (uploading.get(p.id) === req) uploading.delete(p.id); // answered: done now, not a tick later in its finally(), so the card below is drawn once
     const ours = answerOwnsToken(si, signIn);
     if (r.token && ours) { setToken(r.token); ownHeld(); }
     // Refused: 429 (too many results, or too many new guests from one address) or any other error; nothing was rated.
@@ -1125,6 +1129,137 @@ function restoreLeft() {
   restoreBoard().then(() => flushHint(s));
 }
 addEventListener('pageshow', (e) => { if (e.persisted) restoreLeft(); });
+
+// ---------- free game (Play on after a miss: freeplay.js) ----------
+// A game after the judging is over: the miss is decided and sent, and nothing in this section reports, logs, holds or
+// changes a result, or starts, ends or rates a play-out (scripts/test-freeplay.mjs checks this section's source). It
+// shares only the board with the rated play-out; S.free and S.playOn are
+// never both set (freeOffer). The puzzle's clock stops meanwhile, so the retry position comes back as it was left.
+// Its engines run in the browser only (freeDefender): crux's /api/defend is the rated play-outs' lane.
+// The engine to play on against, or null: no Play on button (freeplay.js freeOffer).
+const freeWake = new WeakSet();
+// Engines that didn't answer a free game, by freeFailKey: for this page only (a reload tries them again).
+const freeFails = new Map();
+const freeFailed = (s, fg, engine) => { const k = freeFailKey(s.p.id, fg.base, fg.miss); freeFails.set(k, [...(freeFails.get(k) ?? []), engine]); };
+function freeEngine(s = S) {
+  if (!s || s.placeholder) return null;
+  // (report() draws the card before its upload is marked done: draw it again once it is, so the button can appear)
+  const up = uploading.get(s.p.id);
+  if (up && !freeWake.has(up)) { freeWake.add(up); up.catch(() => {}).finally(() => setTimeout(() => { if (S === s) renderAll(); })); }
+  const k = s.p.komi || 0, here = { syntaksHere: syntaks.supports(s.p.size, k), tiltakHere: tiltak.supports(s.p.size, k), syntaksStatus: syntaks.status(),
+    failed: s.misses?.length ? freeFails.get(freeFailKey(s.p.id, freeBase(s), freeFrom(s))) ?? [] : [] };
+  const e = freeOffer(s, { defender: freeDefender(playOnDefender(), here), held: heldRec.get()?.id === s.p.id, uploading: !!up });
+  return e && !gameAt([...freeBase(s), freeFrom(s)]).result() ? e : null; // (a miss that ended the game: nothing to play)
+}
+function freeBase(s) { return s.hist.length ? [...s.hist, ...s.moves.map((m) => m.ptn)] : s.moves.map((m) => m.ptn); }
+function startFree() {
+  const s = S, engine = freeEngine(s);
+  if (!engine) return;
+  dropPending();
+  const miss = freeFrom(s), base = freeBase(s);
+  const fg = s.free = { miss, at: s.moves.length, base, line: [miss], g: gameAt([...base, miss]), engine,
+    name: engine === 'syntaks' ? 'Syntaks' : 'Tiltak', thinking: false, over: null, e0: elapsed(s) };
+  s.freeNote = null;
+  if (engine === 'syntaks') syntaks.load();
+  else Promise.resolve().then(tiltak.warmup).catch(() => {});
+  s.busy = true;
+  board.highlight([]); // the hint belongs to the retry position (restoreBoard draws it again)
+  showFree(s).then(() => { if (S === s && s.free === fg) freeTurn(s, fg); });
+}
+// The board shows the free game as played (its start, or after a refused move or a take back).
+async function showFree(s) {
+  if (S !== s || !s.free) return;
+  await board.load(ptnFor([...s.free.base, ...s.free.line]));
+  s.loadedKey = null;
+  await board.last();
+}
+// The engine's move, in the browser: Syntaks (its first reply waits for the download), or Tiltak, which also takes
+// over if Syntaks stops answering here. No answer from either: back to the puzzle.
+async function freeTurn(s, fg) {
+  const live = () => S === s && s.free === fg && !fg.over;
+  const typed = document.activeElement?.id === 'ptn-in';
+  fg.thinking = true; s.busy = true;
+  await board.ui({ disableBoard: true });
+  renderAll();
+  const komi = s.p.komi || 0, tps = fg.g.toTPS();
+  let mv = null;
+  const within = (p, ms, v = null) => Promise.race([p, new Promise((res) => setTimeout(res, ms, v))]);
+  if (fg.engine === 'syntaks') {
+    const wait = syntaks.status() === 'ready' ? 0 : 20e3;
+    const r = await within(syntaks.search({ tps, komi, ms: 1500, nodes: 1.5e6 }).catch(() => null), 4500 + wait);
+    if (!live()) return;
+    mv = legalMove(fg.g, r?.move);
+    if (!mv) freeFailed(s, fg, 'syntaks');
+    if (!mv && tiltak.supports(s.p.size, komi)) { fg.engine = 'tiltak'; fg.name = 'Tiltak'; fg.swapped = true; renderAll(); }
+  }
+  if (!mv && fg.engine === 'tiltak') {
+    const up = await within(Promise.resolve().then(tiltak.warmup).then(() => true, () => false), 20e3, false);
+    if (!live()) return;
+    const t = up && await within(tiltak.analyze({ tps, size: s.p.size, komi, ms: 1500 }).catch(() => null), 6000);
+    if (!live()) return;
+    mv = legalMove(fg.g, t?.bestmove);
+  }
+  if (!mv) { if (fg.engine === 'tiltak') freeFailed(s, fg, 'tiltak'); return leaveFree(s, 'failed'); }
+  fg.thinking = false;
+  fg.g.play(mv); fg.line.push(mv);
+  await board.append(mv); await board.last();
+  if (!live()) return;
+  s.busy = false;
+  if (freeOver(s, fg)) return;
+  await board.setPlayer(s.solver);
+  await board.ui({ disableBoard: false });
+  renderAll();
+  if (typed && live()) $('#ptn-in').focus();
+}
+// The player's move: checked against the free game's own position, then the engine answers.
+function freeMove(ptn) {
+  const s = S, fg = s.free;
+  if (fg.over || fg.thinking || s.busy) return showFree(s);
+  const canon = legalMove(fg.g, ptn);
+  if (!canon) return showFree(s);
+  fg.g.play(canon); fg.line.push(canon);
+  if (freeOver(s, fg)) return;
+  freeTurn(s, fg);
+}
+// The game is over: the card says how; Back to the puzzle, Take back, Hint and Solution stay.
+function freeOver(s, fg) {
+  const res = fg.g.result();
+  if (!res) return false;
+  fg.over = res; fg.thinking = false; s.busy = false;
+  board.ui({ disableBoard: true });
+  renderAll();
+  return true;
+}
+function freeTakeBack() {
+  const s = S, fg = s?.free, n = fg && takeBack(fg.line.length);
+  if (n == null || fg.thinking || s.busy) return;
+  dropPending();
+  fg.line.length = n; fg.g = gameAt([...fg.base, ...fg.line]); fg.over = null;
+  s.busy = true; renderAll();
+  showFree(s).then(async () => {
+    if (S !== s || s.free !== fg) return;
+    s.busy = false;
+    await board.setPlayer(s.solver);
+    await board.ui({ disableBoard: false });
+    renderAll();
+  });
+}
+// Leaving the free game (freeplay.js freeExit says what each way out does). The clock picks up where it stopped.
+function leaveFree(s, how) {
+  const fg = s?.free;
+  if (!fg) return;
+  const x = freeExit(how, fg.name);
+  s.free = null;
+  if (fg.engine === 'tiltak' && fg.thinking) tiltak.stop();
+  if (s.t0 != null && fg.e0 != null) s.hiddenMs += elapsed(s) - fg.e0;
+  if (!x.restore) return;
+  dropPending();
+  s.freeNote = x.note ? { text: x.note, n: s.misses.length } : null;
+  if (x.press === 'hint') s.pendingHint = true; else if (x.press === 'solution') s.pendingSolution = true;
+  s.busy = true; renderAll();
+  restoreBoard().then(() => { if (S !== s) return; s.busy = false; renderAll(); flushHint(s); });
+}
+// ---------- end free game ----------
 // Proven off-tree wins at the current attacker node: alts at the root, altsAt[path of moves so far] deeper in.
 function slowerWins() {
   const key = S.moves.map((m) => m.ptn).join(' ');
@@ -1218,6 +1353,7 @@ function finisher(g) {
 async function showSolution() {
   // Pressed while the board is busy (the puzzle's intro, the opponent's reply, the reset after a miss): play it out
   // once the board is free (flushHint), as with Hint.
+  if (S?.free) return leaveFree(S, 'solution'); // from a free game: the retry position comes back, then as from there
   if (S && S.busy && (S.status === 'retry' || S.status === 'play') && !S.placeholder) { S.pendingSolution = true; return; }
   // In the middle of a play-on: give up (a miss), then show it once the board is back
   if (S?.playOn) { if (!S.playOn.end) { S.pendingSolution = true; endPlayOn(S, 'gaveup'); } return; }
@@ -1262,6 +1398,7 @@ function flushHint(s) {
   else if (s.pendingHint) { s.pendingHint = false; showHint(); }
 }
 function showHint() {
+  if (S?.free) return leaveFree(S, 'hint'); // (as Solution)
   if (S && S.busy && (S.status === 'retry' || S.status === 'play') && !S.placeholder) { S.pendingHint = true; return; }
   if (!S || S.placeholder || S.busy || S.playOn || S.status === 'solved' || S.status === 'viewing') return;
   // Looking at an earlier position: go back to the live one and show the hint there.
@@ -1309,7 +1446,7 @@ function moveSquares(ptn) {
 // Browse any earlier position (game history or puzzle moves). Index = number of plies shown.
 async function viewPly(i, branch = S.onBranch) {
   if (!S || S.placeholder || board.holding) return; // stones in hand: finish or cancel the move first
-  if (S.playOn) return; // a play-on game is played, not browsed
+  if (S.playOn || S.free) return; // a play-on game is played, not browsed (a free game too)
   if (S.status === 'solved') {
     S.onBranch = !!(branch && S.branch);
     const line = shownLine();
@@ -1515,6 +1652,18 @@ function renderFeedback(mood, delta) {
   } else if (S.checking) {
     fbHtml = `<div class="icon turn p${S.solver}">…</div><div class="body"><h2>Checking ${esc(S.checking)}</h2>
       <p>That isn’t the puzzle’s line; checking whether it still forces a win.</p></div>${playActions}`;
+  } else if (S.free) {
+    // The free game after a miss (freeplay.js). Hint and Solution stay where they were: they leave it, then act as from
+    // the retry position. Nothing it says promises a re-check: the result is in.
+    const fg = S.free, E = fg.name, m = esc(fg.miss);
+    const counts = S.notCounted ? 'It doesn’t count.' : 'It doesn’t count: the miss is already recorded.';
+    const undo = takeBack(fg.line.length) != null && !fg.thinking && !S.busy;
+    const more = `<div class="more"><button data-act="free-back">Back to the puzzle</button><button data-act="free-undo"${undo ? '' : ' disabled'} title="Take back your last move">Take back</button></div>`;
+    fbHtml = fg.over
+      ? `<div class="icon turn p${S.solver}"></div><div class="body"><h2>Game over</h2>
+        <p>${esc(freeOverText(fg.over, S.solver, E, fg.line.length % 2 === 1))} ${counts}</p></div>${playActions}${more}`
+      : `<div class="icon turn p${S.solver}"></div><div class="body"><h2>Playing on</h2>
+        <p>From ${m}, ${E} defends${fg.swapped ? ' (Syntaks stopped answering here)' : ''}. ${counts}<span class="po-line po-status">${fg.thinking ? `${E} is thinking…` : 'Your move.'}</span></p></div>${playActions}${more}`;
   } else if (S.playOn) {
     // Play on (see startPlayOn). The wording is Shy's approved spec (2026-11-15).
     const po = S.playOn, E = defenderName(po), m = esc(po.miss);
@@ -1559,8 +1708,12 @@ function renderFeedback(mood, delta) {
     fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>${h2}<span class="dslot"></span></h2>
       <p>${hintNote}${lead}${rest}</p></div>${playActions}`;
   } else if (S.status === 'retry') {
+    // Play on: once the miss is in, a free game from the position after it (freeplay.js freeOffer), on its own line.
+    const fe = freeEngine(), E = fe === 'syntaks' ? 'Syntaks' : 'Tiltak';
+    const more = fe ? `<div class="more"><button data-act="free">Play on</button><span>Play on from ${esc(freeFrom(S))} and see how ${E} answers.</span></div>` : '';
+    const fnote = S.freeNote?.n === S.misses.length ? `<span class="po-line">${esc(S.freeNote.text)}</span>` : '';
     fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>That’s not the move<span class="dslot"></span></h2>
-      <p>${hintNote}${unsure(S.refutation?.miss) ? '' : (refText(S.refutation) || 'Try another move.') + ' '}${missNote()}</p></div>${playActions}`;
+      <p>${hintNote}${unsure(S.refutation?.miss) ? '' : (refText(S.refutation) || 'Try another move.') + ' '}${missNote()}${fnote}</p></div>${playActions}${more}`;
   } else if (S.status === 'viewing') {
     fbHtml = `<div class="icon bad">…</div><div class="body"><h2>Solution</h2><p>Watch the winning line.</p></div>`;
   } else {
@@ -1579,14 +1732,20 @@ function renderFeedback(mood, delta) {
     else if (active && active !== document.body) fbFocus = null;
     // Same buttons as before (e.g. the miss text updating with the refutation): replace only the text, so a press on
     // Hint or Solution that straddles the update still lands as a click.
+    // (a card may go on after them: the miss card's Play on row, after Hint | Solution so Tab follows the screen)
+    // Only the side that changed is redrawn: the Play on row appearing after the reset leaves the miss text in place,
+    // so a screen reader doesn't read the miss out twice (freeplay.js cardSplice).
     const acts = fb.querySelector(':scope > .actions');
-    if (acts && fb._html?.endsWith(playActions) && fbHtml.endsWith(playActions) && acts.outerHTML === playActions) {
-      for (const el of [...fb.children]) if (el !== acts) el.remove();
-      acts.insertAdjacentHTML('beforebegin', fbHtml.slice(0, -playActions.length));
+    const part = acts && acts.outerHTML === playActions ? cardSplice(fb._html, fbHtml, playActions) : null;
+    if (part) {
+      const kids = [...fb.childNodes], k = kids.indexOf(acts);
+      if (part.before != null) { kids.slice(0, k).forEach((el) => el.remove()); acts.insertAdjacentHTML('beforebegin', part.before); }
+      if (part.after != null) { kids.slice(k + 1).forEach((el) => el.remove()); acts.insertAdjacentHTML('afterend', part.after); }
     } else fb.innerHTML = fbHtml;
     fb._html = fbHtml;
     if (fbFocus && (!document.activeElement || document.activeElement === document.body)) {
-      const same = fb.querySelector(`[data-act="${fbFocus}"]:not(:disabled)`);
+      const pick = (a) => a && fb.querySelector(`[data-act="${a}"]:not(:disabled)`);
+      const same = pick(fbFocus) || pick(freeFocus(fbFocus)); // (Play on and Back to the puzzle hand focus to each other)
       if (same && same.offsetParent) same.focus(); else focusNext = true;
     }
     if (ended && active?.id === 'ptn-in') focusNext = true; // solved by a typed move
@@ -1647,7 +1806,7 @@ function renderMoves(docked, delta, focusNext) {
   const startPly = S.hist.length ? 0 : Game.fromTPS(p.tps).ply;
   const viewIdx = S.view ?? shownLine().length;
   const onShared = (i) => !S.onBranch || (S.branch && i + 1 <= S.branch.at); // official moves also on your line
-  const po = S.playOn; // a play-on game shows after the puzzle's moves, in italics, instead of its move as a miss
+  const po = S.playOn || S.free; // a play-on game shows after the puzzle's moves, in italics, instead of its move as a miss (a free game too)
   const missesAt = (k) => S.misses.filter((x) => x.at === k && !(po && x.at === po.at && x.ptn === po.miss)).map((x) => `<span class="miss" title="Not the move">${esc(x.ptn)}</span>`).join('');
   const off = unplayedPlies(p.meta), cut = off ? S.hist.length - off : -1; // cut: index of the first unplayed ply
   const cells = []; // one entry per ply slot: { ply, html }
@@ -1659,7 +1818,7 @@ function renderMoves(docked, delta, focusNext) {
     cells.push({ ply: startPly + i, i, html: `${k >= 0 ? missesAt(k) : ''}<span class="${cls}"${tip} data-i="${i + 1}">${esc(m)}</span>` });
   });
   if (po) po.line.forEach((m, j) => cells.push({ ply: startPly + official.length + j, i: official.length + j,
-    html: `${j ? '' : missesAt(S.moves.length)}<span class="mv po" title="Played out against ${defenderName(po)}">${esc(m)}</span>` }));
+    html: `${j ? '' : missesAt(S.moves.length)}<span class="mv po" title="${S.free ? `Played on against ${S.free.name}` : `Played out against ${defenderName(po)}`}">${esc(m)}</span>` }));
   else if (S.misses.some((x) => x.at === S.moves.length)) cells.push({ ply: startPly + official.length, i: official.length, html: missesAt(S.moves.length) });
   const branchRow = () => {
     const b0 = S.branch.at;
@@ -1769,6 +1928,7 @@ function cancelPending() {
   const p = pend, s = p?.s;
   pend = null; renderPending();
   if (!p || S !== s) return;
+  if (s.free) return showFree(s).then(() => { if (S === s && s.free && !s.free.over && !s.busy && !pend) board.ui({ disableBoard: false }); });
   if (s.playOn && !s.playOn.end) return showPlayOn(s).then(() => { if (S === s && s.playOn && !s.busy && !pend) board.ui({ disableBoard: false }); });
   else if (s.status === 'play' || s.status === 'retry') return restoreBoard();
   else if (s.status === 'solved') { s.loadedKey = null; showLine(shownLine(), s.view ?? shownLine().length).then(() => { if (S === s) openExploration(); }); }
@@ -1824,6 +1984,9 @@ $('#feedback').addEventListener('click', async (e) => {
   if ((act === 'hint' || act === 'solution') && fresh(S)) return; // a tap meant for the last puzzle's Next
   if (act === 'hint') return showHint();
   if (act === 'solution') return showSolution();
+  if (act === 'free') return startFree();
+  if (act === 'free-back') return leaveFree(S, 'back');
+  if (act === 'free-undo') return freeTakeBack();
   if (act === 'giveup') { if (busy('giveup', S.playOn?.t0 ?? 0)) return; return endPlayOn(S, 'gaveup'); }
   if (act === 'next') {
     if (justViewed() || justEnded()) return;
