@@ -1,8 +1,8 @@
 // Rush and Streak rules (Lichess Puzzle Storm / Puzzle Streak), pure so node can test them (scripts/test-rush.mjs):
 // judging a move without an engine, the clock, the combo and its time bonuses, and the end-of-run numbers.
 // public/rush.js owns the screen and calls these with the time it read.
-import { Game, colorOf, typeOf } from './shared/tak.js?v=1795067895';
-import { finalSquare } from './settings.js?v=1795067895';
+import { Game, colorOf, typeOf } from './shared/tak.js?v=1795070168';
+import { finalSquare } from './settings.js?v=1795070168';
 
 export const SIZE = 6; // Rush and Streak are 6×6 only (server/rush.js refuses any other size)
 export const RUSH_MS = 180e3; // 3:00

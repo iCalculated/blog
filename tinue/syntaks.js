@@ -6,7 +6,7 @@
 //
 // mate and winProb are from White's side, like /api/analyze. One search at a time; it can't be stopped midway (the
 // limits bound it), so a search nobody wants any more just finishes and is dropped.
-import { canonPTN } from './shared/ptn.js?v=1795067895';
+import { canonPTN } from './shared/ptn.js?v=1795070168';
 
 // The engine build, not the site build: the 19.5 MB file only changes when the engine is rebuilt, so the browser keeps
 // it across site deploys. build-static.sh stamps this with the wasm's own hash.

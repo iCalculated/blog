@@ -3,10 +3,10 @@
 // the board is tinue's own (PTN Ninja's iframe isn't used here: its round trips would cost clock time), and the
 // server's part is server/rush.js. Nothing here is rated, and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { Board, buildPTN } from './board.js?v=1795067895';
-import { api, store, token } from './api.js?v=1795067895';
-import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795067895';
-import * as R from './rush-rules.js?v=1795067895';
+import { Board, buildPTN } from './board.js?v=1795070168';
+import { api, store, token } from './api.js?v=1795070168';
+import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795070168';
+import * as R from './rush-rules.js?v=1795070168';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -150,13 +150,15 @@ async function renderStart() {
   renderRecent();
   flushQueue().then(topUp); // (the queue first: a post is worth more than a spare)
   const g = gen;
-  const [best, top] = await Promise.all([bestFor(), api(`/api/rush/top?mode=${mode}&size=${R.SIZE}`, null, { quiet: true }).catch(() => null)]);
+  const [best, top] = await Promise.all([bestFor(), api(`/api/rush/top?mode=${mode}&size=${R.SIZE}`, topBody(), { quiet: true }).catch(() => null)]);
   if (g !== gen || $('#rush-best') == null || st) return;
   $('#rush-best').innerHTML = `<h2>Your best</h2>${bestTable(best?.[mode])}`;
   $('#rush-top').innerHTML = `<h2>Top scores</h2>` + (top?.top?.length
-    ? `<ol class="rush-toplist">${top.top.map((t) => `<li><span>${esc(t.name)}</span><b>${t.score}</b></li>`).join('')}</ol>`
-    : `<p class="muted flush">No scores yet. Claim a username to be listed.</p>`);
+    ? `<ol class="rush-toplist">${top.top.map((t) => `<li class="${t.named ? '' : 'guest'}${t.you ? ' you' : ''}"><span>${esc(t.name)}${t.you ? ' <em>you</em>' : ''}</span><b>${t.score}</b></li>`).join('')}</ol>`
+    : `<p class="muted flush">No scores yet.</p>`);
 }
+// A tokenless visitor's gid goes in a POST body (never the URL) so their row on the top list is marked; null: a GET.
+const topBody = () => { if (token) return null; const g = store.get('gid', null); return typeof g === 'string' && /^[a-f0-9]{32}$/.test(g) ? { guest: { gid: g } } : null; };
 // Best scores: the server's by token; a visitor without one has only what the last posted run's answer said (kept here).
 async function bestFor() {
   if (token) { const r = await api(`/api/rush/best?size=${R.SIZE}`, null, { quiet: true }).catch(() => null); if (r?.best) return r.best; }
