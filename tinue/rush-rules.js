@@ -1,8 +1,8 @@
 // Rush and Streak rules (Lichess Puzzle Storm / Puzzle Streak), pure so node can test them (scripts/test-rush.mjs):
 // judging a move without an engine, the clock, the combo and its time bonuses, and the end-of-run numbers.
 // public/rush.js owns the screen and calls these with the time it read.
-import { Game, colorOf, typeOf } from './shared/tak.js?v=1795070168';
-import { finalSquare } from './settings.js?v=1795070168';
+import { Game, colorOf, typeOf } from './shared/tak.js?v=1795073685';
+import { finalSquare } from './settings.js?v=1795073685';
 
 export const SIZE = 6; // Rush and Streak are 6×6 only (server/rush.js refuses any other size)
 export const RUSH_MS = 180e3; // 3:00
@@ -180,11 +180,28 @@ export const canAbandon = (run) => !run.over && run.moves > 0;
 export function abandonBody(run, cur, now, build = 0, env = null, wall = null) {
   const r = { ...run, results: [...run.results] };
   const out = expired(r, now);
-  if (out) { if (!r.results.length) return null; } else {
+  if (out) { closeOpen(r, cur); if (!r.results.length) return null; } else {
     if (cur?.moves?.length) r.results.push({ id: cur.p.id, rating: cur.p.rating, solved: false, unfinished: true, ms: now - cur.born, mv: cur.moves, hidden: !!cur.hidden });
     end(r, now);
   }
   return { ...resultBody(r, build, env), ...(out ? {} : { abandoned: true }), ...(wall != null ? { playedAt: playedAtOf(r.endedAt, now, wall) } : {}) };
+}
+// A Rush that ran out of time with a puzzle on the board keeps it, last, as unfinished: the position it reached (at),
+// the moves made in it (none, if it had just appeared), its time up to the clock's end. Never solved or failed, so no
+// score, accuracy or hardest solved; a puzzle already finished (a penalty that emptied the clock, a run out of
+// puzzles) isn't open. Returns the run.
+export function closeOpen(run, cur) {
+  if (run.mode !== 'rush' || !cur?.p || run.results.some((x) => x.id === cur.p.id)) return run;
+  finish(run, { id: cur.p.id, rating: cur.p.rating, solved: false, unfinished: true, ms: Math.max(0, (run.endedAt ?? cur.born) - cur.born),
+    mv: cur.moves || [], hidden: !!cur.hidden, at: [...(cur.line || [])], clock: 0, combo: run.combo });
+  return run;
+}
+// A result's mark on the end screen's list: the glyph, its colour, its word for screen readers, and any text after it.
+export function resultMark(r) {
+  if (r.skipped) return { cls: 'muted', glyph: '–', sr: 'skipped', text: '' };
+  if (r.unfinished) return { cls: 'muted', glyph: '·', sr: 'unfinished', text: 'unfinished' };
+  if (r.solved) return { cls: 'good', glyph: '✓', sr: 'solved', text: '' };
+  return { cls: 'bad', glyph: '✗', sr: 'failed, played', text: r.wrong || '' };
 }
 // When a run ended, wall clock: performance.now() endedAt, read against now / wall taken together.
 export const playedAtOf = (endedAt, now, wall) => Math.round(wall - Math.max(0, now - endedAt));
@@ -279,7 +296,8 @@ export function review(p, r) {
     const sq = row * n + col, stack = g.board[sq], t = stack.length ? stack[stack.length - 1] : -1;
     cells.push({ sq: g.sqName(sq), dark: col % 2 === row % 2, top: t < 0 ? null : { color: colorOf(t), type: typeOf(t) }, h: stack.length });
   }
-  const you = r.solved ? '' : r.skipped ? 'Skipped' : (at.length ? `After ${at.join(' ')}, you played ` : 'You played ') + (r.wrong || '?');
+  const you = r.solved ? '' : r.skipped ? 'Skipped' : r.unfinished ? (at.length ? `After ${at.join(' ')}, time ran out` : 'Time ran out')
+    : (at.length ? `After ${at.join(' ')}, you played ` : 'You played ') + (r.wrong || '?');
   const want = !answer ? '' : r.solved || r.skipped ? `The first move was ${answer}` : `The move was ${answer}`;
   const led = at.length ? at.at(-1) : p.last; // the move that led here (none: no game on record)
   return { size: n, toMove: g.toMove, cells, last: moveSquares(led), played: r.solved || r.skipped ? [] : moveSquares(r.wrong), answer: moveSquares(answer),
@@ -299,7 +317,7 @@ export function recordOf(run, puzzles, t) {
     let answer = null;
     try { answer = answerAt(p, at); } catch {}
     return { id: r.id, rating: Math.round(r.rating), solved: r.solved, ...(r.skipped ? { skipped: true } : {}), ms: Math.round(r.ms),
-      ...(r.wrong ? { wrong: r.wrong, at } : {}), answer, size: p.size, tps: p.tps, komi: p.komi || 0, ...(p.last ? { last: p.last } : {}) };
+      ...(r.wrong ? { wrong: r.wrong, at } : {}), ...(r.unfinished ? { unfinished: true, at } : {}), answer, size: p.size, tps: p.tps, komi: p.komi || 0, ...(p.last ? { last: p.last } : {}) };
   }) };
 }
 const str = (v, max) => typeof v === 'string' && v.length > 0 && v.length <= max;
@@ -308,7 +326,7 @@ const SUM_KEYS = ['score', 'moves', 'errors', 'bestCombo', 'accuracy', 'ms', 'pe
 function validPuzzle(q) {
   return !!q && typeof q === 'object' && str(q.id, 40) && num(q.rating) && typeof q.solved === 'boolean' && num(q.ms) && q.ms >= 0
     && Number.isInteger(q.size) && q.size >= 3 && q.size <= 8 && str(q.tps, 400) && num(q.komi ?? 0)
-    && (q.skipped === undefined || typeof q.skipped === 'boolean') && (q.wrong === undefined || str(q.wrong, 24))
+    && (q.skipped === undefined || typeof q.skipped === 'boolean') && (q.unfinished === undefined || typeof q.unfinished === 'boolean') && (q.wrong === undefined || str(q.wrong, 24))
     && (q.at === undefined || (Array.isArray(q.at) && q.at.length <= 200 && q.at.every((m) => str(m, 24))))
     && (q.answer === null || str(q.answer, 24)) && (q.last === undefined || str(q.last, 24));
 }

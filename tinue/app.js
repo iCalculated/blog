@@ -1,18 +1,18 @@
-import { Game } from './shared/tak.js?v=1795070168';
-import { unplayedPlies } from './shared/ptn.js?v=1795070168';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795070168';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795070168';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795070168';
-import * as engine from './engine.js?v=1795070168';
-import * as tiltak from './tiltak.js?v=1795070168';
-import * as syntaks from './syntaks.js?v=1795070168';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795070168';
-import { createNext } from './next.js?v=1795070168';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795070168';
-import { createOutbox } from './outbox.js?v=1795070168';
-import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795070168';
-import { capMoves, capNote, defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1795070168';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795070168';
+import { Game } from './shared/tak.js?v=1795073685';
+import { unplayedPlies } from './shared/ptn.js?v=1795073685';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795073685';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795073685';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795073685';
+import * as engine from './engine.js?v=1795073685';
+import * as tiltak from './tiltak.js?v=1795073685';
+import * as syntaks from './syntaks.js?v=1795073685';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795073685';
+import { createNext } from './next.js?v=1795073685';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795073685';
+import { createOutbox } from './outbox.js?v=1795073685';
+import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795073685';
+import { capMoves, capNote, defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, provenCap, provenCapNote, heldDisplaced, quickOutcome, capWait, CAP_WAIT_MS, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend } from './playon.js?v=1795073685';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795073685';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -140,7 +140,7 @@ const guestId = () => {
 // PTN Ninja in an iframe instead of tinue's board (same API), by the Board style setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795070168')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1795073685')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -2196,7 +2196,7 @@ async function route() {
   if (page === 'glossary') return glossaryPage();
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795070168')).enter(); } // loaded on first visit
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795073685')).enter(); } // loaded on first visit
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   if (page === 'puzzle' && arg) { if (S?.p.id !== decodeURIComponent(arg)) loadById(decodeURIComponent(arg)); else showPuzzleURL(S.p.id); }

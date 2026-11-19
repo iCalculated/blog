@@ -3,10 +3,10 @@
 // the board is tinue's own (PTN Ninja's iframe isn't used here: its round trips would cost clock time), and the
 // server's part is server/rush.js. Nothing here is rated, and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { Board, buildPTN } from './board.js?v=1795070168';
-import { api, store, token } from './api.js?v=1795070168';
-import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795070168';
-import * as R from './rush-rules.js?v=1795070168';
+import { Board, buildPTN } from './board.js?v=1795073685';
+import { api, store, token } from './api.js?v=1795073685';
+import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795073685';
+import * as R from './rush-rules.js?v=1795073685';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -581,6 +581,7 @@ async function endRun(wrong = null) {
     wrap.classList.add('miss');
     (board.snaps?.at(-1)?.ptn === wrong ? board.last() : board.append(wrong).then(() => board.last())).catch?.(() => {});
   }
+  R.closeOpen(s.run, s.cur); // (a Rush out of time keeps the puzzle on the board, as unfinished)
   const rec = R.recordOf(s.run, s.puzzles, Date.now());
   await new Promise((r) => setTimeout(r, END_BEAT_MS));
   if (s.gone !== 'left') saveRun(rec); // kept whether or not the post below succeeds (a run left unfinished isn't one)
@@ -629,9 +630,7 @@ function showEnd(rec, s, at = null) {
   $('#rush-end h1').focus({ preventScroll: true });
 }
 // A row's result: a glyph, as the strip's, with its word for screen readers.
-const resultHTML = (r) => r.skipped ? '<span class="muted"><span aria-hidden="true">–</span><span class="sr-only">skipped</span></span>'
-  : r.solved ? '<span class="good"><span aria-hidden="true">✓</span><span class="sr-only">solved</span></span>'
-  : `<span class="bad"><span aria-hidden="true">✗</span><span class="sr-only">failed, played</span> ${esc(r.wrong || '')}</span>`;
+const resultHTML = (r) => { const m = R.resultMark(r); return `<span class="${m.cls}"><span aria-hidden="true">${m.glyph}</span><span class="sr-only">${m.sr}</span>${m.text ? ' ' + `<span${m.sr === m.text ? ' aria-hidden="true"' : ''}>${esc(m.text)}</span>` : ''}</span>`; };
 // ---------- looking back at a puzzle (the end screen's list; never during the run, where it would cost clock) ----------
 // A mouse hovering a row, or focus on its result button, gets a floating preview, as Storm's; a tap or click (or
 // Enter on the button) opens the row in place, which is what a phone gets. The position is drawn here, static: a
@@ -649,7 +648,7 @@ function lookHTML(rec, i) {
   return `<div class="rush-look"><div class="rush-mini" style="--n:${v.size}" aria-hidden="true">${v.cells.map((c) =>
     `<i class="${c.dark ? 'dk' : 'lt'}${mk(c.sq)}">${co(c.sq)}${c.top ? `<b class="p${c.top.color} k${c.top.type}"></b>${c.h > 1 ? `<em>${c.h}</em>` : ''}` : ''}</i>`).join('')}</div>
     <div class="rush-look-txt"><p><span class="rush-turn sm ${t.color}" aria-hidden="true"><i></i></span>${t.text}</p>
-    ${v.you ? `<p class="${r.skipped ? 'muted' : 'bad'}">${r.skipped ? '' : g('✗')}${esc(v.you)}</p>` : ''}${v.want ? `<p class="good">${g('✓')}${esc(v.want)}</p>` : ''}</div></div>`;
+    ${v.you ? `<p class="${r.skipped || r.unfinished ? 'muted' : 'bad'}">${r.skipped || r.unfinished ? '' : g('✗')}${esc(v.you)}</p>` : ''}${v.want ? `<p class="good">${g('✓')}${esc(v.want)}</p>` : ''}</div></div>`;
 }
 function lookBack(rec) {
   const wrap = $('#rush-list-wrap'), peek = $('#rush-peek');
