@@ -5,16 +5,17 @@
 // engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused while they work. Nothing here is rated,
 // and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { Board, buildPTN } from './board.js?v=1795146164';
-import { api, store, token } from './api.js?v=1795146164';
-import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795146164';
-import * as R from './rush-rules.js?v=1795146164';
-import * as engine from './engine.js?v=1795146164';
-import * as tiltak from './tiltak.js?v=1795146164';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795146164';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795146164';
-import { busy, BUSY_MS } from './busy.js?v=1795146164';
-import * as SYM from './shared/sym.js?v=1795146164';
+import { Board, buildPTN } from './board.js?v=1795147269';
+import { api, store, token } from './api.js?v=1795147269';
+import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795147269';
+import * as R from './rush-rules.js?v=1795147269';
+import * as engine from './engine.js?v=1795147269';
+import * as tiltak from './tiltak.js?v=1795147269';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795147269';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795147269';
+import { busy, BUSY_MS } from './busy.js?v=1795147269';
+import * as SYM from './shared/sym.js?v=1795147269';
+import * as sound from './sound.js?v=1795147269'; // (moves click through Board.onPly, set by app.js; the verdicts are played here)
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -689,6 +690,8 @@ function done(solved, now, wrong = null, a = null) {
     ...(a ? { played: a.canon, at: c.line.slice(), ...(a.look ? { po: a.look } : {}) } : {}),
     ...(s.run.mode === 'rush' ? { clock: R.timeLeft(s.run, now), combo: s.run.combo } : {}) });
   mark(solved, c.gained || 0, a);
+  // a beat after the move's own click, and before the next puzzle's intro move (INTRO_WAIT)
+  if (solved) sound.later('rushGood', 45); else { sound.later('wrong', 80); s.wrongAt = performance.now() + 80; }
   if (s.run.over) return endRun(wrong, !!a?.po);
   nextPuzzle();
 }
@@ -725,6 +728,13 @@ function renderClock() {
   const low = st.run.startedAt != null && left < 20e3;
   el.classList.toggle('low', low);
   if (low && !st.saidLow) { st.saidLow = true; say('20 seconds left'); }
+  // Ten seconds left: one tick-tock as the clock crosses 10 s (again only if a bonus lifts it back over and it crosses
+  // again), not while paused or over, and not on top of a wrong move's sound.
+  if (left > 10e3) st.lowArmed = true;
+  else if (st.lowArmed && left > 0 && st.run.startedAt != null && st.run.pausedAt == null && !st.ended) {
+    st.lowArmed = false;
+    sound.later('lowTime', Math.max(0, (st.wrongAt ?? -1e9) + 250 - performance.now()));
+  }
 }
 function render() {
   const s = st;
@@ -817,7 +827,11 @@ async function endRun(wrong = null, played = false) {
   }
   R.closeOpen(s.run, s.cur); // (a Rush out of time keeps the puzzle on the board, as unfinished)
   const rec = R.recordOf(s.run, s.puzzles, Date.now());
+  // The run's end: now (the clock ran out, the pool ran dry), or after the beat when a streak's miss ended it, so it
+  // doesn't land on the wrong sound; a clock emptied by a wrong move's 10 s waits for that sound to finish too.
+  if (!wrong && !s.gone) sound.later('rushEnd', Math.max(0, (s.wrongAt ?? -1e9) + 250 - performance.now()));
   await new Promise((r) => setTimeout(r, END_BEAT_MS));
+  if (wrong && !s.gone && st === s) sound.play('rushEnd');
   if (s.gone !== 'left') saveRun(rec); // kept whether or not the post below succeeds (a run left unfinished isn't one)
   if (st === s) showEnd(rec, s);
   if (s.gone) return showBest(null, null, s, s.gone === 'left' ? 'left' : null); // already sent (pagehide)

@@ -1,8 +1,8 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795146164';
-import { parsePTN } from './shared/ptn.js?v=1795146164';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795147269';
+import { parsePTN } from './shared/ptn.js?v=1795147269';
 
 const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
@@ -68,8 +68,8 @@ function stepSnap(s, P, ptn) {
     hl = { sqs, prim: sqs.slice(1) };
   }
   const canon = g.moveToPTN(mv);
-  g.apply(mv);
-  return { g, st, ty, hl, ptn: canon };
+  const u = g.apply(mv);
+  return { g, st, ty, hl, ptn: canon, smash: u.smashed }; // (smash: a wall flattened, for the move's sound)
 }
 
 // Squares of a finished road with dead ends pruned (what gets drawn at full strength), plus its axes.
@@ -100,6 +100,9 @@ document.addEventListener('focusin', (e) => { if (performance.now() - lastPointe
 export const focusedByPointer = (el) => pointerFocused.has(el);
 
 export class Board {
+  // (ptn, smash) on every move played or appended at the line's end, on any board: app.js connects it to sound.js
+  // (kept out of this file, which node tests import).
+  static onPly = null;
   constructor(el, { onMove } = {}) {
     this.el = el; this.onMove = onMove;
     el.classList.add('tb-host');
@@ -271,6 +274,8 @@ export class Board {
   _show(i, animate = false) {
     this.cur = i; this.sel = null; this.peekHl = null;
     this._render(animate);
+    // A move played or appended at the end of the line (animate): its sound. Loads, jumps and restores are silent.
+    if (animate && i > 0) Board.onPly?.(this.snaps[i].ptn, this.snaps[i].smash);
   }
 
   // A number key (or `) pressed while the board is briefly busy (the intro, the reply, the reset after a miss) is

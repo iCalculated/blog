@@ -1,19 +1,20 @@
-import { Game } from './shared/tak.js?v=1795146164';
-import { unplayedPlies } from './shared/ptn.js?v=1795146164';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795146164';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795146164';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795146164';
-import * as engine from './engine.js?v=1795146164';
-import * as tiltak from './tiltak.js?v=1795146164';
-import * as syntaks from './syntaks.js?v=1795146164';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795146164';
-import { createNext } from './next.js?v=1795146164';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795146164';
-import { createOutbox } from './outbox.js?v=1795146164';
-import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795146164';
-import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795146164';
-import * as defend from './defend.js?v=1795146164';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795146164';
+import { Game } from './shared/tak.js?v=1795147269';
+import { unplayedPlies } from './shared/ptn.js?v=1795147269';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795147269';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795147269';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795147269';
+import * as engine from './engine.js?v=1795147269';
+import * as tiltak from './tiltak.js?v=1795147269';
+import * as syntaks from './syntaks.js?v=1795147269';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795147269';
+import { createNext } from './next.js?v=1795147269';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795147269';
+import { createOutbox } from './outbox.js?v=1795147269';
+import * as sound from './sound.js?v=1795147269';
+import { boardFrom, confirmOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795147269';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795147269';
+import * as defend from './defend.js?v=1795147269';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795147269';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -143,8 +144,13 @@ const guestId = () => {
 // PTN Ninja in an iframe instead of tinue's board (same API), by the Board style setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795146164')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1795147269')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
+// Sounds (sound.js): every move played or appended on any board (this page's, Rush's, PTN Ninja's) clicks; the audio
+// unlocks on the first press, tap or key.
+Board.onPly = sound.playMove;
+sound.setEnabled(soundOn(prefs)); sound.setVoice(soundOf(prefs));
+sound.listen();
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
 onNotice(() => renderAll()); // api() shows and clears the server notice
@@ -1039,6 +1045,7 @@ function endPlayOn(s, kind, opts) {
   }
   s.playOn = null;
   s.status = 'retry';
+  if (S === s && kind !== 'left' && kind !== 'unload') sound.later('wrong', 120); // a lost play-out (not one left)
   if (po.proven) s.misses.push({ at: po.at, ptn: po.miss }); // a proven play-out not finished: a miss on the card
   // byYou: the last ply was the player's (line[0] is theirs), e.g. a move that completed only the defender's road
   s.refutation = { miss: po.miss, kind: 'playon', how: kind, n: po.mine, engine: defenderName(po), proven: !!po.proven,
@@ -1200,7 +1207,7 @@ function leaveFree(s, how) {
 // Proven off-tree wins at the current attacker node: alts at the root, altsAt[path of moves so far] deeper in.
 function slowerWins() { return slowerWinsAt(S.p, S.moves.map((m) => m.ptn)); } // (playon.js: Rush reads them too)
 
-function fail(ms) { S.status = 'retry'; report(false, S, S, { ms }); renderAll(); }
+function fail(ms) { S.status = 'retry'; report(false, S, S, { ms }); renderAll(); sound.later('wrong', 120); } // (after the move's own click)
 // Still-wins verdicts already known in this puzzle, by position and move, so a repeat doesn't search again.
 const provenKey = (canon) => S.moves.map((m) => m.ptn).join(' ') + '|' + canon;
 
@@ -1512,7 +1519,10 @@ function renderAll(mood) {
   if (!S) S = PLACEHOLDER;
   const loading = !!S.placeholder;
   // The render that first draws Next puzzle starts its lock (justEnded): every way to 'solved' renders, so none is missed.
+  const unended = S.endT0 == null;
   if (S.status === 'solved' && S.endT0 == null && !loading) S.endT0 = performance.now();
+  // ...and so the solved sound, once a puzzle, a beat after the winning move's click (none for a solution only viewed)
+  if (unended && S.endT0 != null && S.outcome !== 'viewed') sound.later('solved', 170);
   // A held move whose puzzle changed under it (a check settled it, the play-out ended, ...): every change renders.
   if (pend) pendingEvent({ type: 'phase', key: S === pend.s ? phaseKey(S) : null });
   for (const id of ['#feedback', '#moves']) $(id).classList.toggle('is-loading', loading);
@@ -1933,7 +1943,7 @@ const themeDesc = () => { $('#theme-desc').textContent = prefs.theme && THEMES[p
 $('#difficulty').value = prefs.difficulty;
 // A filter changed with the mouse lets go of focus, or number keys meant for the board would go to it (on Board size,
 // 4–8 even pick a size). Changed from the keyboard, it keeps focus.
-for (const id of ['#difficulty', '#size', '#theme', '#set-board', '#set-confirm']) $(id).addEventListener('change', (e) => { if (focusedByPointer(e.target)) e.target.blur(); });
+for (const id of ['#difficulty', '#size', '#theme', '#set-board', '#set-confirm', '#set-sound']) $(id).addEventListener('change', (e) => { if (focusedByPointer(e.target)) e.target.blur(); });
 $('#difficulty').onchange = (e) => { prefs.difficulty = e.target.value; store.set('prefs', prefs); loadNext(); };
 $('#size').onchange = (e) => { prefs.size = e.target.value; store.set('prefs', prefs); renderFilters(); loadNext(); };
 $('#theme').onchange = (e) => { prefs.theme = e.target.value; store.set('prefs', prefs); themeDesc(); loadNext(); };
@@ -1950,6 +1960,7 @@ const showNote = () => {
 };
 $('#set-board').value = boardFrom('', prefs);
 $('#set-confirm').value = confirmOn(prefs) ? 'on' : 'off';
+$('#set-sound').value = soundOf(prefs);
 $('#set-board').onchange = (e) => {
   const was = prefs.board;
   prefs.board = e.target.value; store.set('prefs', prefs);
@@ -1965,18 +1976,30 @@ $('#set-confirm').onchange = (e) => {
   if (!prefs.confirm) pendingEvent({ type: 'leave' });
   renderPending(); showNote();
 };
+$('#set-sound').onchange = (e) => {
+  prefs.sound = soundOf({ sound: e.target.value }); store.set('prefs', prefs);
+  sound.setEnabled(soundOn(prefs)); sound.setVoice(prefs.sound);
+  if (soundOn(prefs)) { sound.unlock(); setTimeout(() => sound.play('place'), 60); } // a preview in the chosen voice (the change is a gesture)
+};
 renderPending(); showNote();
 // Stepping in half-moves, as in PTN Ninja: h = 2·plies shown, +1 while the next move's squares are only
 // highlighted (Shift+arrow). Plain steps land on whole moves.
-async function navTo(h) {
+// step: a single step (arrow key, one wheel notch): one whole move forward plays its sound, as on Lichess; back,
+// jumps (Home/End) and half-steps are silent.
+let stepSoundAt = -1e9;
+async function navTo(h, step = false) {
   if (!S || S.placeholder || board.holding) return;
-  const total = shownLine().length;
+  const total = shownLine().length, s = S, from = navAt();
   h = Math.max(0, Math.min(2 * total, h));
   await viewPly(h >> 1);
   if (h & 1 && (S.view ?? total) === h >> 1) board.peek();
+  if (step && S === s && !board.peeking && navAt() === 2 * ((from >> 1) + 1) && performance.now() - stepSoundAt > 60) {
+    const snap = board.snaps?.[board.cur];
+    if (snap?.ptn) { stepSoundAt = performance.now(); sound.playMove(snap.ptn, snap.smash); }
+  }
 }
 const navAt = () => 2 * (S.view ?? shownLine().length) + (board.peeking ? 1 : 0);
-const navStep = (dir, half) => { const h = navAt(); navTo(half ? h + dir : h + dir * (h & 1 ? 1 : 2)); };
+const navStep = (dir, half) => { const h = navAt(); navTo(half ? h + dir : h + dir * (h & 1 ? 1 : 2), dir > 0); };
 // Captured first, so Enter = Continue wins over board.js's Enter (lift / drop all) when nothing is in hand.
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || !S) return;
@@ -2008,7 +2031,7 @@ $('#board').addEventListener('wheel', (e) => {
   if (!times) return;
   wheelAcc -= times * step;
   const h = navAt();
-  navTo(e.shiftKey ? h + times : 2 * ((h + (times > 0 ? 0 : 1)) >> 1) + 2 * times);
+  navTo(e.shiftKey ? h + times : 2 * ((h + (times > 0 ? 0 : 1)) >> 1) + 2 * times, times === 1);
 }, { passive: false });
 // Typed moves (keyboard / screen reader): played on the board exactly as if clicked.
 $('#ptn-form').addEventListener('submit', (e) => { e.preventDefault(); typedMove(); });
@@ -2130,7 +2153,7 @@ async function route() {
   if (page === 'glossary') return glossaryPage();
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795146164')).enter(); } // loaded on first visit
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795147269')).enter(); } // loaded on first visit
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   if (page === 'puzzle' && arg) { if (S?.p.id !== decodeURIComponent(arg)) loadById(decodeURIComponent(arg)); else showPuzzleURL(S.p.id); }

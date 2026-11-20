@@ -26,8 +26,8 @@ window.__tinueNinja = (function () {
 if (window.__tinueNinja) document.head.append(Object.assign(document.createElement('link'), { rel: 'preconnect', href: 'https://ptn.ninja' }));</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="board.css?v=1795146164">
-<link rel="stylesheet" href="style.css?v=1795146164">
+<link rel="stylesheet" href="board.css?v=1795147269">
+<link rel="stylesheet" href="style.css?v=1795147269">
 <style>.booting main, .booting .credits { visibility: hidden; }</style>
 <script>setTimeout(() => document.documentElement.classList.remove("booting"), 2000);</script>
 <meta name="googlebot" content="noindex"><meta name="bingbot" content="noindex">
@@ -100,6 +100,11 @@ if (window.__tinueNinja) document.head.append(Object.assign(document.createEleme
             <select id="set-confirm"><option value="off">Off</option><option value="on">On</option></select>
           </label>
         </div>
+        <div class="row">
+          <label class="field"><span>Sound</span>
+            <select id="set-sound"><option value="off">Off</option><option value="light">Light</option><option value="thunk">Thunk</option><option value="deep">Deep</option></select>
+          </label>
+        </div>
         <p class="theme-desc hidden" id="settings-note"></p>
       </div>
     </div>
@@ -116,7 +121,7 @@ if (window.__tinueNinja) document.head.append(Object.assign(document.createEleme
   <p>tinue is free software under the <a href="LICENSE.txt">GNU GPL v3</a>. <a href="https://github.com/iCalculated/blog/tree/main/tinue">Source code</a>.</p>
 </footer>
 
-<script src="config.js?v=1795146164"></script>
-<script type="module" src="app.js?v=1795146164"></script>
+<script src="config.js?v=1795147269"></script>
+<script type="module" src="app.js?v=1795147269"></script>
 </body>
 </html>

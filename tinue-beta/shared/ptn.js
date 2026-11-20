@@ -1,5 +1,5 @@
 // Parse a PTN game (headers + moves) and replay it.
-import { Game } from './tak.js?v=1795146164';
+import { Game } from './tak.js?v=1795147269';
 
 export function parsePTN(text) {
   const headers = {};

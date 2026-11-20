@@ -2,9 +2,9 @@
 // embeds it. Same API as Board (board.js), so app.js doesn't care which one it has. Only loaded via import()
 // when the flag is set: everyone else fetches nothing from here or from ptn.ninja.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1795146164';
-import { parsePTN } from './shared/ptn.js?v=1795146164';
-import { buildPTN, focusedByPointer } from './board.js?v=1795146164';
+import { Game } from './shared/tak.js?v=1795147269';
+import { parsePTN } from './shared/ptn.js?v=1795147269';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795147269';
 
 const ORIGIN = 'https://ptn.ninja';
 // tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses).
@@ -124,7 +124,7 @@ export class NinjaBoard {
   // PTN Ninja never came up: put tinue's own board in its place, in the same state, and hand it every call.
   async _fallback() {
     if (this.fb || !this._resolve) return;
-    const { Board } = await import('./board.js?v=1795146164');
+    const { Board } = await import('./board.js?v=1795147269');
     this.el.style.cssText = ''; // index.html's placeholder background
     const fb = new Board(this.el, { onMove: this.onMove });
     this.fb = fb;
@@ -140,7 +140,7 @@ export class NinjaBoard {
   get g() { return this.games[this.cur]; }
   get holding() { return false; } // PTN Ninja doesn't say whether stones are in hand
   _canon(g, ptn) { try { const mv = g.parseMove(ptn); return g.isLegal(mv) ? g.moveToPTN(mv) : null; } catch { return null; } }
-  _push(ptn) { const g = this.games.at(-1).clone(); g.apply(g.parseMove(ptn)); this.games.push(g); this.snaps.push({ ptn }); }
+  _push(ptn) { const g = this.games.at(-1).clone(), u = g.apply(g.parseMove(ptn)); this.games.push(g); this.snaps.push({ ptn, smash: u.smashed }); }
   // A move made on PTN Ninja's board (or typed): like Board's _commit, the next move in line just steps forward.
   _played(ptn) {
     const canon = ptn && this._canon(this.g, ptn);
@@ -148,6 +148,7 @@ export class NinjaBoard {
     const next = this.snaps[this.cur + 1]?.ptn;
     if (next !== canon) { this.games.length = this.snaps.length = this.cur + 1; this._push(canon); }
     this.cur++; this.peeking = false;
+    Board.onPly?.(canon, this.snaps[this.cur].smash); // (as Board's _commit: the move's sound)
     // A different move mid-line: PTN Ninja made it a branch, so its ply numbers no longer match ours (stepping back
     // would show the old line). Give it the line as tinue has it, one straight line, at the same spot.
     if (next && next !== canon) this._relinearize();
@@ -187,7 +188,9 @@ export class NinjaBoard {
   async append(ply) {
     const c = this._canon(this.games.at(-1), ply);
     if (!c) return;
+    const atEnd = this.cur === this.snaps.length - 1;
     this._push(c); this.cur = this.snaps.length - 1; this.peeking = false;
+    if (atEnd) Board.onPly?.(c, this.snaps[this.cur].smash); // (as Board's append: silent while browsing back)
     await this._send('APPEND_PLY', c);
   }
   goTo(plyID) { this.cur = Math.max(0, Math.min(this.snaps.length - 1, plyID + 1)); this.peeking = false; return this._send('GO_TO_PLY', { plyID: this.cur - 1, isDone: true }); }
