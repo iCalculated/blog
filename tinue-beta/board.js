@@ -1,8 +1,9 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795149377';
-import { parsePTN } from './shared/ptn.js?v=1795149377';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795182193';
+import { parsePTN } from './shared/ptn.js?v=1795182193';
+import { dispPoint, shapesSvg } from './analysis.js?v=1795182193';
 
 const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
@@ -180,6 +181,14 @@ export class Board {
     this._render();
   }
   async cancel() { this.sel = null; this._render(); }
+  // The analysis page's shapes (app.js paintShapes; analysis.js shapesSvg draws them): arrows, rings and ghosts for the
+  // engine's lines and the opponent's threats. They belong to the position they were set on: drawn only while that
+  // position is shown, and not while stones are in hand or the next move is peeked at; an empty list clears them.
+  shapes(list = []) {
+    this.shapesList = list || []; this.shapesSnap = this.snaps[this.cur];
+    this._drawShapes();
+  }
+  get shapesVisible() { return !!this.shapesList?.length && this.snaps[this.cur] === this.shapesSnap && !this.sel && !this.peekHl; }
   // Another puzzle: drop whatever input was under way on the last one (stones in hand, a number key kept for when input
   // opens (_flushKey), a touch or long press in progress), so none of it lands on the new position.
   forget() { this.sel = null; this.pendKey = null; this.gen++; this.forgotAt = performance.now(); this._render(false); }
@@ -259,13 +268,19 @@ export class Board {
       this.pcEls.push(p); pcs.append(p);
     }
     this.boardEl.append(pcs);
+    // the shapes' layer: above the pieces, never in the way of a tap (pointer-events: none, board.css)
+    this.boardEl.insertAdjacentHTML('beforeend', `<svg class="tb-ov" aria-hidden="true" viewBox="0 0 ${n} ${n}"></svg>`);
+    this.ovEl = this.boardEl.lastChild; this._ovHtml = '';
+    this._drawShapes();
+  }
+  _drawShapes() {
+    if (!this.ovEl) return;
+    const html = this.shapesVisible ? shapesSvg(this.shapesList, this.n, this.M) : '';
+    if (html !== this._ovHtml) { this.ovEl.innerHTML = html; this._ovHtml = html; }
   }
 
   // Coordinates doubled and centred (2i − (n−1)) so every turn and mirror stays in integers.
-  _disp(sq) {
-    const h = this.n - 1, [a, b, c, d] = this.M, X = 2 * (sq % this.n) - h, Y = 2 * ((sq / this.n) | 0) - h;
-    return [(a * X + b * Y + h) / 2, (c * X + d * Y + h) / 2];
-  }
+  _disp(sq) { return dispPoint(sq, this.n, this.M); } // (analysis.js: the shapes are placed with the same maths)
   _logical(dc, dr) {
     const h = this.n - 1, [a, b, c, d] = this.M, X = 2 * dc - h, Y = 2 * dr - h;
     return ((b * X + d * Y + h) / 2) * this.n + (a * X + c * Y + h) / 2;
@@ -634,6 +649,7 @@ export class Board {
       this._set(c, 't', t > 1 || (t && this.sel) ? String(t) : '', (x) => { c.textContent = x; });
     }
 
+    this._drawShapes();
     if (!anim) { void this.root.offsetWidth; this.root.classList.remove('na'); }
   }
 

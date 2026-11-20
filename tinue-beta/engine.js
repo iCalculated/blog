@@ -78,4 +78,7 @@ export function checkStill(pos, { quickMs = 2500, maxMs = 60e3, budgets = [[3e4,
 export const analyze = (pos) => ask('analyze', pos);
 // How long a known win's proof is (plies after the move, defender to move), or null: { plies } | null if superseded.
 export const proofLength = (pos) => ask('length', pos);
-export const interrupt = () => { stop('refute'); stop('analyze'); stop('length'); };
+// The analysis panel's solver facts for a position (public/analysis.js solverLines; ~20 ms on 6x6): { kind: 'lines',
+// wins1, wins3, partial, threats, tinue, pinned, over } | null if superseded. pos may carry pinned: [ptn] and budget.
+export const lines = (pos) => ask('lines', pos);
+export const interrupt = () => { stop('refute'); stop('analyze'); stop('length'); stop('lines'); };

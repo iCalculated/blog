@@ -2,9 +2,9 @@
 // embeds it. Same API as Board (board.js), so app.js doesn't care which one it has. Only loaded via import()
 // when the flag is set: everyone else fetches nothing from here or from ptn.ninja.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1795149377';
-import { parsePTN } from './shared/ptn.js?v=1795149377';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795149377';
+import { Game } from './shared/tak.js?v=1795182193';
+import { parsePTN } from './shared/ptn.js?v=1795182193';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795182193';
 
 const ORIGIN = 'https://ptn.ninja';
 // tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses).
@@ -124,7 +124,7 @@ export class NinjaBoard {
   // PTN Ninja never came up: put tinue's own board in its place, in the same state, and hand it every call.
   async _fallback() {
     if (this.fb || !this._resolve) return;
-    const { Board } = await import('./board.js?v=1795149377');
+    const { Board } = await import('./board.js?v=1795182193');
     this.el.style.cssText = ''; // index.html's placeholder background
     const fb = new Board(this.el, { onMove: this.onMove });
     this.fb = fb;
@@ -178,7 +178,7 @@ export class NinjaBoard {
     this.cur = this.snaps.length - 1; this.peeking = false;
     // without PTN Ninja's fly-in animation for the whole game
     await this._send('SET_UI', { animateBoard: false });
-    this._post('HIGHLIGHT_SQUARES', []);
+    this._post('HIGHLIGHT_SQUARES', []); this.hl = []; this.shapeKey = null; // (a hint's squares go with the old line)
     this._post('SET_CURRENT_PTN', ptn);
     this._post('LAST');
     await new Promise((r) => setTimeout(r, 60));
@@ -212,7 +212,16 @@ export class NinjaBoard {
     if ('disableBoard' in v || 'dropOnStray' in v) this._focus(!(out.disableBoard ?? this.opts.disableBoard) && !this.opts.dropOnStray);
     return Object.keys(out).length ? this._send('SET_UI', out) : this.ready;
   }
-  highlight(squares = []) { this.hl = squares || []; return this._send('HIGHLIGHT_SQUARES', this.hl); }
+  highlight(squares = []) { this.hl = squares || []; this.shapeKey = null; return this._send('HIGHLIGHT_SQUARES', this.hl); }
+  // The analysis page's shapes (Board's shapes): PTN Ninja's embed has no arrows or rings, so line 1's squares are
+  // highlighted instead (only while no hint is shown), and nothing else. An empty list clears them.
+  shapes(list = []) {
+    if (this.hl.length) return this.ready;
+    const sqs = (list || []).find((x) => x.role === 'best')?.sqs || [], key = sqs.join(' ');
+    if (key === (this.shapeKey ?? '')) return this.ready;
+    this.shapeKey = key;
+    return this._send('HIGHLIGHT_SQUARES', sqs);
+  }
   cancel() { return this._send('CANCEL_MOVE'); }
   // Another puzzle (Board's forget): a move half-entered on PTN Ninja's board is dropped. Its taps and keys never reach
   // the page, so nothing else of it can be held here; the new position (SET_CURRENT_PTN) follows anyway.

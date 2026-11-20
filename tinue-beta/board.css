@@ -157,5 +157,28 @@
   font-size: min(.15em, 15px); color: var(--td); pointer-events: none; }
 .tb-st.p2 + .tb-cnt { color: var(--tl); }
 
+/* the analysis page's shapes (analysis.js shapesSvg, app.js paintShapes): engine lines in blue, distinct from the last
+   move's green (--pri) and the hint (--hint); yours orange and dashed; the opponent's threats red and thin, under the rest.
+   A layer over the pieces that no tap ever lands on. */
+.tb { --eng: #1565c0; --yours: #e07a1f; --threat: #d33; }
+.tb-ov { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; overflow: visible; transition: opacity .12s; }
+.tb-ov .sh { color: var(--eng); fill: currentColor; stroke: currentColor; }
+.tb-ov .best { opacity: .8; }
+.tb-ov .alt { opacity: .4; }
+.tb-ov .yours { color: var(--yours); opacity: .85; }
+.tb-ov .threat { color: var(--threat); opacity: .85; }
+.tb-ov .rg { fill: none; stroke-width: .06; }
+.tb-ov .alt .rg, .tb-ov .threat .rg { stroke-width: .045; }
+.tb-ov .yours .rg, .tb-ov .yours .sf { stroke-dasharray: .12 .08; }
+.tb-ov .sf { stroke-linecap: round; }
+.tb-ov .hd { stroke: none; }
+.tb-ov .sm { stroke-width: .08; stroke-linecap: round; }
+.tb-ov .gh { stroke: none; opacity: .45; }
+.tb-ov .gh.p1 { fill: var(--p1); }
+.tb-ov .gh.p2 { fill: var(--p2); }
+.tb-ov .dc, .tb-ov .dd { stroke: #fff; stroke-width: .03; }
+.tb-ov text { fill: #fff; stroke: none; font: 700 .2px/1 var(--mono, ui-monospace, monospace); text-anchor: middle; dominant-baseline: central; }
+@media (prefers-reduced-motion: reduce) { .tb-ov { transition: none; } }
+
 .tb.na *, .tb.na { transition: none !important; }
 @media (prefers-reduced-motion: reduce) { .tb *, .tb { transition: none !important; } }

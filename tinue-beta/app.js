@@ -1,21 +1,22 @@
-import { Game } from './shared/tak.js?v=1795149377';
-import { unplayedPlies } from './shared/ptn.js?v=1795149377';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795149377';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795149377';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795149377';
-import * as engine from './engine.js?v=1795149377';
-import * as tiltak from './tiltak.js?v=1795149377';
-import * as syntaks from './syntaks.js?v=1795149377';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795149377';
-import { createNext } from './next.js?v=1795149377';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795149377';
-import { createOutbox } from './outbox.js?v=1795149377';
-import * as sound from './sound.js?v=1795149377';
-import { boardFrom, confirmOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795149377';
-import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795149377';
-import * as defend from './defend.js?v=1795149377';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795149377';
-import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795149377';
+import { Game } from './shared/tak.js?v=1795182193';
+import { unplayedPlies } from './shared/ptn.js?v=1795182193';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795182193';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795182193';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795182193';
+import * as engine from './engine.js?v=1795182193';
+import * as tiltak from './tiltak.js?v=1795182193';
+import * as syntaks from './syntaks.js?v=1795182193';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795182193';
+import { createNext } from './next.js?v=1795182193';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795182193';
+import { createOutbox } from './outbox.js?v=1795182193';
+import * as sound from './sound.js?v=1795182193';
+import { boardFrom, confirmOn, arrowsOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795182193';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795182193';
+import * as defend from './defend.js?v=1795182193';
+import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, endLine, evalLabel, mergeLines, pickCandidates, pinnedAt, moveShape, drawAlt, threatGroups } from './analysis.js?v=1795182193';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795182193';
+import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795182193';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -149,7 +150,7 @@ const guestId = () => {
 // PTN Ninja in an iframe instead of tinue's board (same API), by the Board style setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795149377')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1795182193')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
 // Sounds (sound.js): every move played or appended on any board (this page's, Rush's, PTN Ninja's) clicks; the audio
 // unlocks on the first press, tap or key.
@@ -382,7 +383,7 @@ async function loadById(id, s = 0, look = null) {
   if (!puzzle) { try { ({ puzzle } = await api('/api/puzzle/' + encodeURIComponent(id))); } catch { restoreLeft(); return; } }
   if (t !== loadSeq) return;
   if (puzzle && !s && look?.id === puzzle.id) {
-    try { s = (await import('./rush-rules.js?v=1795149377')).symFromRecord(puzzle, look); } catch { s = 0; }
+    try { s = (await import('./rush-rules.js?v=1795182193')).symFromRecord(puzzle, look); } catch { s = 0; }
     if (t !== loadSeq) return;
   }
   // The one place a puzzle is oriented (pagesym.js): the page works in the turned labels from here on; the server's
@@ -417,66 +418,230 @@ function gameAt(plies) {
 const enginePos = (plies) => ({ size: S.p.size, komi: S.p.komi || 0, tps: S.hist.length ? null : S.p0.tps, plies: plies.map(S.x.back) });
 const fromEngine = (s, r) => s.x.answer(r);
 
-// After the puzzle: ask the engine about the position on the board.
-// 6×6: Syntaks on the server (much stronger there, and it knows every half-point komi); if the server can't answer,
-// Tiltak (4×4–6×6, in the browser) gives the evaluation and line, streamed as it searches. On boards neither can
-// play, our own forced-win solver.
-let anaCtl = null; // the in-flight Syntaks request; aborted when the position changes, so the server drops it
+// PTN Ninja links (the puzzle's info and the step buttons, after the puzzle): the line on the board, at the position
+// shown. lz-string (public/vendor) loads on the first solved puzzle; until it arrives the links have no href.
+// Under a symmetry (pagesym.js) the link opens what the player is looking at, in the shown labels: PTN Ninja is not the
+// server (nothing is recorded or judged there), and a board that turned on the way over would read as a different game.
+let lz = null, lzLoad = null;
+const ninjaHref = () => lz && ninjaUrl({ ptn: ptnFor(shownLine()), ply: S.view ?? shownLine().length, name: 'tinue #' + S.p.id }, lz);
+function loadLz() {
+  lzLoad ||= import('./vendor/lz-string.js?v=1795182193').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
+}
+function refreshNinja() {
+  if (!S || S.placeholder || S.status !== 'solved') return;
+  const href = ninjaHref();
+  if (href) for (const a of document.querySelectorAll('a[data-ninja]')) if (a.href !== href) a.href = href;
+}
+
+// After the puzzle: the analysis of the position on the board, as up to three lines (public/analysis.js, the line
+// model), each from the mover's side:
+// - every size: our solver (tactics worker, ~20 ms): every win in 1 and 2 (proven), the opponent's threats, tinuë,
+//   and its verdict on the moves pinned here (the puzzle's move, yours);
+// - 6×6: Syntaks on the server (much stronger there, and it knows every half-point komi), three lines in one search;
+//   a move you missed here that isn't among them gets one search of its own;
+// - 4×4/5×5, and 6×6 when the server can't answer: Tiltak in the browser, streamed as it searches, then a short search
+//   of each of a few candidate moves;
+// - boards neither engine plays: the solver's forced-win line.
+// Everything is keyed on the position (S.evalKey): an answer for a position no longer shown is dropped (live()).
+let anaCtl = null; // the in-flight Syntaks requests; aborted when the position changes, so the server drops them
+// The puzzle's own plies in S.moves (analysis.js pinnedAt's tree): its tree's moves up to the first that isn't one (a
+// slow win, a play-on game: nothing proved those move by move), or a last move that wins at once; at each of the
+// solver's, the plies the tree has left there (playon.js pliesLeftOf), the defender's null.
+function treePlies() {
+  const out = [], won = gameAt(officialLine()).result()?.winner === S.solver;
+  let node = S.p.tree;
+  for (let i = 0; i < S.moves.length; i += 2) {
+    const m = S.moves[i].ptn;
+    if (i === S.moves.length - 1 && won) { out.push(1); break; }
+    if (!node || node === 'win' || !Object.prototype.hasOwnProperty.call(node, m)) break;
+    out.push(pliesLeftOf(node));
+    if (S.moves[i + 1]?.ptn !== node[m]?.r) break;
+    out.push(null); node = node[m].n;
+  }
+  return out;
+}
 async function runEngine() {
   if (!S || S.status !== 'solved') return;
   const line = shownLine();
   const at = S.view ?? line.length;
-  const key = line.slice(0, at).join(' ');
+  const plies = line.slice(0, at);
+  const key = plies.join(' ');
   if (S.evalKey === key) return;
   const s = S;
-  S.evalKey = key; S.eval = null; S.tk = null;
+  // The last position's lines and arrows go now, before anything is awaited.
+  S.evalKey = key; S.eval = null; S.eng = null; S.lines = []; S.sol = null; S.sel = 0; S.pins = []; S.posG = null;
+  board.shapes?.([]);
   anaCtl?.abort(); anaCtl = null;
-  const g = gameAt(line.slice(0, at));
-  const res0 = g.result();
-  if (res0) { tiltak.stop(); S.eval = { kind: 'over', winner: res0.winner, how: res0.kind }; renderAll(); return; }
-  const komi = S.p.komi || 0, live = () => S === s && S.evalKey === key;
-  if (S.p.size === 6 && Math.abs(komi) <= 3.5 && Number.isInteger(komi * 2)) {
-    tiltak.stop();
-    S.tk = { thinking: true, src: 'syntaks' }; renderAll();
-    const ctl = anaCtl = new AbortController();
-    const fallback = () => { if (live()) runTiltak(s, key, g, line.slice(0, at)); };
-    // 6 s covers the search plus a short queue on crux; past that, the browser engine answers sooner.
-    // A plain GET without the Authorization header: no CORS preflight (every position is a new URL, so a preflight
-    // was never reused). The server knows the player by the cookie when the page sends one, else by address.
-    const tmo = new AbortController(), timer = setTimeout(() => tmo.abort(), 6000), stop = () => tmo.abort();
-    ctl.signal.addEventListener('abort', stop);
-    // (the position in the puzzle's own orientation, and its line back in the page's labels: pagesym.js toServer)
-    fetch(`${API}/api/analyze?tps=${encodeURIComponent(s.x.tps(g.toTPS(), komi))}&komi=${komi}`, { credentials: 'include', signal: tmo.signal })
-      .then((r) => r.json()).finally(() => { clearTimeout(timer); ctl.signal.removeEventListener('abort', stop); })
-      .then((r) => { if (!live()) return; if (r?.engine === 'syntaks') { S.tk = { ...fromEngine(s, r), src: 'syntaks' }; renderEngine(); } else fallback(); }, fallback);
-    return;
-  }
-  runTiltak(s, key, g, line.slice(0, at));
-}
-function runTiltak(s, key, g, plies) {
-  if (!tiltak.supports(S.p.size, S.p.komi || 0)) { tiltak.stop(); return runSolver(s, key, plies); }
-  S.tk = { thinking: true }; renderAll();
-  let lastPaint = 0;
+  tiltak.stop();
   const live = () => S === s && S.evalKey === key;
-  // If Tiltak can't load or crashes, use the solver instead of thinking forever.
-  const fallback = () => { if (live() && (!S.tk || S.tk.thinking)) { S.tk = null; runSolver(s, key, plies); } };
-  tiltak.analyze({ tps: g.toTPS(), size: S.p.size, komi: S.p.komi || 0, ms: 2500, onInfo: (r) => {
-    if (!live()) return;
-    S.tk = r; const now = performance.now(); if (now - lastPaint > 250) { lastPaint = now; renderEngine(); }
-  } }).then((r) => { if (!live()) return; if (r) { S.tk = r; renderEngine(); } else fallback(); }, fallback);
+  const g = gameAt(plies);
+  const res0 = g.result();
+  if (res0) { S.eval = { kind: 'over', winner: res0.winner, how: res0.kind }; renderAll(); return; }
+  const mover = g.toMove, official = officialLine();
+  S.posG = g;
+  S.pins = pinnedAt({ official, histLen: S.hist.length, at, onBranch: !!(S.onBranch && S.branch && at > S.branch.at), solver: S.solver, mover,
+    misses: S.misses, tree: treePlies() });
+  S.eng = { thinking: true, src: null, lines: [] };
+  setLines(s, key);
+  // (the worker sees the puzzle's own orientation, like every engine: enginePos and the pinned moves turned back, its
+  // facts turned forward again; pagesym.js toServer)
+  engine.lines({ ...enginePos(plies), pinned: S.pins.map((p) => s.x.back(p.move)) }).then((r) => { if (r && live()) { S.sol = s.x.facts(r); setLines(s, key); } });
+  const komi = S.p.komi || 0;
+  if (S.p.size === 6 && Math.abs(komi) <= 3.5 && Number.isInteger(komi * 2)) return runServer(s, key, g, plies);
+  runTiltak(s, key, g, plies);
 }
+// GET /api/analyze, aborted with ctl (the position changed) or after 6 s (the search plus a short queue on crux; past
+// that, the browser engine answers sooner). A plain GET without the Authorization header: no CORS preflight (every
+// position is a new URL, so a preflight was never reused); the server knows the player by the cookie when the page
+// sends one, else by address. One line asks as before (same URL, so the browser's cache of it still answers).
+function serverAnalyze(tps, komi, lines, ctl) {
+  const tmo = new AbortController(), timer = setTimeout(() => tmo.abort(), 6000), stop = () => tmo.abort();
+  ctl.signal.addEventListener('abort', stop);
+  return fetch(`${API}/api/analyze?tps=${encodeURIComponent(tps)}&komi=${komi}${lines > 1 ? '&lines=' + lines : ''}`, { credentials: 'include', signal: tmo.signal })
+    .then((r) => r.json()).finally(() => { clearTimeout(timer); ctl.signal.removeEventListener('abort', stop); });
+}
+function runServer(s, key, g, plies) {
+  const live = () => S === s && S.evalKey === key;
+  if (!live()) return;
+  const komi = S.p.komi || 0, mover = g.toMove;
+  S.eng = { thinking: true, src: 'syntaks', lines: [] };
+  const ctl = anaCtl = new AbortController();
+  const fallback = () => { if (live()) runTiltak(s, key, g, plies); };
+  // (the server is asked about the position in the puzzle's own orientation, byte for byte what an ordinary visit
+  // sends, and every line it answers is turned to the page's labels: pagesym.js toServer)
+  serverAnalyze(s.x.tps(g.toTPS(), komi), komi, 3, ctl).then((r) => {
+    if (!live()) return;
+    r = s.x.analysis(r);
+    if (r?.engine !== 'syntaks') return fallback();
+    const lines = (r.lines ?? [r]).map((l, i) => fromSyntaks(l, mover, i));
+    S.eng = { thinking: false, src: 'syntaks', lines, multipv: !!r.multipv, depth: r.depth, ms: r.ms };
+    setLines(s, key);
+    // Your miss, if the server's lines don't have it: one search of the position after it, once you stay here a moment.
+    const miss = S.pins.find((p) => p.tags.includes('yours') && !lines.some((l) => l.move === p.move));
+    if (!miss) return;
+    const c = g.clone();
+    try { c.play(miss.move); } catch { return; }
+    const res = c.result();
+    if (res) { S.eng = { ...S.eng, lines: [...S.eng.lines, endLine(miss.move, res, mover)] }; return setLines(s, key); } // (it ends the game: nothing to search)
+    setTimeout(() => {
+      if (!live()) return;
+      serverAnalyze(s.x.tps(c.toTPS(), komi), komi, 1, ctl).then((cr) => {
+        if (!live() || cr?.engine !== 'syntaks') return; // (busy or refused: the solver's verdict stays)
+        cr = s.x.answer(cr);
+        S.eng = { ...S.eng, lines: [...S.eng.lines, fromChild(cr, miss.move, mover)] };
+        setLines(s, key);
+      }, () => {});
+    }, 400);
+  }, fallback);
+}
+// Tiltak: line 1 streamed (repainted at most every 250 ms), then a short search of each candidate (its runner-ups seen
+// in the stream, the solver's wins, your miss): 2 on a mouse, 1 on a phone. Searches are by time (ms), never by
+// nodes, so tiltak.stop() ends them at once.
+function runTiltak(s, key, g, plies) {
+  const live = () => S === s && S.evalKey === key;
+  if (!live()) return;
+  if (!tiltak.supports(S.p.size, S.p.komi || 0)) { tiltak.stop(); return runSolver(s, key, plies); }
+  const size = S.p.size, komi = S.p.komi || 0, mover = g.toMove;
+  S.eng = { thinking: true, src: 'tiltak', lines: [] };
+  setLines(s, key);
+  let lastPaint = 0;
+  const runnerUps = [];
+  // If Tiltak can't load or crashes, use the solver instead of thinking forever.
+  const fallback = () => { if (live() && S.eng?.src === 'tiltak' && S.eng.thinking) runSolver(s, key, plies); };
+  // (Tiltak too sees the puzzle's own orientation, so its lines are an ordinary visit's turned: s.x.tps / s.x.answer)
+  tiltak.analyze({ tps: s.x.tps(g.toTPS(), komi), size, komi, ms: 2000, onInfo: (r) => {
+    if (!live()) return;
+    r = s.x.answer(r);
+    const m = r.pv?.[0];
+    if (m && r.nodes >= 300 && !runnerUps.includes(m)) runnerUps.push(m);
+    S.eng = { thinking: true, src: 'tiltak', lines: [fromTiltak(r, mover)], depth: r.depth, nodes: r.nodes };
+    const now = performance.now(); if (now - lastPaint > 250) { lastPaint = now; setLines(s, key); }
+  } }).then(async (r) => {
+    if (!live()) return;
+    r = s.x.answer(r);
+    if (!r || (!r.pv?.length && r.winProb == null)) return fallback();
+    const l1 = fromTiltak(r, mover);
+    const cands = pickCandidates({ line1: l1.move, solver: S.sol, pinned: S.pins, runnerUps, max: finePointer.matches ? 2 : 1 });
+    S.eng = { thinking: false, more: cands.length > 0, src: 'tiltak', lines: [l1], depth: r.depth, nodes: r.nodes, ms: r.timeMs };
+    setLines(s, key);
+    for (const m of cands) {
+      const c = g.clone();
+      try { c.play(m); } catch { continue; }
+      const res = c.result();
+      let cl;
+      if (res) cl = endLine(m, res, mover);
+      else {
+        const cr = await tiltak.analyze({ tps: s.x.tps(c.toTPS(), komi), size, komi, ms: 600 }).catch(() => null);
+        if (!live()) return;
+        if (!cr) continue;
+        cl = fromChild(s.x.answer(cr), m, mover);
+      }
+      if (!live()) return;
+      S.eng = { ...S.eng, lines: [...S.eng.lines, { ...cl, cand: true }] };
+      setLines(s, key);
+    }
+    if (!live()) return;
+    S.eng = { ...S.eng, more: false };
+    setLines(s, key);
+  }, fallback);
+}
+// Boards neither engine plays (and engine failures): the solver's forced-win line (9 plies); the solver's facts
+// (every win in 1 and 2, verdicts on the pinned moves) join it through setLines like any other line.
 async function runSolver(s, key, plies) {
-  S.eval = { kind: 'thinking' }; renderAll();
+  const live = () => S === s && S.evalKey === key;
+  if (!live()) return;
+  S.eng = { thinking: true, src: 'solver', lines: [] };
+  setLines(s, key);
   const res = fromEngine(s, await engine.analyze({ ...enginePos(plies), maxPlies: 9 }));
-  if (res && S === s && S.evalKey === key) { S.eval = res; renderAll(); }
+  if (!res || !live()) return;
+  const win = res.kind === 'win' && res.pv?.length;
+  S.eng = { thinking: false, src: 'solver', none: res.kind === 'none' ? res.side : null,
+    lines: win ? [{ move: res.pv[0], pv: res.pv, ev: { kind: 'win', n: Math.ceil(res.plies / 2), proven: true }, src: 'solver', tags: [] }] : [] };
+  setLines(s, key);
+}
+// The panel's lines from what has arrived for this position (the selected line stays selected by its move), then the
+// panel and the board's arrows.
+const canonG = new Map(); // size -> an empty Game, to canonicalise moves (parseMove/moveToPTN depend on the size only)
+function setLines(s, key) {
+  if (S !== s || S.evalKey !== key) return;
+  const cg = canonG.get(S.p.size) || canonG.set(S.p.size, new Game(S.p.size)).get(S.p.size);
+  const was = S.lines[S.sel]?.move;
+  S.lines = mergeLines(S.eng?.lines || [], S.sol, S.pins, 3, (m) => cg.canon(m));
+  S.sel = Math.max(0, S.lines.findIndex((l) => l.move === was));
+  renderEngine();
+  paintShapes();
+}
+// The board's shapes (board.js shapes): the opponent's threats always (they are facts), and arrows for line 1 plus the
+// lines close to it (analysis.js drawAlt) or the one selected; on a phone line 1 and the selected line only; your miss
+// only while selected. Only for the position shown.
+function paintShapes() {
+  if (!S || S.placeholder || S.status !== 'solved' || !S.posG) return;
+  const line = shownLine();
+  if (S.evalKey !== line.slice(0, S.view ?? line.length).join(' ')) return;
+  const g = S.posG, mover = g.toMove, list = [];
+  const add = (ptn, role, color) => { try { const shape = moveShape(ptn, g.size, g); if (shape) list.push({ shape, role, color, sqs: moveSquares(ptn) }); } catch {} };
+  for (const t of threatGroups(S.sol?.threats, g.size)) add(t, 'threat', 3 - mover);
+  const l1 = S.lines[0], color = g.ply < 2 ? 3 - mover : mover; // (the first two plies place the opponent's stone)
+  // The selected line first: on a square two lines place on (Sa1 and a1) it is the one drawn, since a second placement
+  // there would only blur the first.
+  const order = S.lines.map((_, i) => i).sort((a, b) => (b === S.sel) - (a === S.sel));
+  if (arrowsOn(prefs)) for (const i of order) {
+    const l = S.lines[i], yours = l.tags.includes('yours'), sel = i === S.sel;
+    const draw = i === 0 || sel || (!yours && finePointer.matches && drawAlt(l1.ev, l.ev));
+    if (draw && !list.some((x) => x.role !== 'threat' && x.shape.kind === 'place' && x.sqs[0] === moveSquares(l.move)[0])) add(l.move, i === 0 ? 'best' : yours ? 'yours' : 'alt', color);
+  }
+  board.shapes?.(list);
 }
 
-// Play the engine's line on the board, up to and including move k (as your line).
-async function playPV(k) {
-  const pv = S.tk?.pv || S.eval?.pv;
-  if (!pv?.length) return;
+// Play line L on the board, up to and including its move k (as your line).
+async function playPV(L, k) {
   const line = shownLine();
   const at = S.view ?? line.length;
+  // only lines made for the position shown (PTN Ninja's board loads a line in ~60 ms, before runEngine clears them)
+  if (S.evalKey !== line.slice(0, at).join(' ')) return;
+  const pv = S.lines?.[L]?.pv;
+  if (!pv?.length) return;
+  k = Math.min(k, pv.length - 1);
   const official = officialLine();
   const prefix = S.onBranch && S.branch && at > S.branch.at ? S.branch.moves.slice(0, at - S.branch.at) : [];
   const base = S.onBranch && S.branch ? Math.min(at, S.branch.at) : at;
@@ -1438,52 +1603,80 @@ const PLACEHOLDER = {
   p: { id: '', size: 5, themes: [], meta: {}, komi: 0, tps: 'x5/x5/x5/x5/x5 1 1', rating: 0, attempts: 0 },
 };
 
-// Engine, Lichess-style: one compact line at the top of the panel. Chance bar, who's better, and the
-// engine's line as clickable moves (click to play it on the board), with a small source tag at the end.
-function engineMarkup() {
-  let engineHtml = '';
-  if (S && S.status === 'solved' && (S.tk || S.eval)) {
-    const pvHtml = (pv) => (pv || []).slice(0, 8).map((m, k) => `<button class="pvm" data-pv="${k}">${esc(m)}</button>`).join('');
-    let lead = '', pv = '', tag = '';
-    if (S.eval?.kind === 'over') lead = S.eval.winner === 0 ? 'Drawn on flats' : `${colorName(S.eval.winner)} won`;
-    else if (S.tk) {
-      if (S.tk.thinking) lead = '<span class="muted">Thinking…</span>';
-      else {
-        const pw = Math.max(0, Math.min(1, S.tk.winProb ?? 0.5));
-        // Syntaks proves forced wins: mate = moves to the win, signed from White's side.
-        const fav = S.tk.mate ? `${S.tk.mate > 0 ? 'White' : 'Black'} wins in ${Math.abs(S.tk.mate)}`
-          : Math.abs(pw - 0.5) < 0.05 ? 'Even' : `${pw > 0.5 ? 'White' : 'Black'} ${Math.round(Math.max(pw, 1 - pw) * 100)}%`;
-        lead = `<span class="bar" title="White’s chances"><i style="width:${(pw * 100).toFixed(1)}%"></i></span><b>${fav}</b>`;
-        pv = pvHtml(S.tk.pv);
-      }
-      tag = S.tk.src === 'syntaks'
-        ? '<a class="src" href="https://github.com/Ciekce/syntaks" target="_blank" rel="noopener" title="Evaluation by Syntaks, Ciekce’s 6×6 engine, running on the puzzle server">Syntaks</a>'
-        : '<a class="src" href="https://github.com/MortenLohne/tiltak" target="_blank" rel="noopener" title="Evaluation by Tiltak, running in your browser">Tiltak</a>';
-    } else if (S.eval) {
-      const e = S.eval, side = colorName(e.side);
-      lead = e.kind === 'thinking' ? '<span class="muted">Thinking…</span>'
-        : e.kind === 'win' ? `<b>${side} wins in ${Math.ceil(e.plies / 2)}</b>` : `<span class="muted">No forced win for ${side}</span>`;
-      pv = e.kind === 'win' ? pvHtml(e.pv) : '';
-      tag = '<span class="src">solver</span>';
-    }
-    engineHtml = `<div class="eng">${lead}<span class="pvline">${pv}</span>${tag}</div>`;
-  }
-  return engineHtml;
+// Engine, Lichess-style, at the top of the move panel: a header (chance bar of line 1, who's better, the source), then
+// up to three lines, each a chip with its evaluation from the side to move's view, its moves as buttons (click one to
+// play the line up to there) and its tags (the puzzle's move, yours, the game's), then the opponent's threats. Docked
+// on a phone: a row of chips (one per line) and, under it, the selected line's moves.
+const TAG_WORDS = { puzzle: 'the puzzle’s move', yours: 'your move', played: 'played in the game' };
+const SRC = {
+  syntaks: (t) => `<a class="src" href="https://github.com/Ciekce/syntaks" target="_blank" rel="noopener" title="Evaluation by Syntaks, Ciekce’s 6×6 engine, running on the puzzle server${t}">Syntaks</a>`,
+  tiltak: (t) => `<a class="src" href="https://github.com/MortenLohne/tiltak" target="_blank" rel="noopener" title="Evaluation by Tiltak, running in your browser${t}">Tiltak</a>`,
+  solver: (t) => `<span class="src" title="tinue’s own solver: proven wins only${t}">solver</span>`,
+};
+const listAnd = (xs) => xs.length < 2 ? xs.join('') : xs.slice(0, -1).join(', ') + ' and ' + xs.at(-1);
+// "Black threatens a road: a4, 2b3+." / "Black has tinuë: a4 and e2." (the solver's facts, exact)
+function threatText() {
+  const sol = S?.sol, g = S?.posG;
+  if (!sol?.threats?.length || !g) return '';
+  const them = 3 - g.toMove, moves = threatGroups(sol.threats, g.size).map(esc);
+  if (sol.tinue) return `${colorName(them)} has tinuë: ${listAnd(moves)}.`;
+  const h = g.clone(); h.toMove = them;
+  const road = threatGroups(sol.threats, g.size).every((t) => { try { const u = h.apply(h.parseMove(t)); const r = h.result(); h.undo(u); return r?.kind === 'road'; } catch { return false; } });
+  return `${colorName(them)} threatens ${road ? 'a road' : 'to win'}: ${moves.join(', ')}.`;
 }
-// Update only the engine row (Tiltak streams updates; re-rendering the whole panel would flicker).
+// White's chance for the bar (null: no evaluation to show)
+const whiteChance = (ev, mover) => ev.kind === 'prob' ? (mover === 1 ? ev.p : 1 - ev.p)
+  : ev.kind === 'win' ? +(mover === 1) : ev.kind === 'loss' ? +(mover !== 1) : null;
+function engineMarkup(docked = DOCK_MQ.matches && S?.status === 'solved') {
+  if (!S || S.status !== 'solved' || !(S.eng || S.eval)) return '';
+  const mover = S.posG?.toMove, lines = S.lines || [], l1 = lines[0], e = S.eng || {};
+  const busy = e.thinking || e.more;
+  const pvHtml = (L, pv) => (pv || []).slice(0, 8).map((m, k) => `<button class="pvm" data-pv="${L}.${k}">${esc(m)}</button>`).join('');
+  let verdict = '', pw = null;
+  if (S.eval?.kind === 'over') verdict = `<b>${S.eval.winner === 0 ? 'Drawn on flats' : `${colorName(S.eval.winner)} won`}</b>`;
+  else if (!l1 || l1.ev.kind === 'pending') verdict = e.none ? `<span class="muted">No forced win for ${colorName(e.none)}</span>` : busy ? '<span class="muted">Thinking…</span>' : '';
+  else {
+    const ev = l1.ev, who = (me) => colorName(me ? mover : 3 - mover);
+    pw = whiteChance(ev, mover);
+    verdict = `<b>${ev.kind === 'win' ? `${who(true)} wins in ${ev.n}` : ev.kind === 'loss' ? `${who(false)} wins in ${ev.n}`
+      : ev.kind === 'nowin' ? `No forced win for ${who(true)} in ${ev.n}` : Math.abs(pw - 0.5) < 0.05 ? 'Even' : `${pw > 0.5 ? 'White' : 'Black'} ${Math.round(Math.max(pw, 1 - pw) * 100)}%`}</b>`
+      + (busy ? '<span class="muted dots" title="Still searching">…</span>' : '');
+  }
+  const bar = pw == null ? '' : `<span class="bar" title="White’s chances"><i style="width:${(pw * 100).toFixed(1)}%"></i></span>`;
+  const detail = [e.depth ? `depth ${e.depth}` : '', e.nodes ? `${e.nodes} nodes` : '', e.ms ? `${e.ms} ms` : ''].filter(Boolean).join(', ');
+  const src = SRC[e.src]?.(detail ? ` (${detail})` : '') || '';
+  const label = (l) => `${l.move}${l.tags.map((t) => TAG_WORDS[t] ? ', ' + TAG_WORDS[t] : '').join('')}: ${evalLabel(l.ev)}${l.ev.proven ? ', proven' : ''}${l.cand ? ' (a candidate move, searched on its own)' : ''}`;
+  const chip = (l, i, withMove) => `<button class="chip${l.ev.proven ? ' pr' : ''}${l.ev.kind === 'win' ? ' w' : l.ev.kind === 'loss' ? ' l' : ''}" data-line="${i}" aria-pressed="${i === S.sel}" aria-label="${esc(label(l))}" title="${esc(label(l))}">${esc(evalLabel(l.ev))}${withMove ? ` · ${esc(l.move)}` : ''}</button>`;
+  const threat = threatText(), threatP = threat ? `<p class="threat" title="${threat}">${threat}</p>` : '';
+  if (docked) {
+    const sel = lines[S.sel] || l1;
+    const rowA = lines.length ? lines.map((l, i) => chip(l, i, true)).join('') + (busy ? '<span class="muted">…</span>' : '') : verdict;
+    // (the threat sentence is the third row, in the dock's held room, so it is never behind the dock)
+    return `<div class="eng docked"><div class="chips" role="group" aria-label="Engine lines">${rowA}</div>`
+      + `<div class="eng-b">${bar}<span class="pvline">${sel ? pvHtml(lines.indexOf(sel), sel.pv) : ''}</span>${src}</div>${threatP}</div>`;
+  }
+  const tags = (l) => l.tags.map((t) => `<span class="tag ${t}">${t === 'puzzle' ? 'puzzle' : t === 'yours' ? 'yours' : 'played'}</span>`).join('');
+  const rows = lines.map((l, i) => `<div class="ln${i === S.sel ? ' sel' : ''}" data-line="${i}">${chip(l, i, false)}<span class="pvline">${pvHtml(i, l.pv)}</span>${tags(l)}</div>`).join('');
+  // The lines' room (three lines and the threat sentence) is held at one height for the whole analysis, a finished
+  // game's position included, so the step buttons below never move.
+  return `<div class="eng"><div class="eng-h">${bar}${verdict}${src}</div>`
+    + `<div class="lns"><div role="group" aria-label="Engine lines">${rows}</div>${threatP}</div></div>`;
+}
+// Update only the engine's part (Tiltak streams updates; re-rendering the whole panel would flicker).
 function renderEngine() {
   const slot = document.querySelector('#moves .eng-slot');
   if (!slot) return renderAll();
-  const html = engineMarkup();
+  const html = engineMarkup(!!slot.closest('.dock'));
   if (slot._html !== html) { const f = pvFocused(); slot.innerHTML = html; slot._html = html; refocusPV(f); fitDock(); }
 }
-// After clicking a move in the engine line, the line is redrawn for the new position: keep keyboard focus
-// on its first move (Enter again steps further along), or on Forward while the engine is still thinking.
-const pvFocused = () => !!document.activeElement?.closest?.('#moves [data-pv]');
+// After clicking a move in a line, the lines are redrawn for the new position: keep keyboard focus on line 1's first
+// move (Enter again steps further along), or on Forward while the engine is still thinking; a chip keeps its focus.
+const pvFocused = () => { const a = document.activeElement; return !a?.closest?.('#moves') ? null : a.matches('.chip') ? 'chip:' + a.dataset.line : a.closest('[data-pv]') ? 'pv' : null; };
 let pvFollow = false; // focus is parked on Forward until the engine's new line arrives
 const refocusPV = (was) => {
   const onFwd = !!document.activeElement?.matches?.('#moves [data-step="next"]');
-  const pv0 = $('#moves [data-pv="0"]');
+  const pv0 = $('#moves [data-pv="0.0"]');
+  if (was?.startsWith('chip:') && !pvFocused()) { const c = $(`#moves .chip[data-line="${was.slice(5)}"]`) || $('#moves .chip'); if (c) return c.focus(); }
   if (was && !pvFocused()) { if (pv0) pv0.focus(); else { $('#moves [data-step="next"]')?.focus(); pvFollow = true; } }
   else if (pvFollow && onFwd && pv0) { pv0.focus(); pvFollow = false; }
   else if (pvFollow && !onFwd) pvFollow = false;
@@ -1561,6 +1754,7 @@ function renderAll(mood) {
   vp.classList.toggle('docked', docked);
   renderInfo(done);
   renderMoves(docked, delta, focusNext);
+  refreshNinja();
 }
 
 // The result didn't reach the server: refused ('rate', 'error') or no answer ('lost'). A held one with no answer is
@@ -1746,7 +1940,7 @@ function renderInfo(done) {
     const off = unplayedPlies(m);
     const from = off ? `a line from this ${p.sourceRef?.startsWith('http') ? game : `${esc(p.source)} game`}` : game;
     info.innerHTML = `<dl>
-        <dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}${p.sym ? '/' + p.sym : ''}">#${esc(p.id)}</a>, ${p.size}×${p.size}${p.komi ? ` with komi ${p.komi}` : ''}${canShare() ? ' · <button class="link" id="share-link">Share</button>' : ''}</dd>
+        <dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}${p.sym ? '/' + p.sym : ''}">#${esc(p.id)}</a>, ${p.size}×${p.size}${p.komi ? ` with komi ${p.komi}` : ''}${canShare() ? ' · <button class="link" id="share-link">Share</button>' : ''} · <a data-ninja target="_blank" rel="noopener" title="Open this line in PTN Ninja">PTN Ninja ↗</a></dd>
         <dt>Rating</dt><dd>${Math.round(p.rating)}</dd>
         <dt>Played</dt><dd>${p.attempts ? `${p.attempts} time${p.attempts === 1 ? '' : 's'}` : 'Not rated by anyone yet'}</dd>
         <dt>From</dt><dd>${from}</dd>
@@ -1757,6 +1951,7 @@ function renderInfo(done) {
       <hr><div>${themes.map((t) => `<a class="tag" href="#/glossary/${t}" title="${esc(THEMES[t].desc)}">${THEMES[t].name}</a>`).join('') || '<span class="sub">No themes</span>'}</div>`;
     const sb = $('#share-link');
     if (sb) sb.onclick = () => sharePuzzle(p);
+    loadLz();
   }
 
 }
@@ -1814,7 +2009,7 @@ function renderMoves(docked, delta, focusNext) {
   if (S.branch && S.branch.at === 0) rows = branchRow() + rows;
   const mv = $('#moves');
   const prevScroll = mv.querySelector('.mscroll')?.scrollTop ?? 0;
-  const engineHtml = engineMarkup();
+  const engineHtml = engineMarkup(docked);
   const fa = mv.contains(document.activeElement) ? document.activeElement : null;
   const navFocus = fa?.dataset.step ? `[data-step="${fa.dataset.step}"]` : null;
   const hadNext = document.activeElement?.dataset?.act === 'next'; // the dock's or the card's: keep it across layout flips
@@ -1826,7 +2021,7 @@ function renderMoves(docked, delta, focusNext) {
   const dockNote = notice ? esc(notice.body) : S.notCounted ? notCountedText() : uncheckedText() ? uncheckedText() : S.slowWin ? `${slowWinText(S.slowWin)}.${S.casualWhy === 'tiltak' ? ' Not rated: Tiltak defended.' : ''}` : S.casual ? 'You used a hint, so this one didn’t count.' : shownOver() ? 'Game over here. Step back with ◀ to explore.' : '';
   const engSlot = `<div class="eng-slot">${engineHtml}</div>`;
   const scroller = `<div class="mscroll" role="group" aria-label="Moves"><div class="mtable">${rows}</div></div>`;
-  const nav = `<div class="nav"><button data-step="first" title="Start" aria-label="Start">⏮</button><button data-step="prev" title="Back (←)" aria-label="Back">◀</button><button data-step="next" title="Forward (→)" aria-label="Forward">▶</button><button data-step="last" title="Current position" aria-label="Current position">⏭</button>${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
+  const nav = `<div class="nav"><button data-step="first" title="Start" aria-label="Start">⏮</button><button data-step="prev" title="Back (←)" aria-label="Back">◀</button><button data-step="next" title="Forward (→)" aria-label="Forward">▶</button><button data-step="last" title="Current position" aria-label="Current position">⏭</button>${S.status === 'solved' ? '<a class="navlink" data-ninja target="_blank" rel="noopener" title="Open this line in PTN Ninja" aria-label="Open this line in PTN Ninja">↗</a>' : ''}${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
   mv.innerHTML = docked ? scroller + `<div class="dock"><div class="dock-res">${dockHead}<button class="primary" data-act="next">Next puzzle</button>${dockNote ? `<p>${dockNote}</p>` : ''}</div>${engSlot}${nav}</div>`
     : engSlot + scroller + nav;
   fitDock();
@@ -1851,7 +2046,15 @@ $('#moves').addEventListener('click', (e) => {
   if (!S || S.placeholder) return;
   if (e.target.closest('[data-act2="back"]')) return backToSolution();
   const pvb = e.target.closest('[data-pv]');
-  if (pvb) return playPV(+pvb.dataset.pv);
+  if (pvb) { const [L, k] = pvb.dataset.pv.split('.').map(Number); return playPV(L, k); }
+  // a line's chip (or its row): select it (its arrow on the board, its moves in the dock); the selected chip again
+  // plays its first move
+  const ln = e.target.closest('[data-line]');
+  if (ln && S.status === 'solved') {
+    const L = +ln.dataset.line;
+    if (L === S.sel && ln.matches('.chip')) return playPV(L, 0);
+    S.sel = L; renderEngine(); paintShapes(); return;
+  }
   const m = e.target.closest('[data-i]');
   if (m) return viewPly(+m.dataset.i, false);
   const b = e.target.closest('[data-b]');
@@ -1965,7 +2168,7 @@ const themeDesc = () => { $('#theme-desc').textContent = prefs.theme && THEMES[p
 $('#difficulty').value = prefs.difficulty;
 // A filter changed with the mouse lets go of focus, or number keys meant for the board would go to it (on Board size,
 // 4–8 even pick a size). Changed from the keyboard, it keeps focus.
-for (const id of ['#difficulty', '#size', '#theme', '#set-board', '#set-confirm', '#set-sound']) $(id).addEventListener('change', (e) => { if (focusedByPointer(e.target)) e.target.blur(); });
+for (const id of ['#difficulty', '#size', '#theme', '#set-board', '#set-confirm', '#set-sound', '#set-arrows']) $(id).addEventListener('change', (e) => { if (focusedByPointer(e.target)) e.target.blur(); });
 $('#difficulty').onchange = (e) => { prefs.difficulty = e.target.value; store.set('prefs', prefs); loadNext(); };
 $('#size').onchange = (e) => { prefs.size = e.target.value; store.set('prefs', prefs); renderFilters(); loadNext(); };
 $('#theme').onchange = (e) => { prefs.theme = e.target.value; store.set('prefs', prefs); themeDesc(); loadNext(); };
@@ -2003,6 +2206,18 @@ $('#set-sound').onchange = (e) => {
   sound.setEnabled(soundOn(prefs)); sound.setVoice(prefs.sound);
   if (soundOn(prefs)) { sound.unlock(); setTimeout(() => sound.play('place'), 60); } // a preview in the chosen voice (the change is a gesture)
 };
+// Engine arrows (settings.js arrowsOn): the setting, or A on the page after a puzzle (a mouse and keyboard; not in a
+// field or on a control). Threat marks stay either way.
+$('#set-arrows').value = arrowsOn(prefs) ? 'on' : 'off';
+const setArrows = (on) => { prefs.arrows = on; store.set('prefs', prefs); $('#set-arrows').value = on ? 'on' : 'off'; paintShapes(); };
+$('#set-arrows').onchange = (e) => setArrows(e.target.value === 'on');
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'a' || e.repeat || e.ctrlKey || e.metaKey || e.altKey || !finePointer.matches) return;
+  if (!S || S.placeholder || S.status !== 'solved' || board.holding || $('#view-puzzle').classList.contains('hidden')) return;
+  const t = e.target;
+  if (t.closest?.('input, select, textarea, [contenteditable]') || (t.closest?.('a, button, summary') && !focusedByPointer(t))) return;
+  e.preventDefault(); setArrows(!arrowsOn(prefs));
+});
 renderPending(); showNote();
 // Stepping in half-moves, as in PTN Ninja: h = 2·plies shown, +1 while the next move's squares are only
 // highlighted (Shift+arrow). Plain steps land on whole moves.
@@ -2177,7 +2392,7 @@ async function route() {
   if (page === 'glossary') return glossaryPage();
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795149377')).enter(); } // loaded on first visit
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795182193')).enter(); } // loaded on first visit
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   // (the same puzzle under another symmetry is another visit; a malformed one is 0 and the address is put right)
@@ -2188,7 +2403,7 @@ async function route() {
     // puzzle as the server sent it, so a second click on the row returns to the visit (as a plain link always has; a
     // restart would leave/abandon the attempt) and a row that saw the puzzle turned still turns it.
     let want = sym, found = false;
-    if (!sym && look?.id === id && S?.p.id === id && S.p0) { try { want = (await import('./rush-rules.js?v=1795149377')).symFromRecord(S.p0, look); found = true; } catch {} }
+    if (!sym && look?.id === id && S?.p.id === id && S.p0) { try { want = (await import('./rush-rules.js?v=1795182193')).symFromRecord(S.p0, look); found = true; } catch {} }
     // A plain link (no symmetry, no Rush note) to the puzzle on screen returns to the visit as it stands, turned or
     // not: restarting it would abandon the attempt, and could cost a rated miss.
     if (!sym && !found && S?.p.id === id) want = symNow();

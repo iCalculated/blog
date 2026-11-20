@@ -2,7 +2,7 @@
 // waits to be confirmed. Both live in the browser's prefs with the others (not synced to the account); off and tinue's
 // own board are the defaults, under which the page behaves as it did before. What app.js decides is here, so node can
 // test it (scripts/test-settings.mjs).
-import { busy } from './busy.js?v=1795149377';
+import { busy } from './busy.js?v=1795182193';
 
 // ---- board ----
 // ?board= in the address wins, so a shared ?board=ninja link keeps working (any other value is tinue's board, as
@@ -19,6 +19,8 @@ export const confirmOn = (prefs) => prefs?.confirm === true;
 export const SOUND_DEFAULT = 'thunk';
 export const soundOf = (prefs) => { const s = prefs?.sound; return s === false || s === 'off' ? 'off' : s === 'light' || s === 'thunk' || s === 'deep' ? s : SOUND_DEFAULT; };
 export const soundOn = (prefs) => soundOf(prefs) !== 'off';
+// The analysis page's engine arrows (app.js paintShapes): on unless turned off. The opponent's threats are always drawn.
+export const arrowsOn = (prefs) => prefs?.arrows !== false;
 // The address's query without ?board=: a switch reloads without it, or the flag the page was opened with would win.
 export function withoutBoardFlag(search) {
   const q = new URLSearchParams(search || '');

@@ -8,8 +8,8 @@
 // on both builds. Not the query string (it rides along to every page) and not the path (a static per-puzzle page
 // forwards to #/puzzle/<id> and drops any hash; <id>/<s> has no page at all).
 // Pure, no DOM: node tests in scripts/test-pagesym.mjs.
-import * as SYM from './shared/sym.js?v=1795149377';
-import { Game } from './shared/tak.js?v=1795149377';
+import * as SYM from './shared/sym.js?v=1795182193';
+import { Game } from './shared/tak.js?v=1795182193';
 
 // An address's symmetry segment: 1..7, else 0 (missing, stale or malformed is ignored).
 export const symOf = (seg) => (typeof seg === 'string' && /^[1-7]$/.test(seg) ? +seg : 0);
@@ -47,10 +47,11 @@ const MOVE_KEYS = ['move', 'best', 'reply', 'threat', 'bestmove'];
 // to the puzzle's own; fwd: the other way. tps(t): a position the page holds, as the same position reached in the
 // puzzle's own orientation writes it (Game.toTPS), so a request carries the bytes an ordinary visit's would. log: a
 // result's move log turned back (copies). answer(r): an engine's answer about a turned-back position, in the page's
-// labels. With s = 0 every one of them returns its argument itself.
+// labels (analysis(r): /api/analyze with its lines; facts(r): the worker's engine.lines). With s = 0 every one of them
+// returns its argument itself.
 export function toServer(s, n) {
   s = symOf(String(s));
-  if (!s) { const id = (v) => v; return { sym: 0, back: id, fwd: id, tps: id, log: id, answer: id }; }
+  if (!s) { const id = (v) => v; return { sym: 0, back: id, fwd: id, tps: id, log: id, answer: id, analysis: id, facts: id }; }
   const inv = SYM.inverse(s);
   const back = (m) => SYM.move(inv, n, m), fwd = (m) => SYM.move(s, n, m);
   const answer = (r) => {
@@ -60,8 +61,24 @@ export function toServer(s, n) {
     if (Array.isArray(r.pv)) o.pv = r.pv.map(fwd);
     return o;
   };
+  // /api/analyze?lines=N's answer: the top level as answer() does, and each of its lines ({ move, pv, ... }) too.
+  const analysis = (r) => {
+    const o = answer(r);
+    if (o && typeof o === 'object' && Array.isArray(r.lines)) o.lines = r.lines.map(answer);
+    return o;
+  };
+  // The tactics worker's analysis facts (engine.lines, analysis.js solverLines): its move lists and the verdicts keyed
+  // by the (turned back) pinned moves, in the page's labels. Lists keep their order; SYM.move is a bijection on moves,
+  // so a key turned back and forward again is the move the page asked about.
+  const list = (a) => (Array.isArray(a) ? a.map(fwd) : a);
+  const facts = (r) => {
+    if (!r || typeof r !== 'object') return r;
+    const o = { ...r, wins1: list(r.wins1), wins3: list(r.wins3), threats: list(r.threats) };
+    if (r.pinned && typeof r.pinned === 'object') o.pinned = Object.fromEntries(Object.entries(r.pinned).map(([k, v]) => [fwd(k), v]));
+    return o;
+  };
   return {
-    sym: s, back, fwd, answer,
+    sym: s, back, fwd, answer, analysis, facts,
     tps: (t, komi = 0) => Game.fromTPS(SYM.tps(inv, t), komi).toTPS(),
     log: (log) => (Array.isArray(log) ? log.map((e) => (e && typeof e.m === 'string' ? { ...e, m: back(e.m) } : e)) : log),
   };

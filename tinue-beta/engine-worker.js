@@ -2,9 +2,12 @@
 //   still:   does a move outside the solution still force a win (at any length)? 'wins', 'no' or 'unknown'.
 //   refute:  why was a move wrong? Find the opponent's reply after which the attack fails.
 //   analyze: does the side to move have a forced win (road or flats), and how?
+//   lines:   the analysis panel's solver facts: every win in 1 and in 3 plies, the opponent's threats, tinuë, verdicts
+//            on asked-about moves (public/analysis.js solverLines)
 // It's a forced-win prover, not an evaluator: it answers "win in N" or "nothing forced within N".
-import { Game, Solver } from './shared/tak.js?v=1795149377';
-import { shortestTinue, TinueSearch, proofTreeLine } from './shared/pns.js?v=1795149377';
+import { Game, Solver } from './shared/tak.js?v=1795182193';
+import { shortestTinue, TinueSearch, proofTreeLine } from './shared/pns.js?v=1795182193';
+import { solverLines } from './analysis.js?v=1795182193';
 
 function gameFrom({ size, komi, tps, plies }) {
   const g = tps ? Game.fromTPS(tps, komi || 0) : Object.assign(new Game(size), { komi: komi || 0 });
@@ -130,6 +133,8 @@ self.onmessage = ({ data }) => {
         if (res?.none && !best) { best = g.moveToPTN(r); self.postMessage({ id, kind: 'refuted', reply: best, exact: false, partial: true }); }
       }
       self.postMessage(best ? { id, kind: 'refuted', reply: best, exact: false } : { id, kind: 'unknown' });
+    } else if (type === 'lines') {
+      self.postMessage({ id, kind: 'lines', ...solverLines(gameFrom(data), data) });
     } else if (type === 'analyze') {
       const g = gameFrom(data);
       const res = g.result();
