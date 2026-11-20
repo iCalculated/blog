@@ -1,0 +1,154 @@
+// Play on: a move the still-wins check couldn't decide in time is played out on the board against an engine defending
+// (Shy, 2026-11-15). The rules that don't need the page live here, so they can be tested (scripts/test-playon.mjs).
+
+// The rules the judge needs (the move cap, who defends, how a game ends, which games count) live in shared/judge.js
+// (plan step S1) and are re-exported here unchanged, so the page and scripts/test-playon.mjs see the same functions.
+import { capMoves, proofMoves, provenCap } from './shared/judge.js?v=1795146164';
+export { capMoves, proofMoves, provenCap, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls } from './shared/judge.js?v=1795146164';
+
+// The cap's explanation, one plain sentence shown on the card (and as the number's tooltip). capNote: the puzzle's
+// bound (the moves it had left at that node, plus the spare: capMoves).
+const moves = (n) => (n === 1 ? '1 move of yours' : `${n} of your moves`);
+export const capNote = (pliesLeft) => {
+  const left = Math.max(1, Math.ceil(pliesLeft / 2)), extra = capMoves(pliesLeft) - left;
+  return `The puzzle had ${moves(left)} left, and you get ${extra} spare.`;
+};
+// A proven play-out's: true for whichever bound set the cap (provenCap). The puzzle's bound wins ties; a proof longer
+// than it sets the cap to the proof's own moves. (The proof isn't minimal, so its length is an upper bound on the
+// shortest forced win, and the sentence says "at most".) `shown`: the cap already on screen when the proof's length arrived;
+// if it is more than both bounds it stays, and the note says so (the page keeps its earlier note then: app.js).
+export function provenCapNote(pliesLeft, proofPlies, move, shown = 0) {
+  const pm = proofMoves(proofPlies), usual = capMoves(pliesLeft), cap = provenCap(pliesLeft, proofPlies, shown);
+  if (cap > Math.max(usual, pm ?? 0)) return `You keep the ${cap} moves you were already given.`;
+  if (pm == null || cap === usual) return capNote(pliesLeft);
+  return `Our proof that ${move} wins needs at most ${moves(pm)}, counting ${move}, so you get ${pm}.`;
+}
+
+// The plies a puzzle had left at a tree node, for the cap: 1 at a 'win' node (road in 1), 0 past the tree, else 2 plus
+// the longest line below. (Moved from app.js unchanged, so Rush's play-outs get the puzzle page's cap.)
+export const pliesLeftOf = (node) => {
+  const d = (n) => (n === 'win' ? 1 : n == null ? 0 : 2 + Math.max(...Object.values(n).map((v) => (v ? d(v.n) : 0))));
+  return d(node);
+};
+// Proven off-tree wins at an attacker node: alts at the root, altsAt[path of the puzzle's moves so far] deeper in.
+// path: the moves played from the puzzle's position, both sides. (Moved from app.js slowerWins.)
+export function slowerWinsAt(p, path) {
+  const key = path.join(' ');
+  return (key ? p.altsAt?.[key] : p.alts) || [];
+}
+// A play-out as it starts (app.js startPlayOn; Rush's driver makes the same): the move played out (miss) at ply `at`
+// of the puzzle's line, the line before it (base), the game after it (g), the puzzle's plies left there (left: the
+// usual cap, capMoves) and who defends. A proven one's cap is raised by applyProofLength.
+export const playOutOf = ({ miss, at, base, g, proven, left, key, engine }) => ({ miss, at, base, line: [miss], g, proven,
+  mine: 1, cap: capMoves(left), capNote: capNote(left), left, proofPlies: null, key, engine, fallback: false, thinking: false, end: null });
+// A proven play-out's cap once its proof's length is known (provenCap: never lower than the cap shown, whose note then
+// stays). Returns false when plies isn't a length (nothing changed). (Moved from app.js setProofLength.)
+export function applyProofLength(po, plies) {
+  if (!Number.isFinite(plies)) return false;
+  po.proofPlies = plies;
+  const cap = provenCap(po.left, plies, po.cap);
+  // Today the cap shown here is always capMoves(po.left) (no earlier length raised it), so this always rewrites the
+  // note. If a later change lets the cap rise twice, a cap above both bounds keeps the note that set it.
+  if (cap === provenCap(po.left, plies)) po.capNote = provenCapNote(po.left, plies, po.miss); // (else the shown cap and its note stay)
+  po.cap = cap;
+  return true;
+}
+
+// Who defended, by name, for the cards (Syntaks only while it defends; once it drops out, Tiltak). (Moved from app.js.)
+export const defenderName = (po) => (po.engine === 'syntaks' && !po.fallback ? 'Syntaks' : 'Tiltak');
+
+// An engine's move, checked and canonical in this game; null if it isn't a legal move here.
+export function legalMove(g, ptn) {
+  if (typeof ptn !== 'string' || !ptn) return null;
+  try {
+    const c = g.canon(ptn);
+    return g.legalMoves().some((m) => g.moveToPTN(m) === c) ? c : null;
+  } catch { return null; }
+}
+
+// ---- proven play-out (Shy, 2026-11-16: "Make people prove winning sequences! Just fine if they are slower";
+// "Rated miss when defended. No play out w tiltak") ----
+// A proven off-tree win isn't solved on the spot where Syntaks defends (6×6): it's played out to a road (or a flat
+// win) within the cap. Its win is a full rated solve, however slow. Failing to finish it (out of moves, or Syntaks's
+// road, flats or a draw) is a rated miss when Syntaks defended throughout (gameRated), and so are Give up, Solution
+// and leaving for another puzzle, as in an ordinary play-on (else stopping would dodge the miss). Only the page going
+// away (a reload, a closed tab, a crash: 'unload') is unrated in a proven play-out: that can happen to a phone through
+// no fault of the player, and the move is proven. Against Tiltak there is no proven play-out:
+// a proven win on 4×4/5×5 is solved on the spot (as on 7×7/8×8), and one whose Syntaks drops out mid-game, or a
+// proof that arrives while Tiltak defends, ends as a solve then (app.js).
+export const provenPlayOut = (engine) => engine === 'syntaks';
+
+// What a held result (app.js heldRec) is sent as when a later page load finds it (flushHeld); null drops it unsent.
+// h: { id, ms, win?, casual?, theme?, b, owner, page }. Dropped: a record of another account (owner: a hash of the
+// token it was played under; after a logout or login it isn't this account's to send), or one whose page is still open
+// (alive: a duplicated tab copies sessionStorage, and the original sends its own). Settled before the page went: as it
+// was settled, under the build that settled it (the server's stale-miss guard reads it; no build, no trust). Never
+// settled (the page died mid-check): the move was never decided, so an unrated miss.
+export function heldResend(h, owner, alive) {
+  if (!h?.id || alive || h.owner !== owner) return null;
+  // (unsettled, including a proven play-out the page died in: an unrated miss, recorded so it isn't a free retry and
+  // never a rated miss for a move proven to win)
+  const result = typeof h.win === 'boolean' ? { win: h.win, ...(h.casual ? { casual: true } : { theme: h.theme }) } : { win: false, casual: true };
+  return { build: +h.b || 0, body: { puzzleId: h.id, ...result, ms: h.ms } };
+}
+
+// heldRec is one slot: a record for another puzzle that was settled (its result known, its upload failed, kept for a
+// resend) must be sent before a new record replaces it, or that result is lost. What to send (heldResend with alive
+// false: the record is this page's own), or null when nothing is lost (no record, the same puzzle, or never settled).
+export const heldDisplaced = (prev, nextId, owner) =>
+  prev?.id && prev.id !== nextId && typeof prev.win === 'boolean' ? heldResend(prev, owner, false) : null;
+
+// What the quick (2.5 s) still-wins check's answer means for the move (app.js userMove): 'wins' (a proven win),
+// 'no' (refuted: a miss as usual, never played out), or, undecided, 'pending' (the first check: held, or played out)
+// or 'unchecked' (a later, minor check: dropped, the move noted as unchecked).
+export const quickOutcome = (quick, minor) => quick === 'wins' || quick === 'no' ? quick : minor ? 'unchecked' : 'pending';
+
+// At the cap, whether to wait before ending the game 'out' (a wait that can only raise the cap):
+//   'length': a proven play-out whose proof length is still being measured (lengthPending) and isn't known;
+//   'proof': an unproven Syntaks play-on (no fallback) whose full check is still running (checkLive): a proof would
+//   make it a proven play-out with a cap covering the proof. (With Tiltak a proof ends the game as a solve by itself.)
+// null: end it now. CAP_WAIT_MS: how long each wait may take.
+export const CAP_WAIT_MS = { length: 30e3, proof: 20e3 };
+export function capWait(po, { lengthPending = false, checkLive = false } = {}) {
+  if (po.mine < po.cap || po.end) return null;
+  if (po.proven) return po.proofPlies == null && lengthPending ? 'length' : null;
+  return checkLive && provenPlayOut(po.engine) && !po.fallback ? 'proof' : null;
+}
+// The engines' time limits, in one place so Rush's server can bound its pauses by them (server/rush.js, rush-rules.js
+// pauseMax): the first still-wins check's quick answer and its run-on (engine.js checkStill's defaults, pinned there
+// by scripts/test-prover.mjs and here by test-rush.mjs), and the defender's (defend.js): an in-browser Syntaks search
+// and its grace, crux's /api/defend, the wait for Syntaks's download, Tiltak's start and its reply.
+export const ENGINE_MS = { quick: 2500, final: 60e3, local: 4500, crux: 8000, download: 20e3, tiltakUp: 20e3, tiltak: 6000 };
+// A proof that lands mid-game (app.js makeProven; Rush the same): against Syntaks the game goes on as a proven
+// play-out (true: po is marked so); against Tiltak, from the start or after Syntaks dropped out, there is no proven
+// play-out (false: it ends as a solve now, 'proved').
+export function upgradeToProven(po) {
+  if (!provenPlayOut(po.engine) || po.fallback) return false;
+  po.proven = po.provedLate = true;
+  return true;
+}
+// Measuring a proof's length (app.js setProofLength; Rush the same): po.lengthP while it runs (at the cap the game
+// waits for it: capWait), cleared when it settles; done(r) with the engine's answer. ask: () => engine.proofLength(...).
+export function measureProof(po, ask, done) {
+  const lp = po.lengthP = ask().then((r) => {
+    if (po.lengthP === lp) po.lengthP = null;
+    done(r);
+  }, () => { if (po.lengthP === lp) po.lengthP = null; });
+  return lp;
+}
+// The lead of a failed proven play-out's card, by how it ended: 'unfinished' (out of moves), 'own-road' (the player's
+// move completed only Syntaks's road), else 'escaped' (Syntaks's road, flats or a draw).
+export const provenLossLead = (how, byYou) => how === 'out' ? 'unfinished' : how === 'road' && byYou ? 'own-road' : 'escaped';
+// A displaced held record whose first upload was still in flight: resend it only if that upload failed or the server
+// didn't record it (no user in the answer). settled: { ok, r } of the first upload.
+export const resendAfterUpload = (settled) => !settled.ok || !settled.r?.user;
+
+// A displaced record's deferred resend (heldRec.set) goes out only if the player is still the one who played it: no
+// login, logout or account switch since it was displaced (authEpoch, app.js; a first token minted for this browser
+// isn't a switch), and only if the first upload didn't land (resendAfterUpload).
+export const deferredResendOk = (settled, epochThen, epochNow) => epochThen === epochNow && resendAfterUpload(settled);
+
+// A result's answer can carry a token minted for this browser (its first result made it a guest). Stored (and `me`
+// taken from the answer) only if nobody signed in, out or claimed a name while it was on its way (signIn, app.js),
+// else the late guest token would replace the account just signed into.
+export const answerOwnsToken = (signInThen, signInNow) => signInThen === signInNow;

@@ -1,0 +1,17 @@
+Tiltak — Tak engine
+Copyright (C) Morten Lohne
+https://github.com/MortenLohne/tiltak (engine)
+https://github.com/MortenLohne/tiltak-wasm (WebAssembly build)
+
+The files tiltak_wasm_bg.wasm and tiltak_wasm.js in this directory are Tiltak compiled to WebAssembly,
+redistributed unmodified under the GNU General Public License, version 3 (see COPYING).
+Exact source revisions for this binary are listed in PROVENANCE.md:
+  tiltak-wasm 3e116108631bacedaac1d3d679e8a0c05e63b46e
+  tiltak      532caa3f028848f7013cbaf4fd9f6e93ded8478d
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even
+the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public
+License for more details.
+
+worker.js (this directory) and ../tiltak.js are part of tinue, which is licensed GPL-3.0-or-later
+(see LICENSE at the repository root).
