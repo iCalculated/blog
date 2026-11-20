@@ -4,6 +4,7 @@ export const THEMES = {
   tinueIn2:  { name: 'Tinuë in 2',    group: 'Length', desc: 'Force a road in two of your moves, whatever the opponent does in between.' },
   tinueIn3:  { name: 'Tinuë in 3',    group: 'Length', desc: 'Force a road in three of your moves.' },
   tinueIn4:  { name: 'Tinuë in 4+',   group: 'Length', desc: 'Longer forced wins.' },
+  deep:      { name: 'Deep tinuë',    group: 'Length', desc: 'Forced roads six to eight of your moves long. A solver searched every other first move and found none that forces a road as fast.' }, // the ids: scripts/deep-proven.jsonl
   gaelet:    { name: 'Flat win',      group: 'Goal',   desc: 'Win on flat count instead of a road: the board fills up or someone runs out of pieces, and you have more flats on top. Tak players call a forced flat win a "gaelet".' },
   fork:      { name: 'Fork',          group: 'Motif',  desc: 'Your move creates two road threats through two different empty squares. The opponent can only block one.' }, // USTA's term; was 'Double threat'
   quietMove: { name: 'Non-Tak tinuë', group: 'Motif',  desc: 'A forced road where at least one of your moves isn’t Tak: it threatens no road next turn, yet the opponent still can’t escape. Usually the hardest kind.' },

@@ -5,16 +5,16 @@
 // engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused while they work. Nothing here is rated,
 // and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { Board, buildPTN } from './board.js?v=1795096090';
-import { api, store, token } from './api.js?v=1795096090';
-import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795096090';
-import * as R from './rush-rules.js?v=1795096090';
-import * as engine from './engine.js?v=1795096090';
-import * as tiltak from './tiltak.js?v=1795096090';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795096090';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795096090';
-import { busy, BUSY_MS } from './busy.js?v=1795096090';
-import * as SYM from './shared/sym.js?v=1795096090';
+import { Board, buildPTN } from './board.js?v=1795144990';
+import { api, store, token } from './api.js?v=1795144990';
+import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795144990';
+import * as R from './rush-rules.js?v=1795144990';
+import * as engine from './engine.js?v=1795144990';
+import * as tiltak from './tiltak.js?v=1795144990';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795144990';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795144990';
+import { busy, BUSY_MS } from './busy.js?v=1795144990';
+import * as SYM from './shared/sym.js?v=1795144990';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
