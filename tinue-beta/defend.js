@@ -2,16 +2,19 @@
 // the browser, else crux's /api/defend, else Tiltak in the browser. Moved out of app.js unchanged (same engines, same
 // requests, same time limits), so both pages play the same defence. po: the play-out (playon.js playOutOf), whose
 // local, slowLocal, ctl and fallback fields this keeps as the page did.
-import * as tiltak from './tiltak.js?v=1795147269';
-import * as syntaks from './syntaks.js?v=1795147269';
-import { api } from './api.js?v=1795147269';
-import { legalMove, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795147269';
+import * as tiltak from './tiltak.js?v=1795149377';
+import * as syntaks from './syntaks.js?v=1795149377';
+import { api } from './api.js?v=1795149377';
+import { legalMove, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795149377';
 
 // Syntaks's reply. It runs in the browser (syntaks.js, loaded when play-on starts; 1.5 s a reply). Until it has loaded,
 // or on a device too slow for a real defence (fewer than LOCAL_MIN_NODES in that time), crux answers (/api/defend,
 // 8 s). With neither, Tiltak in the browser defends the rest of the game, which is then unrated (playOnRated).
 export const LOCAL_MIN_NODES = 150e3; // ~100k nodes/s: a fraction of crux's ~2.6M nodes per reply
-export async function syntaksReply(po, tps, komi, live) {
+// x: the puzzle page's boundary for a visit under a symmetry (pagesym.js toServer): crux gets the position in the puzzle's
+// own orientation and its move comes back turned, so its cache and allowance see an ordinary visit. Rush passes none
+// (its turned position goes as it always has); the in-browser search sees the position as shown.
+export async function syntaksReply(po, tps, komi, live, x = null) {
   const legal = (r) => (r && legalMove(po.g, r.move) ? r : null);
   // Each in-browser search gets its 1.5 s plus 3 s (a worker the browser killed never answers); waiting for the
   // download (crux didn't answer) gets 20 s. Past either, crux or Tiltak defends.
@@ -20,7 +23,8 @@ export async function syntaksReply(po, tps, komi, live) {
     .then((r) => legal(r && { ...r, src: 'browser' }), () => null);
   const server = () => {
     po.ctl = new AbortController(); // aborted when the game ends, so crux drops the search
-    return api(`/api/defend?tps=${encodeURIComponent(tps)}&komi=${komi}`, null, { quiet: true, timeout: ENGINE_MS.crux, signal: po.ctl.signal }).then((r) => legal(r && { ...r, src: 'crux' }), () => null);
+    return api(`/api/defend?tps=${encodeURIComponent(x ? x.tps(tps, komi) : tps)}&komi=${komi}`, null, { quiet: true, timeout: ENGINE_MS.crux, signal: po.ctl.signal })
+      .then((r) => legal(r && { ...(x ? x.answer(r) : r), src: 'crux' }), () => null);
   };
   let r = null;
   if (po.local && syntaks.status() === 'ready' && !po.slowLocal) {

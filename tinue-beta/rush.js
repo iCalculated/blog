@@ -5,17 +5,17 @@
 // engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused while they work. Nothing here is rated,
 // and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { Board, buildPTN } from './board.js?v=1795147269';
-import { api, store, token } from './api.js?v=1795147269';
-import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795147269';
-import * as R from './rush-rules.js?v=1795147269';
-import * as engine from './engine.js?v=1795147269';
-import * as tiltak from './tiltak.js?v=1795147269';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795147269';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795147269';
-import { busy, BUSY_MS } from './busy.js?v=1795147269';
-import * as SYM from './shared/sym.js?v=1795147269';
-import * as sound from './sound.js?v=1795147269'; // (moves click through Board.onPly, set by app.js; the verdicts are played here)
+import { Board, buildPTN } from './board.js?v=1795149377';
+import { api, store, token } from './api.js?v=1795149377';
+import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795149377';
+import * as R from './rush-rules.js?v=1795149377';
+import * as engine from './engine.js?v=1795149377';
+import * as tiltak from './tiltak.js?v=1795149377';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795149377';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795149377';
+import { busy, BUSY_MS } from './busy.js?v=1795149377';
+import * as SYM from './shared/sym.js?v=1795149377';
+import * as sound from './sound.js?v=1795149377'; // (moves click through Board.onPly, set by app.js; the verdicts are played here)
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -865,7 +865,7 @@ function showEnd(rec, s, at = null) {
     ${rec.puzzles.length ? `<h2>Puzzles</h2>
     <p class="muted rush-small">${hint}</p>
     <div class="rush-list-wrap" id="rush-list-wrap"><table class="t rush-list"><tr><th>Puzzle</th><th class="n">Rating</th><th class="n">Time</th><th>Result</th></tr>
-    ${rec.puzzles.map((r, i) => `<tr class="rush-p" data-i="${i}"><td><a href="#/puzzle/${encodeURIComponent(r.id)}">#${esc(r.id)}</a></td><td class="n">${Math.round(r.rating)}</td><td class="n">${sec(r.ms)}</td>
+    ${rec.puzzles.map((r, i) => `<tr class="rush-p" data-i="${i}"><td><a href="${esc(R.puzzleLink(r))}">#${esc(r.id)}</a></td><td class="n">${Math.round(r.rating)}</td><td class="n">${sec(r.ms)}</td>
       <td><button type="button" class="link rush-res" aria-expanded="false" aria-controls="rush-x-${i}">${resultHTML(r)}</button></td></tr>`).join('')}</table>
     <div class="rush-peek" id="rush-peek" hidden></div></div>` : '<p class="muted">No puzzles played.</p>'}`;
   if (rec.puzzles.length) lookBack(rec);
@@ -923,6 +923,11 @@ function lookBack(rec) {
     tr.onmouseenter = () => show(tr); tr.onmouseleave = hide; // (a mouse: the whole row, not just its glyph)
     btn.onfocus = () => show(tr); btn.onblur = hide;
     tr.onclick = (e) => { if (!e.target.closest('a')) toggle(tr); }; // the link still opens the puzzle page; the button's click bubbles here
+    // A puzzle stored without its symmetry (runs from before records kept it): a note for the puzzle page, read and
+    // cleared by its next route, from which it works the symmetry out (app.js loadById, R.symFromRecord). A link opened
+    // in a new tab goes without it and shows the puzzle in its own orientation.
+    const q = rec.puzzles[+tr.dataset.i], a = tr.querySelector('a');
+    if (a && q && q.sym === undefined) a.addEventListener('click', (e) => { if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; try { sessionStorage.setItem('tinue.lookFrom', JSON.stringify(R.lookFrom(q))); } catch {} });
   }
 }
 async function showBest(r, mode, s, out = null) {

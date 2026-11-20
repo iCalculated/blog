@@ -1,20 +1,21 @@
-import { Game } from './shared/tak.js?v=1795147269';
-import { unplayedPlies } from './shared/ptn.js?v=1795147269';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795147269';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795147269';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795147269';
-import * as engine from './engine.js?v=1795147269';
-import * as tiltak from './tiltak.js?v=1795147269';
-import * as syntaks from './syntaks.js?v=1795147269';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795147269';
-import { createNext } from './next.js?v=1795147269';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795147269';
-import { createOutbox } from './outbox.js?v=1795147269';
-import * as sound from './sound.js?v=1795147269';
-import { boardFrom, confirmOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795147269';
-import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795147269';
-import * as defend from './defend.js?v=1795147269';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795147269';
+import { Game } from './shared/tak.js?v=1795149377';
+import { unplayedPlies } from './shared/ptn.js?v=1795149377';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795149377';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795149377';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795149377';
+import * as engine from './engine.js?v=1795149377';
+import * as tiltak from './tiltak.js?v=1795149377';
+import * as syntaks from './syntaks.js?v=1795149377';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795149377';
+import { createNext } from './next.js?v=1795149377';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795149377';
+import { createOutbox } from './outbox.js?v=1795149377';
+import * as sound from './sound.js?v=1795149377';
+import { boardFrom, confirmOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795149377';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795149377';
+import * as defend from './defend.js?v=1795149377';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795149377';
+import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795149377';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -47,16 +48,20 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const APP = location.pathname.replace(/(puzzle\/[^/]+|glossary|me|leaderboard)\/?$/, '').replace(/[^/]*$/, '');
 // The query string (e.g. ?board=ninja) rides along on every address the app shows or shares.
 // A build without those pages (the beta: build-static.sh STUBS=none) keeps puzzles on the hash route, so a reload works.
+// s: the visit's symmetry (pagesym.js; a puzzle opened from a Rush run). Under one (1..7) the puzzle is on the hash route
+// on both builds, #/puzzle/<id>/<s>: a per-puzzle page forwards to #/puzzle/<id> and would drop it.
 const STUBS = window.TINUE_STUBS !== false;
-const puzzlePath = (id) => STUBS ? APP + 'puzzle/' + encodeURIComponent(id) + location.search : APP + location.search + '#/puzzle/' + encodeURIComponent(id);
-const showPuzzleURL = (id) => { if (location.pathname + location.search + location.hash !== puzzlePath(id)) history.replaceState(null, '', puzzlePath(id)); };
+const puzzlePath = (id, s = 0) => Number.isInteger(s) && s > 0 && s < 8 ? APP + location.search + '#/puzzle/' + encodeURIComponent(id) + '/' + s : STUBS ? APP + 'puzzle/' + encodeURIComponent(id) + location.search : APP + location.search + '#/puzzle/' + encodeURIComponent(id);
+const showPuzzleURL = (id, s = 0) => { if (location.pathname + location.search + location.hash !== puzzlePath(id, s)) history.replaceState(null, '', puzzlePath(id, s)); };
+// The symmetry of the visit on screen (0: the puzzle's own orientation).
+const symNow = (s = S) => s?.p?.sym || 0;
 const showHashURL = (h) => { if (location.pathname !== APP || location.hash !== h) history.replaceState(null, '', APP + location.search + h); };
 
 // Share (phones only): the system share sheet with the puzzle's own address (see above). On desktop the address bar
 // already shows that address, so there's no button (Shy, 2026-11-15).
 const canShare = () => !!navigator.share && matchMedia('(pointer: coarse)').matches;
 async function sharePuzzle(p) {
-  try { await navigator.share({ title: 'tinue puzzle', url: location.origin + puzzlePath(p.id) }); } catch {}
+  try { await navigator.share({ title: 'tinue puzzle', url: location.origin + puzzlePath(p.id, p.sym || 0) }); } catch {}
 }
 
 // The server rates everyone. me: the player it knows us as, an account (name) or a guest (name null: has played
@@ -144,7 +149,7 @@ const guestId = () => {
 // PTN Ninja in an iframe instead of tinue's board (same API), by the Board style setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795147269')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1795149377')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
 // Sounds (sound.js): every move played or appended on any board (this page's, Rush's, PTN Ninja's) clicks; the audio
 // unlocks on the first press, tap or key.
@@ -310,15 +315,16 @@ function reloadNow() {
   if (justEnded()) return; // the bar shows once the result does, pushing the board down: a tap aimed at the board
   if (S?.playOn) return; // never in the middle of a play-on game (leaving it is a miss); the bar is hidden then anyway
   if (S && !S.placeholder && (S.resultSent || S.status !== 'play' || S.quickCheck)) loadNext({ reload: true }); // (a move being checked is sent as it leaves)
-  else reloadInto(S?.p?.id, S?.theme);
+  else reloadInto(S?.p?.id, S?.theme, location.search, symNow()); // (the same visit: under its symmetry)
 }
-// A full page load opening puzzle id (or the start). theme: the Theme its result counts under (see start()).
-function reloadInto(id, theme = '', search = location.search) {
+// A full page load opening puzzle id (or the start). theme: the Theme its result counts under (see start()). s: the
+// visit's symmetry, only when reloading the puzzle on screen (never the next one).
+function reloadInto(id, theme = '', search = location.search, s = 0) {
   try {
     sessionStorage.setItem('tinue.reloadedFor', JSON.stringify({ v: newBuild, at: Date.now() }));
     if (id) sessionStorage.setItem('tinue.reloadTheme', JSON.stringify({ id, theme: theme || '' }));
   } catch {}
-  history.replaceState(null, '', APP + search + (id ? '#/puzzle/' + encodeURIComponent(id) : '#/'));
+  history.replaceState(null, '', APP + search + (id ? puzzleHash(id, s) : '#/'));
   location.reload();
 }
 const reloadTheme = (() => { try { const t = JSON.parse(sessionStorage.getItem('tinue.reloadTheme')); sessionStorage.removeItem('tinue.reloadTheme'); return t; } catch { return null; } })();
@@ -365,7 +371,9 @@ async function loadNext({ reload = false } = {}) {
 // Does the puzzle fit the current Theme / Board filters?
 const matchesFilters = (p) => (!prefs.theme || (p.themes || []).includes(prefs.theme)) && (!prefs.size || String(p.size) === String(prefs.size));
 
-async function loadById(id) {
+// s: the visit's symmetry, from the address (route). look: a Rush record stored before records kept their symmetry (rush.js
+// lookFrom), whose symmetry is worked out from the puzzle once it is here (rush-rules.js symFromRecord).
+async function loadById(id, s = 0, look = null) {
   const t = ++loadSeq;
   // Reloaded into a newer build on the way to this puzzle: it's the stored next one (no request needed, even with the
   // server unreachable), and it keeps the Theme it was picked under (start() checks it against the puzzle's themes).
@@ -373,7 +381,13 @@ async function loadById(id) {
   let puzzle = stored?.id === id ? stored : null;
   if (!puzzle) { try { ({ puzzle } = await api('/api/puzzle/' + encodeURIComponent(id))); } catch { restoreLeft(); return; } }
   if (t !== loadSeq) return;
-  if (puzzle) { showPuzzleURL(puzzle.id); start(puzzle, reloaded ? reloadTheme.theme : ''); } else loadNext();
+  if (puzzle && !s && look?.id === puzzle.id) {
+    try { s = (await import('./rush-rules.js?v=1795149377')).symFromRecord(puzzle, look); } catch { s = 0; }
+    if (t !== loadSeq) return;
+  }
+  // The one place a puzzle is oriented (pagesym.js): the page works in the turned labels from here on; the server's
+  // object is kept beside it (S.p0) and nothing that goes out is taken from the turned one (toServer).
+  if (puzzle) { showPuzzleURL(puzzle.id, s); start(orientPage(puzzle, s), reloaded ? reloadTheme.theme : '', puzzle); } else loadNext();
 }
 
 const colorName = (c) => (c === 1 ? 'White' : 'Black');
@@ -397,8 +411,11 @@ function gameAt(plies) {
   for (const m of plies) g.play(m);
   return g;
 }
-// Position description for the engine worker.
-const enginePos = (plies) => ({ size: S.p.size, komi: S.p.komi || 0, tps: S.hist.length ? null : S.p.tps, plies });
+// Position description for the engine worker: in the puzzle's own orientation (S.x, pagesym.js toServer), so the
+// budgeted still-wins check that decides a result runs exactly as in an ordinary visit; its answers come back through
+// fromEngine.
+const enginePos = (plies) => ({ size: S.p.size, komi: S.p.komi || 0, tps: S.hist.length ? null : S.p0.tps, plies: plies.map(S.x.back) });
+const fromEngine = (s, r) => s.x.answer(r);
 
 // After the puzzle: ask the engine about the position on the board.
 // 6×6: Syntaks on the server (much stronger there, and it knows every half-point komi); if the server can't answer,
@@ -428,9 +445,10 @@ async function runEngine() {
     // was never reused). The server knows the player by the cookie when the page sends one, else by address.
     const tmo = new AbortController(), timer = setTimeout(() => tmo.abort(), 6000), stop = () => tmo.abort();
     ctl.signal.addEventListener('abort', stop);
-    fetch(`${API}/api/analyze?tps=${encodeURIComponent(g.toTPS())}&komi=${komi}`, { credentials: 'include', signal: tmo.signal })
+    // (the position in the puzzle's own orientation, and its line back in the page's labels: pagesym.js toServer)
+    fetch(`${API}/api/analyze?tps=${encodeURIComponent(s.x.tps(g.toTPS(), komi))}&komi=${komi}`, { credentials: 'include', signal: tmo.signal })
       .then((r) => r.json()).finally(() => { clearTimeout(timer); ctl.signal.removeEventListener('abort', stop); })
-      .then((r) => { if (!live()) return; if (r?.engine === 'syntaks') { S.tk = { ...r, src: 'syntaks' }; renderEngine(); } else fallback(); }, fallback);
+      .then((r) => { if (!live()) return; if (r?.engine === 'syntaks') { S.tk = { ...fromEngine(s, r), src: 'syntaks' }; renderEngine(); } else fallback(); }, fallback);
     return;
   }
   runTiltak(s, key, g, line.slice(0, at));
@@ -449,7 +467,7 @@ function runTiltak(s, key, g, plies) {
 }
 async function runSolver(s, key, plies) {
   S.eval = { kind: 'thinking' }; renderAll();
-  const res = await engine.analyze({ ...enginePos(plies), maxPlies: 9 });
+  const res = fromEngine(s, await engine.analyze({ ...enginePos(plies), maxPlies: 9 }));
   if (res && S === s && S.evalKey === key) { S.eval = res; renderAll(); }
 }
 
@@ -481,7 +499,8 @@ async function showLine(line, idx) {
   if (idx >= line.length) await board.last(); else if (idx === 0) await board.first(); else await board.goTo(idx - 1);
 }
 
-async function start(p, theme = '') {
+// p: the puzzle as shown (oriented by loadById, pagesym.js); p0: the same puzzle as the server sent it.
+async function start(p, theme = '', p0 = p) {
   if (S?.free) leaveFree(S, 'left'); // (its engine stops; nothing to send)
   abandonCheck(S); // leaving a puzzle whose check is still running (any route: Next, a link, a filter change)
   board.forget(); // nothing begun on the last puzzle's board (stones in hand, a held number key, a touch) carries over
@@ -490,7 +509,7 @@ async function start(p, theme = '') {
   const g = Game.fromTPS(p.tps, p.komi || 0);
   const hist = p.meta?.history || [];
   // theme: the Theme filter this puzzle was picked with (its result is damped as a themed attempt)
-  const s = S = { p, g, node: p.tree, solver: g.toMove, hist, moves: [], snaps: [g.toTPS()], view: null, status: 'play', resultSent: false, hinted: false, delta: null, busy: true,
+  const s = S = { p, p0, x: toServer(p.sym, p.size), g, node: p.tree, solver: g.toMove, hist, moves: [], snaps: [g.toTPS()], view: null, status: 'play', resultSent: false, hinted: false, delta: null, busy: true,
         misses: [], outcome: null, branch: null, onBranch: false, theme: theme && (p.themes || []).includes(theme) ? theme : '',
         t0: null, born: performance.now(), hiddenMs: 0, hiddenAt: null, log: [] };
   board.lock(busyUntil('board', s.born)); // the same lock on the board itself: no stack lifted or cap picked meanwhile
@@ -703,6 +722,7 @@ async function userMove(ptn) {
     const remaining = pliesLeft();
     S.refutation = { miss: canon, kind: 'thinking' };
     engine.refute({ ...enginePos(plies), attacker: S.solver, remaining }).then((r) => {
+      r = fromEngine(s, r);
       if (r && S === s && S.refutation?.miss === canon) { S.refutation = { miss: canon, ...r }; renderAll(); }
     });
     fail(tMove);
@@ -750,7 +770,8 @@ async function report(win, s = S, flags = s, { keepalive = false, ms } = {}) {
   // A game won against Tiltak (playOnRated) is an unrated solve.
   s.casual = flags.hinted || (!win && !!s.unchecked) || (win && !!flags.playOn?.unrated);
   s.casualWhy = flags.hinted ? 'hint' : !s.casual ? null : win ? 'tiltak' : 'unchecked';
-  const p = s.p, timing = { ms: (s.decidedMs ?? elapsed(s)) ?? undefined, log: s.log.length ? s.log : undefined };
+  // (the log's moves in the puzzle's own orientation: pagesym.js toServer)
+  const p = s.p, timing = { ms: (s.decidedMs ?? elapsed(s)) ?? undefined, log: s.log.length ? s.x.log(s.log) : undefined };
   let answered = false;
   // Sent as the page goes away: this request carries the result, so the held copy isn't flushed again (unrated) on the
   // next load; otherwise which of the two reached the server first would decide (a play-on left by reloading is rated).
@@ -955,8 +976,9 @@ function setProofLength(s, po, plies) {
   });
 }
 
-// Syntaks's reply: defend.js (in the browser, else crux's /api/defend; Rush's play-outs call the same).
-async function syntaksReply(s, po, tps, komi, live) { return defend.syntaksReply(po, tps, komi, live); }
+// Syntaks's reply: defend.js (in the browser, else crux's /api/defend; Rush's play-outs call the same). s.x: crux is
+// asked about the position in the puzzle's own orientation, and its move comes back in the page's labels.
+async function syntaksReply(s, po, tps, komi, live) { return defend.syntaksReply(po, tps, komi, live, s.x); }
 
 // The defender's reply: Syntaks (syntaksReply), else Tiltak in the browser for the rest of this game.
 async function defenderTurn(s, po) {
@@ -1706,7 +1728,7 @@ function renderSession() {
   const mine = myRating(), shown = fmtRating(mine.rating, mine.provisional);
   const last = session.at(-1);
   $('#session').innerHTML = `<div><div class="label">Your rating</div><div class="rating-line"><span class="big">${shown}</span>${S.resultSent && last?.id === S.p.id && last.delta != null ? deltaSpan(last.delta) : ''}</div></div>
-    <div class="streak">${session.map((x) => `<a class="${x.win ? 'w' : 'l'}${x.id === S.p.id ? ' cur' : ''}" href="#/puzzle/${esc(x.id)}" title="Puzzle #${esc(x.id)}">${x.delta != null ? signed(x.delta) : x.win ? '✓' : '✗'}</a>`).join('')}</div>`;
+    <div class="streak">${session.map((x) => `<a class="${x.win ? 'w' : 'l'}${x.id === S.p.id ? ' cur' : ''}" href="#/puzzle/${esc(x.id)}${x.id === S.p.id && symNow() ? '/' + symNow() : ''}" title="Puzzle #${esc(x.id)}">${x.delta != null ? signed(x.delta) : x.win ? '✓' : '✗'}</a>`).join('')}</div>`;
 
 }
 
@@ -1724,7 +1746,7 @@ function renderInfo(done) {
     const off = unplayedPlies(m);
     const from = off ? `a line from this ${p.sourceRef?.startsWith('http') ? game : `${esc(p.source)} game`}` : game;
     info.innerHTML = `<dl>
-        <dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}">#${esc(p.id)}</a>, ${p.size}×${p.size}${p.komi ? ` with komi ${p.komi}` : ''}${canShare() ? ' · <button class="link" id="share-link">Share</button>' : ''}</dd>
+        <dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}${p.sym ? '/' + p.sym : ''}">#${esc(p.id)}</a>, ${p.size}×${p.size}${p.komi ? ` with komi ${p.komi}` : ''}${canShare() ? ' · <button class="link" id="share-link">Share</button>' : ''}</dd>
         <dt>Rating</dt><dd>${Math.round(p.rating)}</dd>
         <dt>Played</dt><dd>${p.attempts ? `${p.attempts} time${p.attempts === 1 ? '' : 's'}` : 'Not rated by anyone yet'}</dd>
         <dt>From</dt><dd>${from}</dd>
@@ -1968,7 +1990,7 @@ $('#set-board').onchange = (e) => {
   unsaved = !boardSaved(store.get('prefs', {}), prefs.board);
   if (unsaved) { if (was === undefined) delete prefs.board; else prefs.board = was; e.target.value = boardFrom('', prefs); boardSwitch = false; return showNote(); }
   boardSwitch = prefs.board !== BOARD;
-  if (boardSwitch && switchNow(S, reporting.size)) return reloadInto(S && !S.placeholder ? S.p.id : null, S?.theme, withoutBoardFlag(location.search));
+  if (boardSwitch && switchNow(S, reporting.size)) return reloadInto(S && !S.placeholder ? S.p.id : null, S?.theme, withoutBoardFlag(location.search), S && !S.placeholder ? symNow() : 0);
   showNote();
 };
 $('#set-confirm').onchange = (e) => {
@@ -2147,17 +2169,32 @@ function go(hash) {
 async function route() {
   // a hash wins (in-app links); else the path (<app>/puzzle/<id>, the address shown for a puzzle)
   const pathRoute = location.pathname.slice(APP.length);
-  const [, page, arg] = (location.hash && location.hash !== '#' ? location.hash : '#/' + pathRoute).split('/');
+  const [, page, arg, symArg] = (location.hash && location.hash !== '#' ? location.hash : '#/' + pathRoute).split('/');
+  // A Rush row's one-shot note for this navigation only (rush.js lookFrom): read and cleared on every route.
+  let look = null; try { look = JSON.parse(sessionStorage.getItem('tinue.lookFrom')); sessionStorage.removeItem('tinue.lookFrom'); } catch {}
   if (page !== 'rush') rushPage?.leave(); // a run in progress ends unposted (rush.js)
   if (page === 'glossary' || page === 'me' || page === 'leaderboard' || page === 'rush') showHashURL('#/' + (location.hash || '#/' + pathRoute).split('/').slice(1).join('/'));
   if (page === 'glossary') return glossaryPage();
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795147269')).enter(); } // loaded on first visit
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795149377')).enter(); } // loaded on first visit
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
-  if (page === 'puzzle' && arg) { if (S?.p.id !== decodeURIComponent(arg)) loadById(decodeURIComponent(arg)); else showPuzzleURL(S.p.id); }
-  else if (S && !S.placeholder && S.status !== 'solved' && matchesFilters(S.p)) showPuzzleURL(S.p.id); // back to the puzzle in progress
+  // (the same puzzle under another symmetry is another visit; a malformed one is 0 and the address is put right)
+  const sym = symOf(symArg);
+  if (page === 'puzzle' && arg) {
+    const id = decodeURIComponent(arg);
+    // An older Rush row (plain link plus a note) naming the puzzle on screen: its symmetry is worked out here, against the
+    // puzzle as the server sent it, so a second click on the row returns to the visit (as a plain link always has; a
+    // restart would leave/abandon the attempt) and a row that saw the puzzle turned still turns it.
+    let want = sym, found = false;
+    if (!sym && look?.id === id && S?.p.id === id && S.p0) { try { want = (await import('./rush-rules.js?v=1795149377')).symFromRecord(S.p0, look); found = true; } catch {} }
+    // A plain link (no symmetry, no Rush note) to the puzzle on screen returns to the visit as it stands, turned or
+    // not: restarting it would abandon the attempt, and could cost a rated miss.
+    if (!sym && !found && S?.p.id === id) want = symNow();
+    if (S?.p.id !== id || symNow() !== want) loadById(id, want, found ? null : look); else showPuzzleURL(S.p.id, want);
+  }
+  else if (S && !S.placeholder && S.status !== 'solved' && matchesFilters(S.p)) showPuzzleURL(S.p.id, symNow()); // back to the puzzle in progress
   else loadNext();
 }
 window.addEventListener('hashchange', route);
