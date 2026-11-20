@@ -1,22 +1,22 @@
-import { Game } from './shared/tak.js?v=1795182193';
-import { unplayedPlies } from './shared/ptn.js?v=1795182193';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795182193';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795182193';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795182193';
-import * as engine from './engine.js?v=1795182193';
-import * as tiltak from './tiltak.js?v=1795182193';
-import * as syntaks from './syntaks.js?v=1795182193';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795182193';
-import { createNext } from './next.js?v=1795182193';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795182193';
-import { createOutbox } from './outbox.js?v=1795182193';
-import * as sound from './sound.js?v=1795182193';
-import { boardFrom, confirmOn, arrowsOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795182193';
-import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795182193';
-import * as defend from './defend.js?v=1795182193';
-import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, endLine, evalLabel, mergeLines, pickCandidates, pinnedAt, moveShape, drawAlt, threatGroups } from './analysis.js?v=1795182193';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795182193';
-import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795182193';
+import { Game } from './shared/tak.js?v=1795183303';
+import { unplayedPlies } from './shared/ptn.js?v=1795183303';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795183303';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795183303';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795183303';
+import * as engine from './engine.js?v=1795183303';
+import * as tiltak from './tiltak.js?v=1795183303';
+import * as syntaks from './syntaks.js?v=1795183303';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795183303';
+import { createNext } from './next.js?v=1795183303';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795183303';
+import { createOutbox } from './outbox.js?v=1795183303';
+import * as sound from './sound.js?v=1795183303';
+import { boardFrom, confirmOn, arrowsOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795183303';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795183303';
+import * as defend from './defend.js?v=1795183303';
+import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, endLine, evalLabel, mergeLines, pickCandidates, pinnedAt, moveShape, drawAlt, threatGroups } from './analysis.js?v=1795183303';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795183303';
+import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795183303';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -150,11 +150,16 @@ const guestId = () => {
 // PTN Ninja in an iframe instead of tinue's board (same API), by the Board style setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795182193')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1795183303')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
-// Sounds (sound.js): every move played or appended on any board (this page's, Rush's, PTN Ninja's) clicks; the audio
-// unlocks on the first press, tap or key.
+// Sounds (sound.js): every move played or appended on any board (this page's, Rush's, PTN Ninja's) sounds what it set
+// down and where (board.js landOf); a stack moved by hand sounds each drop as it lands (onLand) and nothing more when
+// it completes; a jump to another position stops drops still queued (onCut). The audio unlocks on the first press,
+// tap or key. A beta build may play the sound lab's recipes stored on this device (sound.js loadCustom).
 Board.onPly = sound.playMove;
+Board.onLand = sound.playLanding;
+Board.onCut = sound.cut;
+sound.loadCustom();
 sound.setEnabled(soundOn(prefs)); sound.setVoice(soundOf(prefs));
 sound.listen();
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
@@ -265,6 +270,12 @@ if (window.TINUE_BETA) {
   const b = Object.assign(document.createElement('span'), { className: 'beta-badge', textContent: 'beta', title: `Beta build of ${window.TINUE_BETA}. It uses the real server: results here count.` });
   b.append(Object.assign(document.createElement('small'), { textContent: String(window.TINUE_BETA) }));
   document.querySelector('.brand')?.after(b);
+  // The sound lab (#/sounds, sound-lab.js): its page and the link to it under the Sound setting exist only here.
+  const lab = Object.assign(document.createElement('main'), { id: 'view-sounds', className: 'page hidden' });
+  document.querySelector('#view-rush')?.after(lab);
+  const a = Object.assign(document.createElement('a'), { href: '#/sounds', id: 'sound-lab-link', textContent: 'Sound lab' });
+  a.style.cssText = 'align-self:end;font-size:var(--fs-sm);line-height:var(--ctl)';
+  document.querySelector('#set-sound')?.closest('.row')?.append(a);
 }
 const withBuild = (path, b = BUILD) => (b ? path + (path.includes('?') ? '&' : '?') + 'b=' + b : path); // logged by the server
 let newBuild = 0, buildBarHidden = false, buildCheck = null, lastBuildCheck = 0;
@@ -383,7 +394,7 @@ async function loadById(id, s = 0, look = null) {
   if (!puzzle) { try { ({ puzzle } = await api('/api/puzzle/' + encodeURIComponent(id))); } catch { restoreLeft(); return; } }
   if (t !== loadSeq) return;
   if (puzzle && !s && look?.id === puzzle.id) {
-    try { s = (await import('./rush-rules.js?v=1795182193')).symFromRecord(puzzle, look); } catch { s = 0; }
+    try { s = (await import('./rush-rules.js?v=1795183303')).symFromRecord(puzzle, look); } catch { s = 0; }
     if (t !== loadSeq) return;
   }
   // The one place a puzzle is oriented (pagesym.js): the page works in the turned labels from here on; the server's
@@ -425,7 +436,7 @@ const fromEngine = (s, r) => s.x.answer(r);
 let lz = null, lzLoad = null;
 const ninjaHref = () => lz && ninjaUrl({ ptn: ptnFor(shownLine()), ply: S.view ?? shownLine().length, name: 'tinue #' + S.p.id }, lz);
 function loadLz() {
-  lzLoad ||= import('./vendor/lz-string.js?v=1795182193').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
+  lzLoad ||= import('./vendor/lz-string.js?v=1795183303').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
 }
 function refreshNinja() {
   if (!S || S.placeholder || S.status !== 'solved') return;
@@ -1737,7 +1748,7 @@ function renderAll(mood) {
   const unended = S.endT0 == null;
   if (S.status === 'solved' && S.endT0 == null && !loading) S.endT0 = performance.now();
   // ...and so the solved sound, once a puzzle, a beat after the winning move's click (none for a solution only viewed)
-  if (unended && S.endT0 != null && S.outcome !== 'viewed') sound.later('solved', 170);
+  if (unended && S.endT0 != null && S.outcome !== 'viewed') sound.verdict('solved', 170); // (after a smash's slap too)
   // A held move whose puzzle changed under it (a check settled it, the play-out ended, ...): every change renders.
   if (pend) pendingEvent({ type: 'phase', key: S === pend.s ? phaseKey(S) : null });
   for (const id of ['#feedback', '#moves']) $(id).classList.toggle('is-loading', loading);
@@ -2232,7 +2243,7 @@ async function navTo(h, step = false) {
   if (h & 1 && (S.view ?? total) === h >> 1) board.peek();
   if (step && S === s && !board.peeking && navAt() === 2 * ((from >> 1) + 1) && performance.now() - stepSoundAt > 60) {
     const snap = board.snaps?.[board.cur];
-    if (snap?.ptn) { stepSoundAt = performance.now(); sound.playMove(snap.ptn, snap.smash); }
+    if (snap?.ptn) { stepSoundAt = performance.now(); sound.playMove(snap.ptn, snap.smash, snap.land); }
   }
 }
 const navAt = () => 2 * (S.view ?? shownLine().length) + (board.peeking ? 1 : 0);
@@ -2302,14 +2313,14 @@ document.addEventListener('click', (e) => {
 });
 
 // ---------- pages ----------
-const TITLES = { 'view-glossary': 'Glossary', 'view-me': 'History', 'view-leaderboard': 'Leaderboard', 'view-rush': 'Rush' };
+const TITLES = { 'view-glossary': 'Glossary', 'view-me': 'History', 'view-leaderboard': 'Leaderboard', 'view-rush': 'Rush', 'view-sounds': 'Sound lab' };
 function setTitle() {
-  const page = ['view-glossary', 'view-me', 'view-leaderboard', 'view-rush'].find((v) => !$('#' + v).classList.contains('hidden'));
+  const page = ['view-glossary', 'view-me', 'view-leaderboard', 'view-rush', 'view-sounds'].find((v) => $('#' + v) && !$('#' + v).classList.contains('hidden'));
   document.title = page ? `${TITLES[page]} — tinue` : S && !S.placeholder ? `Puzzle #${S.p.id} — tinue` : 'tinue — Tak puzzles';
 }
 function show(id) {
   if (id !== 'view-puzzle') pendingEvent({ type: 'leave' });
-  for (const v of ['view-puzzle', 'view-glossary', 'view-me', 'view-leaderboard', 'view-rush']) $('#' + v).classList.toggle('hidden', v !== id);
+  for (const v of ['view-puzzle', 'view-glossary', 'view-me', 'view-leaderboard', 'view-rush', 'view-sounds']) $('#' + v)?.classList.toggle('hidden', v !== id);
   setTitle();
   fitDock(); // the dock (and the room reserved for it) belongs to the puzzle page only
   syncClock(); // another page pauses the puzzle's solve-time clock
@@ -2392,7 +2403,9 @@ async function route() {
   if (page === 'glossary') return glossaryPage();
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795182193')).enter(); } // loaded on first visit
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795183303')).enter(); } // loaded on first visit
+  // The sound lab (sound-lab.js): beta builds only; elsewhere #/sounds is no page at all (it falls through to puzzles)
+  if (page === 'sounds' && window.TINUE_BETA && $('#view-sounds')) { show('view-sounds'); return (await import('./sound-lab.js?v=1795183303')).enter($('#view-sounds')); }
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   // (the same puzzle under another symmetry is another visit; a malformed one is 0 and the address is put right)
@@ -2403,7 +2416,7 @@ async function route() {
     // puzzle as the server sent it, so a second click on the row returns to the visit (as a plain link always has; a
     // restart would leave/abandon the attempt) and a row that saw the puzzle turned still turns it.
     let want = sym, found = false;
-    if (!sym && look?.id === id && S?.p.id === id && S.p0) { try { want = (await import('./rush-rules.js?v=1795182193')).symFromRecord(S.p0, look); found = true; } catch {} }
+    if (!sym && look?.id === id && S?.p.id === id && S.p0) { try { want = (await import('./rush-rules.js?v=1795183303')).symFromRecord(S.p0, look); found = true; } catch {} }
     // A plain link (no symmetry, no Rush note) to the puzzle on screen returns to the visit as it stands, turned or
     // not: restarting it would abandon the attempt, and could cost a rated miss.
     if (!sym && !found && S?.p.id === id) want = symNow();

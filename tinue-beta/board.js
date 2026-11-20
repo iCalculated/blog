@@ -1,9 +1,9 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795182193';
-import { parsePTN } from './shared/ptn.js?v=1795182193';
-import { dispPoint, shapesSvg } from './analysis.js?v=1795182193';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795183303';
+import { parsePTN } from './shared/ptn.js?v=1795183303';
+import { dispPoint, shapesSvg } from './analysis.js?v=1795183303';
 
 const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
@@ -43,6 +43,18 @@ function initialSnap(g, P) {
   return { g, st, ty, hl: null };
 }
 
+// What a move sets down, for its sound (sound.js playMove's info), read off the position before it: a placement's piece;
+// a stack move's top piece (the last to land) and, per square dropped on, what it lands on ('board': the square was
+// empty, 'piece').
+const KIND = { [FLAT]: 'flat', [WALL]: 'wall', [CAP]: 'cap' };
+export function landOf(g, mv) {
+  if (mv.kind === 'p') return { piece: KIND[mv.type] || 'flat' };
+  const size = g.size, from = g.board[mv.sq], [dr, dc] = STEP[mv.dir], onto = [];
+  let r = Math.floor(mv.sq / size), c = mv.sq % size;
+  for (let i = 0; i < mv.drops.length; i++) { r += dr; c += dc; onto.push(g.board[r * size + c].length ? 'piece' : 'board'); }
+  return { top: KIND[typeOf(from[from.length - 1])] || 'flat', onto };
+}
+
 function stepSnap(s, P, ptn) {
   const g = s.g.clone();
   const mv = g.parseMove(ptn);
@@ -68,9 +80,9 @@ function stepSnap(s, P, ptn) {
     }
     hl = { sqs, prim: sqs.slice(1) };
   }
-  const canon = g.moveToPTN(mv);
+  const canon = g.moveToPTN(mv), land = landOf(g, mv);
   const u = g.apply(mv);
-  return { g, st, ty, hl, ptn: canon, smash: u.smashed }; // (smash: a wall flattened, for the move's sound)
+  return { g, st, ty, hl, ptn: canon, smash: u.smashed, land }; // (smash: a wall flattened; land: landOf; for the sound)
 }
 
 // Squares of a finished road with dead ends pruned (what gets drawn at full strength), plus its axes.
@@ -101,9 +113,14 @@ document.addEventListener('focusin', (e) => { if (performance.now() - lastPointe
 export const focusedByPointer = (el) => pointerFocused.has(el);
 
 export class Board {
-  // (ptn, smash) on every move played or appended at the line's end, on any board: app.js connects it to sound.js
-  // (kept out of this file, which node tests import).
+  // The sound hooks, set by app.js to sound.js (kept out of this file, which node tests import):
+  // onPly(ptn, smash, info) on every move played or appended at the line's end, on any board; info is landOf's
+  //   { piece } or { top, onto }, plus byHand when the move was a stack built by hand whose drops onLand already sounded.
+  // onLand([{ piece, onto, drop: true, smash }]) as pieces of a stack being moved by hand land, one input at a time.
+  // onCut() when the board jumps to another position (a load, a step back, a jump): queued drops stop.
   static onPly = null;
+  static onLand = null;
+  static onCut = null;
   constructor(el, { onMove } = {}) {
     this.el = el; this.onMove = onMove;
     el.classList.add('tb-host');
@@ -286,11 +303,36 @@ export class Board {
     return ((b * X + d * Y + h) / 2) * this.n + (a * X + c * Y + h) / 2;
   }
 
-  _show(i, animate = false) {
+  _show(i, animate = false, byHand = false) {
     this.cur = i; this.sel = null; this.peekHl = null;
     this._render(animate);
-    // A move played or appended at the end of the line (animate): its sound. Loads, jumps and restores are silent.
-    if (animate && i > 0) Board.onPly?.(this.snaps[i].ptn, this.snaps[i].smash);
+    // A move played or appended at the end of the line (animate): its sound. Loads, jumps and restores are silent, and
+    // stop the drops of a move still sounding, unless the position shown is the same (last() after append()).
+    const sn = this.snaps[i], key = sn.g.toTPS();
+    if (animate && i > 0) Board.onPly?.(sn.ptn, sn.smash, { ...sn.land, ...(byHand ? { byHand: true } : {}) });
+    else if (key !== this._shownKey) Board.onCut?.();
+    this._shownKey = key;
+  }
+
+  // The pieces of a stack in hand that have landed since the last call: one sound per input, the moment it lands (a
+  // tap, a click, a key). sel.heard is what has sounded, per drop square; a stone taken back off a square (right click)
+  // sounds again when it is set down again. Putting stones back on the origin before leaving it is silent, as are
+  // picking up and cancelling.
+  _landings(sel = this.sel) {
+    if (sel?.t !== 'stack' || sel.path.length < 2) return;
+    const s = this.snaps[this.cur], o = s.st[sel.path[0]], hand = o.slice(o.length - sel.picked), heard = sel.heard || [], out = [];
+    let off = 0;
+    sel.drops.forEach((d, j) => {
+      const prev = Math.min(heard[j] || 0, d);
+      if (d > prev) {
+        const grp = hand.slice(off + prev, off + d), top = grp[grp.length - 1], sq = sel.path[j + 1];
+        const piece = KIND[s.ty[top]] || 'flat', last = j === sel.drops.length - 1;
+        out.push({ piece, onto: prev || s.st[sq].length ? 'piece' : 'board', drop: true, smash: last && sel.flat != null && piece === 'cap' });
+      }
+      off += d;
+    });
+    sel.heard = sel.drops.slice();
+    if (out.length) Board.onLand?.(out);
   }
 
   // A number key (or `) pressed while the board is briefly busy (the intro, the reply, the reset after a miss) is
@@ -395,6 +437,11 @@ export class Board {
   _unmovedStack() { return this.sel?.t === 'stack' && this.sel.path.length === 1; }
 
   _squareClick(sq, alt) {
+    const r = this._squareClick1(sq, alt);
+    this._landings();
+    return r;
+  }
+  _squareClick1(sq, alt) {
     if (!this._canInput()) return;
     const v = this._view();
     if (!this._valid(v).has(sq)) {
@@ -489,6 +536,11 @@ export class Board {
   // Number keys, Enter and ` (PTN Ninja's hotkeys). They lift from the stack under the pointer, then drop on the
   // square under the pointer until the first drop, then on the next square along the line. Never place a stone.
   _keyCount(k) {
+    const r = this._keyCount1(k);
+    this._landings();
+    return r;
+  }
+  _keyCount1(k) {
     const sel = this.sel, s = this.snaps[this.cur], g = s.g, n = this.n;
     if (!this._canInput() || this._locked() || sel?.t === 'tray') return false;
     if (!sel) {
@@ -540,10 +592,11 @@ export class Board {
   _finish() {
     const sel = this.sel, g = this.snaps[this.cur].g;
     const ptn = g.moveToPTN({ kind: 'm', sq: sel.path[0], dir: sel.dir, drops: sel.drops });
-    this._commit(ptn);
+    this._landings(sel); // (the last stones, now: the move is complete and plays nothing more)
+    this._commit(ptn, true);
   }
 
-  _commit(ptn) {
+  _commit(ptn, byHand = false) {
     let next;
     try { next = stepSnap(this.snaps[this.cur], this.P, ptn); } catch { this.cancel(); return; }
     // Like PTN Ninja: playing the move that already comes next just steps forward (the rest of the line is
@@ -551,7 +604,7 @@ export class Board {
     if (this.snaps[this.cur + 1]?.ptn === next.ptn) next = this.snaps[this.cur + 1];
     else { this.snaps.length = this.cur + 1; this.snaps.push(next); }
     this.hlSquares = [];
-    this._show(this.cur + 1, true);
+    this._show(this.cur + 1, true, byHand);
     this.onMove?.(next.ptn);
   }
 

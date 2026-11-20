@@ -5,17 +5,17 @@
 // engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused while they work. Nothing here is rated,
 // and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { Board, buildPTN } from './board.js?v=1795182193';
-import { api, store, token } from './api.js?v=1795182193';
-import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795182193';
-import * as R from './rush-rules.js?v=1795182193';
-import * as engine from './engine.js?v=1795182193';
-import * as tiltak from './tiltak.js?v=1795182193';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795182193';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795182193';
-import { busy, BUSY_MS } from './busy.js?v=1795182193';
-import * as SYM from './shared/sym.js?v=1795182193';
-import * as sound from './sound.js?v=1795182193'; // (moves click through Board.onPly, set by app.js; the verdicts are played here)
+import { Board, buildPTN } from './board.js?v=1795183303';
+import { api, store, token } from './api.js?v=1795183303';
+import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795183303';
+import * as R from './rush-rules.js?v=1795183303';
+import * as engine from './engine.js?v=1795183303';
+import * as tiltak from './tiltak.js?v=1795183303';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795183303';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795183303';
+import { busy, BUSY_MS } from './busy.js?v=1795183303';
+import * as SYM from './shared/sym.js?v=1795183303';
+import * as sound from './sound.js?v=1795183303'; // (moves click through Board.onPly, set by app.js; the verdicts are played here)
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -690,8 +690,9 @@ function done(solved, now, wrong = null, a = null) {
     ...(a ? { played: a.canon, at: c.line.slice(), ...(a.look ? { po: a.look } : {}) } : {}),
     ...(s.run.mode === 'rush' ? { clock: R.timeLeft(s.run, now), combo: s.run.combo } : {}) });
   mark(solved, c.gained || 0, a);
-  // a beat after the move's own click, and before the next puzzle's intro move (INTRO_WAIT)
-  if (solved) sound.later('rushGood', 45); else { sound.later('wrong', 80); s.wrongAt = performance.now() + 80; }
+  // a beat after the move's own sounds (after a smash's slap: sound.verdict), and before the next puzzle's intro move,
+  // whose sound waits until the verdict has played (rushGood is 55 ms long; wrong's second knock ends ~130 ms in)
+  if (solved) sound.verdict('rushGood', 45, 55); else s.wrongAt = performance.now() + sound.verdict('wrong', 80, 130);
   if (s.run.over) return endRun(wrong, !!a?.po);
   nextPuzzle();
 }
