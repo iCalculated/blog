@@ -236,13 +236,11 @@ const PALETTES = {
   #ix .sil { margin-top: 10px; font-size: 0.875rem; color: var(--faint); }
 
   .hint { transition: opacity 1.6s; opacity: 0.78; }
-  .hint .tch { display: none; }
-  body.touch .hint .ptr { display: none; }
-  body.touch .hint .tch { display: inline; }
+  body.touch .hint .ptr { display: none; }   /* touch has no opening hint, only the clue */
   body.hinted .hint, body.no-hint .hint { opacity: 0; }
   .hint .clue { display: none; }
   body.clue .hint { opacity: 0.85; }
-  body.clue .hint .ptr, body.clue .hint .tch { display: none; }
+  body.clue .hint .ptr { display: none; }
   body.clue .hint .clue { display: inline; }
   .scale { display: none; align-items: center; gap: 10px; margin-bottom: 8px; color: var(--ink); opacity: 0.85; }
   body.i-scalebar .scale { display: flex; }
@@ -424,7 +422,7 @@ const PALETTES = {
 
 <div class="hud bl" aria-hidden="true">
   <div class="scale"><i id="bar"></i><span>100 µm</span></div>
-  <div class="hint" id="hint"><span class="ptr">click a cell to keep it talking · its name is the link</span><span class="tch">tap a cell to keep it talking · tap its name to visit</span><span class="clue">some cells only fire when two neighbours speak at once</span></div>
+  <div class="hint" id="hint"><span class="ptr">click a cell to keep it talking · its name is the link</span><span class="clue">some cells only fire when two neighbours speak at once</span></div>
   <div id="stimlog"></div>
 </div>
 
