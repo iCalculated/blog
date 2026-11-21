@@ -235,13 +235,9 @@ const PALETTES = {
   #ix .u b { color: var(--dim); }
   #ix .sil { margin-top: 10px; font-size: 0.875rem; color: var(--faint); }
 
-  .hint { transition: opacity 1.6s; opacity: 0.78; }
-  body.touch .hint .ptr { display: none; }   /* touch has no opening hint, only the clue */
-  body.hinted .hint, body.no-hint .hint { opacity: 0; }
-  .hint .clue { display: none; }
-  body.clue .hint { opacity: 0.85; }
-  body.clue .hint .ptr { display: none; }
-  body.clue .hint .clue { display: inline; }
+  /* holds only the clue: hidden (from find-in-page and selection too) until body.clue fades it in */
+  .hint { opacity: 0; visibility: hidden; transition: opacity 1.6s, visibility 0s 1.6s; }
+  body.clue .hint { opacity: 0.85; visibility: visible; transition: opacity 1.6s; }
   .scale { display: none; align-items: center; gap: 10px; margin-bottom: 8px; color: var(--ink); opacity: 0.85; }
   body.i-scalebar .scale { display: flex; }
   .scale i { display: block; height: 3px; background: var(--ink); }
@@ -422,7 +418,7 @@ const PALETTES = {
 
 <div class="hud bl" aria-hidden="true">
   <div class="scale"><i id="bar"></i><span>100 µm</span></div>
-  <div class="hint" id="hint"><span class="ptr">click a cell to keep it talking · its name is the link</span><span class="clue">some cells only fire when two neighbours speak at once</span></div>
+  <div class="hint" id="hint"><span class="clue">some cells only fire when two neighbours speak at once</span></div>
   <div id="stimlog"></div>
 </div>
 
@@ -1552,7 +1548,6 @@ function setActive(s, via) {
   if (active) {
     active.el.classList.add('act');
     const r = ixEl.querySelector('.ir[data-k="' + active.k + '"]'); if (r) r.classList.add('act');
-    interacted();
     if (cfg.instrument.cellPanel && active.known) {
       document.getElementById('pname').textContent = 'roi ' + active.num + ' · ' + active.p.name;
       document.getElementById('purl').textContent = active.p.href ? active.p.href.replace(/^(https?:\/\/|mailto:)/, '') : 'unreleased';
@@ -1567,8 +1562,6 @@ function positionPanel(r) {
   if (x < 12 || x + pw > W - 12) { x = clamp(r.x - pw / 2, 12, W - pw - 12); y = r.y + r.rp + 34; if (y + ph > H - 12) y = r.y - r.rp - 34 - ph; }
   panel.style.transform = 'translate(' + clamp(x, 12, W - pw - 12).toFixed(0) + 'px,' + clamp(y, 12, H - ph - 12).toFixed(0) + 'px)';
 }
-let interactions = 0, hintT = 0;
-function interacted() { if (++interactions >= 3) document.body.classList.add('hinted'); }
 // voices: the hovered / focused cell, plus up to two the visitor clicked to keep talking. At most two speak.
 let latched = [];   // [{ s, until }], newest first
 function latch(s) {
@@ -1598,7 +1591,6 @@ function pokeSlot(s, touch, kb) {
   stimVis.x = s.x; stimVis.y = s.y; stimVis.t = nowSec; stimVis.rad = 22; stimVis.frame = -99;
   latch(s);
   if (touch) { setActive(s, 'touch'); pinned = true; }
-  interacted();
 }
 let ptr = null, ptrMoved = false;
 window.addEventListener('pointermove', e => { if (e.pointerType === 'mouse') { ptr = [e.clientX, e.clientY]; ptrMoved = true; } }, { passive: true });
@@ -1612,7 +1604,6 @@ window.addEventListener('pointerdown', e => {
   if (t.closest && t.closest('a,button,input,select,label,summary,#tune,#ix,.lab')) return;
   if (pinned) setActive(null);
   stimAt(e.clientX, e.clientY, nowSec);
-  interacted();
 }, { passive: true });
 function nearUpdate() {
   if (!ptrMoved || !ptr) return; ptrMoved = false;
@@ -2674,7 +2665,6 @@ function frame(ms) {
     }
   }
   if (elStim.classList.contains('on') && nowSec - stimLogT > 2.6) elStim.classList.remove('on');
-  if (cfg.text.hint && !document.body.classList.contains('hinted') && nowSec > 25) document.body.classList.add('hinted');
   if (cfg.text.hint && !clueShown && !DEMO && !foundOrder.length && nowSec > 22) { clueShown = true; showClue(9); }
   if (BENCH && R2 && simT0 >= 0) {
     const tc = performance.now();
