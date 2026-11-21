@@ -26,8 +26,8 @@ window.__tinueNinja = (function () {
 if (window.__tinueNinja) document.head.append(Object.assign(document.createElement('link'), { rel: 'preconnect', href: 'https://ptn.ninja' }));</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="board.css?v=1795183303">
-<link rel="stylesheet" href="style.css?v=1795183303">
+<link rel="stylesheet" href="board.css?v=1795284866">
+<link rel="stylesheet" href="style.css?v=1795284866">
 <style>.booting main, .booting .credits { visibility: hidden; }</style>
 <script>setTimeout(() => document.documentElement.classList.remove("booting"), 2000);</script>
 <meta name="googlebot" content="noindex"><meta name="bingbot" content="noindex">
@@ -60,7 +60,19 @@ if (window.__tinueNinja) document.head.append(Object.assign(document.createEleme
         f.allow = 'fullscreen; clipboard-write';
         // PTN Ninja says it's up once (GAME_STATE), possibly before ninja.js has loaded to hear it
         addEventListener('message', function up(e) { if (e.source === f.contentWindow && e.data && e.data.action === 'GAME_STATE') { window.__ninjaUp = true; removeEventListener('message', up); } });
-        f.src = 'https://ptn.ninja/&moveNumber=false&unplayedPieces=true&disableStoneCycling=true&showBoardPrefsBtn=false&disableNavigation=true&disablePTN=true&disableText=true&flatCounts=true&turnIndicator=true&gameTimer=false&showHeader=false&showEval=false&showRoads=false&stackCounts=false&notifyGame=false&disableUndo=true&showPTN=false&showText=false&showControls=false&showScrubber=false&animateBoard=true'; // same settings as UI in ninja.js
+        var src = '&moveNumber=false&unplayedPieces=true&disableStoneCycling=true&showBoardPrefsBtn=false&disableNavigation=true&disablePTN=true&disableText=true&flatCounts=true&turnIndicator=true&gameTimer=false&showHeader=false&showEval=false&showRoads=false&stackCounts=false&notifyGame=false&disableUndo=true&showPTN=false&showText=false&showControls=false&showScrubber=false&animateBoard=true'; // same settings as UI in ninja.js
+        // The player's PTN Ninja look (Settings page) over them, as ninja-look.js frameParams lays it: only its keys, each
+        // value of its form (b: true/false, p: 1 to 10, t: a compressed theme), so nothing else reaches the address.
+        try {
+          var look = (JSON.parse(localStorage.getItem('tinue.prefs')) || {}).ninja, K = { axisLabels: 'b', axisLabelsSmall: 'b', board3D: 'b', orthographic: 'b', perspective: 'p', centerStackCounts: 'b', stackCounts: 'b', flatCounts: 'b', flatWinHighlights: 'b', moveNumber: 'b', turnIndicator: 'b', verticalLayout: 'b', verticalLayoutAuto: 'b', theme: 't' };
+          var FORM = { b: /^(true|false)$/, p: /^([1-9]|10)$/, t: /^[A-Za-z0-9$+-]{1,1500}$/ };
+          if (typeof look === 'string' && look.length <= 1500) look.split('&').forEach(function (item) {
+            var eq = item.indexOf('='), k = item.slice(0, eq), v = item.slice(eq + 1);
+            if (eq < 1 || !Object.prototype.hasOwnProperty.call(K, k) || !FORM[K[k]].test(v)) return;
+            src = src.replace(new RegExp('&' + k + '=[^&]*'), '') + '&' + k + '=' + v;
+          });
+        } catch (e) {}
+        f.src = 'https://ptn.ninja/' + src;
         b.append(f);
       }
     </script>
@@ -91,7 +103,7 @@ if (window.__tinueNinja) document.head.append(Object.assign(document.createEleme
         </label>
       </div>
       <div class="settings">
-        <h2>Settings</h2>
+        <div class="set-head"><h2>Settings</h2><a href="#/settings" class="set-all">All settings</a></div>
         <div class="row">
           <label class="field"><span>Board style</span>
             <select id="set-board"><option value="tinue">tinue</option><option value="ninja">PTN Ninja</option></select>
@@ -118,13 +130,14 @@ if (window.__tinueNinja) document.head.append(Object.assign(document.createEleme
 <main id="view-me" class="page hidden"></main>
 <main id="view-leaderboard" class="page hidden"></main>
 <main id="view-rush" class="page rush-page hidden"></main>
+<main id="view-settings" class="page settings-page hidden"></main>
 
 <footer class="credits">
   <p>Puzzles come from games played on <a href="https://playtak.com">PlayTak</a>. 6×6 positions are evaluated by <a href="https://github.com/Ciekce/syntaks">Syntaks</a>, Ciekce’s engine, which also defends when you play a move out, running in your browser with his <a href="https://github.com/Ciekce/syntaks-nets">cnet023 net</a> (<a href="syntaks/NOTICE.txt">licence</a>); other sizes by <a href="https://github.com/MortenLohne/tiltak">Tiltak</a>, Morten Lohne’s engine. The board is modeled on <a href="https://ptn.ninja">PTN Ninja</a>’s, and theme names follow the <a href="https://ustak.org/tak-terminology/">USTA glossary</a>.</p>
   <p>tinue is free software under the <a href="LICENSE.txt">GNU GPL v3</a>. <a href="https://github.com/iCalculated/blog/tree/main/tinue">Source code</a>.</p>
 </footer>
 
-<script src="config.js?v=1795183303"></script>
-<script type="module" src="app.js?v=1795183303"></script>
+<script src="config.js?v=1795284866"></script>
+<script type="module" src="app.js?v=1795284866"></script>
 </body>
 </html>

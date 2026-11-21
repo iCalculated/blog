@@ -36,3 +36,40 @@ export function compressToEncodedURIComponent(input) {
   for (;;) { val <<= 1; if (pos === BITS - 1) { out.push(URI_SAFE[val]); break; } pos++; } // flush the last character
   return out.join('');
 }
+
+// The decompress half (added 2026-11-20 for the PTN Ninja settings string, whose theme comes compressed): the same
+// format read back. Hostile input is expected here (a player pastes it), so this one stops early: null for a stream
+// that isn't lz-string or whose output would pass maxOut characters (a short stream can expand quadratically).
+export function decompressFromEncodedURIComponent(input, maxOut = 20000) {
+  if (typeof input !== 'string' || input === '') return null;
+  input = input.replace(/ /g, '+'); // (a + that a form or URL decoding turned into a space)
+  const n = input.length;
+  let idx = 0, val = 0, pos = 0;
+  const next = () => { const v = URI_SAFE.indexOf(input.charAt(idx++)); val = v < 0 ? 0 : v; pos = 32; };
+  next();
+  const bits = (k) => { // low bit first, as written
+    let r = 0;
+    for (let i = 0; i < k; i++) { if (val & pos) r |= 1 << i; pos >>= 1; if (!pos) next(); }
+    return r;
+  };
+  const dict = ['', '', ''];
+  let numBits = 3, enlargeIn = 4, out = '';
+  const grow = () => { if (--enlargeIn === 0) { enlargeIn = 2 ** numBits; numBits++; } };
+  const first = bits(2);
+  if (first === 2) return '';
+  if (first > 2) return null;
+  let w = String.fromCharCode(bits(first === 0 ? 8 : 16));
+  dict.push(w); out = w;
+  for (;;) {
+    if (idx > n) return null; // ran off the end without the end-of-stream code
+    let c = bits(numBits);
+    if (c === 2) return out;
+    if (c < 2) { dict.push(String.fromCharCode(bits(c === 0 ? 8 : 16))); c = dict.length - 1; grow(); }
+    const entry = c < dict.length && c > 2 ? dict[c] : c === dict.length ? w + w.charAt(0) : null;
+    if (entry == null) return null;
+    out += entry;
+    if (out.length > maxOut) return null;
+    dict.push(w + entry.charAt(0)); grow();
+    w = entry;
+  }
+}

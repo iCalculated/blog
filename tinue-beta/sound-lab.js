@@ -4,7 +4,7 @@
 // row, the whole edited set copied as JSON to send back, stored on this device for the page to play (sound.js
 // setCustom; beta only), and a recording decoded locally to play next to the synth, level-matched.
 // The pure part (PARAMS, defaultsFor, editSet, exportSet, parseSet) runs in node too: scripts/test-sound-lab.mjs.
-import { MOVE_RECIPES, MOVE_SOUNDS, SOUNDS, VOICES, VARIANTS, renderRecipe, recipeFrom, loudness, setCustom, getCustom, getVoice, isEnabled, CUSTOM_KEY } from './sound.js?v=1795183303';
+import { MOVE_RECIPES, MOVE_SOUNDS, SOUNDS, VOICES, VARIANTS, renderRecipe, recipeFrom, loudness, setCustom, getCustom, getVoice, isEnabled, CUSTOM_KEY, validRecipe } from './sound.js?v=1795284866';
 
 const DROPS = { dropBoard: 'flatBoard', dropPiece: 'flatPiece' }; // a drop's level is set under its placement's
 const OTHER = ['wrong', 'solved', 'rushGood', 'rushEnd', 'lowTime']; // untouched: Play only
@@ -99,17 +99,18 @@ export function exportSet(state = {}, raw = {}) {
   const params = Object.fromEntries(MOVE_SOUNDS.map((n) => [n, fill(n, state[n])]));
   return JSON.stringify({ tinueSoundLab: 1, sounds: { ...editSet(state), ...raw }, params, voices: MOVE_RECIPES.voices, vary: MOVE_RECIPES.vary }, null, 1);
 }
-const isRecipe = (r) => !!r && typeof r === 'object' && Array.isArray(r.events) && r.events.length > 0 && r.events.length <= 16;
 // Back from that JSON (or any { sounds: { name: recipe } }, such as a fitted set put together by hand): { sounds,
 // params, raw }, raw the recipes the sliders do not make (to be played as they are, sliders inactive). Throws on
-// anything else.
+// anything else, and on a recipe sound.js could not render (validRecipe: stored, it would silence that move).
 export function parseSet(text) {
   const j = typeof text === 'string' ? JSON.parse(text) : text;
   if (!j || typeof j !== 'object' || !j.sounds || typeof j.sounds !== 'object') throw new Error('not a sound lab set');
+  const broken = MOVE_SOUNDS.filter((n) => j.sounds[n] != null && !validRecipe(j.sounds[n]));
+  if (broken.length) throw new Error('not a recipe this page can play: ' + broken.join(', '));
   const params = {};
   for (const n of MOVE_SOUNDS) if (j.params?.[n]) params[n] = fill(n, j.params[n]);
   const made = editSet(params), raw = {};
-  for (const n of MOVE_SOUNDS) if (isRecipe(j.sounds[n]) && JSON.stringify(j.sounds[n]) !== JSON.stringify(made[n])) raw[n] = j.sounds[n];
+  for (const n of MOVE_SOUNDS) if (j.sounds[n] != null && JSON.stringify(j.sounds[n]) !== JSON.stringify(made[n])) raw[n] = j.sounds[n];
   return { sounds: j.sounds, params, raw };
 }
 
@@ -139,15 +140,36 @@ const fmt = (p, v) => (p.unit === '×' ? '×' + v.toFixed(2) : p.unit === 'dB' ?
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 const readStored = () => { try { return JSON.parse(localStorage.getItem(CUSTOM_KEY)); } catch { return null; } };
 
-let ac = null, root = null;
+// The lab's own AudioContext (it plays whatever the Sound setting says): made on first use, asleep (suspended) 1.5 s
+// after the last sound ends, as sound.js's is, and closed when the lab page is left (leave). ctxOf() for rendering and
+// decoding, which work asleep; audio() to play, which wakes it.
+let ac = null, root = null, idleT = null, busyUntil = 0;
+const srcs = new Set(); // what the lab started, until it ends: leave() stops them
+const ctxOf = () => { if (!ac) { const AC = window.AudioContext || window.webkitAudioContext; ac = new AC({ latencyHint: 'interactive' }); } return ac; };
 const audio = () => {
-  if (!ac) { const AC = window.AudioContext || window.webkitAudioContext; ac = new AC({ latencyHint: 'interactive' }); }
-  if (ac.state !== 'running') ac.resume().catch(() => {});
-  return ac;
+  const a = ctxOf();
+  if (a.state !== 'running') a.resume().catch(() => {});
+  return a;
 };
+function armIdle() {
+  clearTimeout(idleT);
+  idleT = setTimeout(() => {
+    idleT = null;
+    if (performance.now() < busyUntil + 1495) return armIdle();
+    if (ac?.state === 'running') ac.suspend().catch(() => {});
+  }, Math.max(0, busyUntil - performance.now()) + 1500);
+}
+// The lab page is left (app.js route): its sounds stop and its context is closed (a new one is made on return).
+export function leave() {
+  clearTimeout(idleT); idleT = null;
+  for (const s of srcs) { try { s.stop(); } catch {} }
+  srcs.clear();
+  const a = ac; ac = null; root = null;
+  try { a?.close().catch(() => {}); } catch {}
+}
 const bufCache = new Map();
 function bufferOf(recipe, name, voice, variant) {
-  const r = recipeFrom(recipe, name, voice, variant), key = JSON.stringify([r, audio().sampleRate]);
+  const r = recipeFrom(recipe, name, voice, variant), key = JSON.stringify([r, ctxOf().sampleRate]);
   let b = bufCache.get(key);
   if (!b) {
     const d = renderRecipe(r, ac.sampleRate);
@@ -162,8 +184,25 @@ function bufferOf(recipe, name, voice, variant) {
 function playBuf(b, when = 0, gain = 1) {
   const a = audio(), src = a.createBufferSource(), g = a.createGain();
   g.gain.value = gain; src.buffer = b; src.connect(g); g.connect(a.destination);
-  src.onended = () => { src.disconnect(); g.disconnect(); };
+  srcs.add(src);
+  src.onended = () => { src.disconnect(); g.disconnect(); srcs.delete(src); };
   src.start(a.currentTime + 0.02 + when / 1000);
+  busyUntil = Math.max(busyUntil, performance.now() + 20 + when + b.duration * 1000);
+  armIdle();
+}
+
+// A recording as the lab plays it: its channels mixed to one (what is measured is what is played: a stereo file's
+// channels measured as a mix but played apart could be driven far past full scale, or 6 dB off level), and the gain
+// that brings its loudest 50 ms to the synth's level, never past a 0.99 peak.
+export function monoOf(chans) {
+  const n = chans[0]?.length || 0, mono = new Float32Array(n);
+  for (const d of chans) for (let i = 0; i < n; i++) mono[i] += d[i] / chans.length;
+  return mono;
+}
+export function matchGain(synLvl, mono, sr) {
+  let peak = 0;
+  for (const v of mono) peak = Math.max(peak, Math.abs(v));
+  return Math.min(10 ** ((synLvl - loudness(mono, sr)) / 20), 0.99 / (peak || 1));
 }
 
 export function enter(el) {
@@ -311,7 +350,7 @@ export function enter(el) {
 
   const others = new Map();
   function otherBuf(n) {
-    const a = audio(), k = n + ':' + st.voice;
+    const a = ctxOf(), k = n + ':' + st.voice;
     if (!others.has(k)) { const d = SOUNDS[n].render(a.sampleRate, { voice: st.voice }); const b = a.createBuffer(1, d.length, a.sampleRate); b.getChannelData(0).set(d); others.set(k, b); }
     return others.get(k);
   }
@@ -319,18 +358,17 @@ export function enter(el) {
     const out = el.querySelector('#sl-rec');
     if (!f) return;
     try {
-      const a = audio(), b = await a.decodeAudioData(await f.arrayBuffer());
-      const mono = new Float32Array(b.length);
-      for (let c = 0; c < b.numberOfChannels; c++) { const d = b.getChannelData(c); for (let i = 0; i < d.length; i++) mono[i] += d[i] / b.numberOfChannels; }
-      let peak = 0; for (const v of mono) peak = Math.max(peak, Math.abs(v));
-      rec.buf = b; rec.lvl = loudness(mono, b.sampleRate); rec.peak = peak;
+      const a = ctxOf(), b = await a.decodeAudioData(await f.arrayBuffer());
+      const mono = monoOf(Array.from({ length: b.numberOfChannels }, (_, c) => b.getChannelData(c)));
+      const m = a.createBuffer(1, mono.length, b.sampleRate); m.getChannelData(0).set(mono);
+      rec.buf = m; rec.mono = mono; rec.lvl = loudness(mono, b.sampleRate);
       out.textContent = `${f.name}: ${(b.duration * 1000).toFixed(0)} ms, ${b.numberOfChannels} ch, ${b.sampleRate} Hz, loudest 50 ms ${rec.lvl.toFixed(1)} dBFS.`;
     } catch (err) { rec.buf = null; out.textContent = 'Could not decode that file here (' + (err?.message || err) + ').'; }
   }
   function compare(which) {
     const syn = bufferOf(sets()[rec.name], rec.name, st.voice, 0);
     if (which !== 'syn' && !rec.buf) { el.querySelector('#sl-rec').textContent = 'Choose a recording first.'; return; }
-    const g = rec.buf ? Math.min(10 ** ((syn.__lvl - rec.lvl) / 20), 0.99 / (rec.peak || 1)) : 1;
+    const g = rec.buf ? matchGain(syn.__lvl, rec.mono, rec.buf.sampleRate) : 1;
     if (which === 'rec') playBuf(rec.buf, 0, g);
     else if (which === 'syn') playBuf(syn);
     else { playBuf(rec.buf, 0, g); playBuf(syn, rec.buf.duration * 1000 + 400); }

@@ -120,15 +120,26 @@ export class Game {
   parseMove(ptn) {
     const s = ptn.trim().replace(/['"!?]+$/, '');
     let m = /^([FSC])?([a-h])([1-8])$/.exec(s);
-    if (m) return { kind: 'p', sq: this.sqIndex(m[2] + m[3]), type: m[1] === 'S' ? WALL : m[1] === 'C' ? CAP : FLAT };
+    if (m) return { kind: 'p', sq: this._onBoard(m[2], m[3], ptn), type: m[1] === 'S' ? WALL : m[1] === 'C' ? CAP : FLAT };
     m = /^([1-8])?([a-h])([1-8])([<>+-])([1-8]*)\*?$/.exec(s);
     if (m) {
       const count = m[1] ? +m[1] : 1;
       const drops = m[5] ? m[5].split('').map(Number) : [count];
       if (drops.reduce((a, b) => a + b, 0) !== count) throw new Error('drop counts do not sum: ' + ptn);
-      return { kind: 'm', sq: this.sqIndex(m[2] + m[3]), dir: m[4], drops };
+      const sq = this._onBoard(m[2], m[3], ptn), [dr, dc] = DIRS[m[4]], k = drops.length;
+      const r = Math.floor(sq / this.size) + dr * k, c = sq % this.size + dc * k;
+      if (r < 0 || r >= this.size || c < 0 || c >= this.size) throw new Error('spread leaves the board: ' + ptn);
+      return { kind: 'm', sq, dir: m[4], drops };
     }
     throw new Error('unparseable move: ' + ptn);
+  }
+
+  // The regexes accept files a-h and ranks 1-8 on every size, and sqIndex would wrap an off-board square onto a real
+  // one (g1 on 6x6 is a2), so a typo could be played and judged as a different legal move. Off the board is unparseable.
+  _onBoard(file, rank, ptn) {
+    const c = FILES.indexOf(file), r = +rank - 1;
+    if (c < 0 || c >= this.size || r < 0 || r >= this.size) throw new Error('square off the board: ' + ptn);
+    return r * this.size + c;
   }
 
   // Canonical PTN (no '*'); use for equality.

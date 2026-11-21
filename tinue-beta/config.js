@@ -1,5 +1,5 @@
-// Built 2026-11-20 — API at https://tinue-api.shydrie.xyz.
+// Built 2026-11-21 — API at https://tinue-api.shydrie.xyz.
 window.TINUE_API = 'https://tinue-api.shydrie.xyz';
-window.TINUE_BUILD = 1795183303;
+window.TINUE_BUILD = 1795284866;
 window.TINUE_STUBS = false;
-window.TINUE_BETA = 'beta@ccb2091';
+window.TINUE_BETA = 'beta@2aacee6';

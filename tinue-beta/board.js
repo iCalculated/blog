@@ -1,11 +1,11 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795183303';
-import { parsePTN } from './shared/ptn.js?v=1795183303';
-import { dispPoint, shapesSvg } from './analysis.js?v=1795183303';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795284866';
+import { parsePTN } from './shared/ptn.js?v=1795284866';
+import { dispPoint, shapesSvg, stackPiece, SP, GAP } from './analysis.js?v=1795284866';
 
-const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
+// (SP, GAP: the stack step, % of a square, and how many steps a carried hand is lifted; analysis.js stackPiece)
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
 const FILES = 'abcdefgh';
 // Board orientation: a 2×2 matrix [a, b, c, d] taking centred logical (file, rank) to display (x, y), y up.
@@ -118,6 +118,7 @@ export class Board {
   //   { piece } or { top, onto }, plus byHand when the move was a stack built by hand whose drops onLand already sounded.
   // onLand([{ piece, onto, drop: true, smash }]) as pieces of a stack being moved by hand land, one input at a time.
   // onCut() when the board jumps to another position (a load, a step back, a jump): queued drops stop.
+  // Each gets the board it came from as its last argument (app.js: a board out of sight makes no sound).
   static onPly = null;
   static onLand = null;
   static onCut = null;
@@ -309,8 +310,8 @@ export class Board {
     // A move played or appended at the end of the line (animate): its sound. Loads, jumps and restores are silent, and
     // stop the drops of a move still sounding, unless the position shown is the same (last() after append()).
     const sn = this.snaps[i], key = sn.g.toTPS();
-    if (animate && i > 0) Board.onPly?.(sn.ptn, sn.smash, { ...sn.land, ...(byHand ? { byHand: true } : {}) });
-    else if (key !== this._shownKey) Board.onCut?.();
+    if (animate && i > 0) Board.onPly?.(sn.ptn, sn.smash, { ...sn.land, ...(byHand ? { byHand: true } : {}) }, this);
+    else if (key !== this._shownKey) Board.onCut?.(this);
     this._shownKey = key;
   }
 
@@ -332,7 +333,7 @@ export class Board {
       off += d;
     });
     sel.heard = sel.drops.slice();
-    if (out.length) Board.onLand?.(out);
+    if (out.length) Board.onLand?.(out, this);
   }
 
   // A number key (or `) pressed while the board is briefly busy (the intro, the reply, the reset after a miss) is
@@ -667,16 +668,11 @@ export class Board {
       const stack = st[sq], len = stack.length;
       if (!len) continue;
       const [dc, dr] = this._disp(sq);
-      const over = Math.max(0, len - 10 - n);
       for (let z = 0; z < len; z++) {
-        const id = stack[z], up = v.lifted.has(id), wall = ty[id] === WALL, imm = len - z > n;
-        let y = SP * (z + (up ? GAP : 0));
-        if (len > n && z >= len - n) y -= SP * (len - n);
-        if (wall && len > 1) y -= SP;
-        if (imm) y -= SP * over;
+        const id = stack[z], wall = ty[id] === WALL, { y, imm, ov, z: zi } = stackPiece(len, z, n, wall, v.lifted.has(id));
         onBoard.add(id);
-        this._piece(id, dc * 100, -(dr * 100 + y), 10000 + z + (up ? GAP : 0) - (imm ? over : 0),
-          (wall ? ' S' : ty[id] === CAP ? ' C' : '') + (imm ? ' im' : '') + (z < over ? ' ov' : '') + (id === v.first ? ' fs' : ''));
+        this._piece(id, dc * 100, -(dr * 100 + y), zi,
+          (wall ? ' S' : ty[id] === CAP ? ' C' : '') + (imm ? ' im' : '') + (ov ? ' ov' : '') + (id === v.first ? ' fs' : ''));
       }
       if (sq === this.hover || selSqs.includes(sq)) counts.set(stack[len - 1], len);
     }

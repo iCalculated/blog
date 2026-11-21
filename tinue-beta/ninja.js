@@ -2,9 +2,10 @@
 // embeds it. Same API as Board (board.js), so app.js doesn't care which one it has. Only loaded via import()
 // when the flag is set: everyone else fetches nothing from here or from ptn.ninja.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1795183303';
-import { parsePTN } from './shared/ptn.js?v=1795183303';
-import { Board, buildPTN, focusedByPointer, landOf } from './board.js?v=1795183303';
+import { Game } from './shared/tak.js?v=1795284866';
+import { parsePTN } from './shared/ptn.js?v=1795284866';
+import { Board, buildPTN, focusedByPointer, landOf } from './board.js?v=1795284866';
+import { frameParams, lookUi } from './ninja-look.js?v=1795284866';
 
 const ORIGIN = 'https://ptn.ninja';
 // tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses).
@@ -30,6 +31,10 @@ const UI = {
 };
 // PTN Ninja reads URL settings from the path as /&key=value (not a ?query, which it ignores)
 const PARAMS = '&' + Object.entries(UI).filter(([k]) => k !== 'theme').map(([k, v]) => `${k}=${v}`).join('&');
+// The player's own PTN Ninja look (Settings page, ninja-look.js): its settings over these, its theme (if it has one)
+// instead of tinue's. Without one, exactly tinue's. Those of UI's keys a look can change, for putting back when it goes.
+const withLook = (look) => ({ ...UI, ...look });
+const LOOK_BASE = { axisLabels: true, axisLabelsSmall: true, board3D: false, orthographic: false, perspective: 5, centerStackCounts: false, flatWinHighlights: true, verticalLayout: true, verticalLayoutAuto: true }; // PTN Ninja's own defaults (its src/store/ui/state.js)
 const FRAME_CSS = 'display:block;width:100%;aspect-ratio:1/1.3;border:0;border-radius:var(--corner,6px);background:#262421';
 // tinue's orientation keys, for when focus is on the page rather than inside the iframe (PTN Ninja's own hotkeys
 // handle them there).
@@ -41,15 +46,16 @@ const store = {
 };
 
 export class NinjaBoard {
-  constructor(el, { onMove } = {}) {
-    this.el = el; this.onMove = onMove;
+  // look: the stored PTN Ninja look (prefs.ninja); index.html started the iframe with the same one in its address.
+  constructor(el, { onMove, look = '' } = {}) {
+    this.el = el; this.onMove = onMove; this.look = lookUi(look);
     this.opts = { disableBoard: false, showRoads: false, animateBoard: true, dropOnStray: false };
     this.lockUntil = 0;
     this.games = [new Game(5)]; this.snaps = [{}]; this.cur = 0; this.peeking = false;
     this.ptn = null; this.player = null; this.hl = [];
     // index.html usually started the iframe already (before the page's modules loaded); otherwise start it now
     let f = el.querySelector('iframe');
-    if (!f) { f = document.createElement('iframe'); f.allow = 'fullscreen; clipboard-write'; f.src = ORIGIN + '/' + PARAMS; f.style.opacity = '0'; el.replaceChildren(f); }
+    if (!f) { f = document.createElement('iframe'); f.allow = 'fullscreen; clipboard-write'; f.src = ORIGIN + '/' + frameParams(PARAMS, look); f.style.opacity = '0'; el.replaceChildren(f); }
     this.iframe = f;
     f.title = 'Tak board (PTN Ninja)';
     f.style.cssText = FRAME_CSS + ';opacity:' + f.style.opacity + ';transition:opacity .15s';
@@ -87,10 +93,19 @@ export class NinjaBoard {
     if (!this._resolve || this.fb) return;
     clearTimeout(this._failTimer);
     // tinue shows names nowhere else on the board, and they crowd the flat counts
-    this._post('SET_UI', { ...UI, boardTransform: store.get('ninjaTransform') || [0, 0] });
+    this._post('SET_UI', { ...withLook(this.look), boardTransform: store.get('ninjaTransform') || [0, 0] });
     this._post('SHOW_NAMES', false);
     this._resolve(); this._resolve = null;
     this._settle();
+  }
+
+  // A new look from the Settings page (or the account): what the old one set and the new one doesn't goes back to
+  // tinue's (or PTN Ninja's own default), the rest is the new one's. A page about to be shown waits for PTN Ninja anyway.
+  setLook(stored) {
+    const prev = this.look, look = this.look = lookUi(stored), out = {};
+    for (const k of Object.keys(prev)) if (!(k in look)) out[k] = k in UI ? UI[k] : LOOK_BASE[k];
+    Object.assign(out, look);
+    return Object.keys(out).length ? this._send('SET_UI', out) : this.ready;
   }
 
   // PTN Ninja's hotkeys (number keys, Enter, `) only work while its iframe has keyboard focus, so a puzzle that
@@ -124,7 +139,7 @@ export class NinjaBoard {
   // PTN Ninja never came up: put tinue's own board in its place, in the same state, and hand it every call.
   async _fallback() {
     if (this.fb || !this._resolve) return;
-    const { Board } = await import('./board.js?v=1795183303');
+    const { Board } = await import('./board.js?v=1795284866');
     this.el.style.cssText = ''; // index.html's placeholder background
     const fb = new Board(this.el, { onMove: this.onMove });
     this.fb = fb;
@@ -151,7 +166,7 @@ export class NinjaBoard {
     this.cur++; this.peeking = false;
     // (as Board's _commit: the move's sound. PTN Ninja reports only finished moves, so a stack moved by hand there sounds
     // as a whole when it is complete: its drops in a row, as a reply's would)
-    Board.onPly?.(canon, this.snaps[this.cur].smash, this.snaps[this.cur].land);
+    Board.onPly?.(canon, this.snaps[this.cur].smash, this.snaps[this.cur].land, this);
     // A different move mid-line: PTN Ninja made it a branch, so its ply numbers no longer match ours (stepping back
     // would show the old line). Give it the line as tinue has it, one straight line, at the same spot.
     if (next && next !== canon) this._relinearize();
@@ -176,10 +191,13 @@ export class NinjaBoard {
     const komi = +(headers.Komi || 0);
     const g = headers.TPS ? Game.fromTPS(headers.TPS, komi) : new Game(+headers.Size || 5);
     g.komi = komi;
-    if (ptn !== this.ptn) Board.onCut?.(); // (another position: as Board's load)
+    // (another position shown: as Board's load, which compares what it shows. The same PTN can be another position: a
+    // move made here since the last load (a spread on PTN Ninja, cancelled by Confirm moves) is not in it.)
+    const was = this.games?.[this.cur]?.toTPS?.();
     this.games = [g]; this.snaps = [{}]; this.ptn = ptn; this.headers = headers;
     for (const m of moves) { const c = this._canon(this.games.at(-1), m); if (!c) break; this._push(c); }
     this.cur = this.snaps.length - 1; this.peeking = false;
+    if (this.games[this.cur].toTPS() !== was) Board.onCut?.(this);
     // without PTN Ninja's fly-in animation for the whole game
     await this._send('SET_UI', { animateBoard: false });
     this._post('HIGHLIGHT_SQUARES', []); this.hl = []; this.shapeKey = null; // (a hint's squares go with the old line)
@@ -194,11 +212,11 @@ export class NinjaBoard {
     if (!c) return;
     const atEnd = this.cur === this.snaps.length - 1;
     this._push(c); this.cur = this.snaps.length - 1; this.peeking = false;
-    if (atEnd) Board.onPly?.(c, this.snaps[this.cur].smash, this.snaps[this.cur].land); // (as Board's append: silent while browsing back)
+    if (atEnd) Board.onPly?.(c, this.snaps[this.cur].smash, this.snaps[this.cur].land, this); // (as Board's append: silent while browsing back)
     await this._send('APPEND_PLY', c);
   }
   // (a jump to another ply stops a move's drops still sounding, as Board's _show does)
-  _jump(i) { if (i !== this.cur) Board.onCut?.(); this.cur = i; this.peeking = false; }
+  _jump(i) { if (i !== this.cur) Board.onCut?.(this); this.cur = i; this.peeking = false; }
   goTo(plyID) { this._jump(Math.max(0, Math.min(this.snaps.length - 1, plyID + 1))); return this._send('GO_TO_PLY', { plyID: this.cur - 1, isDone: true }); }
   first() { this._jump(0); return this._send('FIRST'); }
   last() { this._jump(this.snaps.length - 1); return this._send('LAST'); }

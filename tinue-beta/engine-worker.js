@@ -5,9 +5,9 @@
 //   lines:   the analysis panel's solver facts: every win in 1 and in 3 plies, the opponent's threats, tinuë, verdicts
 //            on asked-about moves (public/analysis.js solverLines)
 // It's a forced-win prover, not an evaluator: it answers "win in N" or "nothing forced within N".
-import { Game, Solver } from './shared/tak.js?v=1795183303';
-import { shortestTinue, TinueSearch, proofTreeLine } from './shared/pns.js?v=1795183303';
-import { solverLines } from './analysis.js?v=1795183303';
+import { Game, Solver } from './shared/tak.js?v=1795284866';
+import { shortestTinue, TinueSearch, proofTreeLine } from './shared/pns.js?v=1795284866';
+import { solverLines } from './analysis.js?v=1795284866';
 
 function gameFrom({ size, komi, tps, plies }) {
   const g = tps ? Game.fromTPS(tps, komi || 0) : Object.assign(new Game(size), { komi: komi || 0 });
@@ -144,7 +144,8 @@ self.onmessage = ({ data }) => {
       const h = g.clone(); h.toMove = 3 - g.toMove;
       const threat = immediateWin(h);
       const isWin = win && win.plies;
-      self.postMessage({ id, kind: isWin ? 'win' : 'none', side: g.toMove, plies: win?.plies, pv: win?.pv, exact: !!win?.exact, threat, maxPlies: data.maxPlies || 9 });
+      // inconclusive: the budget ran out before the search could say (the panel must not call that "no forced win")
+      self.postMessage({ id, kind: isWin ? 'win' : 'none', side: g.toMove, plies: win?.plies, pv: win?.pv, exact: !!win?.exact, inconclusive: !!win?.inconclusive, threat, maxPlies: data.maxPlies || 9 });
     }
   } catch (e) {
     self.postMessage({ id, kind: 'error', error: String(e.message || e) });

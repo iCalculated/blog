@@ -144,6 +144,29 @@ a.tag:hover { border-color: var(--accent); color: var(--fg-hi); }
 .settings { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
 .settings h2 { margin: 0; font-size: var(--fs-xs); font-weight: 600; color: var(--fg); }
 .settings .theme-desc { margin: -2px 0 0; }
+.settings .set-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.settings .set-all { font-size: var(--fs-xs); }
+/* The Settings page (#/settings): one setting a row, its control on the right on wide screens, under its name on phones. */
+.settings-page { max-width: 720px; }
+.settings-page .set-status { color: var(--muted); font-size: var(--fs-sm); margin: -4px 0 14px; min-height: 1.4em; }
+.set-list { display: flex; flex-direction: column; gap: 0; padding-top: 4px; padding-bottom: 4px; }
+.set-item { display: grid; grid-template-columns: minmax(0, 1fr) 200px; grid-template-areas: "label ctl" "desc desc"; column-gap: 16px; row-gap: 4px; align-items: center; padding: 12px 0; }
+.set-item + .set-item { border-top: 1px solid var(--line); }
+.set-item > label { grid-area: label; font-weight: 600; color: var(--fg-hi); font-size: var(--fs-sm); }
+.set-item > select { grid-area: ctl; width: 100%; }
+.set-item > .set-desc, .set-item > .set-note { grid-column: 1 / -1; }
+.set-desc { margin: 0; color: var(--muted); font-size: var(--fs-xs); line-height: 1.5; }
+.set-desc.set-msg:empty, .set-desc.hidden { display: none; }
+.set-msg { color: var(--fg); }
+.set-look { grid-column: 1 / -1; display: flex; gap: 8px; min-width: 0; }
+.set-look input { flex: 1 1 auto; min-width: 0; }
+.set-look input:disabled { opacity: .5; }
+@media (max-width: 560px) {
+  .set-item { grid-template-columns: minmax(0, 1fr); grid-template-areas: "label" "ctl" "desc"; }
+  .set-look { flex-wrap: wrap; }
+  .set-look input { flex-basis: 100%; }
+  .set-look button { flex: 1 1 0; }
+}
 /* Confirm moves: a held move's bar under the board. Its room is kept while the setting is on (idle: invisible, and
    takes no taps), so nothing moves when a move is held; on a phone it sits under the thumb and off the board. */
 .confirm-bar { display: flex; align-items: center; gap: 8px; margin-top: 8px; min-height: 44px; }
@@ -393,50 +416,47 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .rush-newbest { color: var(--gold); font-weight: 600; min-height: 1.45em; margin: 0 0 8px; }
 .rush-newbest.bad { color: var(--bad); }
 .rush-when { color: var(--muted); font-weight: 400; } /* (a stored run's date, or where an unsent run went: news, not a best) */
-.rush-list td .good { color: var(--good); }
-.rush-list td .bad { color: var(--bad); }
-.rush-list .n { text-align: right; font-variant-numeric: tabular-nums; }
-/* looking back: a row opens in place (phones) or shows a floating preview (a mouse) */
-.rush-list-wrap { position: relative; }
-.rush-list tr.rush-p { cursor: pointer; }
-.rush-list tr.rush-p:hover, .rush-list tr.rush-p.open { background: var(--bg3); }
-.rush-list tr.rush-p.open td { border-bottom: 0; }
-.rush-list .rush-res { justify-content: flex-start; text-align: left; white-space: normal; }
-.rush-list tr.rush-x td { background: var(--bg3); padding: 4px 12px 12px; }
-.rush-peek { position: absolute; right: 0; z-index: 10; width: 250px; padding: 10px; background: var(--bg3); border: 1px solid var(--line); border-radius: var(--r-panel); box-shadow: 0 4px 16px #0008; pointer-events: none; }
-.rush-look { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: flex-start; }
-.rush-look-txt { flex: 1; min-width: 140px; font-size: var(--fs-sm); overflow-wrap: anywhere; }
+/* looking back: a card per puzzle (its picture, result, link, rating, time), two across on a phone, more on a desktop;
+   its button opens a larger picture with the words in a dialog. Off-screen cards skip layout and paint until
+   scrolled to (a run can hold 60 pictures). */
+.rush-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(180px, calc(50% - 5px)), 1fr)); gap: 10px; }
+.rush-card { min-width: 0; background: var(--bg2); border-radius: var(--r-panel); padding: 6px 6px 4px; border-top: 3px solid var(--bg4);
+  content-visibility: auto; contain-intrinsic-size: auto 220px; }
+.rush-card.good { border-top-color: var(--good-fill); }
+.rush-card.bad { border-top-color: var(--bad-fill); }
+.rush-card .rush-res { display: block; width: 100%; height: auto; padding: 0; background: none; border: 0; border-radius: 3px; text-align: left; white-space: normal; font-weight: 400; color: inherit; }
+.rush-card .rush-res:hover .rush-pic { filter: brightness(1.08); }
+.rush-card-res { display: block; margin-top: 5px; font-size: var(--fs-sm); font-weight: 600; line-height: 1.3; overflow-wrap: anywhere; }
+.rush-card-res .good { color: var(--good); }
+.rush-card-res .bad { color: var(--bad); }
+.rush-card-meta { display: flex; flex-wrap: wrap; gap: 2px 10px; margin: 2px 0 0; font-size: var(--fs-xs); color: var(--muted); font-variant-numeric: tabular-nums; }
+.rush-card-meta a { margin-right: auto; }
+/* a picture: board.css's board, as wide as its card, its corners as the board's */
+.rush-pic { display: block; width: 100%; border-radius: 3px; overflow: hidden; }
+.rush-pic.none { aspect-ratio: 1; background: var(--bg3); }
+/* a card's picture is small: its coordinates a readable 8px (the board's are 15% of a square, 3-4px here) */
+.rush-card .tb-lab { font-size: 8px; width: auto; height: auto; line-height: 1; padding: 1px 2px; }
+.rush-dlg { width: min(520px, calc(100vw - 16px)); max-height: calc(100dvh - 16px); padding: 14px; overflow: auto;
+  background: var(--bg2); color: var(--fg); border: 1px solid var(--line); border-radius: var(--r-panel); box-shadow: 0 8px 32px #000a; }
+.rush-dlg::backdrop { background: #000a; }
+.rush-dlg-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.rush-dlg h2 { margin: 0; font-size: var(--fs-lg); }
+.rush-dlg-res { font-size: var(--fs); font-weight: 600; margin-left: 6px; }
+.rush-dlg-res .good { color: var(--good); }
+.rush-dlg-res .bad { color: var(--bad); }
+.rush-dlg-x { font-size: 26px; line-height: 1; width: 34px; height: 34px; justify-content: center; margin: -6px -6px 0 0; }
+.rush-dlg .rush-card-meta { font-size: var(--fs-sm); margin: 2px 0 10px; }
+.rush-dlg-body .rush-pic { max-width: min(100%, calc(100dvh - 300px)); min-width: 240px; margin: 0 auto; }
+.rush-dlg-nav { justify-content: space-between; }
+.rush-look-txt { margin-top: 10px; font-size: var(--fs-sm); overflow-wrap: anywhere; }
 .rush-look-txt p { margin: 0 0 4px; }
 .rush-look-txt .good { color: var(--good); }
 .rush-look-txt .bad { color: var(--bad); }
-.rush-peek .rush-look-txt { min-width: 100%; }
-/* a static board: the page's squares and stones (the board's own, drawn small). Each mark has its corner: the rank
-   top-left, the file bottom-left, the stack's height bottom-right, the ✗/✓ of a move's squares top-right. */
-.rush-mini { width: min(100%, 200px); aspect-ratio: 1; display: grid; grid-template-columns: repeat(var(--n), 1fr); }
-.rush-peek .rush-mini { width: 100%; }
-.rush-mini i { position: relative; background: var(--sq-light); }
-.rush-mini i.dk { background: var(--sq-dark); }
-/* coordinates: dark on the light squares, light on the dark ones, each with a halo of the other */
-.rush-mini s { position: absolute; z-index: 1; font: 700 9px/1.2 var(--mono); text-decoration: none; color: #2b2118; text-shadow: 0 0 2px #fff9; }
-.rush-mini i.dk s { color: #fff; text-shadow: 0 0 2px #000c; }
-.rush-mini s.r { left: 2px; top: 0; }
-.rush-mini s.f { left: 2px; bottom: 0; }
-.rush-mini i.ml::before { content: ''; position: absolute; inset: 0; background: #9cb83a; opacity: .4; } /* the last move: board.css --pri at .tb-cur's .4 */
-/* the move played (red) and the puzzle's (green): a thick frame with a dark edge, so it holds on either square */
-.rush-mini i.mp { box-shadow: inset 0 0 0 4px var(--bad-fill), inset 0 0 0 5px #000a; }
-.rush-mini i.ma { box-shadow: inset 0 0 0 4px var(--good-fill), inset 0 0 0 5px #000a; }
-.rush-mini i.mp.ma { box-shadow: inset 0 0 0 4px var(--good-fill), inset 0 0 0 8px var(--bad-fill), inset 0 0 0 9px #000a; }
-.rush-mini i.mp::after { content: '✗'; }
-.rush-mini i.ma::after { content: '✓'; } /* (both: ✓ only) */
-/* the ✗/✓ as a small filled badge in the frame's colour, readable on either square */
-.rush-mini i.mp::after, .rush-mini i.ma::after { position: absolute; z-index: 1; right: 2px; top: 2px; min-width: 9px; padding: 1px 2px; border-radius: 3px;
-  font: 700 10px/1 var(--mono); text-align: center; color: #fff; background: var(--bad-fill); box-shadow: 0 0 0 1px #0008; }
-.rush-mini i.ma::after { background: var(--good-fill); }
-.rush-mini b { position: absolute; inset: 22%; border-radius: 10%; background: var(--p1); border: 1px solid var(--p1-edge); }
-.rush-mini b.p2 { background: var(--p2); border-color: var(--p2-edge); }
-.rush-mini b.k1 { inset: 14% 39%; border-radius: 2px; transform: rotate(-45deg); } /* a wall */
-.rush-mini b.k2 { border-radius: 50%; } /* a capstone */
-.rush-mini em { position: absolute; right: 2px; bottom: 0; font: 700 10px/1.2 var(--mono); font-style: normal; color: #000; text-shadow: 0 0 2px #fff; }
+/* the marks' key: a short bar in each mark's colour (board.css --mk-bad / --mk-good) */
+.rush-key .k { display: inline-block; width: 14px; height: 4px; border-radius: 2px; vertical-align: middle; margin: 0 5px 0 0; }
+.rush-key .k.bad { background: #d32f2f; }
+.rush-key .k.good { background: #2f8f1f; margin-left: 0; }
+.rush-key .k.good:not(:first-child) { margin-left: 10px; }
 /* run: clock, score and combo in one row above the board */
 /* the board (with its tray, ~1.24× as tall as wide) and the row above it fit the window's height on a desktop too */
 .rush-run { max-width: max(300px, min(100%, calc((100vh - 200px) / 1.24))); margin: 0 auto; }
@@ -506,16 +526,13 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
   .rush-clock { font-size: 24px; }
   .rush-score b { font-size: 24px; }
   .rush-clock:not(.hidden) + .rush-score b { font-size: 20px; }
-  table.t.rush-list td, table.t.rush-list th { padding: 7px 10px; }
-  .rush-mini { width: min(100%, 280px); }
 }
 /* thumb-sized targets on touch screens (the board and its tray have their own) */
 @media (pointer: coarse) {
   #view-rush button:not(.rush-res), .rush-recent-row { min-height: 44px; }
   #view-rush button.link:not(.rush-res) { min-height: 44px; padding: 0 8px; }
   #rush-clear { margin-left: -8px; } /* (its text stays in line with the rows above) */
-  /* a puzzle's whole row is its target (its result button stays text-sized): about 40 px */
-  table.t.rush-list td { padding-top: 10px; padding-bottom: 10px; }
+  /* a card's result button is its picture: big enough as it is */
   #view-rush .rush-res { min-height: 0; padding: 0; }
 }
 /* reduced motion: no movement and no fades; colour changes (the clock's tint, the red drain) still show */

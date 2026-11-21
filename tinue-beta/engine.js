@@ -10,7 +10,9 @@ function workerFor(type) {
   w.onmessage = ({ data }) => {
     const p = pending[type];
     if (!p || p.id !== data.id) return;
-    if (data.partial) { p.partial = data; return; } // an interim answer, kept in case the search is killed
+    // an interim answer, kept in case the search is killed: refute's only ('lines' says partial on its final answer,
+    // when its wins-in-2 search ran out of budget)
+    if (data.partial && type === 'refute') { p.partial = data; return; }
     pending[type] = null; p.resolve(data);
   };
   return (workers[type] = w);
@@ -76,6 +78,10 @@ export function checkStill(pos, { quickMs = 2500, maxMs = 60e3, budgets = [[3e4,
   return { quick, final, cancel: () => end('unknown'), info };
 }
 export const analyze = (pos) => ask('analyze', pos);
+// The panel's words for an analyze answer without a win (kind 'none'), side: 'White' or 'Black'. A search cut off by
+// its budget (inconclusive) has found nothing either way; a finished one keeps the panel's old wording (the page's
+// 9-ply searches are never exact past 5 plies, so an exact/threats-only split would reword every finished search).
+export const noWinText = (e, side) => e.inconclusive ? 'Search inconclusive' : `No forced win for ${side}`;
 // How long a known win's proof is (plies after the move, defender to move), or null: { plies } | null if superseded.
 export const proofLength = (pos) => ask('length', pos);
 // The analysis panel's solver facts for a position (public/analysis.js solverLines; ~20 ms on 6x6): { kind: 'lines',

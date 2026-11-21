@@ -1,6 +1,6 @@
 // The analysis page's pure parts (after a puzzle): no DOM, no engines, so scripts/test-analysis.mjs runs them in node.
 // solverLines runs in the tactics worker (public/engine-worker.js, engine.lines) and in tests.
-import { Game, winningMoves, DIRS, WALL, CAP, typeOf } from './shared/tak.js?v=1795183303';
+import { Game, winningMoves, DIRS, WALL, CAP, typeOf } from './shared/tak.js?v=1795284866';
 
 // A link that opens a line in PTN Ninja: the PTN, lz-string compressed (compressToEncodedURIComponent, passed in so
 // the compressor loads only when a link is shown), at `ply` plies shown (0: the start, so no ply parameter), with an
@@ -11,9 +11,10 @@ export function ninjaUrl({ ptn, ply = 0, name }, compress) {
 
 // Every move that wins on the spot for the side to move in g (a road, or a flat win by filling the board or the last
 // stone; a move that completes both sides' roads counts as the mover's when the rules say so). g is left as it was.
-function immediateWins(g) {
+// road: only the wins by a road (tinuë is an unstoppable road; a win on flats is not one).
+function immediateWins(g, road = false) {
   const me = g.toMove, out = [];
-  for (const m of g.legalMoves()) { const u = g.apply(m); const r = g.result(); g.undo(u); if (r && r.winner === me) out.push(g.moveToPTN(m)); }
+  for (const m of g.legalMoves()) { const u = g.apply(m); const r = g.result(); g.undo(u); if (r && r.winner === me && (!road || r.kind === 'road')) out.push(g.moveToPTN(m)); }
   return out;
 }
 
@@ -23,7 +24,8 @@ function immediateWins(g) {
 //            `budget` nodes (partial: true)
 //   threats: the moves the side NOT to move would win with at once if it were its turn (a road threat: "Tak"), one per
 //            square for placements (a capstone there wins only where a flat does, so 'Cf1' is left out beside 'f1')
-//   tinue:   the side to move can't win at once and every move it has leaves one of those wins (exact, 2 plies)
+//   tinue:   the side to move can't win at once and every move it has leaves a road win (exact, 2 plies): a forced win
+//            on flats (the board filling, the last stone) is a threat to win, not tinuë
 //   pinned:  for each move asked about (as given): 'win1' | 'win3' | 'no3' (no win within 3 plies) | '?' (unknown:
 //            partial, or not a legal move here)
 //   over:    the game's result when the position is already over (then everything else is empty), else null
@@ -40,11 +42,11 @@ export function solverLines(g, { budget = 3e5, pinned = [] } = {}) {
   const me = g.toMove, them = 3 - me;
   const h = g.clone(); h.toMove = them;
   const all = immediateWins(h), threats = all.filter((m) => !(m[0] === 'C' && all.includes(m.slice(1))));
-  let tinue = threats.length > 0 && !wins1.length;
+  let tinue = !wins1.length && immediateWins(h, true).length > 0;
   if (tinue) for (const m of g.legalMoves()) {
     const u = g.apply(m);
     const r = g.result();
-    const lost = r ? r.winner === them : immediateWins(g).length > 0;
+    const lost = r ? r.winner === them : immediateWins(g, true).length > 0;
     g.undo(u);
     if (!lost) { tinue = false; break; }
   }
@@ -137,7 +139,11 @@ export function mergeLines(lines, solver, pinned = [], cap = 3, canon = (m) => m
     const k = key(l.move), have = at.get(k);
     if (!have) { const c = { ...l, tags: [...(l.tags || [])] }; at.set(k, c); out.push(c); return c; }
     for (const t of l.tags || []) if (!have.tags.includes(t)) have.tags.push(t);
-    if (better(l.ev, have.ev)) { have.ev = l.ev; if (l.pv?.length > (have.pv?.length || 0) || have.ev.kind === 'pending') have.pv = l.pv; }
+    // A proof comes with the line that proves it: the puzzle's proven line replaces an engine's (perhaps slower) pv, and
+    // the solver's one-move placeholder, whenever its proof is the row's.
+    const puzzleProof = l.src === 'puzzle' && l.ev?.proven && l.pv?.length;
+    if (better(l.ev, have.ev)) { have.ev = l.ev; if (puzzleProof || l.pv?.length > (have.pv?.length || 0) || have.ev.kind === 'pending') have.pv = l.pv; }
+    else if (puzzleProof && have.ev?.proven && have.ev.kind === l.ev.kind && have.ev.n === l.ev.n) have.pv = l.pv;
     if (have.ev.kind === 'pending' && l.ev?.kind !== 'pending') { have.ev = l.ev; have.pv = l.pv; have.src = l.src; }
     return have;
   };
@@ -227,7 +233,9 @@ export function drawAlt(ev1, ev) {
 //   { kind: 'spread', from, to, carry, drops: [{ sq, k }], smash }
 // null for a spread that would leave the board.
 export function moveShape(ptn, n, game) {
-  const mv = (game || new Game(n)).parseMove(ptn);
+  // (parseMove throws for a square or spread off the board, shared/tak.js; here that is the null this promises)
+  let mv;
+  try { mv = (game || new Game(n)).parseMove(ptn); } catch (e) { if (/off the board|leaves the board/.test(e.message)) return null; throw e; }
   if (mv.kind === 'p') return { kind: 'place', sq: mv.sq, type: mv.type === WALL ? 'S' : mv.type === CAP ? 'C' : 'F' };
   const [dr, dc] = DIRS[mv.dir];
   let r = (mv.sq / n) | 0, c = mv.sq % n;
@@ -249,37 +257,58 @@ export function dispPoint(sq, n, M) {
   return [(a * X + b * Y + h) / 2, (c * X + d * Y + h) / 2];
 }
 
+// Where piece z (0: the bottom) of a stack of len is drawn on an n×n board (board.js _render; the end screen's still
+// pictures, rush-look.js, use it too, so a stack looks the same in both): its lift in % of a square, SP per step (a
+// wall on a stack one step lower; up: a carried hand, GAP steps higher); imm, one of the slivers up the side below the
+// top n; ov, a sliver hidden below the lowest ten; z, its stacking order.
+export const SP = 7, GAP = 3;
+export function stackPiece(len, z, n, wall = false, up = false) {
+  const over = Math.max(0, len - 10 - n), imm = len - z > n;
+  let y = SP * (z + (up ? GAP : 0));
+  if (len > n && z >= len - n) y -= SP * (len - n);
+  if (wall && len > 1) y -= SP;
+  if (imm) y -= SP * over;
+  return { y, imm, ov: z < over, z: 10000 + z + (up ? GAP : 0) - (imm ? over : 0) };
+}
+
 // SVG markup for a viewBox of 0 0 n n (one unit a square, y down) over the board. list: [{ shape (moveShape), role:
 // 'best' | 'alt' | 'yours' | 'threat', color: 1 | 2 (whose stone a placement would be) }]. Drawn bottom to top:
 // threats, other lines, yours, line 1. A placement is a ring and a faint ghost of the stone; a spread an arrow from
 // the stack to its last drop square, with the number carried at its tail, and a count on each drop square when the
 // stones are split over more than one (3d3>12 and 3d3>21 differ only there); a smash is a bar across the head.
-// Colours and strengths are board.css's (.tb-ov).
-const ORDER = { threat: 0, alt: 1, yours: 2, best: 3 };
+// Colours and strengths are board.css's (.tb-ov). The Rush end screen's pictures (rush-look.js) add two roles drawn as
+// strongly as line 1: 'bad', the move played when it was wrong (red), under 'good', the puzzle's move (green); there
+// two moves can share a square or a line, so an item may carry r (a placement ring's radius, .42 unless given), shift
+// (a spread's arrow moved sideways by that much of a square, so two along one line both show) and lead (the count of
+// stones carried moved that far along its own arrow, so two spreads off one stack each show theirs).
+const ORDER = { threat: 0, alt: 1, yours: 2, bad: 3, best: 4, good: 4 };
+const STRONG = new Set(['best', 'good', 'bad']);
 const f2 = (x) => +x.toFixed(3);
 export function shapesSvg(list, n, M) {
   const at = (sq) => { const [dc, dr] = dispPoint(sq, n, M); return [dc + 0.5, n - 1 - dr + 0.5]; };
   const out = [];
-  for (const { shape: s, role = 'alt', color = 1 } of [...(list || [])].filter((x) => x?.shape).sort((a, b) => (ORDER[a.role] ?? 1) - (ORDER[b.role] ?? 1))) {
-    const strong = role === 'best', thin = role === 'threat';
+  for (const { shape: s, role = 'alt', color = 1, r = 0.42, shift = 0, lead = 0 } of [...(list || [])].filter((x) => x?.shape).sort((a, b) => (ORDER[a.role] ?? 1) - (ORDER[b.role] ?? 1))) {
+    const strong = STRONG.has(role), thin = role === 'threat';
     let g = '';
     if (s.kind === 'place') {
       const [x, y] = at(s.sq);
-      g += `<circle class="rg" cx="${x}" cy="${y}" r=".42"/>`;
+      g += `<circle class="rg" cx="${x}" cy="${y}" r="${r}"/>`;
       if (!thin) {
         if (s.type === 'C') g += `<circle class="gh p${color}" cx="${x}" cy="${y}" r=".25"/>`;
         else if (s.type === 'S') g += `<rect class="gh p${color}" x="${f2(x - 0.094)}" y="${f2(y - 0.25)}" width=".19" height=".5" rx=".04" transform="rotate(${color === 1 ? -45 : 45} ${x} ${y})"/>`;
         else g += `<rect class="gh p${color}" x="${f2(x - 0.25)}" y="${f2(y - 0.25)}" width=".5" height=".5" rx=".05"/>`;
       }
     } else {
-      const [x0, y0] = at(s.from), [x1, y1] = at(s.to);
+      let [x0, y0] = at(s.from), [x1, y1] = at(s.to);
       const len = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / len, uy = (y1 - y0) / len, px = -uy, py = ux;
+      if (shift) { x0 += px * shift; y0 += py * shift; x1 += px * shift; y1 += py * shift; }
       const w = thin ? 0.07 : strong ? 0.16 : 0.09, hl = thin ? 0.24 : strong ? 0.34 : 0.26, hw = thin ? 0.15 : strong ? 0.27 : 0.19;
       const tx = x1 + ux * 0.12, ty = y1 + uy * 0.12, bx = tx - ux * hl, by = ty - uy * hl;
       g += `<line class="sf" x1="${f2(x0)}" y1="${f2(y0)}" x2="${f2(bx + ux * 0.02)}" y2="${f2(by + uy * 0.02)}" stroke-width="${w}"/>`;
       g += `<polygon class="hd" points="${f2(tx)},${f2(ty)} ${f2(bx + px * hw)},${f2(by + py * hw)} ${f2(bx - px * hw)},${f2(by - py * hw)}"/>`;
       if (s.smash) g += `<line class="sm" x1="${f2(tx + ux * 0.04 + px * 0.3)}" y1="${f2(ty + uy * 0.04 + py * 0.3)}" x2="${f2(tx + ux * 0.04 - px * 0.3)}" y2="${f2(ty + uy * 0.04 - py * 0.3)}"/>`;
-      if (!thin && s.carry > 1) g += `<circle class="dc" cx="${f2(x0)}" cy="${f2(y0)}" r=".17"/><text x="${f2(x0)}" y="${f2(y0)}">${s.carry}</text>`;
+      const cx0 = x0 + ux * lead, cy0 = y0 + uy * lead;
+      if (!thin && s.carry > 1) g += `<circle class="dc" cx="${f2(cx0)}" cy="${f2(cy0)}" r=".17"/><text x="${f2(cx0)}" y="${f2(cy0)}">${s.carry}</text>`;
       if (!thin && s.drops.length > 1) for (const { sq, k } of s.drops) {
         const [x, y] = at(sq), cx = x + px * 0.3, cy = y + py * 0.3;
         g += `<circle class="dd" cx="${f2(cx)}" cy="${f2(cy)}" r=".14"/><text x="${f2(cx)}" y="${f2(cy)}">${k}</text>`;

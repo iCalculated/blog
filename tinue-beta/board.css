@@ -182,3 +182,14 @@
 
 .tb.na *, .tb.na { transition: none !important; }
 @media (prefers-reduced-motion: reduce) { .tb *, .tb { transition: none !important; } }
+
+/* the Rush end screen's still pictures (rush-look.js): the board's own squares, stones and overlay, drawn once, so
+   nothing moves and no stone asks for a layer of its own. The move played when it was wrong in red, under the
+   puzzle's move in green: as strong as an engine's line 1, a shade darker than the last move's tint (--pri) so the
+   two greens don't read as one. */
+.tb.still, .tb.still * { transition: none !important; }
+.tb.still .tb-pc { will-change: auto; }
+.tb { --mk-good: #2f8f1f; --mk-bad: #d32f2f; }
+.tb-ov .good { color: var(--mk-good); opacity: .9; }
+.tb-ov .bad { color: var(--mk-bad); opacity: .9; }
+.tb-ov .good .rg, .tb-ov .bad .rg { stroke-width: .09; }

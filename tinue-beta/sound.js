@@ -22,7 +22,10 @@ function rng(seed) {
 }
 
 // RBJ biquad, applied in place over buf[from..]; coefficients come from the sample rate, so 44.1k and 48k agree.
+// f is held under Nyquist (0.45 sr, as contact() does): above it the filter is unstable and the sound turns to NaN
+// (solved's 6 kHz low-pass at the fitter's 8 or 11 kHz; at 44.1 and 48 kHz nothing changes).
 function biquad(buf, sr, type, f, q, from = 0) {
+  f = Math.min(f, 0.45 * sr);
   const w = (2 * Math.PI * f) / sr, c = Math.cos(w), al = Math.sin(w) / (2 * q);
   let b0, b1, b2;
   if (type === 'lp') { b0 = (1 - c) / 2; b1 = 1 - c; b2 = b0; }
@@ -409,7 +412,20 @@ export const SEED_PICKS = {
 export const CUSTOM_KEY = 'tinue.soundLab';
 let custom = null;
 const isBeta = () => { try { return typeof window !== 'undefined' && !!window.TINUE_BETA; } catch { return false; } };
-const validRecipe = (r) => !!r && typeof r === 'object' && Array.isArray(r.events) && r.events.length > 0 && r.events.length <= 16;
+// A recipe this file can render (the format above): plain objects, finite numbers in sane ranges, modes an array. A
+// pasted or stored one that isn't (a null event, an object for modes, a contact 1e100 ms long) would throw or allocate
+// without bound in every render, and playSeq's catch would make that move silent: such an entry is refused (the lab's
+// paste) or left out (setCustom, loadCustom: the built-in sound plays).
+const fin = (v, lo, hi) => typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi;
+const opt = (v, lo, hi) => v === undefined || fin(v, lo, hi);
+const obj = (x) => !!x && typeof x === 'object' && !Array.isArray(x);
+const ringOk = (m) => obj(m) && fin(m.f, 0, 24000) && fin(m.ms, 0, 5000) && fin(m.gain, -10, 10) && opt(m.phase, -100, 100);
+const eventOk = (e) => obj(e) && opt(e.at, 0, 1000) && opt(e.gain, 0, 10)
+  && (e.contact == null || (obj(e.contact) && fin(e.contact.ms, 0, 100) && fin(e.contact.gain, 0, 10) && opt(e.contact.lo, 0, 24000) && opt(e.contact.hi, 0, 24000)))
+  && (e.modes == null || (Array.isArray(e.modes) && e.modes.length <= 32 && e.modes.every(ringOk)))
+  && (e.body == null || ringOk(e.body));
+export const validRecipe = (r) => obj(r) && Array.isArray(r.events) && r.events.length > 0 && r.events.length <= 16
+  && opt(r.level, -80, 0) && opt(r.ms, 0, 1000) && opt(r.seed, 0, 2 ** 32) && r.events.every(eventOk);
 function customOf(name) {
   const r = custom && isBeta() ? custom[name] : null;
   return validRecipe(r) ? r : null;
@@ -573,10 +589,11 @@ const cache = new Map(); // name[:voice][:variant] -> AudioBuffer at ctx.sampleR
 export const setVoice = (v) => { if (VOICES.includes(v) && v !== voice) { voice = v; warm(); } };
 export const getVoice = () => voice;
 
-// Off also suspends the context, so no audio thread renders silence; unlock() (or a play) resumes it.
+// Off stops every sound started or queued (a spread's later drops would otherwise wait in the frozen context and play
+// when it resumes) and suspends the context, so no audio thread renders silence; unlock() (or a play) resumes it.
 export const setEnabled = (on) => {
   enabled = !!on;
-  try { if (!enabled && ctx && ctx.state === 'running') ctx.suspend().catch(() => {}); } catch {}
+  if (!enabled) hush();
 };
 export const isEnabled = () => enabled;
 
@@ -589,13 +606,53 @@ function warm() {
   WARM.flatMap((k) => [...Array(VARIANTS).keys()].map((i) => [k, i])).forEach(([k, i], j) =>
     setTimeout(() => { try { if (ctx && gen === warmGen) buffer(k, i); } catch {} }, 20 * j));
 }
+
+// ---- sleeping while idle ----
+// A running AudioContext costs CPU and keeps the audio hardware awake even when it plays nothing (about 0.6-1 s of CPU
+// a minute, in a hidden tab too). So it is suspended IDLE_MS after the last sound ends (or the last tap: unlock), and at
+// once when the tab is hidden; the next sound resumes it and starts once it runs (playSeq's waiting path).
+const IDLE_MS = 1500;
+let busyUntil = 0, idleT = null, sleeping = null; // sleeping: a suspend() still settling
+function armIdle() {
+  if (!ctx) return;
+  clearTimeout(idleT);
+  idleT = setTimeout(idle, Math.max(0, busyUntil - performance.now()) + IDLE_MS);
+}
+function idle() {
+  idleT = null;
+  if (waiting.size || performance.now() < busyUntil + IDLE_MS - 5) return armIdle(); // (a sound arrived meanwhile)
+  sleep();
+}
+function sleep() {
+  clearTimeout(idleT); idleT = null;
+  try {
+    if (!ctx || ctx.state !== 'running' || sleeping) return;
+    const p = sleeping = Promise.resolve(ctx.suspend()).catch(() => {}).then(() => { if (sleeping === p) sleeping = null; });
+  } catch { /* no audio */ }
+}
+// Resolves once the context runs. Called inside a gesture, resume() is called in it, as iOS needs.
+// (resume() right away, even while a suspend() settles: the context runs them in order, so it ends up running.)
+function wake() {
+  return ctx.state === 'running' && !sleeping ? Promise.resolve() : Promise.resolve(ctx.resume());
+}
+// Everything stops: what sounds, what is queued on the audio clock, what waits for a resume; then the context sleeps.
+// (Off, and a hidden tab: a frozen context would play the rest of a spread when it next resumes.)
+const live = new Set(); // every source started, until it ends
+function hush() {
+  try {
+    for (const src of live) { try { src.stop(); } catch {} }
+    live.clear(); queued.clear(); waiting.clear(); mains.clear(); stash = null; gen++;
+    sleep();
+  } catch { /* never throw into the game */ }
+}
+
 // Call on every gesture: creates the AudioContext on the first one that activates the page and resumes it if
 // suspended. A touch pointerdown does not activate the page (its pointerup/touchend does), so it only resumes.
 export function unlock(e) {
   try {
     if (!AC || !enabled) return;
     if (!ctx) {
-      if (e && e.type === 'pointerdown' && e.pointerType && e.pointerType !== 'mouse') return;
+      if (e && e.type === 'pointerdown' && e.pointerType && e.pointerType !== 'mouse') { touchAt = performance.now(); return; }
       // iOS 16.4+: mix with the player's own music instead of pausing it, and obey the silent switch
       try { if (navigator.audioSession) navigator.audioSession.type = 'ambient'; } catch {}
       ctx = new AC({ latencyHint: 'interactive' });
@@ -604,9 +661,16 @@ export function unlock(e) {
       master.connect(ctx.destination);
       warm();
     }
-    if (ctx.state !== 'running') ctx.resume().catch(() => {});
+    if (ctx.state !== 'running' || sleeping) wake().catch(() => {});
+    armIdle(); // (a tap that plays nothing still resumed it: it sleeps again IDLE_MS later)
+    // A move asked for before the page was ever activated (a long press placing the very first stone: its touchend is
+    // the first activating event): it plays now, if the board hasn't moved on since and it is recent.
+    const s = stash; stash = null;
+    if (s && s.g === gen && performance.now() - s.at < STASH_MS) playSeq(s.list, s.opts);
   } catch { /* no audio: stay silent */ }
 }
+let stash = null, touchAt = -1e9; // touchAt: a touch pressed before the page was activated (only it may stash a move)
+const STASH_MS = 1000;
 
 function buffer(name, variant = 0, opts) {
   const s = SOUNDS[name], voiced = s.voiced;
@@ -634,12 +698,14 @@ function take(name) {
 
 // The gesture listeners (call once at startup): every press, tap and key unlocks or resumes the context, inside the
 // gesture as iOS needs. Document level, capture, passive: board.js cancels touchend on the board (no click follows a
-// tap) and holdTaps stops touches from bubbling, so bubbling listeners or click alone would miss them.
+// tap) and holdTaps stops touches from bubbling, so bubbling listeners or click alone would miss them. A hidden tab
+// stops every sound and sleeps at once.
 let listening = false;
 export function listen() {
   if (listening || typeof document === 'undefined') return;
   listening = true;
   for (const t of ['pointerdown', 'touchend', 'keydown', 'click']) document.addEventListener(t, unlock, { capture: true, passive: true });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) hush(); });
 }
 
 const lastAt = new Map(); // key -> when it last started: the same sound twice within REPEAT_MS is one sound
@@ -648,30 +714,41 @@ const RESUME_MS = 250; // a sound asked for while the context resumes still play
 // The page has had a gesture, maybe one our listeners never saw: a tap inside the PTN Ninja iframe activates this
 // page too (activation propagates to ancestor frames), so the context may be started from here.
 const activated = () => { try { return !!navigator.userActivation?.hasBeenActive; } catch { return false; } };
+const hidden = () => typeof document !== 'undefined' && !!document.hidden;
 
 // Play a list of [delay ms, sound name] (as moveSounds gives), timed on the audio clock; a silent no-op when off,
-// never unlocked, the page hidden, or anything goes wrong. While the context is suspended or interrupted it is resumed
-// and the sounds start once it runs (dropped if that takes longer than RESUME_MS or resume() rejects).
-// The same list (by its first sound) twice within REPEAT_MS plays once.
+// never unlocked, the page hidden, or anything goes wrong. While the context is suspended (asleep while idle, or
+// interrupted) it is resumed and the sounds start once it runs, dropped if that takes longer than RESUME_MS, resume()
+// rejects, or (a move's sounds) the board jumped meanwhile (cut).
+// A one-off sound (play, later, verdict) twice within REPEAT_MS plays once, and so does one move (opts.key, playMove);
+// the landings of a hand are each their own sound however fast they come.
 // A move's sounds still queued on the audio clock (a spread's later drops): cut() stops them. A new move cuts them
 // (playMove, playLanding), and so does a jump to another position (board.js Board.onCut, set by app.js).
 // What the player's own hand queued (playLanding: a capstone moving on alone to flatten a wall) is never stopped: the
 // next board event (Rush's reply 80 ms later, the next puzzle's load) must not silence the move just made.
-const queued = new Set();
+const queued = new Set(); // { src, t (audio clock), hand, rec }
+const waiting = new Set(); // lists waiting for a resume: { hand, cut (a later move cut its later sounds), recs }
 function stopQueued() {
   try {
     const now = ctx ? ctx.currentTime || 0 : 0;
-    for (const q of queued) { if (q.hand) continue; if (q.t > now) { try { q.src.stop(); } catch {} } queued.delete(q); }
+    for (const q of queued) {
+      if (q.hand) continue;
+      if (q.t > now) { try { q.src.stop(); } catch {} mains.delete(q.rec); }
+      queued.delete(q);
+    }
+    for (const w of waiting) if (!w.hand) { w.cut = true; for (const r of w.recs) if (r?.ms > 0) mains.delete(r); }
   } catch { /* never throw into the game */ }
 }
-// A jump to another position: queued drops stop, and the next move sounds even within REPEAT_MS of the last.
+// A jump to another position: queued drops stop, a move waiting for a resume is dropped, and the next move sounds
+// even within REPEAT_MS of the last.
 export function cut() { stopQueued(); lastAt.clear(); gen++; }
-let gen = 0; // (cut() counts up: a move sound held back by holdMoves is dropped if the board jumped meanwhile)
+let gen = 0; // (cut() counts up: a move sound held back by holdMoves, or waiting for a resume, is dropped if it moved)
 
-// When the move sounds asked for so far have played their main part (performance.now() ms): the start of the last event
-// that carries at least half the first's gain (a smash's slap), plus SETTLE_MS for it to ring.
+// When the move sounds asked for so far will have played their main part (performance.now() ms): per sound, the start
+// of the last event that carries at least half the first's gain (a smash's slap), plus SETTLE_MS for it to ring. A
+// sound stopped before it started (cut) no longer counts.
 const SETTLE_MS = 40;
-let movesEnd = 0;
+const mains = new Set(); // { end, ms }
 function mainMs(name) {
   try {
     let at = 0;
@@ -680,37 +757,60 @@ function mainMs(name) {
   } catch { return SETTLE_MS; }
 }
 // ms from now until the move sounds asked for so far have played their main part (0 when they have).
-export const tail = () => Math.max(0, movesEnd - performance.now());
+export const tail = () => {
+  const now = performance.now();
+  let end = now;
+  for (const r of mains) { if (r.end <= now) mains.delete(r); else end = Math.max(end, r.end); }
+  return end - now;
+};
 
 export function playSeq(list, opts) {
   try {
     if (opts?.cut) stopQueued();
     if (!enabled || !Array.isArray(list) || !list.length) return;
     list = list.map(([ms, name]) => [Math.max(0, Number(ms) || 0), ALIASES[name] || name]).filter(([, n]) => SOUNDS[n]);
-    if (!list.length) return;
-    if (typeof document !== 'undefined' && document.hidden) return;
+    if (!list.length || hidden()) return;
     if ((!ctx || ctx.state !== 'running') && activated()) unlock();
-    if (!ctx) return;
-    const now = performance.now(), key = list[0][1];
-    if (now - (lastAt.get(key) ?? -1e9) < REPEAT_MS) return;
-    lastAt.set(key, now);
-    for (const [ms, name] of list) if (SOUNDS[name].move) movesEnd = Math.max(movesEnd, now + ms + mainMs(name));
-    const start = () => {
-      const t0 = ctx.currentTime || 0;
-      for (const [ms, name] of list) {
+    // (Only a move made by a touch still under way: anything else asked for before activation, such as a puzzle's
+    // intro move, would otherwise sound late on the player's first tap, on top of that tap's own sound.)
+    if (!ctx) { if (opts?.cut && performance.now() - touchAt < STASH_MS) stash = { list, opts, at: performance.now(), g: gen }; return; }
+    const now = performance.now(), key = opts?.cut ? opts.key : list[0][1];
+    if (key != null) {
+      if (now - (lastAt.get(key) ?? -1e9) < REPEAT_MS) return;
+      lastAt.set(key, now);
+    }
+    const recs = list.map(([ms, name]) => (SOUNDS[name].move ? { end: now + ms + mainMs(name), ms } : null));
+    for (const r of recs) if (r) mains.add(r);
+    const start = (w) => {
+      const t0 = ctx.currentTime || 0, at = performance.now();
+      list.forEach(([ms, name], i) => {
+        if (w?.cut && ms > 0) return; // (a later move cut this one's later sounds while it waited)
         const src = ctx.createBufferSource();
         src.buffer = buffer(name, take(name), opts?.render);
         src.connect(master);
-        const q = ms > 0 && opts?.cut ? { src, t: t0 + ms / 1000, hand: !!opts.hand } : null;
+        const q = ms > 0 && opts?.cut ? { src, t: t0 + ms / 1000, hand: !!opts.hand, rec: recs[i] } : null;
         if (q) queued.add(q);
-        src.onended = () => { src.disconnect(); if (q) queued.delete(q); };
+        live.add(src);
+        src.onended = () => { src.disconnect(); live.delete(src); if (q) queued.delete(q); };
         if (ms > 0) src.start(t0 + ms / 1000); else src.start();
-      }
+        busyUntil = Math.max(busyUntil, at + ms + (1000 * src.buffer.length) / ctx.sampleRate);
+      });
+      armIdle();
     };
-    if (ctx.state === 'running') return start();
-    ctx.resume().then(() => {
-      try { if (enabled && ctx.state === 'running' && performance.now() - now < RESUME_MS) start(); } catch {}
-    }, () => {});
+    if (ctx.state === 'running' && !sleeping) return start();
+    // Waiting for the context to run: a move stepped away from meanwhile (cut: gen) never sounds late, and nothing
+    // starts in a hidden tab.
+    const g = gen, w = { hand: !!opts?.hand, cut: false, recs };
+    waiting.add(w);
+    busyUntil = Math.max(busyUntil, now + RESUME_MS);
+    // Not started after all: the context goes back to sleep, at once if the tab was hidden or sound turned Off while it
+    // resumed (hush() found it not yet running, so its sleep() did nothing), else after IDLE_MS.
+    const drop = () => { for (const r of recs) mains.delete(r); if (hidden() || !enabled) sleep(); else armIdle(); };
+    wake().then(() => {
+      if (!waiting.delete(w)) return drop(); // (hush() let it go)
+      if (enabled && !hidden() && ctx.state === 'running' && performance.now() - now < RESUME_MS && !(opts?.cut && g !== gen)) start(w);
+      else drop();
+    }, () => { waiting.delete(w); drop(); });
   } catch { /* never throw into the game */ }
 }
 
@@ -739,19 +839,23 @@ export const playLanding = (list) => playSeq(landingSounds(list), { cut: true, h
 export const playMove = (ptn, smash = false, info = {}) => {
   if (info?.byHand) return;
   const list = moveSounds({ ...info, ptn, smash: !!smash }), wait = holdUntil - performance.now(), g = gen;
-  if (wait > 0) return void setTimeout(() => { if (g === gen) playSeq(list, { cut: true }); }, wait);
-  playSeq(list, { cut: true });
+  const opts = { cut: true, key: 'move:' + ptn }; // (one move twice within REPEAT_MS is one; two moves are two)
+  if (wait > 0) return void setTimeout(() => { if (g === gen) playSeq(list, opts); }, wait);
+  playSeq(list, opts);
 };
 let holdUntil = 0;
 // Move sounds asked for in the next ms wait until then (playMove).
 export function holdMoves(ms) { holdUntil = Math.max(holdUntil, performance.now() + Math.max(0, Number(ms) || 0)); }
 
 // Play `name` after `ms` (a verdict after the move's own click, so the two don't mask each other). Whether it plays is
-// decided then, like play().
+// decided then, like play(). dropLater() forgets every cue still waiting (rush.js leave: a run's cues stay in the run).
+const laters = new Set();
 export function later(name, ms, opts) {
   if (!enabled) return;
-  setTimeout(() => play(name, opts), ms);
+  const t = setTimeout(() => { laters.delete(t); play(name, opts); }, ms);
+  laters.add(t);
 }
+export function dropLater() { for (const t of laters) clearTimeout(t); laters.clear(); }
 // A verdict on the move just made: `name` at least `ms` after it, and not before the move's own sounds have played their
 // main part (a smash's slap, a spread's last drop: tail()). The next move sounds no sooner than holdMs after the verdict
 // starts (holdMoves). Returns the delay used.

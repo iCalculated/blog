@@ -5,17 +5,18 @@
 // engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused while they work. Nothing here is rated,
 // and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { Board, buildPTN } from './board.js?v=1795183303';
-import { api, store, token } from './api.js?v=1795183303';
-import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795183303';
-import * as R from './rush-rules.js?v=1795183303';
-import * as engine from './engine.js?v=1795183303';
-import * as tiltak from './tiltak.js?v=1795183303';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795183303';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795183303';
-import { busy, BUSY_MS } from './busy.js?v=1795183303';
-import * as SYM from './shared/sym.js?v=1795183303';
-import * as sound from './sound.js?v=1795183303'; // (moves click through Board.onPly, set by app.js; the verdicts are played here)
+import { Board, buildPTN } from './board.js?v=1795284866';
+import { api, store, token } from './api.js?v=1795284866';
+import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795284866';
+import * as R from './rush-rules.js?v=1795284866';
+import { picture, pictureHTML } from './rush-look.js?v=1795284866';
+import * as engine from './engine.js?v=1795284866';
+import * as tiltak from './tiltak.js?v=1795284866';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795284866';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795284866';
+import { busy, BUSY_MS } from './busy.js?v=1795284866';
+import * as SYM from './shared/sym.js?v=1795284866';
+import * as sound from './sound.js?v=1795284866'; // (moves click through Board.onPly, set by app.js; the verdicts are played here)
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -140,6 +141,7 @@ export async function enter() {
 }
 
 async function renderStart() {
+  closeLook();
   section('rush-start');
   const mode = modeChoice();
   $('#rush-start').innerHTML = `<h1 tabindex="-1">Rush</h1>
@@ -463,6 +465,7 @@ function play(ptn) {
 function reply(c, ptn) {
   const t = performance.now();
   c.reply = null; c.ready = t; board.lock(t);
+  sound.holdMoves(sound.tail()); // its sound after the move's own (a smash built by hand slaps ~200 ms in), the board at once
   board.append(ptn).then(() => board.last());
   R.openMove(c, t);
 }
@@ -689,10 +692,11 @@ function done(solved, now, wrong = null, a = null) {
   R.finish(s.run, { id: c.p.id, rating: c.p.rating, solved, ms: now - c.born, mv: c.moves || [], hidden: !!c.hidden, sym: c.p.sym ?? 0, ...(wrong ? { wrong, at: c.line.slice() } : {}),
     ...(a ? { played: a.canon, at: c.line.slice(), ...(a.look ? { po: a.look } : {}) } : {}),
     ...(s.run.mode === 'rush' ? { clock: R.timeLeft(s.run, now), combo: s.run.combo } : {}) });
-  mark(solved, c.gained || 0, a);
   // a beat after the move's own sounds (after a smash's slap: sound.verdict), and before the next puzzle's intro move,
-  // whose sound waits until the verdict has played (rushGood is 55 ms long; wrong's second knock ends ~130 ms in)
-  if (solved) sound.verdict('rushGood', 45, 55); else s.wrongAt = performance.now() + sound.verdict('wrong', 80, 130);
+  // whose sound waits until the verdict has played (rushGood is 55 ms long; wrong's second knock ends ~130 ms in).
+  // Before mark(), whose clock may cross ten seconds here (a miss's penalty): the warning then waits for wrongAt.
+  if (solved) s.goodAt = performance.now() + sound.verdict('rushGood', 45, 55); else s.wrongAt = performance.now() + sound.verdict('wrong', 80, 130);
+  mark(solved, c.gained || 0, a);
   if (s.run.over) return endRun(wrong, !!a?.po);
   nextPuzzle();
 }
@@ -725,7 +729,10 @@ function say(t) {
 let sayNext = null; // the result just marked, said with the next puzzle's colour to move (nextPuzzle) or the end (endRun)
 function renderClock() {
   const left = R.timeLeft(st.run, performance.now()), el = $('#rush-clock');
-  $('#rush-clock-t').textContent = R.clockText(left);
+  // (written only when it changes: this runs 10 times a second, and writing the same text still costs a layout, a
+  // paint and a frame each time; that was about 3 s of CPU a minute on an untouched run)
+  const t = R.clockText(left), ct = $('#rush-clock-t');
+  if (ct.textContent !== t) ct.textContent = t;
   const low = st.run.startedAt != null && left < 20e3;
   el.classList.toggle('low', low);
   if (low && !st.saidLow) { st.saidLow = true; say('20 seconds left'); }
@@ -830,7 +837,7 @@ async function endRun(wrong = null, played = false) {
   const rec = R.recordOf(s.run, s.puzzles, Date.now());
   // The run's end: now (the clock ran out, the pool ran dry), or after the beat when a streak's miss ended it, so it
   // doesn't land on the wrong sound; a clock emptied by a wrong move's 10 s waits for that sound to finish too.
-  if (!wrong && !s.gone) sound.later('rushEnd', Math.max(0, (s.wrongAt ?? -1e9) + 250 - performance.now()));
+  if (!wrong && !s.gone) sound.later('rushEnd', Math.max(0, (s.wrongAt ?? -1e9) + 250 - performance.now(), (s.goodAt ?? -1e9) + 80 - performance.now()));
   await new Promise((r) => setTimeout(r, END_BEAT_MS));
   if (wrong && !s.gone && st === s) sound.play('rushEnd');
   if (s.gone !== 'left') saveRun(rec); // kept whether or not the post below succeeds (a run left unfinished isn't one)
@@ -856,7 +863,7 @@ function showEnd(rec, s, at = null) {
     ? [['Moves', sum.moves], ['Accuracy', pct(sum.accuracy)], ['Best combo', sum.bestCombo],
       ['Time played', sec(played)], ['Per move', sec(sum.perMove)], ['Hardest solved', sum.highest ?? '–']]
     : [['Hardest solved', sum.highest ?? '–'], ['Time played', sec(played)]];
-  const hint = window.matchMedia?.('(hover: hover)').matches ? 'Hover or click a puzzle to see it.' : 'Tap a puzzle to see it.';
+  const hint = window.matchMedia?.('(hover: hover)').matches ? 'Click a puzzle to see it larger.' : 'Tap a puzzle to see it larger.';
   $('#rush-end').innerHTML = (s ? `<h1 tabindex="-1">${mode === 'rush' ? 'Time’s up' : 'Streak over'}</h1>
     <p class="rush-newbest" id="rush-newbest" aria-live="polite"></p>` : `<h1 tabindex="-1">${MODE[mode].name}</h1><p class="rush-newbest rush-when">${esc(when(rec.t))}</p>`) + `
     <p class="rush-hero"><span>${mode === 'rush' ? 'Score' : 'Streak'}</span><b>${sum.score}</b></p>
@@ -865,10 +872,8 @@ function showEnd(rec, s, at = null) {
     ${s ? '<div class="panel" id="rush-end-best"><h2>Your best</h2><p class="muted flush">…</p></div>' : ''}
     ${rec.puzzles.length ? `<h2>Puzzles</h2>
     <p class="muted rush-small">${hint}</p>
-    <div class="rush-list-wrap" id="rush-list-wrap"><table class="t rush-list"><tr><th>Puzzle</th><th class="n">Rating</th><th class="n">Time</th><th>Result</th></tr>
-    ${rec.puzzles.map((r, i) => `<tr class="rush-p" data-i="${i}"><td><a href="${esc(R.puzzleLink(r))}">#${esc(r.id)}</a></td><td class="n">${Math.round(r.rating)}</td><td class="n">${sec(r.ms)}</td>
-      <td><button type="button" class="link rush-res" aria-expanded="false" aria-controls="rush-x-${i}">${resultHTML(r)}</button></td></tr>`).join('')}</table>
-    <div class="rush-peek" id="rush-peek" hidden></div></div>` : '<p class="muted">No puzzles played.</p>'}`;
+    <ol class="rush-cards" id="rush-cards">${rec.puzzles.map((r, i) => cardHTML(rec, i)).join('')}</ol>
+    <dialog class="rush-dlg" id="rush-look" aria-labelledby="rush-look-h"></dialog>` : '<p class="muted">No puzzles played.</p>'}`;
   if (rec.puzzles.length) lookBack(rec);
   if (s) $('#rush-again').onclick = () => { st = null; startRun(); };
   $('#rush-back').onclick = () => {
@@ -880,55 +885,74 @@ function showEnd(rec, s, at = null) {
 }
 // A row's result: a glyph, as the strip's, with its word for screen readers.
 const resultHTML = (r) => { const m = R.resultMark(r); return `<span class="${m.cls}"><span aria-hidden="true">${m.glyph}</span><span class="sr-only">${m.sr}</span>${m.text ? ' ' + `<span${m.sr === m.text ? ' aria-hidden="true"' : ''}>${esc(m.text)}</span>` : ''}</span>`; };
-// ---------- looking back at a puzzle (the end screen's list; never during the run, where it would cost clock) ----------
-// A mouse hovering a row, or focus on its result button, gets a floating preview, as Storm's; a tap or click (or
-// Enter on the button) opens the row in place, which is what a phone gets. The position is drawn here, static: a
-// second Board would add its own window key handler per preview for a picture that never moves.
+// ---------- looking back at a puzzle (the end screen's cards; never during the run, where it would cost clock) ----------
+// Every puzzle of the run is a card with a picture of it (rush-look.js: a still copy of the board, in the symmetry, the
+// labels and the orientation the player saw it in), its result, its link, rating and time. Its result button opens a
+// larger picture with the words (lookHTML) in a dialog, with Previous and Next through the run.
 // rec: R.recordOf (a run just played, or a stored one); each of its puzzles is both the position and the result.
-function lookHTML(rec, i) {
-  const q = rec.puzzles[i];
-  let v;
-  try { v = R.review(q, q); } catch { return ''; } // (a stored position that doesn't parse: nothing to draw)
-  const r = q, t = R.turn(v.toMove);
-  const mk = (sq) => (v.last.includes(sq) ? ' ml' : '') + (v.played.includes(sq) ? ' mp' : '') + (v.answer.includes(sq) ? ' ma' : '');
-  // coordinates as a board's: the rank on the a-file, the file on rank 1
-  const co = (sq) => (sq[0] === 'a' ? `<s class="r">${sq.slice(1)}</s>` : '') + (sq.slice(1) === '1' ? `<s class="f">${sq[0]}</s>` : '');
-  const g = (x) => `<span aria-hidden="true">${x}</span> `;
-  return `<div class="rush-look"><div class="rush-mini" style="--n:${v.size}" aria-hidden="true">${v.cells.map((c) =>
-    `<i class="${c.dark ? 'dk' : 'lt'}${mk(c.sq)}">${co(c.sq)}${c.top ? `<b class="p${c.top.color} k${c.top.type}"></b>${c.h > 1 ? `<em>${c.h}</em>` : ''}` : ''}</i>`).join('')}</div>
-    <div class="rush-look-txt"><p><span class="rush-turn sm ${t.color}" aria-hidden="true"><i></i></span>${t.text}</p>
-    ${v.you ? `<p class="${r.skipped || r.unfinished ? 'muted' : r.solved ? 'good' : 'bad'}">${r.skipped || r.unfinished ? '' : g(r.solved ? '✓' : '✗')}${esc(v.you)}</p>` : ''}${v.want ? `<p class="${r.solved && r.played != null ? 'muted' : 'good'}">${r.solved && r.played != null ? '' : g('✓')}${esc(v.want)}</p>` : ''}</div></div>`;
+// The board's orientation (the player's own turn or mirror, [ ] - ; : =, kept in this browser) is the Rush board's.
+const orientOf = () => board?.M || [1, 0, 0, 1];
+const viewOf = (q) => { try { return R.review(q, q); } catch { return null; } }; // (a stored position that doesn't parse: nothing to draw)
+function picHTML(q) { const v = viewOf(q); return v ? pictureHTML(picture(v, orientOf())) : '<div class="rush-pic none"></div>'; }
+function cardHTML(rec, i) {
+  const r = rec.puzzles[i], m = R.resultMark(r);
+  return `<li class="rush-card ${m.cls}" data-i="${i}"><button type="button" class="rush-res" aria-haspopup="dialog" aria-expanded="false" aria-controls="rush-look">
+    ${picHTML(r)}<span class="rush-card-res"><span class="sr-only">Puzzle ${i + 1}, </span>${resultHTML(r)}</span></button>
+    <p class="rush-card-meta"><a href="${esc(R.puzzleLink(r))}">#${esc(r.id)}</a><span><span class="sr-only">rated </span>${Math.round(r.rating)}</span><span>${sec(r.ms)}</span></p></li>`;
 }
+// The words under the larger picture: whose turn it was, what was played, what the move was, how a play-out ended.
+function lookHTML(rec, i) {
+  const q = rec.puzzles[i], v = viewOf(q);
+  if (!v) return '';
+  const r = q, t = R.turn(v.toMove);
+  const g = (x) => `<span aria-hidden="true">${x}</span> `;
+  return `<div class="rush-look-txt"><p><span class="rush-turn sm ${t.color}" aria-hidden="true"><i></i></span>${t.text}</p>
+    ${v.you ? `<p class="${r.skipped || r.unfinished ? 'muted' : r.solved ? 'good' : 'bad'}">${r.skipped || r.unfinished ? '' : g(r.solved ? '✓' : '✗')}${esc(v.you)}</p>` : ''}${v.want ? `<p class="${r.solved && r.played != null ? 'muted' : 'good'}">${r.solved && r.played != null ? '' : g('✓')}${esc(v.want)}</p>` : ''}
+    ${v.marks.length ? `<p class="rush-key muted" aria-hidden="true">${v.marks.some((x) => x.role === 'bad') ? '<span class="k bad"></span>your move ' : ''}${v.marks.some((x) => x.role === 'good') ? '<span class="k good"></span>the puzzle’s move' : ''}</p>` : ''}</div>`;
+}
+// A puzzle stored without its symmetry (runs from before records kept it): a note for the puzzle page, read and
+// cleared by its next route, from which it works the symmetry out (app.js loadById, R.symFromRecord). A link opened
+// in a new tab goes without it and shows the puzzle in its own orientation.
+function noteLink(a, q) {
+  if (a && q && q.sym === undefined) a.addEventListener('click', (e) => { if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; try { sessionStorage.setItem('tinue.lookFrom', JSON.stringify(R.lookFrom(q))); } catch {} });
+}
+// The look-back dialog closed whenever its page goes (another page, the start screen, the browser's Back): left open in
+// a hidden section it would stay modal and leave the whole page unclickable.
+function closeLook() { const d = document.querySelector('#rush-look'); if (d?.open) d.close(); }
 function lookBack(rec) {
-  const wrap = $('#rush-list-wrap'), peek = $('#rush-peek');
-  const mouse = !!window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
-  const hide = () => { peek.hidden = true; };
-  const show = (tr) => {
-    if (!mouse || tr.classList.contains('open')) return hide();
-    peek.innerHTML = lookHTML(rec, +tr.dataset.i);
-    peek.hidden = false;
-    // under the row, or over it when the window ends first
-    const w = wrap.getBoundingClientRect(), b = tr.getBoundingClientRect(), h = peek.offsetHeight;
-    peek.style.top = (b.bottom + h <= innerHeight ? b.bottom - w.top : b.top - w.top - h) + 'px';
+  const list = $('#rush-cards'), dlg = $('#rush-look'), n = rec.puzzles.length;
+  let at = -1;
+  const btn = (i) => list.querySelector(`.rush-card[data-i="${i}"] .rush-res`);
+  const show = (i) => {
+    if (at >= 0) btn(at)?.setAttribute('aria-expanded', 'false');
+    at = i;
+    const q = rec.puzzles[i];
+    dlg.innerHTML = `<div class="rush-dlg-head"><h2 id="rush-look-h">Puzzle ${i + 1} of ${n} <span class="rush-dlg-res">${resultHTML(q)}</span></h2>
+      <button type="button" class="link rush-dlg-x" id="rush-look-x" aria-label="Close">×</button></div>
+      <p class="rush-card-meta"><a href="${esc(R.puzzleLink(q))}">#${esc(q.id)}</a><span>Rated ${Math.round(q.rating)}</span><span>${sec(q.ms)}</span></p>
+      <div class="rush-dlg-body">${picHTML(q)}${lookHTML(rec, i)}</div>
+      <div class="rush-row rush-dlg-nav"><button type="button" id="rush-look-prev"${i ? '' : ' disabled'}>Previous</button><button type="button" id="rush-look-next"${i < n - 1 ? '' : ' disabled'}>Next</button></div>`;
+    noteLink(dlg.querySelector('a'), q);
+    // Following the link leaves this page with the dialog open: a modal dialog in a hidden page stays modal, and
+    // everything outside it (the puzzle page too) stops taking clicks. Closed first (a new tab's link leaves it be).
+    dlg.querySelector('a').addEventListener('click', (e) => { if (!(e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey)) dlg.close(); });
+    $('#rush-look-x').onclick = () => dlg.close();
+    $('#rush-look-prev').onclick = () => go(-1);
+    $('#rush-look-next').onclick = () => go(1);
+    btn(i)?.setAttribute('aria-expanded', 'true');
   };
-  const toggle = (tr) => {
-    const open = tr.classList.contains('open'), i = +tr.dataset.i;
-    if (open) tr.nextElementSibling?.classList.contains('rush-x') && tr.nextElementSibling.remove();
-    else tr.insertAdjacentHTML('afterend', `<tr class="rush-x" id="rush-x-${i}"><td colspan="4">${lookHTML(rec, i)}</td></tr>`);
-    tr.classList.toggle('open', !open);
-    tr.querySelector('.rush-res')?.setAttribute('aria-expanded', String(!open));
-    hide();
-  };
-  for (const tr of wrap.querySelectorAll('tr.rush-p')) {
-    const btn = tr.querySelector('.rush-res');
-    tr.onmouseenter = () => show(tr); tr.onmouseleave = hide; // (a mouse: the whole row, not just its glyph)
-    btn.onfocus = () => show(tr); btn.onblur = hide;
-    tr.onclick = (e) => { if (!e.target.closest('a')) toggle(tr); }; // the link still opens the puzzle page; the button's click bubbles here
-    // A puzzle stored without its symmetry (runs from before records kept it): a note for the puzzle page, read and
-    // cleared by its next route, from which it works the symmetry out (app.js loadById, R.symFromRecord). A link opened
-    // in a new tab goes without it and shows the puzzle in its own orientation.
-    const q = rec.puzzles[+tr.dataset.i], a = tr.querySelector('a');
-    if (a && q && q.sym === undefined) a.addEventListener('click', (e) => { if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; try { sessionStorage.setItem('tinue.lookFrom', JSON.stringify(R.lookFrom(q))); } catch {} });
+  // (Previous or Next turned off at the end of the run: the focus moves to the other, not out of the dialog)
+  const go = (d) => { const i = at + d; if (i < 0 || i >= n) return; show(i); (d < 0 ? (i ? $('#rush-look-prev') : $('#rush-look-next')) : (i < n - 1 ? $('#rush-look-next') : $('#rush-look-prev')))?.focus(); };
+  dlg.addEventListener('close', () => { const b = btn(at); b?.setAttribute('aria-expanded', 'false'); at = -1; b?.focus(); });
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); }); // (the backdrop)
+  dlg.addEventListener('keydown', (e) => {
+    if ((e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || e.target.closest?.('a')) return;
+    e.preventDefault(); go(e.key === 'ArrowLeft' ? -1 : 1);
+  });
+  for (const li of list.querySelectorAll('.rush-card')) {
+    const i = +li.dataset.i;
+    li.querySelector('.rush-res').onclick = () => { show(i); if (!dlg.open) dlg.showModal(); $('#rush-look-x').focus(); };
+    noteLink(li.querySelector('a'), rec.puzzles[i]);
   }
 }
 async function showBest(r, mode, s, out = null) {
@@ -945,6 +969,8 @@ async function showBest(r, mode, s, out = null) {
 // Another page: a run in progress ends here, posted as abandoned once a move was made (see abandon).
 export function leave() {
   gen++;
+  if (st) sound.dropLater(); // (a verdict, the ten-second warning or the end still due stays in the run)
+  closeLook();
   abandon(st);
   if (st?.cur?.adj) stopAdj(st.cur, 'left');
   if (st) { clearInterval(st.timer); st = null; dropHeld(); board?.ui({ disableBoard: true }); }
