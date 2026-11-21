@@ -2,10 +2,10 @@
 // the browser, else crux's /api/defend, else Tiltak in the browser. Moved out of app.js unchanged (same engines, same
 // requests, same time limits), so both pages play the same defence. po: the play-out (playon.js playOutOf), whose
 // local, slowLocal, ctl and fallback fields this keeps as the page did.
-import * as tiltak from './tiltak.js?v=1795240423';
-import * as syntaks from './syntaks.js?v=1795240423';
-import { api } from './api.js?v=1795240423';
-import { legalMove, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795240423';
+import * as tiltak from './tiltak.js?v=1795300077';
+import * as syntaks from './syntaks.js?v=1795300077';
+import { api } from './api.js?v=1795300077';
+import { legalMove, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795300077';
 
 // Syntaks's reply. It runs in the browser (syntaks.js, loaded when play-on starts; 1.5 s a reply). Until it has loaded,
 // or on a device too slow for a real defence (fewer than LOCAL_MIN_NODES in that time), crux answers (/api/defend,

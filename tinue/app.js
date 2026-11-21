@@ -1,20 +1,20 @@
-import { Game } from './shared/tak.js?v=1795240423';
-import { unplayedPlies } from './shared/ptn.js?v=1795240423';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795240423';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795240423';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795240423';
-import * as engine from './engine.js?v=1795240423';
-import { showLineOn } from './lines.js?v=1795240423';
-import * as tiltak from './tiltak.js?v=1795240423';
-import * as syntaks from './syntaks.js?v=1795240423';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795240423';
-import { createNext } from './next.js?v=1795240423';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795240423';
-import { createOutbox } from './outbox.js?v=1795240423';
-import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795240423';
-import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795240423';
-import * as defend from './defend.js?v=1795240423';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795240423';
+import { Game } from './shared/tak.js?v=1795300077';
+import { unplayedPlies } from './shared/ptn.js?v=1795300077';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795300077';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795300077';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795300077';
+import * as engine from './engine.js?v=1795300077';
+import { showLineOn } from './lines.js?v=1795300077';
+import * as tiltak from './tiltak.js?v=1795300077';
+import * as syntaks from './syntaks.js?v=1795300077';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795300077';
+import { createNext } from './next.js?v=1795300077';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795300077';
+import { createOutbox } from './outbox.js?v=1795300077';
+import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795300077';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795300077';
+import * as defend from './defend.js?v=1795300077';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795300077';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -144,7 +144,7 @@ const guestId = () => {
 // PTN Ninja in an iframe instead of tinue's board (same API), by the Board style setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795240423')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1795300077')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -2109,8 +2109,9 @@ async function mePage() {
     <div class="chart"><svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"><path d="${path}" fill="none" stroke="#3692e7" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>
     <table class="t"><tr><th>Puzzle</th><th>Result</th><th>Puzzle rating</th><th>Δ</th><th>When</th></tr>
     ${h.map((r) => `<tr><td><a href="#/puzzle/${esc(r.puzzle_id)}">#${esc(r.puzzle_id)}</a> <span class="muted">${r.size}×${r.size}, ${r.plies} ${r.plies === 1 ? 'ply' : 'plies'}</span></td>
-      <td>${r.win ? '✓' : '✗'}</td><td>${Math.round(r.puzzle_rating)}</td>
-      <td>${r.rated ? `<span class="delta ${r.user_delta >= 0 ? 'up' : 'down'}">${r.user_delta >= 0 ? '+' : ''}${Math.round(r.user_delta)}</span>` : '<span class="muted">casual</span>'}</td>
+      <td>${r.win ? '✓' : '✗'}${r.refund ? ' <span class="muted" title="Refunded: counted as solved">refunded</span>' : ''}</td><td>${Math.round(r.puzzle_rating)}</td>
+      <td>${r.refund && !Math.round(r.user_delta) ? '<span class="muted">0</span>' // a refund's Δ is its net effect, often nothing
+        : r.rated ? `<span class="delta ${r.user_delta >= 0 ? 'up' : 'down'}">${r.user_delta >= 0 ? '+' : ''}${Math.round(r.user_delta)}</span>` : '<span class="muted">casual</span>'}</td>
       <td class="muted">${new Date(r.ts).toLocaleString()}</td></tr>`).join('')}</table>`;
   const out = $('#token-out');
   if (out) {
@@ -2149,7 +2150,7 @@ async function route() {
   if (page === 'glossary') return glossaryPage();
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795240423')).enter(); } // loaded on first visit
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795300077')).enter(); } // loaded on first visit
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   // Keeping the puzzle on screen: a Next this navigation superseded may have left it mid-way (needsRestore, busy) after
