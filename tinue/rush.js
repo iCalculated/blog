@@ -5,16 +5,16 @@
 // engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused while they work. Nothing here is rated,
 // and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { Board, buildPTN } from './board.js?v=1795239942';
-import { api, store, token } from './api.js?v=1795239942';
-import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795239942';
-import * as R from './rush-rules.js?v=1795239942';
-import * as engine from './engine.js?v=1795239942';
-import * as tiltak from './tiltak.js?v=1795239942';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795239942';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795239942';
-import { busy, BUSY_MS } from './busy.js?v=1795239942';
-import * as SYM from './shared/sym.js?v=1795239942';
+import { Board, buildPTN } from './board.js?v=1795240423';
+import { api, store, token } from './api.js?v=1795240423';
+import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795240423';
+import * as R from './rush-rules.js?v=1795240423';
+import * as engine from './engine.js?v=1795240423';
+import * as tiltak from './tiltak.js?v=1795240423';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795240423';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795240423';
+import { busy, BUSY_MS } from './busy.js?v=1795240423';
+import * as SYM from './shared/sym.js?v=1795240423';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -721,7 +721,10 @@ function say(t) {
 let sayNext = null; // the result just marked, said with the next puzzle's colour to move (nextPuzzle) or the end (endRun)
 function renderClock() {
   const left = R.timeLeft(st.run, performance.now()), el = $('#rush-clock');
-  $('#rush-clock-t').textContent = R.clockText(left);
+  // (written only when it changes: this runs 10 times a second, and writing the same text still costs a layout, a
+  // paint and a frame each time; that was about 3 s of CPU a minute on an untouched run)
+  const t = R.clockText(left), ct = $('#rush-clock-t');
+  if (ct.textContent !== t) ct.textContent = t;
   const low = st.run.startedAt != null && left < 20e3;
   el.classList.toggle('low', low);
   if (low && !st.saidLow) { st.saidLow = true; say('20 seconds left'); }
