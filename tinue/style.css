@@ -65,6 +65,9 @@ select { padding-right: 6px; }
 .top { display: flex; align-items: center; gap: 28px; padding: 0 24px; height: 56px; background: var(--bg2); border-bottom: 1px solid var(--line); font-size: 14px; }
 .brand { display: flex; align-items: center; gap: 8px; color: var(--fg-hi); font-weight: 600; font-size: 18px; letter-spacing: -.2px; }
 .brand .logo { width: 26px; height: 26px; display: block; color: var(--fg-hi); margin-top: -3px; }
+.beta-badge { margin-left: -16px; padding: 1px 8px; border: 1px solid var(--accent); border-radius: 999px; color: var(--accent); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.beta-badge small { margin-left: 6px; font-weight: 400; color: var(--muted, inherit); opacity: .8; }
+@media (max-width: 700px) { .beta-badge { margin-left: 0; } .beta-badge small { display: none; } }
 .top nav { display: flex; gap: 22px; }
 .top nav a { color: var(--muted); }
 .top nav a.on, .top nav a:hover { color: var(--fg-hi); }

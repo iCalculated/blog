@@ -2,7 +2,7 @@
 // New players start at 1500 ± 500 (as on Lichess) and puzzles at their prior ± 250: uncertain ratings move fast,
 // settled ones slowly, and a result from an uncertain player moves a puzzle less.
 // scripts/simulate-newcomers.mjs (and, for Glicko over Elo, scripts/archive/simulate-glicko.mjs) show why these numbers were picked.
-import { update, cap, blend, PLAYER_START, PUZZLE_START, PROVISIONAL_RD, provisional } from './glicko.js?v=1795144990';
+import { update, cap, blend, PLAYER_START, PUZZLE_START, PROVISIONAL_RD, provisional } from './glicko.js?v=1795235532';
 
 const CLUELESS_RD = 230;
 
@@ -17,10 +17,11 @@ export const UNSETTLED_SQL = `rd >= ${PROVISIONAL_RD}`;
 // Drilling a theme gives part of the answer away (you know it's a fork, or a forced win in 2), so a themed
 // result moves ratings less, and a win far less than a loss: it's still telling when you miss despite the
 // hint. Lichess does the same with milder weights; ours are sharper because in Tak the theme is a big hint.
-// Mix/no theme = full weight.
+// Mix/no theme = full weight, and so is a theme marked fullWeight (Deep tinuë: knowing a win is six to eight moves
+// deep is no hint worth a discount).
 export const THEME_WIN_WEIGHT = 0.1, THEME_LOSS_WEIGHT = 0.7;
 export function themeWeight(themeKey, themes, win) {
-  if (!themeKey || !themes[themeKey]) return 1;
+  if (!themeKey || !themes[themeKey] || themes[themeKey].fullWeight) return 1; // (fullWeight: a challenge theme, shared/themes.js)
   return win ? THEME_WIN_WEIGHT : THEME_LOSS_WEIGHT;
 }
 
