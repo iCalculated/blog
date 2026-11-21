@@ -1,19 +1,20 @@
-import { Game } from './shared/tak.js?v=1795235532';
-import { unplayedPlies } from './shared/ptn.js?v=1795235532';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795235532';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795235532';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795235532';
-import * as engine from './engine.js?v=1795235532';
-import * as tiltak from './tiltak.js?v=1795235532';
-import * as syntaks from './syntaks.js?v=1795235532';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795235532';
-import { createNext } from './next.js?v=1795235532';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795235532';
-import { createOutbox } from './outbox.js?v=1795235532';
-import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795235532';
-import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795235532';
-import * as defend from './defend.js?v=1795235532';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795235532';
+import { Game } from './shared/tak.js?v=1795239942';
+import { unplayedPlies } from './shared/ptn.js?v=1795239942';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795239942';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795239942';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795239942';
+import * as engine from './engine.js?v=1795239942';
+import { showLineOn } from './lines.js?v=1795239942';
+import * as tiltak from './tiltak.js?v=1795239942';
+import * as syntaks from './syntaks.js?v=1795239942';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795239942';
+import { createNext } from './next.js?v=1795239942';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795239942';
+import { createOutbox } from './outbox.js?v=1795239942';
+import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795239942';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795239942';
+import * as defend from './defend.js?v=1795239942';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795239942';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -143,7 +144,7 @@ const guestId = () => {
 // PTN Ninja in an iframe instead of tinue's board (same API), by the Board style setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795235532')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1795239942')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -222,6 +223,9 @@ function refreshPage() {
 }
 
 // ---------- puzzle flow ----------
+// The load generation: every loadNext/loadById and every route() bumps it, and a load checks it after each await, so
+// a late reply never starts its puzzle after the player navigated elsewhere (back to the puzzle on screen, to Rush, to
+// another page): starting it would abandon the puzzle on screen (a play-out left is a rated miss) and rewrite the address.
 let loadSeq = 0;
 const nextQuery = (skip) => { // skip: a puzzle id to leave out (one whose result may not have reached the server)
   const q = new URLSearchParams({ difficulty: prefs.difficulty });
@@ -324,9 +328,11 @@ async function loadNext({ reload = false } = {}) {
   const leaving = S?.checkPending || S?.quickCheck ? S.p.id : null;
   const left = abandonCheck(S);
   if (left) await Promise.race([left, new Promise((r) => setTimeout(r, 3000))]);
+  if (t !== loadSeq) return;
   const pre = nextQ.take(); // (a stored one stays until this puzzle's result: leaving halfway comes back to it)
   // A prefetch still in flight gets 3 s (it is quiet: no waiting notice), then a normal request takes over.
   let r = pre && (await Promise.race([pre, new Promise((res) => setTimeout(() => res(null), 3000))]));
+  if (t !== loadSeq) return;
   if (!r?.puzzle || r.puzzle.id === S?.p.id) { // (a "no match" answer is re-asked too)
     if (pre && !r) { setNotice(WAIT_NOTICE); renderAll(); }
     try { r = judgeSeen(await api('/api/next?' + nextQuery(leaving))); } catch { restoreLeft(); return; } // api() has shown the error
@@ -365,7 +371,8 @@ async function loadById(id) {
   // server unreachable), and it keeps the Theme it was picked under (start() checks it against the puzzle's themes).
   const reloaded = reloadTheme?.id === id, stored = reloaded && store.get('next', null)?.puzzle;
   let puzzle = stored?.id === id ? stored : null;
-  if (!puzzle) { try { ({ puzzle } = await api('/api/puzzle/' + encodeURIComponent(id))); } catch { restoreLeft(); return; } }
+  // (judgeSeen: a fresh tab opened on a puzzle link learns here whether the judge listens, before start() opens the attempt)
+  if (!puzzle) { try { ({ puzzle } = judgeSeen(await api('/api/puzzle/' + encodeURIComponent(id)))); } catch { restoreLeft(); return; } }
   if (t !== loadSeq) return;
   if (puzzle) { showPuzzleURL(puzzle.id); start(puzzle, reloaded ? reloadTheme.theme : ''); } else loadNext();
 }
@@ -449,10 +456,12 @@ async function runSolver(s, key, plies) {
 
 // Play the engine's line on the board, up to and including move k (as your line).
 async function playPV(k) {
-  const pv = S.tk?.pv || S.eval?.pv;
-  if (!pv?.length) return;
   const line = shownLine();
   const at = S.view ?? line.length;
+  // (only the line's legal moves from here: an engine that printed a bad one would break the branch)
+  let pv; try { pv = legalPrefix(gameAt(line.slice(0, at)), S.tk?.pv || S.eval?.pv); } catch { return; }
+  if (!pv.length) return;
+  k = Math.min(k, pv.length - 1);
   const official = officialLine();
   const prefix = S.onBranch && S.branch && at > S.branch.at ? S.branch.moves.slice(0, at - S.branch.at) : [];
   const base = S.onBranch && S.branch ? Math.min(at, S.branch.at) : at;
@@ -469,11 +478,8 @@ async function playPV(k) {
 }
 
 // Load a line onto the board and show the position after `idx` plies (no animation).
-async function showLine(line, idx) {
-  const key = line.join(' ');
-  if (S.loadedKey !== key) { await board.load(ptnFor(line)); S.loadedKey = key; }
-  if (idx >= line.length) await board.last(); else if (idx === 0) await board.first(); else await board.goTo(idx - 1);
-}
+// (lines.js: a newer call made while this one's load is still waiting wins, so rapid line switches end on the last one)
+function showLine(line, idx) { return showLineOn(board, S, line, idx, ptnFor); }
 
 async function start(p, theme = '') {
   if (S?.free) leaveFree(S, 'left'); // (its engine stops; nothing to send)
@@ -584,15 +590,20 @@ document.addEventListener('visibilitychange', syncClock);
 const pliesLeft = () => pliesLeftOf(S.node); // (playon.js: Rush's play-outs use it too)
 
 // Put the board back to exactly the moves we've accepted (after a wrong move, or after browsing history).
-async function restoreBoard() {
+// s: the puzzle it was asked for; if another one has started meanwhile (PTN Ninja's load really waits), it stops.
+async function restoreBoard(s = S) {
   await board.load(currentPTN());
+  if (S !== s) return;
   S.loadedKey = null;
   await board.last();
+  if (S !== s) return;
   S.view = null;
   const live = S.status === 'play' || S.status === 'retry';
   await board.ui({ disableBoard: !live });
+  if (S !== s) return;
   if (live) await board.setPlayer(S.solver);
   if (live && S.hint?.node === S.node && S.hint.at === S.moves.length) await board.highlight(S.hint.sqs); // a reload clears it
+  if (S !== s) return;
   renderAll();
 }
 
@@ -751,7 +762,7 @@ async function report(win, s = S, flags = s, { keepalive = false, ms } = {}) {
   if (keepalive) heldRec.del(p.id);
   // A held result settled now: if the page reloads before the server has it, flushHeld sends this result (under this
   // build), not an unrated miss (the server keeps only the first, so a resend of one that landed changes nothing).
-  else if (heldRec.get()?.id === p.id) heldRec.set({ id: p.id, ms: timing.ms, win, casual: !!s.casual, theme: s.casual ? undefined : s.theme || undefined });
+  else if (heldRec.get()?.id === p.id) heldRec.set(settledHeld(p.id, timing, win, s.casual, s.theme));
   try { // a failed upload (network, server restart) loses this result (a held one waits for a reload), not the session
     // noWait: a slow upload mustn't swap the card (and its Hint button) for the waiting notice; a failed one still says so
     const si = signIn; // (a sign-in while this is on its way keeps its token: answerOwnsToken)
@@ -1204,11 +1215,14 @@ function fail(ms) { S.status = 'retry'; report(false, S, S, { ms }); renderAll()
 // Still-wins verdicts already known in this puzzle, by position and move, so a repeat doesn't search again.
 const provenKey = (canon) => S.moves.map((m) => m.ptn).join(' ') + '|' + canon;
 
-async function solved() {
-  S.status = 'solved';
-  S.outcome = S.viewed ? 'viewed' : S.misses.length ? 'miss' : 'clean';
-  if (!S.resultSent) report(true);
-  await openExploration();
+// s: the puzzle solved. before: what to await between reporting it and opening exploration (slowSolve: the board put
+// back); another puzzle may be on screen by then, and it is left alone.
+async function solved(s = S, before = null) {
+  s.status = 'solved';
+  s.outcome = s.viewed ? 'viewed' : s.misses.length ? 'miss' : 'clean';
+  if (!s.resultSent) report(true, s);
+  if (before) await before();
+  if (S === s) await openExploration();
 }
 
 // A proven forced win the puzzle's line doesn't take is a solve, whatever its length (with 7+ plies left the tree has
@@ -1223,7 +1237,11 @@ function slowSolve(canon, tMove, node) {
   g.play(canon);
   S.moves.push({ ptn: canon, me: true }); S.snaps.push(g.toTPS());
   S.refutation = null; S.busy = false;
-  restoreBoard().then(() => solved());
+  // The win is this puzzle's, decided now: it is reported before the board's await. On PTN Ninja that await yields
+  // for 60 ms or more, and a filter change or puzzle link in between used to start the next puzzle, which solved()
+  // (reading S) then marked solved and reported as a rated win while this one was never reported.
+  const s = S;
+  solved(s, () => restoreBoard(s));
 }
 
 // After the puzzle the board is free: play any legal move, for either side, from any position.
@@ -1433,7 +1451,7 @@ function engineMarkup() {
     } else if (S.eval) {
       const e = S.eval, side = colorName(e.side);
       lead = e.kind === 'thinking' ? '<span class="muted">Thinking…</span>'
-        : e.kind === 'win' ? `<b>${side} wins in ${Math.ceil(e.plies / 2)}</b>` : `<span class="muted">No forced win for ${side}</span>`;
+        : e.kind === 'win' ? `<b>${side} wins in ${Math.ceil(e.plies / 2)}</b>` : `<span class="muted">${engine.noWinText(e, side)}</span>`;
       pv = e.kind === 'win' ? pvHtml(e.pv) : '';
       tag = '<span class="src">solver</span>';
     }
@@ -2122,6 +2140,7 @@ function go(hash) {
 }
 
 async function route() {
+  ++loadSeq; // whatever this navigation shows, a puzzle load still in flight is now stale
   // a hash wins (in-app links); else the path (<app>/puzzle/<id>, the address shown for a puzzle)
   const pathRoute = location.pathname.slice(APP.length);
   const [, page, arg] = (location.hash && location.hash !== '#' ? location.hash : '#/' + pathRoute).split('/');
@@ -2130,11 +2149,13 @@ async function route() {
   if (page === 'glossary') return glossaryPage();
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795235532')).enter(); } // loaded on first visit
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795239942')).enter(); } // loaded on first visit
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
-  if (page === 'puzzle' && arg) { if (S?.p.id !== decodeURIComponent(arg)) loadById(decodeURIComponent(arg)); else showPuzzleURL(S.p.id); }
-  else if (S && !S.placeholder && S.status !== 'solved' && matchesFilters(S.p)) showPuzzleURL(S.p.id); // back to the puzzle in progress
+  // Keeping the puzzle on screen: a Next this navigation superseded may have left it mid-way (needsRestore, busy) after
+  // abandoning its check, so put its board back (restoreLeft does nothing otherwise).
+  if (page === 'puzzle' && arg) { if (S?.p.id !== decodeURIComponent(arg)) loadById(decodeURIComponent(arg)); else { restoreLeft(); showPuzzleURL(S.p.id); } }
+  else if (S && !S.placeholder && S.status !== 'solved' && matchesFilters(S.p)) { restoreLeft(); showPuzzleURL(S.p.id); } // back to the puzzle in progress
   else loadNext();
 }
 window.addEventListener('hashchange', route);

@@ -3,8 +3,8 @@
 
 // The rules the judge needs (the move cap, who defends, how a game ends, which games count) live in shared/judge.js
 // (plan step S1) and are re-exported here unchanged, so the page and scripts/test-playon.mjs see the same functions.
-import { capMoves, proofMoves, provenCap } from './shared/judge.js?v=1795235532';
-export { capMoves, proofMoves, provenCap, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls } from './shared/judge.js?v=1795235532';
+import { capMoves, proofMoves, provenCap } from './shared/judge.js?v=1795239942';
+export { capMoves, proofMoves, provenCap, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls } from './shared/judge.js?v=1795239942';
 
 // The cap's explanation, one plain sentence shown on the card (and as the number's tooltip). capNote: the puzzle's
 // bound (the moves it had left at that node, plus the spare: capMoves).
@@ -66,6 +66,15 @@ export function legalMove(g, ptn) {
   } catch { return null; }
 }
 
+// An engine's line from game g, cut at its first move that isn't legal there (or isn't a move at all): nothing checks
+// a printed line before the analysis panel plays it onto the board, and one bad move in an explored branch would leave
+// that branch unplayable. Moves come back canonical; g is left as it was.
+export function legalPrefix(g, pv) {
+  const h = g.clone(), out = [];
+  for (const m of pv || []) { const c = legalMove(h, m); if (!c) break; h.play(c); out.push(c); }
+  return out;
+}
+
 // ---- proven play-out (Shy, 2026-11-16: "Make people prove winning sequences! Just fine if they are slower";
 // "Rated miss when defended. No play out w tiltak") ----
 // A proven off-tree win isn't solved on the spot where Syntaks defends (6×6): it's played out to a road (or a flat
@@ -88,9 +97,16 @@ export function heldResend(h, owner, alive) {
   if (!h?.id || alive || h.owner !== owner) return null;
   // (unsettled, including a proven play-out the page died in: an unrated miss, recorded so it isn't a free retry and
   // never a rated miss for a move proven to win)
-  const result = typeof h.win === 'boolean' ? { win: h.win, ...(h.casual ? { casual: true } : { theme: h.theme }) } : { win: false, casual: true };
-  return { build: +h.b || 0, body: { puzzleId: h.id, ...result, ms: h.ms } };
+  const settled = typeof h.win === 'boolean';
+  const result = settled ? { win: h.win, ...(h.casual ? { casual: true } : { theme: h.theme }) } : { win: false, casual: true };
+  // A settled record keeps its move log (settledHeld): the server stores only the first result for a puzzle, so a
+  // resend without it would lose that attempt's log for good.
+  return { build: +h.b || 0, body: { puzzleId: h.id, ...result, ms: h.ms, ...(settled && Array.isArray(h.log) && h.log.length ? { log: h.log } : {}) } };
 }
+// The record report() keeps for a settled result until the server has it (app.js heldRec): what heldResend sends.
+// timing: { ms, log } as report() sends them.
+export const settledHeld = (id, timing, win, casual, theme) =>
+  ({ id, ms: timing.ms, win, casual: !!casual, theme: casual ? undefined : theme || undefined, ...(timing.log ? { log: timing.log } : {}) });
 
 // heldRec is one slot: a record for another puzzle that was settled (its result known, its upload failed, kept for a
 // resend) must be sent before a new record replaces it, or that result is lost. What to send (heldResend with alive

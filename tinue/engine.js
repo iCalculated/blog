@@ -76,6 +76,10 @@ export function checkStill(pos, { quickMs = 2500, maxMs = 60e3, budgets = [[3e4,
   return { quick, final, cancel: () => end('unknown'), info };
 }
 export const analyze = (pos) => ask('analyze', pos);
+// The panel's words for an analyze answer without a win (kind 'none'), side: 'White' or 'Black'. A search cut off by
+// its budget (inconclusive) has found nothing either way; a finished one keeps the panel's old wording (the page's
+// 9-ply searches are never exact past 5 plies, so an exact/threats-only split would reword every finished search).
+export const noWinText = (e, side) => e.inconclusive ? 'Search inconclusive' : `No forced win for ${side}`;
 // How long a known win's proof is (plies after the move, defender to move), or null: { plies } | null if superseded.
 export const proofLength = (pos) => ask('length', pos);
 export const interrupt = () => { stop('refute'); stop('analyze'); stop('length'); };
