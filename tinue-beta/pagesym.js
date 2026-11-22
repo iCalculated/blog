@@ -8,8 +8,8 @@
 // on both builds. Not the query string (it rides along to every page) and not the path (a static per-puzzle page
 // forwards to #/puzzle/<id> and drops any hash; <id>/<s> has no page at all).
 // Pure, no DOM: node tests in scripts/test-pagesym.mjs.
-import * as SYM from './shared/sym.js?v=1795369724';
-import { Game } from './shared/tak.js?v=1795369724';
+import * as SYM from './shared/sym.js?v=1795371035';
+import { Game } from './shared/tak.js?v=1795371035';
 
 // An address's symmetry segment: 1..7, else 0 (missing, stale or malformed is ignored).
 export const symOf = (seg) => (typeof seg === 'string' && /^[1-7]$/.test(seg) ? +seg : 0);

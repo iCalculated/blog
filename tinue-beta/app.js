@@ -1,27 +1,27 @@
-import { Game } from './shared/tak.js?v=1795369724';
-import { unplayedPlies } from './shared/ptn.js?v=1795369724';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795369724';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795369724';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795369724';
-import * as engine from './engine.js?v=1795369724';
-import { showLineOn } from './lines.js?v=1795369724';
-import * as tiltak from './tiltak.js?v=1795369724';
-import * as syntaks from './syntaks.js?v=1795369724';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795369724';
-import { createNext } from './next.js?v=1795369724';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795369724';
-import { createOutbox } from './outbox.js?v=1795369724';
-import * as sound from './sound.js?v=1795369724';
-import { boardFrom, confirmOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795369724';
-import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof, isTak, countTak, outOfMoves, takLeft, TAK_COUNTDOWN, replyEntry, logOk, leftRunsOn, runOnHeld, noEnding, REFUTED } from './playon.js?v=1795369724';
-import { copy } from './playon-copy.js?v=1795369724';
-import { OTHER, syncedOf, decide, diff, changesBody, carried, unsentKeys, withUnsent, afterPost, syncStatus } from './prefsync.js?v=1795369724';
-import { parseLook, encodeLook, cleanLook, lookReport, THEMES as NINJA_THEMES, themeOf, withTheme, themeName } from './ninja-look.js?v=1795369724';
-import * as defend from './defend.js?v=1795369724';
-import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, quickLine, mergeLines, pickCandidates, pinnedAt, moveShape, threatGroups, chipLabel, numberedPV, ptnParts, THREAT_ON, ALT_IN } from './analysis.js?v=1795369724';
-import { whenText } from './rush-rules.js?v=1795369724';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795369724';
-import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795369724';
+import { Game } from './shared/tak.js?v=1795371035';
+import { unplayedPlies } from './shared/ptn.js?v=1795371035';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795371035';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795371035';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795371035';
+import * as engine from './engine.js?v=1795371035';
+import { showLineOn } from './lines.js?v=1795371035';
+import * as tiltak from './tiltak.js?v=1795371035';
+import * as syntaks from './syntaks.js?v=1795371035';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795371035';
+import { createNext } from './next.js?v=1795371035';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795371035';
+import { createOutbox } from './outbox.js?v=1795371035';
+import * as sound from './sound.js?v=1795371035';
+import { boardFrom, confirmOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795371035';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof, isTak, countTak, outOfMoves, takLeft, TAK_COUNTDOWN, replyEntry, logOk, leftRunsOn, runOnHeld, noEnding, REFUTED } from './playon.js?v=1795371035';
+import { copy } from './playon-copy.js?v=1795371035';
+import { OTHER, syncedOf, decide, diff, changesBody, carried, unsentKeys, withUnsent, afterPost, syncStatus } from './prefsync.js?v=1795371035';
+import { parseLook, encodeLook, cleanLook, lookReport, THEMES as NINJA_THEMES, themeOf, withTheme, themeName } from './ninja-look.js?v=1795371035';
+import * as defend from './defend.js?v=1795371035';
+import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, quickLine, mergeLines, pickCandidates, pinnedAt, moveShape, threatGroups, chipLabel, numberedPV, ptnParts, THREAT_ON, ALT_IN } from './analysis.js?v=1795371035';
+import { whenText } from './rush-rules.js?v=1795371035';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795371035';
+import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795371035';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -160,7 +160,7 @@ const guestId = () => {
 // PTN Ninja in an iframe instead of tinue's board (same API), by the Board setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795369724')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn), look: prefs.ninja })
+const board = NINJA ? new (await import('./ninja.js?v=1795371035')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn), look: prefs.ninja })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
 // Sounds (sound.js): every move played or appended on any board (this page's, Rush's, PTN Ninja's) sounds what it set
 // down and where (board.js landOf); a stack moved by hand sounds each drop as it lands (onLand) and nothing more when
@@ -434,7 +434,7 @@ async function loadById(id, s = 0, look = null) {
   if (!puzzle) { try { ({ puzzle } = judgeSeen(await api('/api/puzzle/' + encodeURIComponent(id)))); } catch { restoreLeft(); return; } }
   if (t !== loadSeq) return;
   if (puzzle && !s && look?.id === puzzle.id) {
-    try { s = (await import('./rush-rules.js?v=1795369724')).symFromRecord(puzzle, look); } catch { s = 0; }
+    try { s = (await import('./rush-rules.js?v=1795371035')).symFromRecord(puzzle, look); } catch { s = 0; }
     if (t !== loadSeq) return;
   }
   // The one place a puzzle is oriented (pagesym.js): the page works in the turned labels from here on; the server's
@@ -476,7 +476,7 @@ const fromEngine = (s, r) => s.x.answer(r);
 let lz = null, lzLoad = null;
 const ninjaHref = () => lz && ninjaUrl({ ptn: ptnFor(shownLine()), ply: S.view ?? shownLine().length, name: 'tinue #' + S.p.id }, lz);
 function loadLz() {
-  lzLoad ||= import('./vendor/lz-string.js?v=1795369724').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
+  lzLoad ||= import('./vendor/lz-string.js?v=1795371035').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
 }
 function refreshNinja() {
   if (!S || S.placeholder || S.status !== 'solved') return;
@@ -698,14 +698,15 @@ function setLines(s, key) {
 // sits inside line 1's (ALT_IN), so both show; where it spreads from line 1's stack its count sits along its own arrow
 // (lead), and along the same line both arrows run side by side (shift), so neither hides the other's count or shaft. A
 // threat ending on a stone rings it from outside (THREAT_ON). The threats are drawn over all of it (analysis.js
-// shapesSvg). Only for the position shown.
+// shapesSvg), and only while they are shown (S.thr, the Threats button or x: off by default, as on Lichess). Only for
+// the position shown.
 function paintShapes() {
   if (!ANALYSIS || !S || S.placeholder || S.status !== 'solved' || !S.posG) return;
   const line = shownLine();
   if (S.evalKey !== line.slice(0, S.view ?? line.length).join(' ')) return;
   const g = S.posG, mover = g.toMove, list = [];
   const add = (ptn, role, color, extra) => { try { const shape = moveShape(ptn, g.size, g); if (shape) list.push({ shape, role, color, sqs: moveSquares(ptn), ...extra }); } catch {} };
-  for (const t of threatGroups(S.sol?.threats, g.size)) {
+  if (S.thr) for (const t of threatGroups(S.sol?.threats, g.size)) {
     add(t, 'threat', 3 - mover);
     const x = list.at(-1), sq = x?.role === 'threat' ? (x.shape.kind === 'place' ? x.shape.sq : x.shape.to) : null;
     if (sq != null && g.board[sq]?.length) x.r = THREAT_ON;
@@ -757,6 +758,21 @@ async function playPV(L, k) {
 function showLine(line, idx) { return showLineOn(board, S, line, idx, ptnFor); }
 
 // p: the puzzle as shown (oriented by loadById, pagesym.js); p0: the same puzzle as the server sent it.
+// The opponent's threats shown or not (the analysis view's Threats button, or x): their line under the engine lines and
+// their rings and arrows on the board. Off with every new puzzle (S.thr unset); kept while stepping through this one.
+function toggleThreats() {
+  if (!ANALYSIS || !S || S.placeholder || S.status !== 'solved') return;
+  S.thr = !S.thr;
+  renderEngine(); paintShapes();
+}
+// x: the Threats button's key (as on Lichess), only while the analysis view is shown, never in a field or with a modifier
+window.addEventListener('keydown', (e) => {
+  if (!ANALYSIS || e.key !== 'x' || e.ctrlKey || e.metaKey || e.altKey || e.repeat || pend) return;
+  if (e.target?.closest?.('input, select, textarea, [contenteditable]') || $('#view-puzzle').classList.contains('hidden')) return;
+  if (!S || S.placeholder || S.status !== 'solved' || !$('#moves [data-thr]')) return;
+  e.preventDefault(); toggleThreats();
+});
+
 async function start(p, theme = '', p0 = p) {
   if (S?.free) leaveFree(S, 'left'); // (its engine stops; nothing to send)
   abandonCheck(S); // leaving a puzzle whose check is still running (any route: Next, a link, a filter change)
@@ -1752,6 +1768,10 @@ const PLACEHOLDER = {
 // of the side ahead, its number spoken for that side, as the header's), the line's moves numbered as the move list
 // numbers them (click one to play the line up to there) and its tags, then the opponent's threats in one short red line.
 // Docked on a phone: a row of two-part chips (evaluation | move), and under it the selected line's moves.
+// The threats (the red line here and the red rings and arrows on the board) are off by default, as on Lichess (Sasha,
+// 2026-11-22: "threat should be toggle-able (and off by default) like on lichess"): a small Threats button beside the
+// lines, or x, shows them (S.thr). Each puzzle starts with them off (S is new); stepping through it keeps them as set.
+// Their line's room is held either way, so nothing above it moves when they come and go.
 const TAG_WORDS = { puzzle: 'the puzzle’s move', yours: 'your move', played: 'played in the game' };
 const SRC = {
   syntaks: (t) => `<a class="src" href="https://github.com/Ciekce/syntaks" target="_blank" rel="noopener" title="Evaluation by Syntaks, a 6×6 engine by Ciekce and contributors, running on the puzzle server${t}">Syntaks</a>`,
@@ -1802,23 +1822,25 @@ function engineMarkup(docked = DOCK_MQ.matches && S?.status === 'solved') {
     : SRC[e.src]?.(detail ? ` (${detail})` : '') || '';
   const label = (l) => { const c = chipLabel(l.ev, mover); return `${l.move}${l.tags.map((t) => TAG_WORDS[t] ? ', ' + TAG_WORDS[t] : '').join('')}: ${c.side ? colorName(c.side) + ' ' : ''}${c.text}${l.ev.proven ? ', proven' : ''}${l.cand ? ' (a candidate move, searched on its own)' : ''}`; };
   const ev = (l) => { const c = chipLabel(l.ev, mover); return [c, `s${c.side}${l.ev.proven ? ' pr' : ''}`]; };
-  const tt = threatText(), threatP = tt ? `<p class="threat" title="${tt.long}" aria-label="${tt.long}">${tt.short}</p>` : '';
+  const tt = S.thr ? threatText() : null, threatP = tt ? `<p class="threat" title="${tt.long}" aria-label="${tt.long}">${tt.short}</p>` : '';
+  const thrB = `<button type="button" class="thr-t" data-thr aria-pressed="${!!S.thr}" title="The opponent’s threats (x)">Threats</button>`;
   if (docked) {
     const sel = lines[S.sel] || l1;
     const seg = (l, i) => { const [c, k] = ev(l); return `<button class="chip" data-line="${i}" aria-pressed="${i === S.sel}" aria-label="${esc(label(l))}" title="${esc(label(l))}"><span class="ev ${k}">${esc(c.text)}</span><span class="mv">${mvHtml(l.move)}</span></button>`; };
     const rowA = lines.length ? lines.map(seg).join('') + (busy ? '<span class="muted">…</span>' : '') : `<b class="vd">${verdict}</b>`;
-    // (the threat line is the third row, in the dock's held room, so it is never behind the dock)
+    // (the threat line is the third row, in the dock's held room, so it is never behind the dock; its button ends the
+    // second row, a finger's size, where the third row's 17 px would be too small)
     return `<div class="eng ana docked"><div class="chips" role="group" aria-label="Engine lines">${rowA}</div>`
-      + `<div class="eng-b"><span class="pvline">${sel ? pvHtml(lines.indexOf(sel), sel.pv) : ''}</span>${src}</div>${threatP}</div>`;
+      + `<div class="eng-b"><span class="pvline">${sel ? pvHtml(lines.indexOf(sel), sel.pv) : ''}</span>${src}${thrB}</div>${threatP}</div>`;
   }
   const chip = (l, i) => { const [c, k] = ev(l); return `<button class="chip ${k}" data-line="${i}" aria-pressed="${i === S.sel}" aria-label="${esc(label(l))}" title="${esc(label(l))}">${esc(c.text)}</button>`; };
   const tags = (l) => l.tags.map((t) => `<span class="tag ${t}">${t}</span>`).join('');
   const rows = lines.map((l, i) => `<div class="ln${i === S.sel ? ' sel' : ''}" data-line="${i}">${chip(l, i)}<span class="pvline">${pvHtml(i, l.pv)}</span>${tags(l)}</div>`).join('');
   // The lines' room (four lines and the threat line, analysis.css) is held at one height for the whole analysis, a
-  // finished game's position included, so the step buttons below never move; the threat line sits outside the rows'
-  // scroller, so a fifth row never pushes it out of sight.
+  // finished game's position included, so the step buttons below never move; the threat line (the Threats button, then
+  // the threats while shown) sits outside the rows' scroller, so a fifth row never pushes it out of sight.
   return `<div class="eng ana"><div class="eng-h">${src}<b class="vd">${verdict}</b></div>${bar}`
-    + `<div class="lns"><div class="rws" role="group" aria-label="Engine lines">${rows}</div>${threatP}</div></div>`;
+    + `<div class="lns"><div class="rws" role="group" aria-label="Engine lines">${rows}</div><div class="thr">${thrB}${threatP}</div></div></div>`;
 }
 // After the lines are drawn: a line's moves fade at the row's edge only when they overflow it (analysis.css
 // .pvline.of), and in the dock the selected chip is scrolled into the chips' row (a 4th line, yours, sat off screen).
@@ -1859,11 +1881,12 @@ function renderEngine() {
 }
 // After clicking a move in a line, the lines are redrawn for the new position: keep keyboard focus on line 1's first
 // move (Enter again steps further along), or on Forward while the engine is still thinking; a chip keeps its focus.
-const pvFocused = () => { const a = document.activeElement; return !a?.closest?.('#moves') ? null : a.matches('.chip') ? 'chip:' + a.dataset.line : a.closest('[data-pv]') ? 'pv' : null; };
+const pvFocused = () => { const a = document.activeElement; return !a?.closest?.('#moves') ? null : a.matches('.chip') ? 'chip:' + a.dataset.line : a.matches('[data-thr]') ? 'thr' : a.closest('[data-pv]') ? 'pv' : null; };
 let pvFollow = false; // focus is parked on Forward until the engine's new line arrives
 const refocusPV = (was) => {
   const onFwd = !!document.activeElement?.matches?.('#moves [data-step="next"]');
   const pv0 = $('#moves [data-pv="0.0"]');
+  if (was === 'thr') return $('#moves [data-thr]')?.focus(); // (the Threats button keeps its focus)
   if (was?.startsWith('chip:') && !pvFocused()) { const c = $(`#moves .chip[data-line="${was.slice(5)}"]`) || $('#moves .chip'); if (c) return c.focus(); }
   if (was && !pvFocused()) { if (pv0) pv0.focus(); else { $('#moves [data-step="next"]')?.focus(); pvFollow = true; } }
   else if (pvFollow && onFwd && pv0) { pv0.focus(); pvFollow = false; }
@@ -2240,6 +2263,7 @@ $('#moves').addEventListener('click', (e) => {
   if (pvb) { const [L, k] = pvb.dataset.pv.split('.').map(Number); return playPV(L, k); }
   // a line's chip (or its row): select it (its arrow on the board, its moves in the dock); the selected chip again
   // plays its first move
+  if (ANALYSIS && e.target.closest('[data-thr]')) return toggleThreats();
   const ln = ANALYSIS && e.target.closest('[data-line]');
   if (ln && S.status === 'solved') {
     const L = +ln.dataset.line;
@@ -2756,9 +2780,9 @@ async function route() {
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
   if (page === 'settings') return settingsPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795369724')).enter({ frame: NINJA ? board : null }); } // loaded on first visit; PTN Ninja's frame, which Rush borrows
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795371035')).enter({ frame: NINJA ? board : null }); } // loaded on first visit; PTN Ninja's frame, which Rush borrows
   // The sound lab (sound-lab.js): beta builds only; elsewhere #/sounds is no page at all (it falls through to puzzles)
-  if (page === 'sounds' && window.TINUE_BETA && $('#view-sounds')) { show('view-sounds'); return (labPage ||= await import('./sound-lab.js?v=1795369724')).enter($('#view-sounds')); }
+  if (page === 'sounds' && window.TINUE_BETA && $('#view-sounds')) { show('view-sounds'); return (labPage ||= await import('./sound-lab.js?v=1795371035')).enter($('#view-sounds')); }
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   // Keeping the puzzle on screen: a Next this navigation superseded may have left it mid-way (needsRestore, busy) after
@@ -2774,7 +2798,7 @@ async function route() {
     const zero = symArg === '0';
     let want = sym, found = false;
     if (!sym && !zero && look?.id === id && S?.p.id === id && S.p0) {
-      try { want = (await import('./rush-rules.js?v=1795369724')).symFromRecord(S.p0, look); found = true; } catch {}
+      try { want = (await import('./rush-rules.js?v=1795371035')).symFromRecord(S.p0, look); found = true; } catch {}
       if (nav !== loadSeq) return; // a newer navigation (or load) came while that module loaded: this one is stale
     }
     // A plain link (no symmetry, no Rush note) to the puzzle on screen returns to the visit as it stands, turned or
