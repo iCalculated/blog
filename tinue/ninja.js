@@ -2,9 +2,10 @@
 // embeds it. Same API as Board (board.js), so app.js doesn't care which one it has. Only loaded via import()
 // when the flag is set: everyone else fetches nothing from here or from ptn.ninja.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1795308640';
-import { parsePTN } from './shared/ptn.js?v=1795308640';
-import { buildPTN, focusedByPointer } from './board.js?v=1795308640';
+import { Game } from './shared/tak.js?v=1795331497';
+import { parsePTN } from './shared/ptn.js?v=1795331497';
+import { buildPTN, focusedByPointer } from './board.js?v=1795331497';
+import { frameParams, lookUi } from './ninja-look.js?v=1795331497';
 
 const ORIGIN = 'https://ptn.ninja';
 // tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses).
@@ -30,6 +31,10 @@ const UI = {
 };
 // PTN Ninja reads URL settings from the path as /&key=value (not a ?query, which it ignores)
 const PARAMS = '&' + Object.entries(UI).filter(([k]) => k !== 'theme').map(([k, v]) => `${k}=${v}`).join('&');
+// The player's own PTN Ninja look (Settings page, ninja-look.js): its settings over these, its theme (if it has one)
+// instead of tinue's. Without one, exactly tinue's. Those of UI's keys a look can change, for putting back when it goes.
+const withLook = (look) => ({ ...UI, ...look });
+const LOOK_BASE = { axisLabels: true, axisLabelsSmall: true, board3D: false, orthographic: false, perspective: 5, centerStackCounts: false, flatWinHighlights: true, verticalLayout: true, verticalLayoutAuto: true }; // PTN Ninja's own defaults (its src/store/ui/state.js)
 const FRAME_CSS = 'display:block;width:100%;aspect-ratio:1/1.3;border:0;border-radius:var(--corner,6px);background:#262421';
 // tinue's orientation keys, for when focus is on the page rather than inside the iframe (PTN Ninja's own hotkeys
 // handle them there).
@@ -41,15 +46,16 @@ const store = {
 };
 
 export class NinjaBoard {
-  constructor(el, { onMove } = {}) {
-    this.el = el; this.onMove = onMove;
+  // look: the stored PTN Ninja look (prefs.ninja); index.html started the iframe with the same one in its address.
+  constructor(el, { onMove, look = '' } = {}) {
+    this.el = el; this.onMove = onMove; this.look = lookUi(look);
     this.opts = { disableBoard: false, showRoads: false, animateBoard: true, dropOnStray: false };
     this.lockUntil = 0;
     this.games = [new Game(5)]; this.snaps = [{}]; this.cur = 0; this.peeking = false;
     this.ptn = null; this.player = null; this.hl = [];
     // index.html usually started the iframe already (before the page's modules loaded); otherwise start it now
     let f = el.querySelector('iframe');
-    if (!f) { f = document.createElement('iframe'); f.allow = 'fullscreen; clipboard-write'; f.src = ORIGIN + '/' + PARAMS; f.style.opacity = '0'; el.replaceChildren(f); }
+    if (!f) { f = document.createElement('iframe'); f.allow = 'fullscreen; clipboard-write'; f.src = ORIGIN + '/' + frameParams(PARAMS, look); f.style.opacity = '0'; el.replaceChildren(f); }
     this.iframe = f;
     f.title = 'Tak board (PTN Ninja)';
     f.style.cssText = FRAME_CSS + ';opacity:' + f.style.opacity + ';transition:opacity .15s';
@@ -87,10 +93,19 @@ export class NinjaBoard {
     if (!this._resolve || this.fb) return;
     clearTimeout(this._failTimer);
     // tinue shows names nowhere else on the board, and they crowd the flat counts
-    this._post('SET_UI', { ...UI, boardTransform: store.get('ninjaTransform') || [0, 0] });
+    this._post('SET_UI', { ...withLook(this.look), boardTransform: store.get('ninjaTransform') || [0, 0] });
     this._post('SHOW_NAMES', false);
     this._resolve(); this._resolve = null;
     this._settle();
+  }
+
+  // A new look from the Settings page (or the account): what the old one set and the new one doesn't goes back to
+  // tinue's (or PTN Ninja's own default), the rest is the new one's. A page about to be shown waits for PTN Ninja anyway.
+  setLook(stored) {
+    const prev = this.look, look = this.look = lookUi(stored), out = {};
+    for (const k of Object.keys(prev)) if (!(k in look)) out[k] = k in UI ? UI[k] : LOOK_BASE[k];
+    Object.assign(out, look);
+    return Object.keys(out).length ? this._send('SET_UI', out) : this.ready;
   }
 
   // PTN Ninja's hotkeys (number keys, Enter, `) only work while its iframe has keyboard focus, so a puzzle that
@@ -124,7 +139,7 @@ export class NinjaBoard {
   // PTN Ninja never came up: put tinue's own board in its place, in the same state, and hand it every call.
   async _fallback() {
     if (this.fb || !this._resolve) return;
-    const { Board } = await import('./board.js?v=1795308640');
+    const { Board } = await import('./board.js?v=1795331497');
     this.el.style.cssText = ''; // index.html's placeholder background
     const fb = new Board(this.el, { onMove: this.onMove });
     this.fb = fb;

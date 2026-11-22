@@ -1,21 +1,23 @@
-import { Game } from './shared/tak.js?v=1795308640';
-import { unplayedPlies } from './shared/ptn.js?v=1795308640';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795308640';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795308640';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795308640';
-import * as engine from './engine.js?v=1795308640';
-import { showLineOn } from './lines.js?v=1795308640';
-import * as tiltak from './tiltak.js?v=1795308640';
-import * as syntaks from './syntaks.js?v=1795308640';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795308640';
-import { createNext } from './next.js?v=1795308640';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795308640';
-import { createOutbox } from './outbox.js?v=1795308640';
-import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795308640';
-import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795308640';
-import * as defend from './defend.js?v=1795308640';
-import { whenText } from './rush-rules.js?v=1795308640';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795308640';
+import { Game } from './shared/tak.js?v=1795331497';
+import { unplayedPlies } from './shared/ptn.js?v=1795331497';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795331497';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795331497';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795331497';
+import * as engine from './engine.js?v=1795331497';
+import { showLineOn } from './lines.js?v=1795331497';
+import * as tiltak from './tiltak.js?v=1795331497';
+import * as syntaks from './syntaks.js?v=1795331497';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795331497';
+import { createNext } from './next.js?v=1795331497';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795331497';
+import { createOutbox } from './outbox.js?v=1795331497';
+import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795331497';
+import { OTHER, syncedOf, decide, diff, changesBody, carried, unsentKeys, withUnsent, afterPost, syncStatus } from './prefsync.js?v=1795331497';
+import { parseLook, encodeLook, cleanLook, lookReport } from './ninja-look.js?v=1795331497';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795331497';
+import * as defend from './defend.js?v=1795331497';
+import { whenText } from './rush-rules.js?v=1795331497';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795331497';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -119,7 +121,12 @@ if (!prefs.v2) { prefs.size = '6'; prefs.v2 = true; } // 6×6 by default
 // moves too, once; "Any size" and later choices stay.
 if (!prefs.v3) { if (prefs.size === '5') prefs.size = '6'; prefs.v3 = true; }
 prefs.difficulty ||= 'normal';
+// The PTN Ninja look as stored (ninja-look.js): kept only in its clean form, so what index.html put in the iframe's
+// address and what ninja.js sends agree from here on.
+if ('ninja' in prefs) { const c = cleanLook(prefs.ninja); if (c) prefs.ninja = c; else delete prefs.ninja; }
 store.set('prefs', prefs);
+// Whether this browser keeps site storage at all (the Settings page says so when it doesn't).
+const STORAGE_OK = (() => { try { localStorage.setItem('tinue.probe', '1'); const ok = localStorage.getItem('tinue.probe') === '1'; localStorage.removeItem('tinue.probe'); return ok; } catch { return false; } })();
 // This sitting's results {id, win, delta}: kept per tab, so a reload (e.g. into a newer build) doesn't wipe the streak.
 const session = (() => { try { return JSON.parse(sessionStorage.getItem('tinue.session')) || []; } catch { return []; } })();
 const saveSession = () => { try { sessionStorage.setItem('tinue.session', JSON.stringify(session.slice(-200))); } catch {} };
@@ -142,10 +149,10 @@ const guestId = () => {
   return store.get('gid', null) === id ? id : null;
 };
 
-// PTN Ninja in an iframe instead of tinue's board (same API), by the Board style setting or ?board=ninja (which wins:
+// PTN Ninja in an iframe instead of tinue's board (same API), by the Board setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795308640')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1795331497')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn), look: prefs.ninja })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -155,11 +162,12 @@ onNotice(() => renderAll()); // api() shows and clears the server notice
 function renderUser() {
   const box = $('#userbox');
   store.set('me', me ? { name: me.name } : null); // a guest is { name: null }
+  renderSyncStatus(); // (the Settings page says whether settings follow the account)
   if (me) { store.set('myRating', me.rating); store.set('myProv', !!me.provisional); } // shown before /api/me answers next time
   if (me?.name) {
     // Name with a small menu on hover/focus: History, Sign out (with an inline confirm).
     box.innerHTML = `<div class="menu"><button class="link name" aria-haspopup="true">${esc(me.name)}</button>
-      <div class="pop" role="menu"><a href="#/me" role="menuitem">History</a><button class="link" id="logout" role="menuitem">Sign out</button>
+      <div class="pop" role="menu"><a href="#/me" role="menuitem">History</a><a href="#/settings" role="menuitem">Settings</a><button class="link" id="logout" role="menuitem">Sign out</button>
         <div class="confirm hidden" id="logout-confirm"><p>You’ll need your login token (on your History page) to sign back in on this device.</p><button class="danger" id="logout-yes">Sign out</button></div></div></div>`;
     // (a keyboard press moves focus onto the confirm: the button it pressed hides, and the menu lives on focus)
     $('#logout').onclick = (e) => { $('#logout-confirm').classList.remove('hidden'); $('#logout').classList.add('hidden'); if (!e.detail) $('#logout-yes').focus(); };
@@ -170,14 +178,16 @@ function renderUser() {
       menu.querySelector('#logout-confirm').classList.add('hidden'); menu.querySelector('#logout').classList.remove('hidden');
     });
     menu.addEventListener('mouseleave', fold); menu.addEventListener('focusout', fold);
-    $('#logout-yes').onclick = async () => { await abandonCheck(S); restoreLeft(); await api('/api/logout', {}); authEpoch++; signIn++; setToken(null); forgetNext(); me = null; session.length = 0; saveSession(); renderUser(); refreshPage(); };
+    $('#logout-yes').onclick = async () => { await abandonCheck(S); restoreLeft(); await api('/api/logout', {}); authEpoch++; signIn++; setToken(null); forgetNext(); me = null; serverSettings = null; syncState = 'saved'; // (this device keeps its settings)
+      session.length = 0; saveSession(); renderUser(); refreshPage(); };
   } else {
     // One quiet button; claiming a name (or pasting a token) happens in a small popover.
     box.innerHTML = `<div class="menu click"><button class="link name" id="claim-open" aria-haspopup="dialog" aria-expanded="false">Claim a username</button>
       <div class="pop wide" role="dialog" aria-label="Claim a username">
         <form id="claim"><label class="field"><span>Username</span><input name="name" id="claim-name" maxlength="20" autocomplete="username" placeholder="2–20 letters, digits, _ or -"></label>
           <button class="primary" type="submit">Claim</button><p class="err hidden" id="claim-err"></p>
-          <p class="hint">No password: your browser remembers you. <button type="button" class="link" id="token-open">Have a login token?</button></p></form>
+          <p class="hint">No password: your browser remembers you. <button type="button" class="link" id="token-open">Have a login token?</button></p>
+          <p class="hint"><a href="#/settings" class="link" id="settings-open">Settings</a></p></form>
         <form id="tok" class="hidden"><label class="field"><span>Login token</span><input name="token" id="tok-in" autocomplete="off" placeholder="From the History page on your other device"></label>
           <button class="primary" type="submit">Sign in</button><p class="err hidden" id="tok-err"></p></form>
       </div></div>`;
@@ -191,6 +201,7 @@ function renderUser() {
       for (const id of ['#claim-err', '#tok-err']) $(id).classList.add('hidden');
       $('#claim-name').focus();
     };
+    $('#settings-open').onclick = () => closeMenu(menu, false);
     $('#token-open').onclick = () => { $('#claim').classList.add('hidden'); $('#tok').classList.remove('hidden'); $('#tok-in').focus(); };
     const showErr = (id, msg) => { const el = $(id); el.textContent = msg; el.classList.remove('hidden'); };
     $('#claim').onsubmit = async (e) => {
@@ -201,7 +212,7 @@ function renderUser() {
       if (r.token && token && r.token !== token) authEpoch++; // another account now (a guest naming its own row isn't)
       signIn++; // signed in as the named account now (its token may come only as a cookie): an answer on its way stays out
       if (r.token) setToken(r.token);
-      me = r.user; renderUser(); refreshPage();
+      me = r.user; renderUser(); settingsArrived(r); refreshPage();
     };
     $('#tok').onsubmit = async (e) => {
       e.preventDefault();
@@ -209,7 +220,7 @@ function renderUser() {
       const r = await api('/api/login', { token: t });
       if (r.error) return showErr('#tok-err', 'That token doesn’t match an account.');
       await abandonCheck(S); restoreLeft(); // a held result goes out under the identity that played it
-      authEpoch++; signIn++; setToken(t); forgetNext(); me = r.user; session.length = 0; saveSession(); renderUser(); refreshPage();
+      authEpoch++; signIn++; setToken(t); forgetNext(); me = r.user; session.length = 0; saveSession(); serverSettings = null; renderUser(); settingsArrived(r); refreshPage();
     };
   }
 }
@@ -319,15 +330,18 @@ function reloadNow() {
   if (S && !S.placeholder && (S.resultSent || S.status !== 'play' || S.quickCheck)) loadNext({ reload: true }); // (a move being checked is sent as it leaves)
   else reloadInto(S?.p?.id, S?.theme);
 }
-// A full page load opening puzzle id (or the start). theme: the Theme its result counts under (see start()).
-function reloadInto(id, theme = '', search = location.search) {
+// A full page load opening puzzle id (or the start). theme: the Theme its result counts under (see start()). hash:
+// another page to come back to instead (the Settings page, or a puzzle link not loaded yet).
+function reloadInto(id, theme = '', search = location.search, hash = '') {
   try {
     sessionStorage.setItem('tinue.reloadedFor', JSON.stringify({ v: newBuild, at: Date.now() }));
     if (id) sessionStorage.setItem('tinue.reloadTheme', JSON.stringify({ id, theme: theme || '' }));
   } catch {}
-  history.replaceState(null, '', APP + search + (id ? '#/puzzle/' + encodeURIComponent(id) : '#/'));
+  history.replaceState(null, '', APP + search + (hash || (id ? '#/puzzle/' + encodeURIComponent(id) : '#/')));
   location.reload();
 }
+// The page the address names, as a hash (a puzzle's real path, <app>/puzzle/<id>, as #/puzzle/<id>), for reloadInto.
+const routeHash = () => (location.hash && location.hash !== '#' ? location.hash : '#/' + location.pathname.slice(APP.length));
 const reloadTheme = (() => { try { const t = JSON.parse(sessionStorage.getItem('tinue.reloadTheme')); sessionStorage.removeItem('tinue.reloadTheme'); return t; } catch { return null; } })();
 
 async function loadNext({ reload = false } = {}) {
@@ -360,7 +374,7 @@ async function loadNext({ reload = false } = {}) {
   // Between puzzles, a newer build (as last checked: Next doesn't wait on the network) reloads into this one. Not while
   // a result is held or still uploading (the reload would cut it off), unless the player pressed Reload: then an
   // upload in flight gets 3 s, and a held one is sent at the reload anyway (flushHeld).
-  // A Board style switched mid-puzzle (boardSwitch) reloads here too, when nothing is held or still uploading (else at
+  // A Board setting switched mid-puzzle (boardSwitch) reloads here too, when nothing is held or still uploading (else at
   // the Next after this one).
   const switching = switchAtNext({ wanted: boardSwitch, leaving, held: !!heldRec.get(), uploading: reporting.size });
   if ((newBuild && (reload || (!leaving && !heldRec.get() && !reporting.size))) || switching) {
@@ -1960,39 +1974,195 @@ const themeDesc = () => { $('#theme-desc').textContent = prefs.theme && THEMES[p
 $('#difficulty').value = prefs.difficulty;
 // A filter changed with the mouse lets go of focus, or number keys meant for the board would go to it (on Board size,
 // 4–8 even pick a size). Changed from the keyboard, it keeps focus.
-for (const id of ['#difficulty', '#size', '#theme', '#set-board', '#set-confirm']) $(id).addEventListener('change', (e) => { if (focusedByPointer(e.target)) e.target.blur(); });
+for (const id of ['#difficulty', '#size', '#theme']) $(id).addEventListener('change', (e) => { if (focusedByPointer(e.target)) e.target.blur(); });
 $('#difficulty').onchange = (e) => { prefs.difficulty = e.target.value; store.set('prefs', prefs); loadNext(); };
 $('#size').onchange = (e) => { prefs.size = e.target.value; store.set('prefs', prefs); renderFilters(); loadNext(); };
 $('#theme').onchange = (e) => { prefs.theme = e.target.value; store.set('prefs', prefs); themeDesc(); loadNext(); };
-// Settings. Board style: the board is chosen at boot, so a switch reloads (signed in as before: the token is kept in
-// this browser), now if nothing is under way (settings.js switchNow), else when the next puzzle loads (loadNext), so
-// a switch never sends a result or ends a play-out. The reload drops ?board= from the address, or it would win.
-// The select shows the setting; a ?board= link that overrides it says so in the note.
+// Settings (settings.js), on the Settings page (#/settings) only: Board, the PTN Ninja look and Confirm moves (the
+// puzzle page links there). setSetting is the one writer: it stores the value, checks it was kept (site storage may be
+// blocked), does what the setting does on this page, puts the page's controls in step, and for a change made there
+// saves it to the account (prefsync.js). from: 'here' (a control), 'account' (the account's
+// settings, arriving with /api/me, a sign-in or a post's answer) or 'tab' (another tab of this site changed it:
+// already stored, and that tab sends it).
+// Board: the board is chosen at boot, so a switch reloads (signed in as before: the token is kept in this
+// browser), now if nothing is under way (settings.js switchNow), else when the next puzzle loads (loadNext), so a switch
+// never sends a result or ends a play-out. The reload drops ?board= from the address, or it would win. A switch from
+// the account waits for the puzzle page (or the Settings page), so it never cuts a Rush run or another page short, and
+// leaves a ?board= link's board alone.
 let boardSwitch = false, unsaved = false;
 const BOARD = NINJA ? 'ninja' : 'tinue', LINK_BOARD = new URLSearchParams(location.search).has('board') ? BOARD : null;
 const showNote = () => {
   const note = settingsNote({ unsaved, switching: boardSwitch, linkBoard: LINK_BOARD, ninja: NINJA, confirm: confirmOn(prefs) });
-  $('#settings-note').textContent = note;
-  $('#settings-note').classList.toggle('hidden', !note);
+  const pn = $('#st-note'); // (under the Settings page's Board select; not built until the page is first opened)
+  if (pn) { pn.textContent = note; pn.classList.toggle('hidden', !note); }
 };
-$('#set-board').value = boardFrom('', prefs);
-$('#set-confirm').value = confirmOn(prefs) ? 'on' : 'off';
-$('#set-board').onchange = (e) => {
-  const was = prefs.board;
-  prefs.board = e.target.value; store.set('prefs', prefs);
-  // Not stored (site storage blocked): no switch, the reload would come back on this board and signed out.
-  unsaved = !boardSaved(store.get('prefs', {}), prefs.board);
-  if (unsaved) { if (was === undefined) delete prefs.board; else prefs.board = was; e.target.value = boardFrom('', prefs); boardSwitch = false; return showNote(); }
-  boardSwitch = prefs.board !== BOARD;
-  if (boardSwitch && switchNow(S, reporting.size)) return reloadInto(S && !S.placeholder ? S.p.id : null, S?.theme, withoutBoardFlag(location.search));
-  showNote();
+// Each select's options, its value for a setting, and the setting for a select's value.
+const CTL = {
+  board: { opts: [['tinue', 'tinue'], ['ninja', 'PTN Ninja']], show: () => boardFrom('', prefs), read: (v) => (v === 'ninja' ? 'ninja' : 'tinue') },
+  confirm: { opts: [['off', 'Off'], ['on', 'On']], show: () => (confirmOn(prefs) ? 'on' : 'off'), read: (v) => v === 'on' },
 };
-$('#set-confirm').onchange = (e) => {
-  prefs.confirm = e.target.value === 'on'; store.set('prefs', prefs);
-  if (!prefs.confirm) pendingEvent({ type: 'leave' });
-  renderPending(); showNote();
-};
-renderPending(); showNote();
+function showSettings() {
+  for (const [k, c] of Object.entries(CTL)) { const el = $('#st-' + k); if (el) el.value = c.show(); }
+  renderLookField(); showNote(); renderSyncStatus();
+}
+// (a page missing from the HTML, as in an index.html cached from before it, is not being viewed)
+const viewing = (id) => $('#' + id)?.classList.contains('hidden') === false;
+function setSetting(key, value, from = 'here') {
+  const was = prefs[key];
+  if (key === 'ninja' && !value) delete prefs.ninja; else prefs[key] = value;
+  if (from !== 'tab') {
+    store.set('prefs', prefs);
+    // Not kept (site storage blocked): put back as it was, and say so. (For the board, the reload would come back on
+    // the old one, signed out: the token was kept in memory only.)
+    if (key === 'board' ? !boardSaved(store.get('prefs', {}), prefs.board) : syncedOf(store.get('prefs', {}))[key] !== syncedOf(prefs)[key]) {
+      if (was === undefined) delete prefs[key]; else prefs[key] = was;
+      unsaved = true; if (key === 'board') boardSwitch = false;
+      showSettings(); return false;
+    }
+    unsaved = false;
+  }
+  // Marked unsent before anything else: a board switch reloads at once, and the next boot must send this change, not
+  // take the account's old board back (settingsArrived).
+  if (from === 'here') markUnsent([key]);
+  if (key === 'board') {
+    boardSwitch = prefs.board !== BOARD && !(from !== 'here' && LINK_BOARD);
+    // Back to where the player is: the Settings page, the puzzle on screen, or, before one has loaded (a puzzle link
+    // being opened, say), the address as it is, so the linked puzzle isn't swapped for another.
+    const page = viewing('view-settings') ? '#/settings' : S && !S.placeholder ? '' : routeHash();
+    if (boardSwitch && switchNow(S, reporting.size) && (from === 'here' || viewing('view-settings') || viewing('view-puzzle')))
+      return reloadInto(S && !S.placeholder ? S.p.id : null, S?.theme, withoutBoardFlag(location.search), page);
+  } else if (key === 'confirm') {
+    if (!prefs.confirm) pendingEvent({ type: 'leave' });
+    renderPending();
+  } else if (key === 'ninja') board.setLook?.(prefs.ninja || ''); // (tinue's own board has no PTN Ninja look)
+  showSettings();
+  if (from === 'here') pushSettings();
+  return true;
+}
+
+// ---- settings saved to the account (prefsync.js) ----
+// Only for a named account (a guest or a signed-out player keeps them on this device, as before). A change here posts
+// only the keys changed (POST /api/settings { changes }, laid over what the account holds), so an out-of-date tab or
+// device never puts back old values of the others. Until the account confirms a key, this device's value wins for that
+// key (setUnsent: { o: the account, as owner()'s hash of the token; k: the keys }), and it is sent again with the next
+// change and at the next boot (settingsArrived). Every other key takes the account's value. Settings this page doesn't
+// have (prefsync.js OTHER: the beta's) are never applied, posted or dropped here, in storage, the mark or the account.
+const named = () => !!(token && me?.name);
+let serverSettings = null, syncState = 'saved', postSeq = 0;
+const unsent = () => unsentKeys(store.get('setUnsent', null), owner());
+// Add keys to this account's unsent mark, or (keep) set this page's keys in it to exactly these.
+function markUnsent(keys, keep = false) {
+  if (!named()) return;
+  const mark = withUnsent(store.get('setUnsent', null), owner(), keep ? keys : [...unsent(), ...keys]);
+  if (mark) store.set('setUnsent', mark); else store.del('setUnsent');
+}
+if (token && unsent().length) syncState = 'saving'; // (sent as soon as /api/me answers; 'unsent' if that fails)
+// The current stored prefs (another tab may have changed one since this tab read them), else this tab's.
+const prefsNow = () => (STORAGE_OK ? store.get('prefs', prefs) : prefs);
+const deviceNow = () => syncedOf(prefsNow());
+// first: the account has nothing stored yet, so the post also carries this browser's settings of other pages
+// (prefsync.js carried), as they are.
+async function pushSettings(keys = [], first = false) {
+  if (!named()) return;
+  markUnsent(keys);
+  const dirty = unsent();
+  if (!dirty.length) return;
+  const seq = ++postSeq, tok = token, body = changesBody(deviceNow(), dirty);
+  if (first) body.changes = { ...carried(prefsNow()), ...body.changes };
+  syncState = 'saving'; renderSyncStatus();
+  let r = null;
+  try { r = await api('/api/settings', body, { quiet: true, timeout: 15000 }); } catch {}
+  if (seq !== postSeq || token !== tok) return; // a later change is on its way (it decides), or another account now
+  if (r?.settings && typeof r.settings === 'object' && !r.error) {
+    markUnsent(afterPost(unsent(), body.changes, deviceNow()), true);
+    syncState = 'saved'; takeServer(r.settings); // (another device's newer value for another key arrives here too)
+  } else syncState = 'unsent';
+  renderSyncStatus();
+}
+// The account's settings as they stand: every value cleaned as one from this browser's storage is (prefsync.js
+// syncedOf); what differs is applied, except this device's unsent keys; the board goes last (it may reload the page).
+// → decide's answer (post: the keys to send).
+function takeServer(settings) {
+  serverSettings = settings && typeof settings === 'object' && !Array.isArray(settings) ? settings : null;
+  const d = decide({ device: syncedOf(prefs), dirty: unsent(), server: serverSettings });
+  for (const k of Object.keys(d.apply).sort((a, b) => (a === 'board') - (b === 'board'))) setSetting(k, d.apply[k], 'account');
+  return d;
+}
+// An answer carrying the signed-in account's settings (/api/me, /api/login, /api/register).
+function settingsArrived(r) {
+  if (!r || typeof r !== 'object' || !('settings' in r) || !named()) return;
+  const { post, first } = takeServer(r.settings);
+  if (post.length) pushSettings(post, first); else { syncState = 'saved'; renderSyncStatus(); } // (nothing unsent: decide posts every unsent key)
+}
+// Another tab of this site changed a setting: take it here too, so this tab's next save doesn't put the old value back
+// (in this browser's storage or, through its unsent keys, on the account). That tab sends it. The settings this page
+// doesn't have are taken as they are, so this tab's next write of the prefs (a filter, say) keeps the other tab's.
+window.addEventListener('storage', (e) => {
+  if (e.key !== 'tinue.prefs') return; // (not a clear(): that is no setting chosen)
+  const stored = store.get('prefs', {});
+  for (const k of OTHER) if (stored && Object.hasOwn(stored, k)) prefs[k] = stored[k]; else delete prefs[k];
+  const now = syncedOf(stored);
+  for (const k of diff(syncedOf(prefs), now).sort((a, b) => (a === 'board') - (b === 'board'))) setSetting(k, now[k], 'tab');
+});
+function renderSyncStatus() {
+  const el = $('#st-status');
+  if (el) el.textContent = syncStatus({ blocked: unsaved || !STORAGE_OK, named: named(), state: syncState });
+}
+
+// ---- the Settings page (#/settings) ----
+// Each setting has one plain line.
+function settingsPage() {
+  // An index.html cached from before this page (a CDN edge can serve one for minutes after a deploy, with this app.js)
+  // has no <main> for it: add it where the HTML has it, before the footer.
+  if (!$('#view-settings')) {
+    const m = Object.assign(document.createElement('main'), { id: 'view-settings', className: 'page settings-page hidden' }), f = $('footer.credits');
+    if (f) f.before(m); else document.body.append(m);
+  }
+  show('view-settings');
+  const el = $('#view-settings');
+  if (!el.firstChild) {
+    const sel = (k, label, desc, extra = '') => `<div class="set-item"><label for="st-${k}">${label}</label><select id="st-${k}" aria-describedby="st-${k}-d"></select>
+      <p class="set-desc" id="st-${k}-d">${desc}</p>${extra}</div>`;
+    el.innerHTML = `<h1>Settings</h1><p class="set-status" id="st-status" role="status"></p>
+      <div class="panel set-list">
+        ${sel('board', 'Board', 'The board you solve puzzles on: tinue’s own, or the one from ptn.ninja. Rush always uses tinue’s board.', '<p class="set-desc set-note hidden" id="st-note"></p>')}
+        <div class="set-item"><label for="st-ninja">PTN Ninja look</label>
+          <form id="st-ninja-form" class="set-look"><input id="st-ninja" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="st-ninja-d st-ninja-msg" placeholder="A ptn.ninja link, or &amp;axisLabels=false&amp;theme=…">
+            <button type="submit" id="st-ninja-use">Use</button><button type="button" id="st-ninja-clear">Clear</button></form>
+          <p class="set-desc" id="st-ninja-d"></p><p class="set-desc set-msg" id="st-ninja-msg" aria-live="polite"></p></div>
+        ${sel('confirm', 'Confirm moves', 'A move waits on the board until you confirm it: tap its square again, press Confirm or Enter.')}
+      </div><p><a href="#/">Back to puzzles</a></p>`;
+    for (const k of Object.keys(CTL)) {
+      const s = $('#st-' + k);
+      for (const [v, t] of CTL[k].opts) s.append(new Option(t, v));
+      s.onchange = (e) => { if (focusedByPointer(e.target)) e.target.blur(); setSetting(k, CTL[k].read(e.target.value)); };
+    }
+    $('#st-ninja-form').onsubmit = (e) => {
+      e.preventDefault();
+      const res = parseLook($('#st-ninja').value), msg = $('#st-ninja-msg');
+      if (res.error || !res.applied.length) { msg.textContent = lookReport(res); return; } // nothing changes
+      if (setSetting('ninja', encodeLook(res.look))) msg.textContent = lookReport(res);
+    };
+    $('#st-ninja-clear').onclick = () => { if (setSetting('ninja', '')) $('#st-ninja-msg').textContent = 'The board has tinue’s look again.'; };
+    renderLookField(true);
+  }
+  showSettings();
+}
+// The look field: usable while the board is PTN Ninja (the setting, or a ?board=ninja link), otherwise it says why.
+// fresh: show what is in use (else a message about the last paste stays).
+function renderLookField(fresh = false) {
+  const inp = $('#st-ninja');
+  if (!inp) return;
+  const on = NINJA || boardFrom('', prefs) === 'ninja';
+  for (const el of [inp, $('#st-ninja-use')]) el.disabled = !on;
+  $('#st-ninja-clear').disabled = !on || !prefs.ninja;
+  $('#st-ninja-d').textContent = on
+    ? 'Paste a ptn.ninja link, or just its settings, to use its look here: axis labels, counts, layout, 3D and theme. Settings tinue needs are left out.'
+    : 'Choose PTN Ninja as the board to use this: it changes how the PTN Ninja board looks.';
+  if (document.activeElement !== inp) inp.value = prefs.ninja || '';
+  if (fresh) $('#st-ninja-msg').textContent = prefs.ninja ? lookReport(parseLook(prefs.ninja)) : '';
+}
+renderPending();
 // Stepping in half-moves, as in PTN Ninja: h = 2·plies shown, +1 while the next move's squares are only
 // highlighted (Shift+arrow). Plain steps land on whole moves.
 async function navTo(h) {
@@ -2075,14 +2245,14 @@ document.addEventListener('click', (e) => {
 });
 
 // ---------- pages ----------
-const TITLES = { 'view-glossary': 'Glossary', 'view-me': 'History', 'view-leaderboard': 'Leaderboard', 'view-rush': 'Rush' };
+const TITLES = { 'view-glossary': 'Glossary', 'view-me': 'History', 'view-leaderboard': 'Leaderboard', 'view-rush': 'Rush', 'view-settings': 'Settings' };
 function setTitle() {
-  const page = ['view-glossary', 'view-me', 'view-leaderboard', 'view-rush'].find((v) => !$('#' + v).classList.contains('hidden'));
+  const page = ['view-glossary', 'view-me', 'view-leaderboard', 'view-rush', 'view-settings'].find((v) => $('#' + v)?.classList.contains('hidden') === false); // (? : as viewing)
   document.title = page ? `${TITLES[page]} — tinue` : S && !S.placeholder ? `Puzzle #${S.p.id} — tinue` : 'tinue — Tak puzzles';
 }
 function show(id) {
   if (id !== 'view-puzzle') pendingEvent({ type: 'leave' });
-  for (const v of ['view-puzzle', 'view-glossary', 'view-me', 'view-leaderboard', 'view-rush']) $('#' + v).classList.toggle('hidden', v !== id);
+  for (const v of ['view-puzzle', 'view-glossary', 'view-me', 'view-leaderboard', 'view-rush', 'view-settings']) $('#' + v)?.classList.toggle('hidden', v !== id); // (? : an old cached index.html, settingsPage)
   setTitle();
   fitDock(); // the dock (and the room reserved for it) belongs to the puzzle page only
   syncClock(); // another page pauses the puzzle's solve-time clock
@@ -2118,7 +2288,7 @@ async function mePage() {
   if (!me) { el.innerHTML = `<h1>History</h1><div class="panel"><p class="flush">Your puzzles will show up here. ${claim}</p></div>`; return; }
   // (me fresh too: another tab may have played since this one loaded, and the chart ends at me.rating)
   const [{ history: h }, fresh] = await Promise.all([api('/api/history'), api(withBuild('/api/me')).catch(() => null)]);
-  if (fresh?.user) { me = fresh.user; renderUser(); }
+  if (fresh?.user) { me = fresh.user; renderUser(); settingsArrived(fresh); }
   const tok = me.name ? token : null; // a guest has no name to sign in as elsewhere: claiming one comes first
   // rating chart
   const rated = h.filter((r) => r.rated).reverse();
@@ -2154,7 +2324,7 @@ async function leaderPage() {
     : `<div class="panel"><p class="flush">Nobody is on the leaderboard yet. Claim a username, solve a puzzle and you could be first.</p></div>`);
 }
 
-// Hash routes (#/, #/puzzle/ID, #/glossary[/term], #/me, #/leaderboard, #/rush) so it works as static files.
+// Hash routes (#/, #/puzzle/ID, #/glossary[/term], #/me, #/leaderboard, #/rush, #/settings) so it works as static files.
 let rushPage = null; // rush.js, once #/rush has been visited
 function go(hash) {
   if (location.hash !== hash) location.hash = hash; // triggers route() via hashchange
@@ -2167,11 +2337,12 @@ async function route() {
   const pathRoute = location.pathname.slice(APP.length);
   const [, page, arg] = (location.hash && location.hash !== '#' ? location.hash : '#/' + pathRoute).split('/');
   if (page !== 'rush') rushPage?.leave(); // a run in progress ends unposted (rush.js)
-  if (page === 'glossary' || page === 'me' || page === 'leaderboard' || page === 'rush') showHashURL('#/' + (location.hash || '#/' + pathRoute).split('/').slice(1).join('/'));
+  if (page === 'glossary' || page === 'me' || page === 'leaderboard' || page === 'rush' || page === 'settings') showHashURL('#/' + (location.hash || '#/' + pathRoute).split('/').slice(1).join('/'));
   if (page === 'glossary') return glossaryPage();
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795308640')).enter(); } // loaded on first visit
+  if (page === 'settings') return settingsPage();
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795331497')).enter(); } // loaded on first visit
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   // Keeping the puzzle on screen: a Next this navigation superseded may have left it mid-way (needsRestore, busy) after
@@ -2191,7 +2362,7 @@ window.addEventListener('hashchange', route);
   renderAll(); // placeholder panels at their final size
   board.load(buildPTN({ size: +(prefs.size || 6) })); // the same board component, empty, until the puzzle arrives
   requestAnimationFrame(() => document.documentElement.classList.remove('booting')); // reveal once laid out
-  const meP = api(withBuild('/api/me')).then((r) => { me = r.user; renderUser(); if (S) renderAll(); }).catch(() => {});
+  const meP = api(withBuild('/api/me')).then((r) => { me = r.user; renderUser(); settingsArrived(r); if (S) renderAll(); }).catch(() => { if (syncState === 'saving') { syncState = 'unsent'; renderSyncStatus(); } });
   // With a cached account the puzzle request goes out alongside /api/me (the server knows us by the token).
   const flushed = flushHeld(); // before the first puzzle, so the server knows that one was played
   if (flushed) await Promise.race([flushed, new Promise((r) => setTimeout(r, 3000))]);

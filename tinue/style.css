@@ -54,7 +54,9 @@ button.primary:hover { filter: brightness(1.1); }
 button:disabled { opacity: .4; cursor: default; background: var(--bg3); }
 button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 select, input { background: var(--bg); padding: 0 10px; }
-select { padding-right: 6px; }
+/* Our own chevron, 10px in from the edge like the text on the left: the browser's arrow sits hard against the
+   border and can't be moved. (The data URI can't read a CSS variable, so the grey is written out.) */
+select { appearance: none; -webkit-appearance: none; padding-right: 28px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23a8a39a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 10px 6px; }
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .field > span { font-size: var(--fs-xs); color: var(--muted); display: flex; align-items: center; gap: 6px; }
 .field select { width: 100%; }
@@ -142,10 +144,29 @@ a.tag:hover { border-color: var(--accent); color: var(--fg-hi); }
 .controls { display: flex; flex-direction: column; gap: 12px; }
 .controls .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .theme-desc { margin: -4px 0 0; color: var(--muted); font-size: var(--fs-xs); }
-/* Settings (Board style, Confirm moves): kept in this browser with the filters above */
-.settings { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
-.settings h2 { margin: 0; font-size: var(--fs-xs); font-weight: 600; color: var(--fg); }
-.settings .theme-desc { margin: -2px 0 0; }
+/* Under the filters, the way to the Settings page (Board, PTN Ninja look, Confirm moves live only there). */
+.controls .set-link { margin: 0; font-size: var(--fs-xs); }
+/* The Settings page (#/settings): one setting a row, its control on the right on wide screens, under its name on phones. */
+.settings-page { max-width: 720px; }
+.settings-page .set-status { color: var(--muted); font-size: var(--fs-sm); margin: -4px 0 14px; min-height: 1.4em; }
+.set-list { display: flex; flex-direction: column; gap: 0; padding-top: 4px; padding-bottom: 4px; }
+.set-item { display: grid; grid-template-columns: minmax(0, 1fr) 200px; grid-template-areas: "label ctl" "desc desc"; column-gap: 16px; row-gap: 4px; align-items: center; padding: 12px 0; }
+.set-item + .set-item { border-top: 1px solid var(--line); }
+.set-item > label { grid-area: label; font-weight: 600; color: var(--fg-hi); font-size: var(--fs-sm); }
+.set-item > select { grid-area: ctl; width: 100%; }
+.set-item > .set-desc, .set-item > .set-note { grid-column: 1 / -1; }
+.set-desc { margin: 0; color: var(--muted); font-size: var(--fs-xs); line-height: 1.5; }
+.set-desc.set-msg:empty, .set-desc.hidden { display: none; }
+.set-msg { color: var(--fg); }
+.set-look { grid-column: 1 / -1; display: flex; gap: 8px; min-width: 0; }
+.set-look input { flex: 1 1 auto; min-width: 0; }
+.set-look input:disabled { opacity: .5; }
+@media (max-width: 560px) {
+  .set-item { grid-template-columns: minmax(0, 1fr); grid-template-areas: "label" "ctl" "desc"; }
+  .set-look { flex-wrap: wrap; }
+  .set-look input { flex-basis: 100%; }
+  .set-look button { flex: 1 1 0; }
+}
 /* Confirm moves: a held move's bar under the board. Its room is kept while the setting is on (idle: invisible, and
    takes no taps), so nothing moves when a move is held; on a phone it sits under the thumb and off the board. */
 .confirm-bar { display: flex; align-items: center; gap: 8px; margin-top: 8px; min-height: 44px; }
