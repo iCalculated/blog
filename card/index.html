@@ -87,7 +87,6 @@
     opacity: 0; pointer-events: none; transition: opacity .2s;
   }
   #toast.on { opacity: 1; }
-  body.drag main { outline: 2px dashed var(--accent); outline-offset: -8px; }
 </style>
 </head>
 <body>
@@ -99,10 +98,7 @@
     <div class="row">
       <button id="pick" hidden>pick contact</button>
       <button id="paste" hidden>paste contact</button>
-      <button id="file">import .vcf</button>
-      <input id="fileInput" type="file" accept=".vcf,.vcard,text/vcard,text/x-vcard" hidden>
     </div>
-    <p class="hint" id="importHint" hidden></p>
 
     <form class="fields" id="form" autocomplete="on" onsubmit="return false">
       <label><span>name</span><input name="fn" autocomplete="name" placeholder="ada lovelace" enterkeyhint="next"></label>
@@ -328,7 +324,6 @@
     if (!d) return false;
     fill(d); toast('imported ' + (d.fn || 'contact')); return true;
   }
-  const importFile = async f => { if (f && !importText(await f.text())) toast("couldn't read contact"); };
 
   function initEdit(seed) {
     $('view').hidden = true; $('edit').hidden = false; document.title = 'card';
@@ -350,8 +345,6 @@
       if (!importText(t)) toast('no contact found');
     };
   }
-  $('file').onclick = () => $('fileInput').click();
-  $('fileInput').onchange = e => { importFile(e.target.files[0]); e.target.value = ''; };
   $('open').onclick = () => { location.hash = encode(read()); };
   $('shareEdit').onclick = () => share(read());
   $('saveEdit').onclick = () => saveQR($('qrEdit'), read());
@@ -370,27 +363,12 @@
       } catch {}
     };
   }
-  if (/iPhone|iPad/.test(navigator.userAgent))
-    { $('importHint').textContent = 'in contacts: share contact → save to files'; $('importHint').hidden = false; }
-
-  // paste / drop a vcard anywhere
+  // paste a contact anywhere
   document.addEventListener('paste', e => {
     if ($('edit').hidden) return;
     const cd = e.clipboardData; if (!cd) return;
-    const f = [...cd.files].find(f => /vcard|\.vcf$/i.test(f.type + f.name));
-    if (f) { e.preventDefault(); importFile(f); return; }
     const t = cd.getData('text/vcard') || cd.getData('text/plain');
     if (/BEGIN:VCARD/i.test(t) ? importText(t) : (!/^(INPUT|TEXTAREA)$/.test(e.target.tagName) && importText(t))) e.preventDefault();
-  });
-  let dragN = 0;
-  addEventListener('dragenter', e => { e.preventDefault(); dragN++; document.body.classList.add('drag'); });
-  addEventListener('dragleave', () => { if (--dragN <= 0) { dragN = 0; document.body.classList.remove('drag'); } });
-  addEventListener('dragover', e => e.preventDefault());
-  addEventListener('drop', e => {
-    e.preventDefault(); dragN = 0; document.body.classList.remove('drag');
-    if ($('edit').hidden) return;
-    const f = e.dataTransfer.files[0];
-    if (f) importFile(f); else importText(e.dataTransfer.getData('text/plain'));
   });
 
   // ---------- viewer ----------
