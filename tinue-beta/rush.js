@@ -5,18 +5,18 @@
 // with the puzzle page's own rules and engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused
 // while they work. Nothing here is rated, and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { Board, buildPTN } from './board.js?v=1795367936';
-import { api, store, token } from './api.js?v=1795367936';
-import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795367936';
-import * as R from './rush-rules.js?v=1795367936';
-import { picture, pictureHTML } from './rush-look.js?v=1795367936';
-import * as engine from './engine.js?v=1795367936';
-import * as tiltak from './tiltak.js?v=1795367936';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795367936';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795367936';
-import { busy, BUSY_MS } from './busy.js?v=1795367936';
-import * as SYM from './shared/sym.js?v=1795367936';
-import * as sound from './sound.js?v=1795367936'; // (moves click through Board.onPly, set by app.js; the verdicts are played here)
+import { Board, buildPTN } from './board.js?v=1795369724';
+import { api, store, token } from './api.js?v=1795369724';
+import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795369724';
+import * as R from './rush-rules.js?v=1795369724';
+import { picture, pictureHTML } from './rush-look.js?v=1795369724';
+import * as engine from './engine.js?v=1795369724';
+import * as tiltak from './tiltak.js?v=1795369724';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795369724';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795369724';
+import { busy, BUSY_MS } from './busy.js?v=1795369724';
+import * as SYM from './shared/sym.js?v=1795369724';
+import * as sound from './sound.js?v=1795369724'; // (moves click through Board.onPly, set by app.js; the verdicts are played here)
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);

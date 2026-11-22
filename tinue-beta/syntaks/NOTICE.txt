@@ -1,6 +1,6 @@
-Syntaks — Tak engine (6×6), by Ciekce
+Syntaks — Tak engine (6×6), a group project by Ciekce and contributors
 https://github.com/Ciekce/syntaks (engine, MIT licence below)
-https://github.com/Ciekce/syntaks-nets (cnet023 net, releases/cnet023)
+https://github.com/Ciekce/syntaks-nets (cnet023 net, trained by chef; releases/cnet023)
 
 syntaks.wasm in this directory is Syntaks at upstream commit 4f224c9 with tinue's single-threaded WebAssembly
 patch (wasm/syntaks/syntaks-wasm.patch in the tinue repository), built by wasm/syntaks/build.sh. It embeds the

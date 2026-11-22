@@ -1,4 +1,4 @@
-// Syntaks (Ciekce's 6×6 NNUE engine, MIT; github.com/Ciekce/syntaks) with its cnet023 net, in a Web Worker.
+// Syntaks (6×6 NNUE engine by Ciekce and contributors, MIT; github.com/Ciekce/syntaks) with chef's cnet023 net, in a Web Worker.
 // syntaks.wasm is built by wasm/syntaks/build.sh: wasm32-wasip1, single-threaded, TEI lines in through tk_command,
 // output on stdout. This file is the host: a six-call WASI shim (clock, stdout, random, env, exit) and a TEI loop.
 //

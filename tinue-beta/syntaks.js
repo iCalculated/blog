@@ -1,4 +1,4 @@
-// Main-thread handle for Syntaks in the browser (Ciekce's 6×6 NNUE engine, MIT, with his cnet023 net, shipped with
+// Main-thread handle for Syntaks in the browser (the 6×6 NNUE engine by Ciekce and contributors, MIT, with chef's cnet023 net, shipped with
 // his OK, 2026-11-15). syntaks/worker.js runs syntaks/syntaks.wasm (wasm/syntaks/build.sh) in a Web Worker.
 //
 //   await load();                                   // first use only: ~9.8 MB gzipped, then the browser's cache
@@ -6,7 +6,7 @@
 //
 // mate and winProb are from White's side, like /api/analyze. One search at a time; it can't be stopped midway (the
 // limits bound it), so a search nobody wants any more just finishes and is dropped.
-import { canonPTN } from './shared/ptn.js?v=1795367936';
+import { canonPTN } from './shared/ptn.js?v=1795369724';
 
 // The engine build, not the site build: the 19.5 MB file only changes when the engine is rebuilt, so the browser keeps
 // it across site deploys. build-static.sh stamps this with the wasm's own hash.

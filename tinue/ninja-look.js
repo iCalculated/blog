@@ -9,7 +9,7 @@
 // name and targetBranch are lz-string compressed; theme is a built-in theme's id or a theme as JSON, either one usually
 // lz-string compressed (its own Share links compress even an id), and it falls back to the default when unreadable.
 // The same settings can be sent later as one SET_UI message (README "API"), where theme is an id or a theme object.
-import { compressToEncodedURIComponent as lz, decompressFromEncodedURIComponent as unlz } from './vendor/lz-string.js?v=1795367932';
+import { compressToEncodedURIComponent as lz, decompressFromEncodedURIComponent as unlz } from './vendor/lz-string.js?v=1795369707';
 
 // The settings tinue passes on, with the kind of value each takes (b: true/false, p: a whole number 1 to 10, t: a
 // theme). index.html's early iframe start has the same table (scripts/test-ninja-look.mjs holds them together).

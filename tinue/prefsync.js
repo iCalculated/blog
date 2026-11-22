@@ -6,8 +6,8 @@
 // The same account (and, on the same site, the same browser storage) may also hold settings this page no longer has:
 // the beta's Engine arrows (2026-11, now no setting: arrows are on wherever the analysis view is). This page never
 // reads, applies or changes those: they are carried as they are (OTHER).
-import { boardFrom, confirmOn, soundOf, SOUND_DEFAULT } from './settings.js?v=1795367932';
-import { cleanLook } from './ninja-look.js?v=1795367932';
+import { boardFrom, confirmOn, soundOf, SOUND_DEFAULT } from './settings.js?v=1795369707';
+import { cleanLook } from './ninja-look.js?v=1795369707';
 
 export const SYNCED = ['board', 'confirm', 'sound', 'ninja'];
 export const DEFAULTS = { board: 'tinue', confirm: false, sound: SOUND_DEFAULT, ninja: '' };

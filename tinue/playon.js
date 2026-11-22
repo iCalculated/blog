@@ -3,8 +3,8 @@
 
 // The rules the judge needs (the move cap, who defends, how a game ends, which games count) live in shared/judge.js
 // (plan step S1) and are re-exported here unchanged, so the page and scripts/test-playon.mjs see the same functions.
-import { capMoves, proofMoves, provenCap, countTak, outOfMoves, endsOnNo } from './shared/judge.js?v=1795367932';
-export { capMoves, proofMoves, provenCap, isTak, countTak, outOfTak, takLeft, outOfMoves, TAK_COUNTDOWN, REPLY_MARK, replyEntry, isReplyEntry, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls, endsOnNo, REFUTED } from './shared/judge.js?v=1795367932';
+import { capMoves, proofMoves, provenCap, countTak, outOfMoves, endsOnNo } from './shared/judge.js?v=1795369707';
+export { capMoves, proofMoves, provenCap, isTak, countTak, outOfTak, takLeft, outOfMoves, TAK_COUNTDOWN, REPLY_MARK, replyEntry, isReplyEntry, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls, endsOnNo, REFUTED } from './shared/judge.js?v=1795369707';
 
 // The cap's explanation, one plain sentence shown on the card (and as the number's tooltip). capNote: the puzzle's
 // bound (the moves it had left at that node, plus the spare: capMoves).
