@@ -2,26 +2,27 @@
 // embeds it. Same API as Board (board.js), so app.js doesn't care which one it has. Only loaded via import()
 // when the flag is set: everyone else fetches nothing from here or from ptn.ninja.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1795338435';
-import { parsePTN } from './shared/ptn.js?v=1795338435';
-import { Board, buildPTN, focusedByPointer, landOf } from './board.js?v=1795338435';
-import { frameParams, lookUi, frameBox } from './ninja-look.js?v=1795338435';
+import { Game } from './shared/tak.js?v=1795344949';
+import { parsePTN } from './shared/ptn.js?v=1795344949';
+import { Board, buildPTN, focusedByPointer, landOf } from './board.js?v=1795344949';
+import { frameParams, lookUi, frameBox } from './ninja-look.js?v=1795344949';
 
 const ORIGIN = 'https://ptn.ninja';
 // tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses). The board as
-// tinue's own (board.css): not checkered, PTN Ninja's grid2 (board1 tiles on a board2 ground with a small gap, rounded
-// corners), no rings. primary, player1border and player1road are board.css's --pri, --p1b and --p1r, chosen to read
-// on the light tile (board.css has the ratios): player1road is what PTN Ninja tints White's road, flat win, hint and
-// line squares with, so it can't be White's cream.
+// near tinue's own felt board (board.css) as the format goes: not checkered, PTN Ninja's grid1 (one board1 field ruled
+// in board2 lines: the cloth and its thread), no rings, board.css's stone colours. What it can't carry: the weave, the
+// stitches' dashes, the stones' proportions, and a last move drawn as a line: PTN Ninja fills the square with primary,
+// so primary is the thread's straw, which also draws its turn indicator (on Black's half of its bar; on White's cream
+// it is faint, a limit of the one colour).
 const THEME = {
-  id: 'tinue', name: 'tinue', boardStyle: 'grid2', boardChecker: false, rings: 0,
+  id: 'tinue', name: 'tinue', boardStyle: 'grid1', boardChecker: false, rings: 0,
   vars: { 'piece-border-width': 1 },
   colors: {
-    primary: '#86a52a', secondary: '#161512', ui: '#262421', accent: '#302e2c', panel: '#262421c0',
-    board1: '#f0d9b5', board2: '#b58863', board3: '#262421',
-    player1: '#f6f1e7', player1road: '#7d7262', player1flat: '#f6f1e7', player1special: '#ffffff', player1border: '#857a69',
-    player2: '#2f2c29', player2road: '#4a4540', player2flat: '#2f2c29', player2special: '#3d3935', player2border: '#0d0c0b',
-    textLight: '#fafafacd', textDark: '#212121cd', umbra: '#00000033',
+    primary: '#e3d3a1', secondary: '#161512', ui: '#262421', accent: '#302e2c', panel: '#262421c0',
+    board1: '#4a6761', board2: '#8fa9a1', board3: '#344b46',
+    player1: '#ece7db', player1road: '#ece7db', player1flat: '#ece7db', player1special: '#f5f1e8', player1border: '#9a948a',
+    player2: '#151b1a', player2road: '#121817', player2flat: '#151b1a', player2special: '#1d2524', player2border: '#5f6b67',
+    textLight: '#ece7dbcc', textDark: '#1a2120cc', umbra: '#0000004d',
   },
 };
 // PlayTak's embed settings, but with PTN Ninja's own turn indicator + flat-count bar (Shy: use the built-in one).

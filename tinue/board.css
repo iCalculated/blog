@@ -2,24 +2,23 @@
    Visual/interaction spec, read off PTN Ninja's components (numbers only; no code taken):
 
    LAYOUT (vertical layout, unplayed pieces on, axisLabelsSmall)
-   - Board = N×N square grid, not checkered: PTN Ninja's "grid2" board style with boardChecker off (no rings).
-     Every square is a board1 tile on a board2 ground, the tile inset 3.6% of a square on each side (a 7.2% gap
-     between two tiles, half that at the board's edge) with 4% corners; the gap comes out of the tile, so the
-     board and its squares keep their size. Unplayed-pieces tray below the board: board3, height = 1 square,
-     bottom corners rounded 0.35em, where 1em (board font) = min(30px, 4.375% of board width).
+   - Board = N×N square grid, not checkered, no rings: the felt board, one piece of sage cloth (--b1, with a faint
+     weave) and running stitches (--thread) for the seams between squares, none along the board's own edge (PTN
+     Ninja's nearest is "grid1" with board2 for its lines: ninja.js THEME). Unplayed-pieces tray below the board:
+     board3, height = 1 square, bottom corners rounded 0.35em, where 1em (board font) = min(30px, 4.375% of board width).
    - Coordinates live inside the edge squares: rank at the top-left of the left column, file at the
      bottom-right of the bottom row; box 1.5em × 1.5em with font-size min(15% of a square, 15px);
-     text #212121cd, on the tile (11.7:1).
+     text --lab, a pale sage, on the cloth (3.5:1).
 
    PIECES (all lengths in % of a square; 1em on a piece = 1 square)
-   - Flat: 50% × 50% square inset 25%, corner radius 10%, border 1.3% (border-width 1 × .013em).
-     Shadow 0 (.65%+2%) (1.3%+3%) umbra #00000033. Lifted first piece adds 0 .2em .1em umbra.
-   - Wall: 18.75% wide × 50% tall, 40% from the left, radius 27%/10%, rotated -45° (player 1) / +45°
+   - Flat: 52% × 52% square inset 24%, corner radius 13%, border 1.3% (border-width 1 × .013em).
+     Shadow 0 (.65%+2%) (1.3%+5%) umbra #0000004d. Lifted first piece adds 0 .2em .1em umbra.
+   - Wall: 19% wide × 52% tall, 40.5% from the left, radius 38%/12%, rotated -45° (player 1) / +45°
      (player 2); shadow offset rotated with it (x, y × .78). Walls and caps use the "special" color.
-   - Cap: the flat's 50% box, fully round.
+   - Cap: the flat's 52% box, fully round.
    - Stacks: each piece 7% higher than the one below. A stack taller than N shows its top N pieces from
      the base up; the pieces below them ("immovable") become slivers 15% × 8% (radius 15%/30%) stacked
-     7% apart up the right side (x 75%, starting 25% up). Above N+10 pieces the lowest slivers are hidden
+     7% apart up the right side (x 76%, starting 24% up). Above N+10 pieces the lowest slivers are hidden
      and the rest shift down. A wall on a stack sits one step (7%) lower.
    - Selected (carried) pieces are lifted 3 steps (21%) and drawn above everything else.
    - Tray: each player's unplayed pieces fan along the tray's top row, player 1 from the left edge,
@@ -27,14 +26,16 @@
      (N/2 − .875)·(k/(T−1)) squares from its edge, caps outermost, the next piece to be used next to the
      caps; outer pieces overlap inner ones. A selected tray piece is lifted 21%.
 
-   HIGHLIGHTS (opacity of an overlay the shape of the tile, as PTN Ninja's on grid2; roads cross the gap)
-   - Last ply, primary color: .4 on the source/placed square, .75 on drop squares (and on a placed one).
-   - highlight([sq]) suggestions, side-to-move road color: .4 (first square .8).
-   - Squares in a move being entered: .5 (the origin, once left, .25). Hover on a valid square: .35
-     (fine pointers only). Flat win: .4 owner's road color on flat-topped squares.
+   HIGHLIGHTS (opacity of an overlay the shape of the square)
+   - Last ply, a straw thread (--pri) stitched round the square inside it: dashed and faint on the source square,
+     solid with a 14% wash on drop squares (and on a placed one).
+   - highlight([sq]) suggestions (hints): --hint, .35 (first square .5) and a ring.
+   - Squares in a move being entered: White .3, Black .45, with a ring in the mover's colour (the origin, once left,
+     .25 / .35, no ring). Hover on a valid square: .2 (fine pointers only). Flat win: .3 owner's road color on
+     flat-topped squares.
    - Roads (showRoads): a center block (middle third) plus arms to orthogonal same-colored road pieces
-     and to board edges, in the owner's road color: .2 for connections, .8 for the winning road. A
-     finished road game shows just the winning road (.8) even without showRoads.
+     and to board edges, in the owner's road color: .2 for connections, .8 for the winning road (Black's at full
+     strength with a cream edge). A finished road game shows just the winning road even without showRoads.
 
    FLAT COUNTS: a 22px bar on the board's top edge, white left and black right, each as wide as its share of top
    flats plus any komi it receives (komi = a hatched end of that side, read "+2½"); 12%–88% so a count always fits.
@@ -61,24 +62,31 @@
    Hover/selected stacks show their height (or pieces in hand / dropped here) on the top piece. */
 
 .tb-host { container-type: inline-size; }
-/* Colours on a board of light tiles (WCAG ratios against the tile #f0d9b5; ninja.js THEME has the same values):
-   - --pri, the last move: a deeper green than the site's #9cb83a, which at .4 was 1.21:1 on the tile; this is 1.32:1
-     at .4 and 1.70:1 at .75 (PTN Ninja takes the colour only, at its own opacities, so the colour is the lever).
-   - --p1b, White's outline: 3.07:1 (#8f8473 was 2.68:1); on the tile a white stone (1.22:1) reads by its outline.
-   - --p1r, White's marks (selection, hover, road, flat win; PTN Ninja's player1road, so its hints and line squares for
-     White too): White's cream was 1.03 to 1.17:1 on the tile, i.e. invisible. This warm grey, White's outline a shade
-     darker, is 1.30:1 at .25 up to 2.56:1 at .8, lighter than Black's #4a4540 (1.47 to 4.31:1). */
+/* The felt board's colours (WCAG ratios against the cloth #4a6761, a mid tone: nothing on it can pass 6.2:1 when lighter
+   or 3.4:1 when darker; ninja.js THEME has the same values; scripts/test-felt-board.mjs holds them):
+   - stones: White #ece7db 5.00:1; Black #151b1a 2.83:1, its walls and capstone #1d2524 2.54:1 (no lighter than its
+     flats). The outlines are what separate stacked stones of one colour and the stones fanned in the tray: White's
+     #9a948a is 2.44:1 on White, Black's #5f6b67 3.15:1 on Black and about the cloth's own luminance (1.11:1), so a
+     black stone's edge doesn't turn into a halo.
+   - --pri, the last move: a straw thread, 4.14:1, drawn as a line round the square (a fill pale enough to read on the
+     cloth was paler than a white stone's own contrast with it); White on its 14% wash 3.97:1, Black 3.34:1.
+   - --p1r / --p2r, each side's marks (selection, hover, road, flat win; PTN Ninja's player road colours): White's cream
+     and a near-black, the two directions away from the cloth.
+   - --thread, the seams: 1.92:1 at .7, a texture, not a mark. --lab, the coordinates: 3.54:1. */
 .tb {
-  --b1: #f0d9b5; --b2: #b58863; --b3: #262421; --pri: #86a52a; --hint: #2f86d6;
-  --p1: #f6f1e7; --p1s: #ffffff; --p1b: #857a69; --p1r: #7d7262;
-  /* --p2b: black stones' outline is light enough to separate stacked black stones (a near-black one merged them) */
-  --p2: #2f2c29; --p2s: #3d3935; --p2b: #7a7168; --p2r: #4a4540;
-  --tl: #fafafacd; --td: #212121cd; --um: #00000033;
+  --b1: #4a6761; --b2: #4a6761; --b3: #344b46; --pri: #e3d3a1; --hint: #8cc8ff; --thread: #8fa9a1; --lab: #b7c8c2;
+  --p1: #ece7db; --p1s: #f5f1e8; --p1b: #9a948a; --p1r: #ece7db;
+  --p2: #151b1a; --p2s: #1d2524; --p2b: #5f6b67; --p2r: #121817;
+  /* the komi hatch's light stripe on each half of the bar (Black's road colour is darker than its flats: 1.03:1) */
+  --h1: #d4cebf; --h2: #2e3937;
+  --tl: #ece7dbcc; --td: #1a2120cc; --um: #0000004d;
   --dur: .3s; --ease: cubic-bezier(.3, .3, .5, 1);
   position: relative; width: 100%; font-size: min(30px, 4.375cqw); line-height: 1;
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
 }
-.tb-board { position: relative; z-index: 1; width: 100%; aspect-ratio: 1; background: var(--b2);
+/* one cloth: a faint weave (fractal noise, 16% of a dark grain) over the whole board */
+.tb-board { position: relative; z-index: 1; width: 100%; aspect-ratio: 1; background-color: var(--b1);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.16'/%3E%3C/svg%3E");
   display: grid; grid-template-columns: repeat(var(--n), 1fr); grid-template-rows: repeat(var(--n), 1fr); }
 .tb-tray { width: 100%; aspect-ratio: var(--n) / 1; background: var(--b3); border-radius: 0 0 var(--corner, 6px) var(--corner, 6px); }
 /* flat-count bar: top flats per side (walls and caps don't count), komi as a hatched end of the side that gets it */
@@ -88,53 +96,68 @@
 .tb-fc b { position: relative; font-weight: inherit; }
 .tb-fc i { position: absolute; top: 0; bottom: 0; width: 0; }
 .tb-f1 { background: var(--p1); color: var(--p2); }
-.tb-f1 i { left: 0; background: repeating-linear-gradient(135deg, #ddd5c6 0 4px, var(--p1) 4px 8px); }
+.tb-f1 i { left: 0; background: repeating-linear-gradient(135deg, var(--h1) 0 4px, var(--p1) 4px 8px); }
 .tb-f2 { background: var(--p2); color: var(--p1); text-align: right; }
-.tb-f2 i { right: 0; background: repeating-linear-gradient(135deg, var(--p2r) 0 4px, var(--p2) 4px 8px); }
+.tb-f2 i { right: 0; background: repeating-linear-gradient(135deg, var(--h2) 0 4px, var(--p2) 4px 8px); }
 /* to-move trim: .tm1/.tm2 on the bar (board.js turnMark) = the side to move, none once the game is over. A 3px green
-   edge along the mover's half, next to the board, drawn over the komi hatch; absolute, so the bar keeps its size. The light
-   half takes a deeper shade of the accent: --pri on #f6f1e7 is 2.0:1, #6d8028 is 3.9:1 (3.0:1 on the hatch); the dark half
-   takes #9cb83a, 6.2:1 (4.2:1 on the hatch), pinned like the light half's so the plain board's darker --pri (#86a52a,
-   4.9:1) doesn't move it. No shape on purpose: without colour it reads as a darker or lighter stripe under one half. */
+   edge along the mover's half, next to the board, drawn over the komi hatch; absolute, so the bar keeps its size. The
+   site's green, not the cloth's sage (a sage trim ran into the board under it and read as the bar ending early): on the
+   light half a deep olive (#5c741c: 4.29:1 on #ece7db, 3.37:1 on the hatch), on the dark half #9cb83a (7.75:1 on #151b1a,
+   5.31:1 on the hatch). No shape on purpose: without colour it reads as a darker or lighter stripe under one half. */
 .tb-fc.tm1 > .tb-f1::after, .tb-fc.tm2 > .tb-f2::after {
-  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--pri); }
-.tb-fc.tm1 > .tb-f1::after { background: #6d8028; }
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; }
+.tb-fc.tm1 > .tb-f1::after { background: #5c741c; }
 .tb-fc.tm2 > .tb-f2::after { background: #9cb83a; }
 
 /* squares */
 .tb-sq { position: relative; font-size: calc(100cqw / var(--n)); }
-/* the tile, and the tints and the hint's ring in its shape (the gap between tiles stays the ground) */
-.tb-sq::before, .tb-hl, .tb-sq.s::after { position: absolute; inset: 3.6%; border-radius: 4%; pointer-events: none; }
-.tb-sq::before { content: ''; background: var(--b1); }
+/* the seams, and the tints and the hint's ring over the whole square */
+.tb-sq::before, .tb-hl, .tb-sq::after { position: absolute; inset: 0; pointer-events: none; }
+/* running stitches (dashes 5.5% of a square long, every 10%) down the left and along the bottom of each square, none on
+   the board's own edge: the left column carries the rank labels, the bottom row the file labels */
+.tb-sq::before { content: ''; opacity: .7;
+  background: repeating-linear-gradient(to bottom, var(--thread) 0 5.5%, transparent 5.5% 10%) left top / max(1px, .013em) 100% no-repeat,
+              repeating-linear-gradient(to right, var(--thread) 0 5.5%, transparent 5.5% 10%) left bottom / 100% max(1px, .013em) no-repeat; }
+.tb-sq:has(.tb-lr)::before { background: repeating-linear-gradient(to right, var(--thread) 0 5.5%, transparent 5.5% 10%) left bottom / 100% max(1px, .013em) no-repeat; }
+.tb-sq:has(.tb-lc)::before { background: repeating-linear-gradient(to bottom, var(--thread) 0 5.5%, transparent 5.5% 10%) left top / max(1px, .013em) 100% no-repeat; }
+.tb-sq:has(.tb-lr):has(.tb-lc)::before { background: none; }
 .tb-rd, .tb-rd > i { position: absolute; inset: 0; pointer-events: none; }
 .tb-rd { z-index: 1; }
 .tb-hl { opacity: 0; transition: background-color var(--dur) var(--ease), opacity var(--dur) var(--ease); }
-.tb-cur { background: var(--pri); }
 .tb-pl { background: var(--p1r); }
 .tb.t2 .tb-pl { background: var(--p2r); }
-.tb-sq.c .tb-cur { opacity: .4; }
-.tb-sq.c.cp .tb-cur { opacity: .75; }
+/* the last move: a straw thread stitched round the square, dashed and faint where the move came from, solid with a
+   faint wash where it went (and on a placement) */
+.tb-cur { inset: 7%; border-radius: 6%; background: transparent; }
+.tb-sq.c .tb-cur { opacity: .65; outline: .025em dashed var(--pri); outline-offset: -.03em; }
+.tb-sq.c.cp .tb-cur { opacity: 1; outline: 0; background: color-mix(in srgb, var(--pri) 14%, transparent); box-shadow: inset 0 0 0 .038em var(--pri); }
 /* hints: their own colour (the side-to-move tint was cream on cream for White), plus a ring that shows around stacks */
 .tb-sq.s .tb-pl, .tb.t2 .tb-sq.s .tb-pl { background: var(--hint); }
 .tb-sq.s .tb-pl { opacity: .35; }
 .tb-sq.s.sp .tb-pl { opacity: .5; }
 .tb-sq.s::after { content: ''; box-shadow: inset 0 0 0 .05em var(--hint); }
 .tb-sq.s.sp::after { box-shadow: inset 0 0 0 .08em var(--hint); }
-.tb-sq.fw .tb-pl { opacity: .4; }
+/* a flat win: a tint in the owner's colour, .3 (White 1.77:1 on the cloth, Black 1.42:1), light enough that each side's
+   stones still stand off their own tint (White 2.83:1, Black 2.00:1; at .4 Black's sank to 1.78:1). No ring: on a full
+   board the rings drew a hard grid, a chequerboard again. */
+.tb-sq.fw .tb-pl { opacity: .3; }
 .tb-sq.fw.o1 .tb-pl { background: var(--p1r); }
 .tb-sq.fw.o2 .tb-pl { background: var(--p2r); }
-.tb-sq.sel .tb-pl { opacity: .5; }
+/* a selection: a tint in the mover's colour (White's cream .3, 1.77:1 on the cloth; Black's near-black .45, 1.69:1) and a
+   ring in it (5.0:1 / 2.91:1), which the stones left behind can't hide; the origin once left a tint alone, .25 / .35
+   (1.61:1 / 1.50:1). A hint's own ring wins on a hinted square. */
+.tb-sq.sel .tb-pl { opacity: .3; }
 .tb-sq.sel.selp .tb-pl { opacity: .25; }
-/* Black's selection at .5 is the ground's luminance (1.00:1), so its tile's edge only showed by hue; .65 is 3.11:1 on
-   the tile and 1.36:1 on the ground (White's .5 is 1.32:1 on the ground) */
-.tb.t2 .tb-sq.sel .tb-pl { opacity: .65; }
-.tb.t2 .tb-sq.sel.selp .tb-pl { opacity: .25; }
+.tb.t2 .tb-sq.sel .tb-pl { opacity: .45; }
+.tb.t2 .tb-sq.sel.selp .tb-pl { opacity: .35; }
+.tb-sq.sel:not(.selp):not(.s)::after { content: ''; box-shadow: inset 0 0 0 .03em var(--p1r); }
+.tb.t2 .tb-sq.sel:not(.selp):not(.s)::after { box-shadow: inset 0 0 0 .03em var(--p2r); }
 .tb-sq.v { cursor: pointer; }
-@media (pointer: fine) { .tb-sq.v:not(.s):hover .tb-pl { opacity: .35; } }
+@media (pointer: fine) { .tb-sq.v:not(.s):hover .tb-pl { opacity: .2; } }
 
 /* coordinates */
 .tb-lab { position: absolute; width: 1.5em; height: 1.5em; line-height: 1.5em; text-align: center;
-  font-size: min(.15em, 15px); color: var(--td); pointer-events: none; z-index: 1; }
+  font-size: min(.15em, 15px); color: var(--lab); pointer-events: none; z-index: 1; }
 .tb-lr { top: 0; left: 0; }
 .tb-lc { bottom: 0; right: 0; }
 
@@ -150,6 +173,13 @@
 .tb-rd > .w { inset: 33.33% 66.67% 33.33% 0; }
 .tb-rd > i.on { opacity: .2; transition-timing-function: cubic-bezier(1, 0, .5, 0); }
 .tb-rd > i.rd { opacity: .8; }
+/* Black's winning road: a near-black can't reach 3:1 on the cloth (2.91:1 at full strength), so it is drawn at full
+   strength with a cream edge along it (2.89:1 on the cloth, 8.4:1 on the road): each arm edged along its two sides, the
+   centre block all round, under the arms drawn after it, so no edge crosses the road where two pieces of it meet */
+.tb-sq.o2 .tb-rd > i.rd { opacity: 1; --re: color-mix(in srgb, var(--p1) 60%, transparent); --rw: max(1px, .012em); }
+.tb-sq.o2 .tb-rd > .m.rd { box-shadow: 0 0 0 var(--rw) var(--re); }
+.tb-sq.o2 .tb-rd > .n.rd, .tb-sq.o2 .tb-rd > .s.rd { box-shadow: var(--rw) 0 var(--re), calc(-1 * var(--rw)) 0 var(--re); }
+.tb-sq.o2 .tb-rd > .e.rd, .tb-sq.o2 .tb-rd > .w.rd { box-shadow: 0 var(--rw) var(--re), 0 calc(-1 * var(--rw)) var(--re); }
 
 /* pieces: a square-sized box moved by translate (% of a square), the stone inside it */
 .tb-pcs { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
@@ -157,9 +187,9 @@
   font-size: calc(100cqw / var(--n)); will-change: transform;
   transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease); }
 .tb-st {
-  --sw: .013em; --sy: calc(var(--sw) / 2 + .02em); --sb: calc(var(--sw) + .03em);
-  position: absolute; bottom: 0; left: 0; width: 50%; height: 50%; margin: 25%; box-sizing: border-box;
-  border: var(--sw) solid var(--p1b); border-radius: 10%; background: var(--p1);
+  --sw: .013em; --sy: calc(var(--sw) / 2 + .02em); --sb: calc(var(--sw) + .05em);
+  position: absolute; bottom: 0; left: 0; width: 52%; height: 52%; margin: 24%; box-sizing: border-box;
+  border: var(--sw) solid var(--p1b); border-radius: 13%; background: var(--p1);
   box-shadow: 0 var(--sy) var(--sb) var(--um);
   transition: var(--dur) var(--ease); transition-property: opacity, transform, width, height, left, border-radius, background-color, box-shadow;
 }
@@ -167,12 +197,12 @@
 .tb-st.p2 { background: var(--p2); border-color: var(--p2b); }
 .tb-st.C { border-radius: 50%; background: var(--p1s); }
 .tb-st.C.p2 { background: var(--p2s); }
-.tb-st.S { width: 18.75%; left: 15%; border-radius: 27% / 10%; background: var(--p1s); transform: rotate(-45deg);
+.tb-st.S { width: 19%; left: 16.5%; border-radius: 38% / 12%; background: var(--p1s); transform: rotate(-45deg);
   box-shadow: calc(var(--sy) * -.78) calc(var(--sy) * .78) var(--sb) var(--um); }
 .tb-st.S.fs { box-shadow: calc(var(--sy) * -.78) calc(var(--sy) * .78) var(--sb) var(--um), -.156em .156em .1em var(--um); }
 .tb-st.S.p2 { background: var(--p2s); transform: rotate(45deg); box-shadow: calc(var(--sy) * .78) calc(var(--sy) * .78) var(--sb) var(--um); }
 .tb-st.S.p2.fs { box-shadow: calc(var(--sy) * .78) calc(var(--sy) * .78) var(--sb) var(--um), .156em .156em .1em var(--um); }
-.tb-st.im { left: 50%; width: 15%; height: 8%; border-radius: 15% / 30%; }
+.tb-st.im { left: 52%; width: 15%; height: 8%; border-radius: 30% / 50%; }
 .tb-st.ov { opacity: 0; }
 .tb-st.pick { pointer-events: auto; cursor: pointer; }
 .tb-cnt { position: absolute; left: 0; right: 0; bottom: 25%; height: 50%; display: flex; align-items: center; justify-content: center;
@@ -180,9 +210,10 @@
 .tb-st.p2 + .tb-cnt { color: var(--tl); }
 
 /* the analysis page's shapes (analysis.js shapesSvg, app.js paintShapes): engine lines in blue, distinct from the last
-   move's green (--pri) and the hint (--hint); yours orange and dashed; the opponent's threats red and thin, under the rest.
-   A layer over the pieces that no tap ever lands on. */
-.tb { --eng: #1565c0; --yours: #e07a1f; --threat: #d33; }
+   move's straw (--pri); yours orange and dashed; the opponent's threats red and thin, under the rest. A layer over the
+   pieces that no tap ever lands on. Light shades, since the cloth is a mid tone (a darker blue, orange or red is the
+   cloth's own luminance): line 1 at .8 3.03:1, yours 2.96:1, threats 2.8:1. */
+.tb { --eng: #9fd0ff; --yours: #ffb36b; --threat: #ff8f85; }
 .tb-ov { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; overflow: visible; transition: opacity .12s; }
 .tb-ov .sh { color: var(--eng); fill: currentColor; stroke: currentColor; }
 .tb-ov .best { opacity: .8; }
@@ -196,12 +227,12 @@
 .tb-ov .hd { stroke: none; }
 .tb-ov .sm { stroke-width: .08; stroke-linecap: round; }
 .tb-ov .gh { stroke: none; opacity: .45; }
-/* (White's faint stone, cream on the cream tile, is drawn by its outline, as a white stone is) */
+/* (a faint stone: White's cream at .75, 3.59:1 on the cloth; Black's at .6, 1.95:1, with its outline) */
 .tb-ov .gh.p1 { fill: var(--p1); stroke: var(--p1b); stroke-width: .02; opacity: .75; }
-/* (Black's at .45 came out the ground's brown, 1.05:1 on it: .6 and the black outline make it a stone again) */
 .tb-ov .gh.p2 { fill: var(--p2); stroke: var(--p2b); stroke-width: .02; opacity: .6; }
-.tb-ov .dc, .tb-ov .dd { stroke: #fff; stroke-width: .03; }
-.tb-ov text { fill: #fff; stroke: none; font: 700 .2px/1 var(--mono, ui-monospace, monospace); text-anchor: middle; dominant-baseline: central; }
+/* (the counts: dark figures on the light disc of the line's colour, ringed dark so the disc stands off the cloth) */
+.tb-ov .dc, .tb-ov .dd { stroke: var(--p2); stroke-width: .03; }
+.tb-ov text { fill: var(--p2); stroke: none; font: 700 .2px/1 var(--mono, ui-monospace, monospace); text-anchor: middle; dominant-baseline: central; }
 @media (prefers-reduced-motion: reduce) { .tb-ov { transition: none; } }
 
 .tb.na *, .tb.na { transition: none !important; }
@@ -209,11 +240,11 @@
 
 /* the Rush end screen's still pictures (rush-look.js): the board's own squares, stones and overlay, drawn once, so
    nothing moves and no stone asks for a layer of its own. The move played when it was wrong in red, under the
-   puzzle's move in green: as strong as an engine's line 1, a shade darker than the last move's tint (--pri) so the
-   two greens don't read as one. */
+   puzzle's move in green, at full strength: light shades to read on the cloth (green 4.27:1, red 3.02:1), apart from
+   the last move's straw thread. */
 .tb.still, .tb.still * { transition: none !important; }
 .tb.still .tb-pc { will-change: auto; }
-.tb { --mk-good: #2f8f1f; --mk-bad: #d32f2f; }
-.tb-ov .good { color: var(--mk-good); opacity: .9; }
-.tb-ov .bad { color: var(--mk-bad); opacity: .9; }
+.tb { --mk-good: #a6e88a; --mk-bad: #ff9a90; }
+.tb-ov .good { color: var(--mk-good); opacity: 1; }
+.tb-ov .bad { color: var(--mk-bad); opacity: 1; }
 .tb-ov .good .rg, .tb-ov .bad .rg { stroke-width: .09; }
