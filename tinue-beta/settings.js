@@ -1,8 +1,8 @@
-// The Settings block on the puzzle page (beside Theme, Difficulty and size): which board, and whether a finished move
-// waits to be confirmed. Both live in the browser's prefs with the others (not synced to the account); off and tinue's
-// own board are the defaults, under which the page behaves as it did before. What app.js decides is here, so node can
+// Settings of the Settings page (#/settings): which board, whether a finished move waits to be confirmed, and Sound.
+// They live in the browser's prefs with the others (and an account's settings: prefsync.js); off and tinue's own board
+// are the defaults, under which the page behaves as it did before. What app.js decides is here, so node can
 // test it (scripts/test-settings.mjs).
-import { busy } from './busy.js?v=1795314232';
+import { busy } from './busy.js?v=1795338781';
 
 // ---- board ----
 // ?board= in the address wins, so a shared ?board=ninja link keeps working (any other value is tinue's board, as
@@ -19,8 +19,6 @@ export const confirmOn = (prefs) => prefs?.confirm === true;
 export const SOUND_DEFAULT = 'thunk';
 export const soundOf = (prefs) => { const s = prefs?.sound; return s === false || s === 'off' ? 'off' : s === 'light' || s === 'thunk' || s === 'deep' ? s : SOUND_DEFAULT; };
 export const soundOn = (prefs) => soundOf(prefs) !== 'off';
-// The analysis page's engine arrows (app.js paintShapes): on unless turned off. The opponent's threats are always drawn.
-export const arrowsOn = (prefs) => prefs?.arrows !== false;
 // The address's query without ?board=: a switch reloads without it, or the flag the page was opened with would win.
 export function withoutBoardFlag(search) {
   const q = new URLSearchParams(search || '');
@@ -39,10 +37,10 @@ export const switchNow = (s, uploading = 0) => !uploading && (!s || !!s.placehol
 // A switch made mid-puzzle reloads as the next puzzle loads (app.js loadNext), when nothing is held or still uploading,
 // as a newer build does by itself; otherwise it waits for the Next after that.
 export const switchAtNext = ({ wanted, leaving, held, uploading }) => !!wanted && !leaving && !held && !uploading;
-// Whether a Board style choice was really stored (read back): where site storage is blocked the write is silently
+// Whether a Board choice was really stored (read back): where site storage is blocked the write is silently
 // dropped, and a reload would come back on the old board, signed out (the token was kept in memory only).
 export const boardSaved = (stored, board) => boardFrom('', stored) === board;
-// The line under the Settings block: what isn't plain from the selects.
+// The line under the Settings page's Board select: what isn't plain from the selects.
 export function settingsNote({ unsaved, switching, linkBoard, ninja, confirm }) {
   if (unsaved) return "Settings can't be saved in this browser.";
   const out = [];

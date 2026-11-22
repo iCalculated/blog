@@ -3,8 +3,8 @@
 
 // The rules the judge needs (the move cap, who defends, how a game ends, which games count) live in shared/judge.js
 // (plan step S1) and are re-exported here unchanged, so the page and scripts/test-playon.mjs see the same functions.
-import { capMoves, proofMoves, provenCap, countTak, outOfMoves } from './shared/judge.js?v=1795314232';
-export { capMoves, proofMoves, provenCap, isTak, countTak, outOfTak, takLeft, outOfMoves, TAK_COUNTDOWN, REPLY_MARK, replyEntry, isReplyEntry, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls } from './shared/judge.js?v=1795314232';
+import { capMoves, proofMoves, provenCap, countTak, outOfMoves, endsOnNo } from './shared/judge.js?v=1795338781';
+export { capMoves, proofMoves, provenCap, isTak, countTak, outOfTak, takLeft, outOfMoves, TAK_COUNTDOWN, REPLY_MARK, replyEntry, isReplyEntry, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls, endsOnNo, REFUTED } from './shared/judge.js?v=1795338781';
 
 // The cap's explanation, one plain sentence shown on the card (and as the number's tooltip). capNote: the puzzle's
 // bound (the moves it had left at that node, plus the spare: capMoves).
@@ -164,6 +164,25 @@ export function capWait(po, { lengthPending = false, checkLive = false } = {}) {
   if (!outOfMoves(po) || po.end) return null;
   if (po.proven) return po.proofPlies == null && lengthPending ? 'length' : null;
   return checkLive && provenPlayOut(po.engine) && !po.fallback ? 'proof' : null;
+}
+// When the page ends a play-out on a 'no' (judge.js endsOnNo; app.js startPlayOn's handler and defenderTurn). The
+// event-order rule: the page judges events in the order it handles them, and a move counts once the page has accepted
+// it (playOnMove plays it onto the game, synchronously from the board's input). So a winning move accepted before the
+// 'no' is handled is a solve (the play-out is over, and the 'no' finds nothing to end); a 'no' handled first ends the
+// play-out, and a move not yet accepted (stones in hand, or one waiting for Confirm) never counts. What happens, by
+// what the page is doing when the 'no' is handled:
+//   'now':   the player's turn (stones in hand, a move waiting for Confirm, a hidden tab included): it ends now.
+//   'reply': the defender's reply is being chosen or played onto the board (po.thinking, or s.busy while it animates):
+//            the play-out ends as soon as that reply is on the board, before the player's turn opens, unless the reply
+//            itself ended the game (the defender's road, flats or a draw: that ending stands, rated the same way).
+//   'wait':  the countdown has run down and the page is waiting for the check at the end (capWait 'proof'): the wait
+//            ends with the 'no' and the play-out ends 'out', as before this rule (the same rating).
+//   null:    nothing ends: not a 'no' (an 'unknown' changes nothing), not the Tak rule (Rush), already over, or proven.
+// busy: the page's s.busy (the board is mid-animation or locked for the defender).
+export function noEnding(po, verdict, { busy = false } = {}) {
+  if (!endsOnNo(po, verdict)) return null;
+  if (po.waiting) return 'wait';
+  return po.thinking || busy ? 'reply' : 'now';
 }
 // The engines' time limits, in one place so Rush's server can bound its pauses by them (server/rush.js, rush-rules.js
 // pauseMax): the first still-wins check's quick answer and its run-on (engine.js checkStill's defaults, pinned there

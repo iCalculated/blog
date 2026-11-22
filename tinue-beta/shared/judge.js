@@ -5,7 +5,7 @@
 //
 // The play-on rules below moved here unchanged from public/playon.js, which re-exports them, so the page behaves as
 // before (scripts/test-playon.mjs).
-import { winMove } from './pns.js?v=1795314232';
+import { winMove } from './pns.js?v=1795338781';
 
 // ---- play-on rules (moved from public/playon.js) ----
 
@@ -37,6 +37,15 @@ export const replyEntry = (m) => m + REPLY_MARK;
 export const isReplyEntry = (e) => !!e && e.k === 'po' && typeof e.m === 'string' && e.m.endsWith(REPLY_MARK);
 // Whether the play-out has run out of moves under its rule: po.rule 'tak' (the puzzle page) or the move cap (Rush).
 export const outOfMoves = (po) => (po.rule === 'tak' ? outOfTak(po) : po.mine >= po.cap);
+// A 'no' ends the play-out (Sasha, 2026-11-21, review point F2: "yeah we should terminate playout early on miss"). The
+// check of the move played out answering 'no' (it doesn't force a win) while the play-out is still going ends it there
+// as a miss, its ending 'refuted', rated exactly as any other ending without the player's win (lossRated: the game
+// Syntaks defended counts, gameRated), so a 'no' no longer leaves unlimited rated tries at catching the engine out.
+// Only under the Tak rule (the puzzle page; Rush keeps the cap and its own handling), only a live play-out (one already
+// over keeps its ending), and never a proven one (a move proven to win is never refuted). 'unknown' (a timeout or a
+// failure) is not a 'no' and changes nothing.
+export const REFUTED = 'refuted';
+export const endsOnNo = (po, verdict) => verdict === 'no' && !!po && po.rule === 'tak' && !po.end && !po.proven;
 
 // How many of your moves you get, counting the move being played out. The puzzle had `pliesLeft` plies to go at that
 // node (an attacker node, so an odd number: your moves and the replies between them); you get those moves plus the
@@ -60,9 +69,10 @@ export function provenCap(pliesLeft, proofPlies, shown = 0) {
 }
 
 // Who defends: Syntaks on the server for 6×6 (any half-point komi it knows), else Tiltak in the browser where it plays
-// (4×4–6×6). null: no engine for this board, so the move is handled as before play-on.
+// (4×4/5×5). null: no engine for this board, so the move is handled as before play-on. 6×6 is never Tiltak's, whatever
+// tiltakSupports says (Sasha, 2026-11-21: no Tiltak on 6×6): a komi Syntaks doesn't know is null, as on 7×7.
 export function defender(size, komi, tiltakSupports) {
-  if (size === 6 && Math.abs(komi) <= 3.5 && Number.isInteger(komi * 2)) return 'syntaks';
+  if (size === 6) return Math.abs(komi) <= 3.5 && Number.isInteger(komi * 2) ? 'syntaks' : null;
   return tiltakSupports(size, komi) ? 'tiltak' : null;
 }
 
@@ -323,7 +333,9 @@ function act(a, ply, inp) {
 }
 
 // The final verdict of an earlier pending ply (row 11), or a proof landing in a live unproven play-out (it becomes a
-// proven play-out, as makeProven does; the game goes on; with the Tak rule there is no cap to raise).
+// proven play-out, as makeProven does; the game goes on; with the Tak rule there is no cap to raise), or a 'no' landing
+// in one (it ends there, 'refuted', as app.js does: endsOnNo). Plies are judged in the order they come, so a win
+// judged before the 'no' stands (the play-out is over by then, and the 'no' is stale).
 function settle(a, n, final) {
   const f = typeof final === 'string' ? { kind: final } : isObj(final) ? final : {};
   const kind = f.kind === 'wins' && (f.fullDefense === true || f.checked === true) ? 'wins'
@@ -332,7 +344,8 @@ function settle(a, n, final) {
   if (!p) return { verdict: 'stale' };
   const po = a.playout;
   if (po && po.at === n) {
-    if (po.end || po.proven || kind !== 'wins') return { verdict: 'noted' }; // a 'no' or unknown: the game decides
+    if (endsOnNo(po, kind)) return endPlayout(a, REFUTED);
+    if (po.end || po.proven || kind !== 'wins') return { verdict: 'noted' }; // an unknown (or a 'no' outside the Tak rule): the game decides
     po.proven = true;
     if (Number.isFinite(f.plies) && f.plies >= 0) { po.proofPlies = f.plies; if (po.rule !== 'tak') po.cap = provenCap(po.left, f.plies, po.cap); }
     p.evidence = { kind: 'prover', src: f.src || 'pns', late: true };

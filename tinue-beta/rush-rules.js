@@ -2,11 +2,11 @@
 // judging a move by the puzzle's line, where an off-line move goes next (the puzzle page's adjudication: route,
 // playOutOutcome), the clock and its pauses, the combo and its time bonuses, and the end-of-run numbers.
 // public/rush.js owns the screen and the engines and calls these with the time it read.
-import { Game, colorOf, typeOf } from './shared/tak.js?v=1795314232';
-import { finalSquare } from './settings.js?v=1795314232';
-import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795314232';
-import * as SYM from './shared/sym.js?v=1795314232';
-import { moveShape } from './analysis.js?v=1795314232';
+import { Game, colorOf, typeOf } from './shared/tak.js?v=1795338781';
+import { finalSquare } from './settings.js?v=1795338781';
+import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795338781';
+import * as SYM from './shared/sym.js?v=1795338781';
+import { moveShape } from './analysis.js?v=1795338781';
 
 export const SIZE = 6; // Rush and Streak are 6×6 only (server/rush.js refuses any other size)
 export const RUSH_MS = 180e3; // 3:00
@@ -390,7 +390,7 @@ export function boardFrom(p, line = []) {
 }
 // The colour to move (solver 1 = white), and whether it differs from the last puzzle's: a run mixes both colours, and
 // the stone and the board's ring pulse on a change so a player in the habit of one side notices.
-// name: the word the bar above the board shows beside the stone, so the side reads without telling two shades apart.
+// name: the side in a word (text, the line under the board and what is said, starts with it).
 export function turn(solver, prev = null) {
   const white = solver === 1, name = white ? 'White' : 'Black';
   return { color: white ? 'white' : 'black', name, text: `${name} to play.`, changed: prev != null && prev !== solver };
@@ -470,7 +470,7 @@ export function moveSquares(ptn) {
 // move), so the player sees the side and the squares they had; a solve or a skip shows the start and its first move.
 // r: the run's result with `at`, the moves accepted before the miss (rush.js keeps it; it isn't posted), and
 // `answer` when already known (a stored run keeps it, not the puzzle's tree).
-// Returns { size, toMove, cells (rank size first, file a first: { sq, dark, top: { color, type } | null, h, stack: the
+// Returns { size, toMove, cells (rank size first, file a first: { sq, top: { color, type } | null, h, stack: the
 // whole stack, bottom first, [{ color, type }] }), last (the move that led to the position, tinted as the board does),
 // played, answer (each [start, final] squares), you (what was played, '' for a solve), want (the puzzle's move), text
 // (both), and for the end screen's picture (rush-look.js): tint ({ sqs, prim }: the squares the board tints for that
@@ -485,7 +485,7 @@ export function review(p, r) {
   const g = startGame(p, at), answer = r.answer !== undefined ? r.answer : answerAt(p, at), n = p.size, cells = [];
   for (let row = n - 1; row >= 0; row--) for (let col = 0; col < n; col++) {
     const sq = row * n + col, stack = g.board[sq], t = stack.length ? stack[stack.length - 1] : -1;
-    cells.push({ sq: g.sqName(sq), dark: col % 2 === row % 2, top: t < 0 ? null : { color: colorOf(t), type: typeOf(t) }, h: stack.length,
+    cells.push({ sq: g.sqName(sq), top: t < 0 ? null : { color: colorOf(t), type: typeOf(t) }, h: stack.length,
       stack: stack.map((x) => ({ color: colorOf(x), type: typeOf(x) })) });
   }
   const after = at.length ? `After ${at.join(' ')}, ` : '';

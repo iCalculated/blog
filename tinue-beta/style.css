@@ -15,10 +15,9 @@
   --good: #7fb83a;      /* text on panels 6.5:1 */
   --bad: #ec7a74;       /* text on panels 5.6:1, on bg3 4.9:1 */
   --gold: #d59020;
-  --sq-light: #f0d9b5;
-  --sq-dark: #b58863;
+  --board-ground: #b58863; /* board.css --b2: the ground between the board's tiles */
   --p1: #f6f1e7;
-  --p1-edge: #8f8473;
+  --p1-edge: #857a69;   /* board.css --p1b: a white stone's outline */
   --p2: #2f2c29;
   --p2-edge: #7a7168;   /* board.css --p2b: a black stone's outline */
 
@@ -54,7 +53,9 @@ button.primary:hover { filter: brightness(1.1); }
 button:disabled { opacity: .4; cursor: default; background: var(--bg3); }
 button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 select, input { background: var(--bg); padding: 0 10px; }
-select { padding-right: 6px; }
+/* Our own chevron, 10px in from the edge like the text on the left: the browser's arrow sits hard against the
+   border and can't be moved. (The data URI can't read a CSS variable, so the grey is written out.) */
+select { appearance: none; -webkit-appearance: none; padding-right: 28px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23a8a39a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 10px 6px; }
 .field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .field > span { font-size: var(--fs-xs); color: var(--muted); display: flex; align-items: center; gap: 6px; }
 .field select { width: 100%; }
@@ -142,12 +143,8 @@ a.tag:hover { border-color: var(--accent); color: var(--fg-hi); }
 .controls { display: flex; flex-direction: column; gap: 12px; }
 .controls .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .theme-desc { margin: -4px 0 0; color: var(--muted); font-size: var(--fs-xs); }
-/* Settings (Board style, Confirm moves): kept in this browser with the filters above */
-.settings { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
-.settings h2 { margin: 0; font-size: var(--fs-xs); font-weight: 600; color: var(--fg); }
-.settings .theme-desc { margin: -2px 0 0; }
-.settings .set-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.settings .set-all { font-size: var(--fs-xs); }
+/* Under the filters, the way to the Settings page (Board, PTN Ninja look, Confirm moves live only there). */
+.controls .set-link { margin: 0; font-size: var(--fs-xs); }
 /* The Settings page (#/settings): one setting a row, its control on the right on wide screens, under its name on phones. */
 .settings-page { max-width: 720px; }
 .settings-page .set-status { color: var(--muted); font-size: var(--fs-sm); margin: -4px 0 14px; min-height: 1.4em; }
@@ -277,6 +274,12 @@ a.tag:hover { border-color: var(--accent); color: var(--fg-hi); }
 .moves .eng .tag.yours { color: #e8a25c; } /* board.css --yours, lightened for text: 7:1 on panels */
 .moves .threat { margin: 4px 0 0; height: 17px; font: var(--fs-xs)/1.4 "Noto Sans", -apple-system, sans-serif; color: var(--bad); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* one line: its title has it all */
 @media (prefers-reduced-motion: reduce) { .moves .eng .bar i { transition: none; } }
+/* The analysis view off (app.js ANALYSIS, the production build): production's one engine row as it was before the view,
+   bar and who's better, the source, then line 1's moves on their own row. */
+.moves .eng.row { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding-bottom: 10px; min-height: 30px; }
+.moves .eng.row .src { order: 2; margin-left: auto; align-self: center; }
+.moves .eng.row .pvline { order: 3; flex: 1 1 100%; min-height: calc(var(--fs-sm) * 1.3 + 4px); flex-wrap: wrap; overflow-x: visible; margin-left: -5px; }
+.moves .eng.row .pvm { flex: initial; white-space: normal; }
 
 /* loading: the real panels with dummy values, text masked */
 .is-loading h2, .is-loading p, .is-loading .mv, .is-loading .num { color: transparent !important; background: var(--bg3) !important; border-color: transparent !important; border-radius: 4px; }
@@ -348,6 +351,11 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
   .moves .dock .chips::-webkit-scrollbar, .moves .dock .eng-b::-webkit-scrollbar { display: none; }
   .moves .dock .eng .chip { height: 32px; border-radius: 16px; } /* (.eng: beats the coarse-pointer rule below) */
   .moves .dock .eng-b .pvline { flex: 1 1 auto; }
+  /* the analysis view off: production's dock row (its height held before the engine's first line) */
+  .moves .dock .eng-slot.row { height: auto; min-height: 67px; overflow: visible; }
+  .moves .dock .eng.row { padding: 6px 0 0; gap: 6px 8px; }
+  .moves .dock .eng.row .pvline { flex-wrap: nowrap; overflow-x: auto; }
+  .moves .dock .eng.row .pvm { flex: none; white-space: nowrap; }
   .moves .dock .nav { margin: 0; padding: 0; border: 0; display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; } /* 4 steps + PTN Ninja */
   .moves .dock .nav button, .moves .dock .nav .navlink { width: auto; height: 40px; font-size: 17px; }
   /* the result lives in the dock, so the card steps aside; it stays for screen readers (it's the live region), minus
@@ -494,21 +502,19 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 #rush-skip:disabled { background: none; border-color: transparent; color: var(--muted); opacity: 1; }
 #rush-giveup { flex: none; }
 .rush-clock.paused { opacity: .55; } /* (the engine's time: never charged) */
-/* the colour to move, without reading: the stone drawn on a board square to the left of the clock. The square is the
-   board's dark one, where both stones stand out (white 2.8:1, black 4.4:1; on the light square white is 1.2:1), and the
-   square itself shows on the bar (4.9:1). A new colour to move swells the stone once, inside the square. */
-.rush-turn { flex: none; position: relative; width: 36px; height: 36px; border-radius: 3px; background: var(--sq-dark); }
+/* the colour to move, without reading: the stone drawn on a square of the board's ground to the left of the clock,
+   where both stones stand out (white 2.8:1, black 4.4:1; on the board's light tile white is 1.2:1), and the square
+   itself shows on the bar (4.9:1). A new colour to move swells the stone once, inside the square. */
+.rush-turn { flex: none; position: relative; width: 36px; height: 36px; border-radius: 3px; background: var(--board-ground); }
 /* the stone as board.css .tb-st draws a flat: half the square, its outline, 10% corners, a soft shadow */
 .rush-turn i { position: absolute; inset: 25%; box-sizing: border-box; border: 1px solid var(--p1-edge); border-radius: 10%; background: var(--p1); box-shadow: 0 1px 2px #0003; }
 .rush-turn.black i { background: var(--p2); border-color: var(--p2-edge); }
 .rush-turn.sm { display: inline-block; width: 22px; height: 22px; vertical-align: -6px; margin-right: 6px; }
 .rush-turn.flip i { animation: rush-stone var(--rush-base) var(--rush-ease); }
-/* the stone and its name, first in the bar: the side to move is read before the clock, and in words as well as shade
-   (players on Discord, 2026-11-21, couldn't tell whose turn it was). In the bar, so nothing under it can push it down. */
+/* the stone, first in the bar: the side to move is read before the clock (players on Discord, 2026-11-21, couldn't
+   tell whose turn it was). No words in the bar (Sasha): the board's green trim and the note under it, which starts with
+   the side to play, say it too. In the bar, so nothing under it can push it down. */
 .rush-side { flex: none; display: flex; align-items: center; gap: 8px; }
-.rush-side-txt { display: flex; flex-direction: column; line-height: 1.1; }
-.rush-side-txt b { font-size: 17px; color: var(--fg-hi); }
-.rush-side-txt span { font-size: var(--fs-xs); color: var(--muted); }
 @keyframes rush-stone { 40% { transform: scale(1.2); } }
 /* the puzzle just finished, as Storm's: one fixed spot under the board, flush right; it pops in when a result arrives */
 .rush-note { flex: 1; min-width: 0; }
@@ -550,7 +556,6 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
   .rush-clock:not(.hidden) + .rush-score b { font-size: 20px; }
   .rush-side { gap: 6px; }
   .rush-side .rush-turn { width: 32px; height: 32px; }
-  .rush-side-txt b { font-size: 15px; }
   .rush-combo-text { flex-direction: column; gap: 0; line-height: 1.1; }
   .rush-combo-bar { margin-top: 3px; }
   .rush-pop { top: 13px; left: 0; right: auto; }
@@ -564,7 +569,6 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
   .rush-score { gap: 4px; }
   .rush-side { gap: 5px; }
   .rush-side .rush-turn { width: 28px; height: 28px; }
-  .rush-side-txt b { font-size: 14px; }
 }
 /* (without container queries: the same rules where .rush-run's width says the bar is that narrow, a phone-wide window
    or one under 746 px tall, (745 - 200) / 1.24 < 440) */
@@ -576,7 +580,6 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
     .rush-clock:not(.hidden) + .rush-score b { font-size: 20px; }
     .rush-side { gap: 6px; }
     .rush-side .rush-turn { width: 32px; height: 32px; }
-    .rush-side-txt b { font-size: 15px; }
     .rush-combo-text { flex-direction: column; gap: 0; line-height: 1.1; }
     .rush-combo-bar { margin-top: 3px; }
     .rush-pop { top: 13px; left: 0; right: auto; }

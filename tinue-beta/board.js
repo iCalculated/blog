@@ -1,9 +1,9 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795314232';
-import { parsePTN } from './shared/ptn.js?v=1795314232';
-import { dispPoint, shapesSvg, stackPiece, SP, GAP } from './analysis.js?v=1795314232';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795338781';
+import { parsePTN } from './shared/ptn.js?v=1795338781';
+import { dispPoint, shapesSvg, stackPiece, SP, GAP } from './analysis.js?v=1795338781';
 
 // (SP, GAP: the stack step, % of a square, and how many steps a carried hand is lifted; analysis.js stackPiece)
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
@@ -13,6 +13,8 @@ const FILES = 'abcdefgh';
 const ID = [1, 0, 0, 1];
 const OPS = { ']': [0, 1, -1, 0], '[': [0, -1, 1, 0], '-': [-1, 0, 0, -1], ';': [-1, 0, 0, 1], ':': [1, 0, 0, -1], '=': null };
 const mul = ([p, q, r, t], [a, b, c, d]) => [p * a + q * c, p * b + q * d, r * a + t * c, r * b + t * d];
+// The side to move as the flat-count bar marks it: 1 or 2, or 0 once the game is over (nobody moves).
+export const turnMark = (g) => (g.result() ? 0 : g.toMove);
 const loadOrient = () => { try { const m = JSON.parse(localStorage.getItem('tinue.orient')); if (Array.isArray(m) && m.length === 4) return m; } catch {} return ID; };
 
 // ---------- positions with piece identities (so a move can be animated piece by piece) ----------
@@ -267,7 +269,7 @@ export class Board {
     for (const sq of order) {
       const r = (sq / n) | 0, c = sq % n, [dc, dr] = this._disp(sq);
       const d = document.createElement('div');
-      d.className = 'tb-sq ' + (c % 2 !== r % 2 ? 'lt' : 'dk');
+      d.className = 'tb-sq';
       d.dataset.sq = sq;
       d.innerHTML = '<div class="tb-hl tb-cur"></div><div class="tb-hl tb-pl"></div><div class="tb-rd"><i class="m"></i><i class="n"></i><i class="e"></i><i class="s"></i><i class="w"></i></div>' +
         (dc === 0 ? `<span class="tb-lab tb-lr">${this.M[2] ? FILES[c] : r + 1}</span>` : '') + (dr === 0 ? `<span class="tb-lab tb-lc">${this.M[0] ? FILES[c] : r + 1}</span>` : '');
@@ -633,6 +635,7 @@ export class Board {
     const w1 = f[1] + Math.max(0, -k), w2 = f[2] + Math.max(0, k), tot = w1 + w2;
     const pct = tot ? Math.min(88, Math.max(12, (100 * w1) / tot)) : 50;
     const [s1, s2] = this.fcEl.children;
+    this._set(this.fcEl, 'tm', turnMark(g), (x) => { this.fcEl.className = 'tb-fc' + (x ? ' tm' + x : ''); });
     this._set(s1, 'w', pct, (x) => { s1.style.width = x + '%'; });
     this._set(s2, 'w', 100 - pct, (x) => { s2.style.width = x + '%'; });
     [[s1, f[1], -k, w1], [s2, f[2], k, w2]].forEach(([el, flats, km, w]) => {
@@ -646,7 +649,7 @@ export class Board {
     const selSqs = this.sel?.t === 'stack' ? this.sel.path : [];
     for (let sq = 0; sq < n * n; sq++) {
       const top = g.top(sq);
-      let cls = 'tb-sq ' + (sq % n % 2 !== ((sq / n) | 0) % 2 ? 'lt' : 'dk');
+      let cls = 'tb-sq';
       if (top >= 0) cls += ' o' + colorOf(top);
       if (hl?.sqs.includes(sq)) cls += ' c' + (hl.prim.includes(sq) ? ' cp' : '');
       const hi = this.hlSquares.indexOf(sq);

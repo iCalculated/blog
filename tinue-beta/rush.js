@@ -5,18 +5,18 @@
 // engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused while they work. Nothing here is rated,
 // and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { Board, buildPTN } from './board.js?v=1795314232';
-import { api, store, token } from './api.js?v=1795314232';
-import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795314232';
-import * as R from './rush-rules.js?v=1795314232';
-import { picture, pictureHTML } from './rush-look.js?v=1795314232';
-import * as engine from './engine.js?v=1795314232';
-import * as tiltak from './tiltak.js?v=1795314232';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795314232';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795314232';
-import { busy, BUSY_MS } from './busy.js?v=1795314232';
-import * as SYM from './shared/sym.js?v=1795314232';
-import * as sound from './sound.js?v=1795314232'; // (moves click through Board.onPly, set by app.js; the verdicts are played here)
+import { Board, buildPTN } from './board.js?v=1795338781';
+import { api, store, token } from './api.js?v=1795338781';
+import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795338781';
+import * as R from './rush-rules.js?v=1795338781';
+import { picture, pictureHTML } from './rush-look.js?v=1795338781';
+import * as engine from './engine.js?v=1795338781';
+import * as tiltak from './tiltak.js?v=1795338781';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795338781';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795338781';
+import { busy, BUSY_MS } from './busy.js?v=1795338781';
+import * as SYM from './shared/sym.js?v=1795338781';
+import * as sound from './sound.js?v=1795338781'; // (moves click through Board.onPly, set by app.js; the verdicts are played here)
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -71,7 +71,7 @@ function build() {
     <section class="rush-start" id="rush-start"></section>
     <section class="rush-run hidden" id="rush-run">
       <div class="rush-hud">
-        <div class="rush-side" aria-hidden="true"><div class="rush-turn" id="rush-turn"><i></i></div><span class="rush-side-txt"><b id="rush-side-name"></b><span>to play</span></span></div>
+        <div class="rush-side" aria-hidden="true"><div class="rush-turn" id="rush-turn"><i></i></div></div>
         <div class="rush-clock" id="rush-clock" role="timer"><span id="rush-clock-t">3:00</span><span class="sr-only"> left</span></div>
         <div class="rush-score"><b id="rush-score">0</b><span id="rush-score-label">solved</span></div>
         <div class="rush-combo" id="rush-combo"><div class="rush-combo-text"><span id="rush-combo-n">Combo 0</span><span id="rush-combo-next" class="muted"></span></div><div class="rush-combo-bar" aria-hidden="true"><i id="rush-combo-fill"></i></div><div class="rush-pop" id="rush-pop" aria-hidden="true"></div></div>
@@ -767,14 +767,15 @@ function render() {
   gb.disabled = !po || !!po.end || busy('giveup', po.t0); // (its first 1.5 s: a tap aimed at the board, as on the puzzle page)
   if (s.run.mode === 'streak') $('#rush-skip').disabled = s.run.skipUsed || !!a;
 }
-// The colour to move, first thing in the bar above the board: the stone on a board square, swelling once on a change,
-// and its name in words beside it (a colour-blind player, or one who doesn't trust a shade, reads it). Screen readers
-// get it from the line under the board and say(), so the bar stays hidden from them.
+// The colour to move, first thing in the bar above the board: the stone on a board square, swelling once on a change.
+// No words beside it (Sasha, 2026-11-21: "Let's not say which side to play in the bar"): the board's green to-move trim
+// on the flat-count bar says it too, and the line under the board names the side in words first (a colour-blind
+// player, or one who doesn't trust a shade, reads it there). Screen readers get it from that line and say(), so the
+// bar stays hidden from them.
 function showTurn(t) {
   const el = $('#rush-turn');
   el.classList.remove('white', 'black', 'flip');
   el.classList.add(t.color);
-  $('#rush-side-name').textContent = t.name;
   if (t.changed) { void el.offsetWidth; el.classList.add('flip'); } // (a reflow restarts the animation)
   if (sayNext) { say(R.sayText({ ...sayNext, next: t.text })); sayNext = null; } // (the side to move first, as on screen)
 }

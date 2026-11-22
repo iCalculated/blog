@@ -1,6 +1,6 @@
-// lz-string 1.5.0 (MIT, Copyright (c) 2013 pieroxy; see LICENSE-lz-string.txt beside this file), the compress half
-// only, rewritten as an ES module: compressToEncodedURIComponent, the format of ptn.ninja's links. Output is the same
-// as the library's, byte for byte (scripts/test-analysis.mjs checks a real link).
+// lz-string 1.5.0 (MIT, Copyright (c) 2013 pieroxy; see LICENSE-lz-string.txt beside this file), rewritten as an ES
+// module with both halves of ptn.ninja's link format: compressToEncodedURIComponent and decompressFromEncodedURIComponent.
+// Output is the same as the library's, byte for byte (scripts/test-ninja-look.mjs checks a real link both ways).
 const URI_SAFE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-$';
 
 export function compressToEncodedURIComponent(input) {

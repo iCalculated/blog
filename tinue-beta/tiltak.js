@@ -13,11 +13,14 @@
 //
 // Cancellation: a new analyze() stops the previous search; the previous promise resolves to null.
 // stop() ends the current search early and its promise resolves with what was found so far.
-// Supported: sizes 4, 5, 6; komi 0 and 2 (the only komi Tiltak has trained weights for). Other komi
+// Supported: sizes 4 and 5; komi 0 and 2 (the only komi Tiltak has trained weights for). Other komi
 // values are rounded to the nearest of those and reported in komiUsed / komiApprox.
-import { canonPTN } from './shared/ptn.js?v=1795314232';
+// Never 6×6, though Tiltak plays it: 6×6 is Syntaks's alone (Sasha, 2026-11-21: "we shouldn't have any tiltak analysis
+// in 6x6"). Where Syntaks can't answer on 6×6 the page says so (the solver's verdict, no engine) and Tiltak isn't asked:
+// supports() is false and analyze() refuses, so no caller (analysis, play-out, free game, Rush) can reach it.
+import { canonPTN } from './shared/ptn.js?v=1795338781';
 
-export const SUPPORTED = Object.freeze({ sizes: [4, 5, 6], komi: [0, 2] });
+export const SUPPORTED = Object.freeze({ sizes: [4, 5], komi: [0, 2] });
 export const supports = (size, komi = 0) => SUPPORTED.sizes.includes(size) && (komi == null || komi >= -5 && komi <= 5);
 
 const workerURL = new URL('./tiltak/worker.js' + (import.meta.url.match(/\?v=[\w.]+/)?.[0] || ''), import.meta.url);
@@ -116,7 +119,7 @@ export function analyze({ tps, size, komi = 0, ms = 1500, nodes, onInfo } = {}) 
     // A 'go nodes' search never yields to the worker's event loop, so it can't hear 'stop': restart instead.
     if (old.nodesMode && worker) { worker.terminate(); worker = null; readyP = null; }
   }
-  if (!SUPPORTED.sizes.includes(size)) return Promise.reject(new Error(`Tiltak supports sizes 4, 5 and 6 only (got ${size})`));
+  if (!SUPPORTED.sizes.includes(size)) return Promise.reject(new Error(`Tiltak is used on 4×4 and 5×5 only (got ${size}×${size})`));
 
   const id = ++seq;
   const p = new Promise((resolve, reject) => { job = { id, resolve, reject, onInfo, ctx, last: null, nodesMode: nodes > 0, posted: false, stopReq: false }; });

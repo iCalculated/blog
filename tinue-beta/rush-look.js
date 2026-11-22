@@ -1,12 +1,12 @@
 // The Rush end screen's pictures of a puzzle: a still copy of tinue's board (board.js, board.css) drawn as one string of
 // HTML, so a run of 60 puzzles costs no Board, no key handler and no timer per picture. It draws what the board draws
-// for a position: the checkered squares, the coordinates where the board puts them, every stone of every stack placed
+// for a position: the plain tiles, the coordinates where the board puts them, every stone of every stack placed
 // by the board's own maths (analysis.js stackPiece: the top n stones up the square, the rest as slivers up its side),
 // the tint on the move that led there, and the two moves that matter as the analysis overlay draws a line (analysis.js
 // shapesSvg: a ring and a faint stone for a placement, an arrow with the stones carried for a spread): the move played
 // when it was wrong in red, the puzzle's move in green.
 // Pure (no DOM), so node tests it against the real Board's position: scripts/test-rush-look.mjs.
-import { dispPoint, shapesSvg, stackPiece } from './analysis.js?v=1795314232';
+import { dispPoint, shapesSvg, stackPiece } from './analysis.js?v=1795338781';
 
 const FILES = 'abcdefgh';
 const ID = [1, 0, 0, 1];
@@ -23,7 +23,7 @@ const dirOf = (s, n) => [sign(rowOf(s.to, n) - rowOf(s.from, n)), sign((s.to % n
 
 // The picture as data: v is rush-rules.js review()'s answer (its cells, tint and marks, in the labels the run showed),
 // M the board's orientation (Board#M: the player's own turn or mirror of the board, kept in this browser).
-// Returns { n, squares (in the order the board lays them out, top row first: { sq: logical index, name, dark, tint:
+// Returns { n, squares (in the order the board lays them out, top row first: { sq: logical index, name, tint:
 // '' | 'c' | 'cp' (the board's .c / .c.cp), lr, lc: the rank or file label drawn there, or null) }, pieces ([{ sq,
 // name, color, type, x, y (the board's translate, % of a square), z, imm }], every stone drawn, bottom first), marks
 // (review's, with r, shift or lead set where two moves share a square or a stack), svg (the marks drawn) }.
@@ -33,7 +33,7 @@ export function picture(v, M = ID) {
   const squares = [];
   for (let dr = n - 1; dr >= 0; dr--) for (let dc = 0; dc < n; dc++) {
     const sq = logical(dc, dr, n, M), r = rowOf(sq, n), c = sq % n;
-    squares.push({ sq, name: FILES[c] + (r + 1), dark: c % 2 === r % 2, tint: tint.sqs.includes(sq) ? (tint.prim.includes(sq) ? 'cp' : 'c') : '',
+    squares.push({ sq, name: FILES[c] + (r + 1), tint: tint.sqs.includes(sq) ? (tint.prim.includes(sq) ? 'cp' : 'c') : '',
       lr: dc === 0 ? (M[2] ? FILES[c] : String(r + 1)) : null, lc: dr === 0 ? (M[0] ? FILES[c] : String(r + 1)) : null });
   }
   const pieces = [];
@@ -60,7 +60,7 @@ export function picture(v, M = ID) {
 // from screen readers: the words beside it say the same.
 export function pictureHTML(pic) {
   const n = pic.n;
-  const sq = pic.squares.map((s) => `<div class="tb-sq ${s.dark ? 'dk' : 'lt'}${s.tint ? ' c' + (s.tint === 'cp' ? ' cp' : '') : ''}">${s.tint ? '<div class="tb-hl tb-cur"></div>' : ''}`
+  const sq = pic.squares.map((s) => `<div class="tb-sq${s.tint ? ' c' + (s.tint === 'cp' ? ' cp' : '') : ''}">${s.tint ? '<div class="tb-hl tb-cur"></div>' : ''}`
     + (s.lr != null ? `<span class="tb-lab tb-lr">${s.lr}</span>` : '') + (s.lc != null ? `<span class="tb-lab tb-lc">${s.lc}</span>` : '') + '</div>').join('');
   const pcs = pic.pieces.map((p) => `<div class="tb-pc" style="transform:translate(${p.x}%,${p.y}%);z-index:${p.z}"><div class="tb-st p${p.color}${p.type === 1 ? ' S' : p.type === 2 ? ' C' : ''}${p.imm ? ' im' : ''}"></div></div>`).join('');
   return `<div class="tb-host rush-pic" aria-hidden="true"><div class="tb still" style="--n:${n}"><div class="tb-board">${sq}<div class="tb-pcs">${pcs}</div>`

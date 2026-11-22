@@ -1,27 +1,27 @@
-import { Game } from './shared/tak.js?v=1795314232';
-import { unplayedPlies } from './shared/ptn.js?v=1795314232';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795314232';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795314232';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795314232';
-import * as engine from './engine.js?v=1795314232';
-import { showLineOn } from './lines.js?v=1795314232';
-import * as tiltak from './tiltak.js?v=1795314232';
-import * as syntaks from './syntaks.js?v=1795314232';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795314232';
-import { createNext } from './next.js?v=1795314232';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795314232';
-import { createOutbox } from './outbox.js?v=1795314232';
-import * as sound from './sound.js?v=1795314232';
-import { boardFrom, confirmOn, arrowsOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795314232';
-import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof, isTak, countTak, outOfMoves, takLeft, TAK_COUNTDOWN, replyEntry, logOk, leftRunsOn, runOnHeld } from './playon.js?v=1795314232';
-import { copy } from './playon-copy.js?v=1795314232';
-import * as defend from './defend.js?v=1795314232';
-import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, quickLine, evalLabel, mergeLines, pickCandidates, pinnedAt, moveShape, drawAlt, threatGroups } from './analysis.js?v=1795314232';
-import { whenText } from './rush-rules.js?v=1795314232';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795314232';
-import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795314232';
-import { syncedOf, decide, diff, changesBody, unsentKeys, afterPost, syncStatus } from './prefsync.js?v=1795314232';
-import { parseLook, encodeLook, cleanLook, lookReport } from './ninja-look.js?v=1795314232';
+import { Game } from './shared/tak.js?v=1795338781';
+import { unplayedPlies } from './shared/ptn.js?v=1795338781';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795338781';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795338781';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795338781';
+import * as engine from './engine.js?v=1795338781';
+import { showLineOn } from './lines.js?v=1795338781';
+import * as tiltak from './tiltak.js?v=1795338781';
+import * as syntaks from './syntaks.js?v=1795338781';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795338781';
+import { createNext } from './next.js?v=1795338781';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795338781';
+import { createOutbox } from './outbox.js?v=1795338781';
+import * as sound from './sound.js?v=1795338781';
+import { boardFrom, confirmOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795338781';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof, isTak, countTak, outOfMoves, takLeft, TAK_COUNTDOWN, replyEntry, logOk, leftRunsOn, runOnHeld, noEnding, REFUTED } from './playon.js?v=1795338781';
+import { copy } from './playon-copy.js?v=1795338781';
+import { OTHER, syncedOf, decide, diff, changesBody, carried, unsentKeys, withUnsent, afterPost, syncStatus } from './prefsync.js?v=1795338781';
+import { parseLook, encodeLook, cleanLook, lookReport, THEMES as NINJA_THEMES, themeOf, withTheme, themeName } from './ninja-look.js?v=1795338781';
+import * as defend from './defend.js?v=1795338781';
+import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, quickLine, evalLabel, mergeLines, pickCandidates, pinnedAt, moveShape, drawAlt, threatGroups } from './analysis.js?v=1795338781';
+import { whenText } from './rush-rules.js?v=1795338781';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795338781';
+import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795338781';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -157,10 +157,10 @@ const guestId = () => {
   return store.get('gid', null) === id ? id : null;
 };
 
-// PTN Ninja in an iframe instead of tinue's board (same API), by the Board style setting or ?board=ninja (which wins:
+// PTN Ninja in an iframe instead of tinue's board (same API), by the Board setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795314232')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn), look: prefs.ninja })
+const board = NINJA ? new (await import('./ninja.js?v=1795338781')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn), look: prefs.ninja })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
 // Sounds (sound.js): every move played or appended on any board (this page's, Rush's, PTN Ninja's) sounds what it set
 // down and where (board.js landOf); a stack moved by hand sounds each drop as it lands (onLand) and nothing more when
@@ -258,6 +258,16 @@ document.addEventListener('click', (e) => { // close the claim popover when clic
   const m = document.querySelector('.menu.click.open');
   if (m && !m.contains(e.target)) closeMenu(m, false);
 });
+// Focus gone into PTN Ninja's frame (a click on its board): no click or key from there reaches the page, so what a click
+// elsewhere or Escape would end here ends now. The claim popover closes, and a move waiting for Confirm keeps the
+// keyboard (Esc cancels, Enter confirms; PTN Ninja's board is off meanwhile). Otherwise Escape stays PTN Ninja's own.
+addEventListener('blur', () => setTimeout(() => {
+  const f = document.activeElement;
+  if (f?.tagName !== 'IFRAME' || !$('#board').contains(f)) return;
+  const m = document.querySelector('.menu.click.open');
+  if (m) closeMenu(m, false);
+  if (pend) f.blur();
+}));
 // After signing in or out: re-render whichever page is showing (History shows the account and its token).
 function refreshPage() {
   if ($('#view-puzzle').classList.contains('hidden')) route(); else renderAll();
@@ -298,12 +308,9 @@ if (window.TINUE_BETA) {
   const b = Object.assign(document.createElement('span'), { className: 'beta-badge', textContent: 'beta', title: `Beta build of ${window.TINUE_BETA}. It uses the real server: results here count.` });
   b.append(Object.assign(document.createElement('small'), { textContent: String(window.TINUE_BETA) }));
   document.querySelector('.brand')?.after(b);
-  // The sound lab (#/sounds, sound-lab.js): its page and the link to it under the Sound setting exist only here.
+  // The sound lab (#/sounds, sound-lab.js): its page, and the link to it under the Settings page's Sound, exist only here.
   const lab = Object.assign(document.createElement('main'), { id: 'view-sounds', className: 'page hidden' });
   document.querySelector('#view-rush')?.after(lab);
-  const a = Object.assign(document.createElement('a'), { href: '#/sounds', id: 'sound-lab-link', textContent: 'Sound lab' });
-  a.style.cssText = 'align-self:end;font-size:var(--fs-sm);line-height:var(--ctl)';
-  document.querySelector('#set-sound')?.closest('.row')?.append(a);
 }
 const withBuild = (path, b = BUILD) => (b ? path + (path.includes('?') ? '&' : '?') + 'b=' + b : path); // logged by the server
 let newBuild = 0, buildBarHidden = false, buildCheck = null, lastBuildCheck = 0;
@@ -401,7 +408,7 @@ async function loadNext({ reload = false } = {}) {
   // Between puzzles, a newer build (as last checked: Next doesn't wait on the network) reloads into this one. Not while
   // a result is held or still uploading (the reload would cut it off), unless the player pressed Reload: then an
   // upload in flight gets 3 s, and a held one is sent at the reload anyway (flushHeld).
-  // A Board style switched mid-puzzle (boardSwitch) reloads here too, when nothing is held or still uploading (else at
+  // A Board setting switched mid-puzzle (boardSwitch) reloads here too, when nothing is held or still uploading (else at
   // the Next after this one).
   const switching = switchAtNext({ wanted: boardSwitch, leaving, held: !!heldRec.get(), uploading: reporting.size });
   if ((newBuild && (reload || (!leaving && !heldRec.get() && !reporting.size))) || switching) {
@@ -427,7 +434,7 @@ async function loadById(id, s = 0, look = null) {
   if (!puzzle) { try { ({ puzzle } = judgeSeen(await api('/api/puzzle/' + encodeURIComponent(id)))); } catch { restoreLeft(); return; } }
   if (t !== loadSeq) return;
   if (puzzle && !s && look?.id === puzzle.id) {
-    try { s = (await import('./rush-rules.js?v=1795314232')).symFromRecord(puzzle, look); } catch { s = 0; }
+    try { s = (await import('./rush-rules.js?v=1795338781')).symFromRecord(puzzle, look); } catch { s = 0; }
     if (t !== loadSeq) return;
   }
   // The one place a puzzle is oriented (pagesym.js): the page works in the turned labels from here on; the server's
@@ -469,7 +476,7 @@ const fromEngine = (s, r) => s.x.answer(r);
 let lz = null, lzLoad = null;
 const ninjaHref = () => lz && ninjaUrl({ ptn: ptnFor(shownLine()), ply: S.view ?? shownLine().length, name: 'tinue #' + S.p.id }, lz);
 function loadLz() {
-  lzLoad ||= import('./vendor/lz-string.js?v=1795314232').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
+  lzLoad ||= import('./vendor/lz-string.js?v=1795338781').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
 }
 function refreshNinja() {
   if (!S || S.placeholder || S.status !== 'solved') return;
@@ -477,15 +484,23 @@ function refreshNinja() {
   if (href) for (const a of document.querySelectorAll('a[data-ninja]')) if (a.href !== href) a.href = href;
 }
 
+// The analysis view (window.TINUE_ANALYSIS, config.js as scripts/build-static.sh writes it: on in the beta build, off in
+// the production build, on in local development). Off, the page after a puzzle is production's as it was before the
+// analysis view (main, 2026-11-21): one engine row, line 1 only (its chance bar, who's better, its moves, the source),
+// from the same engines and the same one request per position; no further lines, no candidate chips or candidate
+// searches, no tactics facts (threats, pinned moves), no arrows or rings on the board.
+// On only where config.js says true (fail closed): a config.js without the line, such as production's before this
+// release, still cached beside the new app.js, gets production's page.
+const ANALYSIS = window.TINUE_ANALYSIS === true;
 // After the puzzle: the analysis of the position on the board, as up to three lines (public/analysis.js, the line
 // model), each from the mover's side:
 // - every size: our solver (tactics worker, ~20 ms): every win in 1 and 2 (proven), the opponent's threats, tinuë,
 //   and its verdict on the moves pinned here (the puzzle's move, yours);
 // - 6×6: Syntaks on the server (much stronger there, and it knows every half-point komi), three lines in one search;
 //   a move you missed here that isn't among them gets one search of its own;
-// - 4×4/5×5, and 6×6 when the server can't answer: Tiltak in the browser, streamed as it searches, then a short search
-//   of each of a few candidate moves;
-// - boards neither engine plays: the solver's forced-win line.
+// - 4×4/5×5: Tiltak in the browser, streamed as it searches, then a short search of each of a few candidate moves;
+// - boards neither engine plays, and 6×6 when the server can't answer: the solver's forced-win line (never Tiltak on
+//   6×6, Sasha 2026-11-21: "we shouldn't have any tiltak analysis in 6x6"; tiltak.js supports).
 // Everything is keyed on the position (S.evalKey): an answer for a position no longer shown is dropped (live()).
 let anaCtl = null; // the in-flight Syntaks requests; aborted when the position changes, so the server drops them
 // The puzzle's own plies in S.moves (analysis.js pinnedAt's tree): its tree's moves up to the first that isn't one (a
@@ -524,9 +539,15 @@ async function runEngine() {
   if (res0) { S.eval = { kind: 'over', winner: res0.winner, how: res0.kind }; renderAll(); return; }
   const mover = g.toMove, official = officialLine();
   S.posG = g;
+  S.eng = { thinking: true, src: null, lines: [] };
+  if (!ANALYSIS) { // (production's engine row: no tactics facts, no pinned moves; line 1 from the engine below)
+    setLines(s, key);
+    const komi = S.p.komi || 0;
+    if (S.p.size === 6 && Math.abs(komi) <= 3.5 && Number.isInteger(komi * 2)) return runServer(s, key, g, plies);
+    return runTiltak(s, key, g, plies);
+  }
   S.pins = pinnedAt({ official, histLen: S.hist.length, at, onBranch: !!(S.onBranch && S.branch && at > S.branch.at), solver: S.solver, mover,
     misses: S.misses, tree: treePlies() });
-  S.eng = { thinking: true, src: null, lines: [] };
   setLines(s, key);
   // (the worker sees the puzzle's own orientation, like every engine: enginePos and the pinned moves turned back, its
   // facts turned forward again; pagesym.js toServer)
@@ -536,7 +557,7 @@ async function runEngine() {
   runTiltak(s, key, g, plies);
 }
 // GET /api/analyze, aborted with ctl (the position changed) or after 6 s (the search plus a short queue on crux; past
-// that, the browser engine answers sooner). A plain GET without the Authorization header: no CORS preflight (every
+// that, the solver answers: runServer). A plain GET without the Authorization header: no CORS preflight (every
 // position is a new URL, so a preflight was never reused); the server knows the player by the cookie when the page
 // sends one, else by address. One line asks as before (same URL, so the browser's cache of it still answers).
 function serverAnalyze(tps, komi, lines, ctl) {
@@ -552,16 +573,17 @@ function runServer(s, key, g, plies) {
   const komi = S.p.komi || 0, mover = g.toMove;
   S.eng = { thinking: true, src: 'syntaks', lines: [] };
   const ctl = anaCtl = new AbortController();
-  const fallback = () => { if (live()) runTiltak(s, key, g, plies); };
+  const fallback = () => { if (live()) runSolver(s, key, plies); }; // (never Tiltak on 6×6: tiltak.js supports)
   // (the server is asked about the position in the puzzle's own orientation, byte for byte what an ordinary visit
   // sends, and every line it answers is turned to the page's labels: pagesym.js toServer)
-  serverAnalyze(s.x.tps(g.toTPS(), komi), komi, 3, ctl).then((r) => {
+  serverAnalyze(s.x.tps(g.toTPS(), komi), komi, ANALYSIS ? 3 : 1, ctl).then((r) => { // (off: one line, production's URL)
     if (!live()) return;
     r = s.x.analysis(r);
     if (r?.engine !== 'syntaks') return fallback();
     const lines = (r.lines ?? [r]).map((l, i) => fromSyntaks(l, mover, i));
     S.eng = { thinking: false, src: 'syntaks', lines, multipv: !!r.multipv, depth: r.depth, ms: r.ms };
     setLines(s, key);
+    if (!ANALYSIS) return;
     // Your miss, if the server's lines don't have it: one search of the position after it, once you stay here a moment.
     const miss = S.pins.find((p) => p.tags.includes('yours') && !lines.some((l) => l.move === p.move));
     if (!miss) return;
@@ -609,7 +631,7 @@ function runTiltak(s, key, g, plies) {
     r = s.x.answer(r);
     if (!r || (!r.pv?.length && r.winProb == null)) return fallback();
     const l1 = fromTiltak(r, mover);
-    const cands = pickCandidates({ line1: l1.move, solver: S.sol, pinned: S.pins, runnerUps, max: finePointer.matches ? 2 : 1 });
+    const cands = ANALYSIS ? pickCandidates({ line1: l1.move, solver: S.sol, pinned: S.pins, runnerUps, max: finePointer.matches ? 2 : 1 }) : [];
     S.eng = { thinking: false, more: cands.length > 0, src: 'tiltak', lines: [l1], depth: r.depth, nodes: r.nodes, ms: r.timeMs };
     setLines(s, key);
     for (const m of cands) {
@@ -659,11 +681,11 @@ function setLines(s, key) {
   renderEngine();
   paintShapes();
 }
-// The board's shapes (board.js shapes): the opponent's threats always (they are facts), and arrows for line 1 plus the
+// The board's shapes (board.js shapes): the opponent's threats (they are facts), and arrows for line 1 plus the
 // lines close to it (analysis.js drawAlt) or the one selected; on a phone line 1 and the selected line only; your miss
 // only while selected. Only for the position shown.
 function paintShapes() {
-  if (!S || S.placeholder || S.status !== 'solved' || !S.posG) return;
+  if (!ANALYSIS || !S || S.placeholder || S.status !== 'solved' || !S.posG) return;
   const line = shownLine();
   if (S.evalKey !== line.slice(0, S.view ?? line.length).join(' ')) return;
   const g = S.posG, mover = g.toMove, list = [];
@@ -673,7 +695,7 @@ function paintShapes() {
   // The selected line first: on a square two lines place on (Sa1 and a1) it is the one drawn, since a second placement
   // there would only blur the first.
   const order = S.lines.map((_, i) => i).sort((a, b) => (b === S.sel) - (a === S.sel));
-  if (arrowsOn(prefs)) for (const i of order) {
+  for (const i of order) {
     const l = S.lines[i], yours = l.tags.includes('yours'), sel = i === S.sel;
     const draw = i === 0 || sel || (!yours && finePointer.matches && drawAlt(l1.ev, l.ev));
     if (draw && !list.some((x) => x.role !== 'threat' && x.shape.kind === 'place' && x.sqs[0] === moveSquares(l.move)[0])) add(l.move, i === 0 ? 'best' : yours ? 'yours' : 'alt', color);
@@ -1129,10 +1151,11 @@ async function flushHeld() {
 // becomes the puzzle's line and the puzzle ends there. Syntaks holding (out of moves, its road, flats or a draw), Give
 // up or leaving is a miss. Which of these count toward rating is playon.js's gameRated / winRated (only a game Syntaks
 // defended throughout; Tiltak, a dropout, no defender move or a stalled reply make it unrated both ways, while a proof
-// always counts). The check runs on meanwhile: a proof ends the game as a solve at once, and a 'no' is ignored (the
-// prover only sees road threats; the game decides). The result is held as for a pending check (checkPending with
-// .playOn), so settleCheck sends it, and a reload resends what was settled (flushHeld). No engine at all ('noengine')
-// sets po.fallback: unrated whatever the check says.
+// always counts). The check runs on meanwhile: a proof makes it a proven play-out (or, against Tiltak, a solve at once),
+// and a 'no' ends the game there as a miss (Sasha, 2026-11-21: judge.js endsOnNo, playon.js noEnding; it used to be
+// ignored, the game deciding, which left unlimited rated tries at catching the engine out). The result is held as for
+// a pending check (checkPending with .playOn), so settleCheck sends it, and a reload resends what was settled
+// (flushHeld). No engine at all ('noengine') sets po.fallback: unrated whatever the check says.
 const playOnDefender = () => defender(S.p.size, S.p.komi || 0, tiltak.supports);
 // (defenderName, playon.js: 6×6 is Syntaks's even where it can't run in this browser (no WebAssembly SIMD): crux answers
 // every reply then.)
@@ -1163,7 +1186,11 @@ function startPlayOn(s, canon, plies, chk, tMove, proven = false, proofPlies) {
     // unrated miss, never a rated one: lossRated provedAtOut)
     if (c.playOn.end === 'out' && v === 'wins') { po.proven = po.provedAtOut = true; return settleCheck(s, 'unknown'); }
     if (c.playOn.end) return settleCheck(s, v);
-    if (v === 'wins') makeProven(s, po); else c.final = v; // a proof makes it a proven play-out; anything else waits
+    if (v === 'wins') return makeProven(s, po); // a proof makes it a proven play-out
+    c.final = v; // an 'unknown' waits (the game decides), and so does a 'no' in a proven play-out (none: proven has no check)
+    // A 'no' ends the play-out as a miss (judge.js endsOnNo, Sasha 2026-11-21): now on the player's turn, else once the
+    // defender's reply is on the board (defenderTurn), or as 'out' at the end of the wait it is answering (playon.js noEnding).
+    if (noEnding(po, v, { busy: s.busy }) === 'now') endPlayOn(s, REFUTED);
   });
   defend.warmDefender(po, s.p.size, s.p.komi || 0); // (Syntaks fetched on first use, or Tiltak started: defend.js)
   // Give up sits where Hint was: it ignores clicks for its first 1.5 s, so one meant for Hint can't end the game
@@ -1236,6 +1263,10 @@ async function defenderTurn(s, po) {
   if (!live()) return;
   const end = ending(po.g.result(), s.solver);
   if (end) return endPlayOn(s, end);
+  // A 'no' that came while the reply was being chosen or played: the play-out ends here, before the player's turn opens
+  // (playon.js noEnding 'reply'; the reply's own ending, just above, stands first).
+  const c = s.checkPending;
+  if (c?.playOn === po && noEnding(po, c.final) === 'now') return endPlayOn(s, REFUTED);
   po.thinking = false; s.busy = false;
   await board.setPlayer(s.solver);
   await board.ui({ disableBoard: false });
@@ -1316,7 +1347,11 @@ function endPlayOn(s, kind, opts) {
   // Out under the Tak rule with the check still running (it outlasted the wait at the end): it runs on, and the result
   // is held until it answers (startPlayOn's handler), so running out never pre-empts a proof (2026-11-21).
   const runOn = kind === 'noengine' || (kind === 'out' && po.rule === 'tak');
-  if (c?.playOn === po) {
+  // Ended by the check's 'no' (judge.js endsOnNo): a move waiting for Confirm was never accepted, so it is dropped (a
+  // later Confirm would play it on the retry position), and the miss goes in as the 'no' it is (settleCheck: rated as
+  // any other lost play-out, lossRated; the verdict is kept, so the same move played again is a miss at once).
+  if (kind === REFUTED) { if (pend?.s === s) dropPending(); if (c?.playOn === po) sent = settleCheck(s, 'no', opts); }
+  else if (c?.playOn === po) {
     if (!runOn || po.proven) { c.chk.cancel(); sent = settleCheck(s, 'unknown', opts); } // (proven: nothing to wait for)
     else if (c.final) sent = settleCheck(s, c.final, opts);
     // (held on: the game's log goes into the held record, so a page that dies before the check answers resends the
@@ -1382,7 +1417,7 @@ async function showFree(s) {
   await board.last();
 }
 // The engine's move, in the browser: Syntaks (its first reply waits for the download), or Tiltak, which also takes
-// over if Syntaks stops answering here. No answer from either: back to the puzzle.
+// over if Syntaks stops answering here (not on 6×6: tiltak.js supports). No answer from either: back to the puzzle.
 async function freeTurn(s, fg) {
   const live = () => S === s && s.free === fg && !fg.over;
   const typed = document.activeElement?.id === 'ptn-in';
@@ -1713,6 +1748,7 @@ const whiteChance = (ev, mover) => ev.kind === 'prob' ? (mover === 1 ? ev.p : 1 
   : ev.kind === 'win' ? +(mover === 1) : ev.kind === 'loss' ? +(mover !== 1) : null;
 function engineMarkup(docked = DOCK_MQ.matches && S?.status === 'solved') {
   if (!S || S.status !== 'solved' || !(S.eng || S.eval)) return '';
+  if (!ANALYSIS) return engineRow();
   const mover = S.posG?.toMove, lines = S.lines || [], l1 = lines[0], e = S.eng || {};
   const busy = e.thinking || e.more;
   const pvHtml = (L, pv) => (pv || []).slice(0, 8).map((m, k) => `<button class="pvm" data-pv="${L}.${k}">${esc(m)}</button>`).join('');
@@ -1745,6 +1781,24 @@ function engineMarkup(docked = DOCK_MQ.matches && S?.status === 'solved') {
   // game's position included, so the step buttons below never move.
   return `<div class="eng"><div class="eng-h">${bar}${verdict}${src}</div>`
     + `<div class="lns"><div role="group" aria-label="Engine lines">${rows}</div>${threatP}</div></div>`;
+}
+// The analysis view off: production's engine row (main before the analysis view), one compact line at the top of the
+// panel: line 1's chance bar and who's better, the source, then line 1's moves as buttons (click to play it).
+function engineRow() {
+  const mover = S.posG?.toMove, l1 = S.lines?.[0], e = S.eng || {};
+  let lead = '', pv = '';
+  if (S.eval?.kind === 'over') lead = S.eval.winner === 0 ? 'Drawn on flats' : `${colorName(S.eval.winner)} won`;
+  else if (!l1 || l1.ev.kind === 'pending') lead = e.none ? `<span class="muted">${esc(e.none)}</span>` : e.thinking ? '<span class="muted">Thinking…</span>' : '';
+  else {
+    const ev = l1.ev, who = (me) => colorName(me ? mover : 3 - mover), pw = whiteChance(ev, mover);
+    const fav = ev.kind === 'win' ? `${who(true)} wins in ${ev.n}` : ev.kind === 'loss' ? `${who(false)} wins in ${ev.n}`
+      : pw == null ? '' : Math.abs(pw - 0.5) < 0.05 ? 'Even' : `${pw > 0.5 ? 'White' : 'Black'} ${Math.round(Math.max(pw, 1 - pw) * 100)}%`;
+    // (the solver's proven win has no chance bar, as before)
+    lead = (pw == null || e.src === 'solver' ? '' : `<span class="bar" title="White’s chances"><i style="width:${(pw * 100).toFixed(1)}%"></i></span>`) + (fav ? `<b>${fav}</b>` : '');
+    pv = (l1.pv || []).slice(0, 8).map((m, k) => `<button class="pvm" data-pv="0.${k}">${esc(m)}</button>`).join('');
+  }
+  const src = S.eval?.kind === 'over' ? '' : SRC[e.src]?.('') || '';
+  return `<div class="eng row">${lead}<span class="pvline">${pv}</span>${src}</div>`;
 }
 // Update only the engine's part (Tiltak streams updates; re-rendering the whole panel would flicker).
 function renderEngine() {
@@ -1934,11 +1988,13 @@ function renderFeedback(mood, delta) {
       <div class="actions"><button class="primary" data-act="next">Next puzzle</button></div>`;
   } else if (S.status === 'retry' && S.refutation?.kind === 'playon') {
     const r = S.refutation, E = r.engine, mv = `${r.n} move${r.n === 1 ? '' : 's'}`;
-    const gaveUp = r.how === 'gaveup' || r.how === 'left' || r.how === 'unload', takOut = r.how === 'out' && r.rule === 'tak';
+    const gaveUp = r.how === 'gaveup' || r.how === 'left' || r.how === 'unload', takOut = r.how === 'out' && r.rule === 'tak', refuted = r.how === REFUTED;
     const tc = (id) => esc(copy(id, { E, m: r.miss, mv, k: TAK_COUNTDOWN, k1: TAK_COUNTDOWN + 1 }));
-    const h2 = gaveUp ? 'You gave up' : takOut ? tc('end.h2.out') : r.how === 'out' ? 'Out of moves'
+    // (ended by the check's 'no': the ordinary miss card's title, and one line saying why the game stopped)
+    const h2 = gaveUp ? 'You gave up' : refuted ? 'That’s not the move' : takOut ? tc('end.h2.out') : r.how === 'out' ? 'Out of moves'
       : r.how === 'road' ? (r.byYou ? `Your move completed ${E}’s road` : `${E} made a road`) : `${E} held`;
     const lead = gaveUp ? `You gave up on ${esc(r.miss)} after ${mv}`
+      : refuted ? tc('end.lead.refuted')
       : takOut ? tc(r.proven ? 'end.lead.outProven' : 'end.lead.out')
       : r.proven ? { unfinished: `${esc(r.miss)} wins, but you didn’t finish it in ${mv}: ${E} held`,
         escaped: `${esc(r.miss)} wins, but ${E} got out of it after ${mv}`,
@@ -2024,7 +2080,7 @@ function renderInfo(done) {
     const off = unplayedPlies(m);
     const from = off ? `a line from this ${p.sourceRef?.startsWith('http') ? game : `${esc(p.source)} game`}` : game;
     info.innerHTML = `<dl>
-        <dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}${p.sym ? '/' + p.sym : ''}">#${esc(p.id)}</a>, ${p.size}×${p.size}${p.komi ? ` with komi ${p.komi}` : ''}${canShare() ? ' · <button class="link" id="share-link">Share</button>' : ''} · <a data-ninja target="_blank" rel="noopener" title="Open this line in PTN Ninja">PTN Ninja ↗</a></dd>
+        <dt>Puzzle</dt><dd><a href="#/puzzle/${esc(p.id)}${p.sym ? '/' + p.sym : ''}">#${esc(p.id)}</a>, ${p.size}×${p.size}${p.komi ? ` with komi ${p.komi}` : ''}${canShare() ? ' · <button class="link" id="share-link">Share</button>' : ''}${ANALYSIS ? ' · <a data-ninja target="_blank" rel="noopener" title="Open this line in PTN Ninja">PTN Ninja ↗</a>' : ''}</dd>
         <dt>Rating</dt><dd>${Math.round(p.rating)}</dd>
         <dt>Played</dt><dd>${p.attempts ? `${p.attempts} time${p.attempts === 1 ? '' : 's'}` : 'Not rated by anyone yet'}</dd>
         <dt>From</dt><dd>${from}</dd>
@@ -2035,7 +2091,7 @@ function renderInfo(done) {
       <hr><div>${themes.map((t) => `<a class="tag" href="#/glossary/${t}" title="${esc(THEMES[t].desc)}">${THEMES[t].name}</a>`).join('') || '<span class="sub">No themes</span>'}</div>`;
     const sb = $('#share-link');
     if (sb) sb.onclick = () => sharePuzzle(p);
-    loadLz();
+    if (ANALYSIS) loadLz();
   }
 
 }
@@ -2103,9 +2159,9 @@ function renderMoves(docked, delta, focusNext) {
   const dockHead = notice ? `<span class="icon bad" aria-hidden="true">!</span><b>${esc(notice.title)}</b>`
     : `<span class="icon ${clean ? 'good' : 'bad'}" aria-hidden="true">${clean ? '✓' : '✗'}</span><b>${solvedTitle()}${delta}</b>`;
   const dockNote = notice ? esc(notice.body) : S.notCounted ? notCountedText() : uncheckedText() ? uncheckedText() : S.slowWin ? `${slowWinText(S.slowWin)}.${S.casualWhy === 'tiltak' ? ' Not rated: Tiltak defended.' : ''}` : S.casual ? 'You used a hint, so this one didn’t count.' : shownOver() ? 'Game over here. Step back with ◀ to explore.' : '';
-  const engSlot = `<div class="eng-slot">${engineHtml}</div>`;
+  const engSlot = `<div class="eng-slot${ANALYSIS ? '' : ' row'}">${engineHtml}</div>`;
   const scroller = `<div class="mscroll" role="group" aria-label="Moves"><div class="mtable">${rows}</div></div>`;
-  const nav = `<div class="nav"><button data-step="first" title="Start" aria-label="Start">⏮</button><button data-step="prev" title="Back (←)" aria-label="Back">◀</button><button data-step="next" title="Forward (→)" aria-label="Forward">▶</button><button data-step="last" title="Current position" aria-label="Current position">⏭</button>${S.status === 'solved' ? '<a class="navlink" data-ninja target="_blank" rel="noopener" title="Open this line in PTN Ninja" aria-label="Open this line in PTN Ninja">↗</a>' : ''}${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
+  const nav = `<div class="nav"><button data-step="first" title="Start" aria-label="Start">⏮</button><button data-step="prev" title="Back (←)" aria-label="Back">◀</button><button data-step="next" title="Forward (→)" aria-label="Forward">▶</button><button data-step="last" title="Current position" aria-label="Current position">⏭</button>${ANALYSIS && S.status === 'solved' ? '<a class="navlink" data-ninja target="_blank" rel="noopener" title="Open this line in PTN Ninja" aria-label="Open this line in PTN Ninja">↗</a>' : ''}${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
   mv.innerHTML = docked ? scroller + `<div class="dock"><div class="dock-res">${dockHead}<button class="primary" data-act="next">Next puzzle</button>${dockNote ? `<p>${dockNote}</p>` : ''}</div>${engSlot}${nav}</div>`
     : engSlot + scroller + nav;
   fitDock();
@@ -2133,7 +2189,7 @@ $('#moves').addEventListener('click', (e) => {
   if (pvb) { const [L, k] = pvb.dataset.pv.split('.').map(Number); return playPV(L, k); }
   // a line's chip (or its row): select it (its arrow on the board, its moves in the dock); the selected chip again
   // plays its first move
-  const ln = e.target.closest('[data-line]');
+  const ln = ANALYSIS && e.target.closest('[data-line]');
   if (ln && S.status === 'solved') {
     const L = +ln.dataset.line;
     if (L === S.sel && ln.matches('.chip')) return playPV(L, 0);
@@ -2253,17 +2309,18 @@ const themeDesc = () => { $('#theme-desc').textContent = prefs.theme && THEMES[p
 $('#difficulty').value = prefs.difficulty;
 // A filter changed with the mouse lets go of focus, or number keys meant for the board would go to it (on Board size,
 // 4–8 even pick a size). Changed from the keyboard, it keeps focus.
-for (const id of ['#difficulty', '#size', '#theme', '#set-board', '#set-confirm', '#set-sound', '#set-arrows']) $(id).addEventListener('change', (e) => { if (focusedByPointer(e.target)) e.target.blur(); });
+for (const id of ['#difficulty', '#size', '#theme']) $(id).addEventListener('change', (e) => { if (focusedByPointer(e.target)) e.target.blur(); });
 $('#difficulty').onchange = (e) => { prefs.difficulty = e.target.value; store.set('prefs', prefs); loadNext(); };
 $('#size').onchange = (e) => { prefs.size = e.target.value; store.set('prefs', prefs); renderFilters(); loadNext(); };
 $('#theme').onchange = (e) => { prefs.theme = e.target.value; store.set('prefs', prefs); themeDesc(); loadNext(); };
-// Settings (settings.js), shown twice: the four quick selects in the puzzle page's Settings block and the Settings page
-// (#/settings), which also has the PTN Ninja look. setSetting is the one writer for both: it stores the value, checks
-// it was kept (site storage may be blocked), does what the setting does on this page, puts every control in step, and
-// for a change made here saves it to the account (prefsync.js). from: 'here' (a control, the A key), 'account' (the
-// account's settings, arriving with /api/me, a sign-in or a post's answer) or 'tab' (another tab of this site changed
-// it: already stored, and that tab sends it).
-// Board style: the board is chosen at boot, so a switch reloads (signed in as before: the token is kept in this
+// Settings (settings.js), on the Settings page (#/settings) only: Board, the PTN Ninja look, Confirm moves and Sound
+// (the puzzle page links there). Engine arrows is no setting (Sasha, 2026-11-21): the arrows are on wherever the
+// analysis view is. setSetting is the one writer: it stores the value, checks it was kept (site storage may be
+// blocked), does what the setting does on this page, puts the page's controls in step, and for a change made there
+// saves it to the account (prefsync.js). from: 'here' (a control), 'account' (the account's
+// settings, arriving with /api/me, a sign-in or a post's answer) or 'tab' (another tab of this site changed it:
+// already stored, and that tab sends it).
+// Board: the board is chosen at boot, so a switch reloads (signed in as before: the token is kept in this
 // browser), now if nothing is under way (settings.js switchNow), else when the next puzzle loads (loadNext), so a switch
 // never sends a result or ends a play-out. The reload drops ?board= from the address, or it would win. A switch from
 // the account waits for the puzzle page (or the Settings page), so it never cuts a Rush run or another page short, and
@@ -2272,23 +2329,21 @@ let boardSwitch = false, unsaved = false;
 const BOARD = NINJA ? 'ninja' : 'tinue', LINK_BOARD = new URLSearchParams(location.search).has('board') ? BOARD : null;
 const showNote = () => {
   const note = settingsNote({ unsaved, switching: boardSwitch, linkBoard: LINK_BOARD, ninja: NINJA, confirm: confirmOn(prefs) });
-  $('#settings-note').textContent = note;
-  $('#settings-note').classList.toggle('hidden', !note);
-  const pn = $('#st-note'); // (the Settings page's copy, under its Board select)
+  const pn = $('#st-note'); // (under the Settings page's Board select; not built until the page is first opened)
   if (pn) { pn.textContent = note; pn.classList.toggle('hidden', !note); }
 };
-// Each select's value for a setting, and the setting for a select's value.
+// Each select's options, its value for a setting, and the setting for a select's value.
 const CTL = {
-  board: { show: () => boardFrom('', prefs), read: (v) => (v === 'ninja' ? 'ninja' : 'tinue') },
-  confirm: { show: () => (confirmOn(prefs) ? 'on' : 'off'), read: (v) => v === 'on' },
-  arrows: { show: () => (arrowsOn(prefs) ? 'on' : 'off'), read: (v) => v === 'on' },
-  sound: { show: () => soundOf(prefs), read: (v) => soundOf({ sound: v }) },
+  board: { opts: [['tinue', 'tinue'], ['ninja', 'PTN Ninja']], show: () => boardFrom('', prefs), read: (v) => (v === 'ninja' ? 'ninja' : 'tinue') },
+  confirm: { opts: [['off', 'Off'], ['on', 'On']], show: () => (confirmOn(prefs) ? 'on' : 'off'), read: (v) => v === 'on' },
+  sound: { opts: [['off', 'Off'], ['light', 'Light'], ['thunk', 'Thunk'], ['deep', 'Deep']], show: () => soundOf(prefs), read: (v) => soundOf({ sound: v }) },
 };
 function showSettings() {
-  for (const [k, c] of Object.entries(CTL)) for (const el of [$('#set-' + k), $('#st-' + k)]) if (el) el.value = c.show();
+  for (const [k, c] of Object.entries(CTL)) { const el = $('#st-' + k); if (el) el.value = c.show(); }
   renderLookField(); showNote(); renderSyncStatus();
 }
-const viewing = (id) => !$('#' + id)?.classList.contains('hidden');
+// (a page missing from the HTML, as in an index.html cached from before it, is not being viewed)
+const viewing = (id) => $('#' + id)?.classList.contains('hidden') === false;
 function setSetting(key, value, from = 'here') {
   const was = prefs[key];
   if (key === 'ninja' && !value) delete prefs.ninja; else prefs[key] = value;
@@ -2319,49 +2374,41 @@ function setSetting(key, value, from = 'here') {
   } else if (key === 'sound') {
     sound.setEnabled(soundOn(prefs)); sound.setVoice(soundOf(prefs));
     if (from === 'here' && soundOn(prefs)) { sound.unlock(); setTimeout(() => sound.play('place'), 60); } // a preview in the chosen voice (the change is a gesture)
-  } else if (key === 'arrows') paintShapes();
-  else if (key === 'ninja') board.setLook?.(prefs.ninja || ''); // (tinue's own board has no PTN Ninja look)
+  } else if (key === 'ninja') board.setLook?.(prefs.ninja || ''); // (tinue's own board has no PTN Ninja look)
   showSettings();
   if (from === 'here') pushSettings();
   return true;
 }
-// The selects, on both pages. A filter or setting changed with the mouse lets go of focus, or number keys meant for the
-// board would go to it (on Board size, 4–8 even pick a size). Changed from the keyboard, it keeps focus.
-for (const k of Object.keys(CTL)) $('#set-' + k).onchange = (e) => setSetting(k, CTL[k].read(e.target.value));
-// Engine arrows (settings.js arrowsOn): the setting, or A on the page after a puzzle (a mouse and keyboard; not in a
-// field or on a control). Threat marks stay either way.
-window.addEventListener('keydown', (e) => {
-  if (e.key !== 'a' || e.repeat || e.ctrlKey || e.metaKey || e.altKey || !finePointer.matches) return;
-  if (!S || S.placeholder || S.status !== 'solved' || board.holding || $('#view-puzzle').classList.contains('hidden')) return;
-  const t = e.target;
-  if (t.closest?.('input, select, textarea, [contenteditable]') || (t.closest?.('a, button, summary') && !focusedByPointer(t))) return;
-  e.preventDefault(); setSetting('arrows', !arrowsOn(prefs));
-});
 
 // ---- settings saved to the account (prefsync.js) ----
 // Only for a named account (a guest or a signed-out player keeps them on this device, as before). A change here posts
 // only the keys changed (POST /api/settings { changes }, laid over what the account holds), so an out-of-date tab or
 // device never puts back old values of the others. Until the account confirms a key, this device's value wins for that
 // key (setUnsent: { o: the account, as owner()'s hash of the token; k: the keys }), and it is sent again with the next
-// change and at the next boot (settingsArrived). Every other key takes the account's value.
+// change and at the next boot (settingsArrived). Every other key takes the account's value. Settings this page doesn't
+// have (prefsync.js OTHER: the beta's) are never applied, posted or dropped here, in storage, the mark or the account.
 const named = () => !!(token && me?.name);
 let serverSettings = null, syncState = 'saved', postSeq = 0;
 const unsent = () => unsentKeys(store.get('setUnsent', null), owner());
-// Add keys to this account's unsent mark, or (keep) set it to exactly these.
+// Add keys to this account's unsent mark, or (keep) set this page's keys in it to exactly these.
 function markUnsent(keys, keep = false) {
   if (!named()) return;
-  const k = keep ? keys : [...new Set([...unsent(), ...keys])];
-  if (k.length) store.set('setUnsent', { o: owner(), k }); else store.del('setUnsent');
+  const mark = withUnsent(store.get('setUnsent', null), owner(), keep ? keys : [...unsent(), ...keys]);
+  if (mark) store.set('setUnsent', mark); else store.del('setUnsent');
 }
 if (token && unsent().length) syncState = 'saving'; // (sent as soon as /api/me answers; 'unsent' if that fails)
 // The current stored prefs (another tab may have changed one since this tab read them), else this tab's.
-const deviceNow = () => syncedOf(STORAGE_OK ? store.get('prefs', prefs) : prefs);
-async function pushSettings(keys = []) {
+const prefsNow = () => (STORAGE_OK ? store.get('prefs', prefs) : prefs);
+const deviceNow = () => syncedOf(prefsNow());
+// first: the account has nothing stored yet, so the post also carries this browser's settings of other pages
+// (prefsync.js carried), as they are.
+async function pushSettings(keys = [], first = false) {
   if (!named()) return;
   markUnsent(keys);
   const dirty = unsent();
   if (!dirty.length) return;
   const seq = ++postSeq, tok = token, body = changesBody(deviceNow(), dirty);
+  if (first) body.changes = { ...carried(prefsNow()), ...body.changes };
   syncState = 'saving'; renderSyncStatus();
   let r = null;
   try { r = await api('/api/settings', body, { quiet: true, timeout: 15000 }); } catch {}
@@ -2374,24 +2421,27 @@ async function pushSettings(keys = []) {
 }
 // The account's settings as they stand: every value cleaned as one from this browser's storage is (prefsync.js
 // syncedOf); what differs is applied, except this device's unsent keys; the board goes last (it may reload the page).
-// → the keys to send.
+// → decide's answer (post: the keys to send).
 function takeServer(settings) {
   serverSettings = settings && typeof settings === 'object' && !Array.isArray(settings) ? settings : null;
-  const { apply, post } = decide({ device: syncedOf(prefs), dirty: unsent(), server: serverSettings });
-  for (const k of Object.keys(apply).sort((a, b) => (a === 'board') - (b === 'board'))) setSetting(k, apply[k], 'account');
-  return post;
+  const d = decide({ device: syncedOf(prefs), dirty: unsent(), server: serverSettings });
+  for (const k of Object.keys(d.apply).sort((a, b) => (a === 'board') - (b === 'board'))) setSetting(k, d.apply[k], 'account');
+  return d;
 }
 // An answer carrying the signed-in account's settings (/api/me, /api/login, /api/register).
 function settingsArrived(r) {
   if (!r || typeof r !== 'object' || !('settings' in r) || !named()) return;
-  const post = takeServer(r.settings);
-  if (post.length) pushSettings(post); else { syncState = 'saved'; renderSyncStatus(); } // (nothing unsent: decide posts every unsent key)
+  const { post, first } = takeServer(r.settings);
+  if (post.length) pushSettings(post, first); else { syncState = 'saved'; renderSyncStatus(); } // (nothing unsent: decide posts every unsent key)
 }
 // Another tab of this site changed a setting: take it here too, so this tab's next save doesn't put the old value back
-// (in this browser's storage or, through its unsent keys, on the account). That tab sends it.
+// (in this browser's storage or, through its unsent keys, on the account). That tab sends it. The settings this page
+// doesn't have are taken as they are, so this tab's next write of the prefs (a filter, say) keeps the other tab's.
 window.addEventListener('storage', (e) => {
   if (e.key !== 'tinue.prefs') return; // (not a clear(): that is no setting chosen)
-  const now = syncedOf(store.get('prefs', {}));
+  const stored = store.get('prefs', {});
+  for (const k of OTHER) if (stored && Object.hasOwn(stored, k)) prefs[k] = stored[k]; else delete prefs[k];
+  const now = syncedOf(stored);
   for (const k of diff(syncedOf(prefs), now).sort((a, b) => (a === 'board') - (b === 'board'))) setSetting(k, now[k], 'tab');
 });
 function renderSyncStatus() {
@@ -2400,8 +2450,14 @@ function renderSyncStatus() {
 }
 
 // ---- the Settings page (#/settings) ----
-// The selects copy their options from the puzzle page's (one list each). Each setting has one plain line.
+// Each setting has one plain line.
 function settingsPage() {
+  // An index.html cached from before this page (a CDN edge can serve one for minutes after a deploy, with this app.js)
+  // has no <main> for it: add it where the HTML has it, before the footer.
+  if (!$('#view-settings')) {
+    const m = Object.assign(document.createElement('main'), { id: 'view-settings', className: 'page settings-page hidden' }), f = $('footer.credits');
+    if (f) f.before(m); else document.body.append(m);
+  }
   show('view-settings');
   const el = $('#view-settings');
   if (!el.firstChild) {
@@ -2410,17 +2466,19 @@ function settingsPage() {
     el.innerHTML = `<h1>Settings</h1><p class="set-status" id="st-status" role="status"></p>
       <div class="panel set-list">
         ${sel('board', 'Board', 'The board you solve puzzles on: tinue’s own, or the one from ptn.ninja. Rush always uses tinue’s board.', '<p class="set-desc set-note hidden" id="st-note"></p>')}
+        <div class="set-item"><label for="st-ninja-theme">PTN Ninja theme</label><select id="st-ninja-theme" aria-describedby="st-ninja-theme-d">
+          <option value="">tinue’s own</option>${NINJA_THEMES.map((id) => `<option value="${id}">${themeName(id)}</option>`).join('')}<option value="custom" hidden>Custom</option></select>
+          <p class="set-desc" id="st-ninja-theme-d">The colours of the PTN Ninja board. A theme of your own can be pasted below.</p></div>
         <div class="set-item"><label for="st-ninja">PTN Ninja look</label>
           <form id="st-ninja-form" class="set-look"><input id="st-ninja" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="st-ninja-d st-ninja-msg" placeholder="A ptn.ninja link, or &amp;axisLabels=false&amp;theme=…">
             <button type="submit" id="st-ninja-use">Use</button><button type="button" id="st-ninja-clear">Clear</button></form>
           <p class="set-desc" id="st-ninja-d"></p><p class="set-desc set-msg" id="st-ninja-msg" aria-live="polite"></p></div>
         ${sel('confirm', 'Confirm moves', 'A move waits on the board until you confirm it: tap its square again, press Confirm or Enter.')}
-        ${sel('arrows', 'Engine arrows', 'After a puzzle, arrows show the engine’s lines on the board. The A key turns them on and off.')}
-        ${sel('sound', 'Sound', 'The sound of stones as they are played. Light, Thunk and Deep are different stones.')}
+        ${sel('sound', 'Sound', 'The sound of stones as they are played. Light, Thunk and Deep are different stones.', window.TINUE_BETA ? '<p class="set-desc"><a href="#/sounds" id="sound-lab-link">Sound lab</a></p>' : '')}
       </div><p><a href="#/">Back to puzzles</a></p>`;
     for (const k of Object.keys(CTL)) {
       const s = $('#st-' + k);
-      s.innerHTML = $('#set-' + k).innerHTML;
+      for (const [v, t] of CTL[k].opts) s.append(new Option(t, v));
       s.onchange = (e) => { if (focusedByPointer(e.target)) e.target.blur(); setSetting(k, CTL[k].read(e.target.value)); };
     }
     $('#st-ninja-form').onsubmit = (e) => {
@@ -2428,6 +2486,11 @@ function settingsPage() {
       const res = parseLook($('#st-ninja').value), msg = $('#st-ninja-msg');
       if (res.error || !res.applied.length) { msg.textContent = lookReport(res); return; } // nothing changes
       if (setSetting('ninja', encodeLook(res.look))) msg.textContent = lookReport(res);
+    };
+    // (the same stored look as the paste box: the theme changed in it, its other settings kept)
+    $('#st-ninja-theme').onchange = (e) => {
+      if (focusedByPointer(e.target)) e.target.blur();
+      if (setSetting('ninja', withTheme(prefs.ninja || '', e.target.value))) $('#st-ninja-msg').textContent = prefs.ninja ? lookReport(parseLook(prefs.ninja)) : 'The board has tinue’s look again.';
     };
     $('#st-ninja-clear').onclick = () => { if (setSetting('ninja', '')) $('#st-ninja-msg').textContent = 'The board has tinue’s look again.'; };
     renderLookField(true);
@@ -2440,7 +2503,10 @@ function renderLookField(fresh = false) {
   const inp = $('#st-ninja');
   if (!inp) return;
   const on = NINJA || boardFrom('', prefs) === 'ninja';
-  for (const el of [inp, $('#st-ninja-use')]) el.disabled = !on;
+  for (const el of [inp, $('#st-ninja-use'), $('#st-ninja-theme')]) el.disabled = !on;
+  const th = $('#st-ninja-theme'), cur = themeOf(prefs.ninja || '');
+  th.querySelector('[value="custom"]').hidden = cur !== 'custom'; // (shown only while a pasted theme is in use)
+  th.value = cur;
   $('#st-ninja-clear').disabled = !on || !prefs.ninja;
   $('#st-ninja-d').textContent = on
     ? 'Paste a ptn.ninja link, or just its settings, to use its look here: axis labels, counts, layout, 3D and theme. Settings tinue needs are left out.'
@@ -2448,7 +2514,7 @@ function renderLookField(fresh = false) {
   if (document.activeElement !== inp) inp.value = prefs.ninja || '';
   if (fresh) $('#st-ninja-msg').textContent = prefs.ninja ? lookReport(parseLook(prefs.ninja)) : '';
 }
-renderPending(); showSettings();
+renderPending();
 // Stepping in half-moves, as in PTN Ninja: h = 2·plies shown, +1 while the next move's squares are only
 // highlighted (Shift+arrow). Plain steps land on whole moves.
 // step: a single step (arrow key, one wheel notch): one whole move forward plays its sound, as on Lichess; back,
@@ -2617,7 +2683,7 @@ async function leaderPage() {
     : `<div class="panel"><p class="flush">Nobody is on the leaderboard yet. Claim a username, solve a puzzle and you could be first.</p></div>`);
 }
 
-// Hash routes (#/, #/puzzle/ID, #/glossary[/term], #/me, #/leaderboard, #/rush) so it works as static files.
+// Hash routes (#/, #/puzzle/ID, #/glossary[/term], #/me, #/leaderboard, #/rush, #/settings) so it works as static files.
 let rushPage = null; // rush.js, once #/rush has been visited
 let labPage = null; // sound-lab.js, once #/sounds has been visited (beta builds)
 function go(hash) {
@@ -2639,9 +2705,9 @@ async function route() {
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
   if (page === 'settings') return settingsPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795314232')).enter(); } // loaded on first visit
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795338781')).enter(); } // loaded on first visit
   // The sound lab (sound-lab.js): beta builds only; elsewhere #/sounds is no page at all (it falls through to puzzles)
-  if (page === 'sounds' && window.TINUE_BETA && $('#view-sounds')) { show('view-sounds'); return (labPage ||= await import('./sound-lab.js?v=1795314232')).enter($('#view-sounds')); }
+  if (page === 'sounds' && window.TINUE_BETA && $('#view-sounds')) { show('view-sounds'); return (labPage ||= await import('./sound-lab.js?v=1795338781')).enter($('#view-sounds')); }
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   // Keeping the puzzle on screen: a Next this navigation superseded may have left it mid-way (needsRestore, busy) after
@@ -2657,7 +2723,7 @@ async function route() {
     const zero = symArg === '0';
     let want = sym, found = false;
     if (!sym && !zero && look?.id === id && S?.p.id === id && S.p0) {
-      try { want = (await import('./rush-rules.js?v=1795314232')).symFromRecord(S.p0, look); found = true; } catch {}
+      try { want = (await import('./rush-rules.js?v=1795338781')).symFromRecord(S.p0, look); found = true; } catch {}
       if (nav !== loadSeq) return; // a newer navigation (or load) came while that module loaded: this one is stale
     }
     // A plain link (no symmetry, no Rush note) to the puzzle on screen returns to the visit as it stands, turned or

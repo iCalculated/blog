@@ -9,7 +9,7 @@
 // name and targetBranch are lz-string compressed; theme is a built-in theme's id or a theme as JSON, either one usually
 // lz-string compressed (its own Share links compress even an id), and it falls back to the default when unreadable.
 // The same settings can be sent later as one SET_UI message (README "API"), where theme is an id or a theme object.
-import { compressToEncodedURIComponent as lz, decompressFromEncodedURIComponent as unlz } from './vendor/lz-string.js?v=1795314232';
+import { compressToEncodedURIComponent as lz, decompressFromEncodedURIComponent as unlz } from './vendor/lz-string.js?v=1795338781';
 
 // The settings tinue passes on, with the kind of value each takes (b: true/false, p: a whole number 1 to 10, t: a
 // theme). index.html's early iframe start has the same table (scripts/test-ninja-look.mjs holds them together).
@@ -140,6 +140,19 @@ export const cleanLook = (stored) => (typeof stored === 'string' && stored.lengt
 // The stored string as SET_UI values (the theme as an id or an object), for ninja.js.
 export const lookUi = (stored) => (typeof stored === 'string' && stored.length <= MAX ? parseLook(stored).look : {});
 
+// ---- the theme select (Settings page): the same stored string as the paste box, so the two stay one setting ----
+// What it shows for a stored look: '' (tinue's own), a built-in id, or 'custom' (a pasted theme of the player's own).
+export const themeOf = (stored) => { const t = lookUi(stored).theme; return t == null ? '' : typeof t === 'string' ? t : 'custom'; };
+// The stored look with its theme changed to `id` ('' for tinue's own); its other settings kept. 'custom' or anything not
+// built in changes nothing.
+export function withTheme(stored, id) {
+  const look = lookUi(stored);
+  if (id === '') delete look.theme; else if (THEMES.includes(id)) look.theme = id; else return cleanLook(stored);
+  return encodeLook(look);
+}
+// PTN Ninja's names for them (its en-us strings)
+export const themeName = (id) => (id === 'bubbletron' ? 'BubbleTron' : id[0].toUpperCase() + id.slice(1));
+
 // ---- the iframe's address ----
 // tinue's own embed settings (base, '&k=v…') with the stored look laid over them: a key in both takes the look's value
 // in place, the others follow. Only LOOK's keys with a value of the right form pass (true/false, 1 to 10, a compressed
@@ -155,6 +168,27 @@ export function frameParams(base, stored) {
     out = out.replace(new RegExp('&' + k + '=[^&]*'), '') + '&' + k + '=' + v;
   }
   return out;
+}
+
+// ---- the frame's shape ----
+// How PTN Ninja sizes its board to the frame (its src/components/board/Board.vue, read 2026-11-21; behaviour only): the
+// whole board (flat-count row, squares, stone tray, labels) keeps one aspect ratio. In a frame taller than that it fills
+// the width less a margin of 10% (at least 32 px), centred; in a wider one it fits the height and also keeps a 44 px row
+// on top for its buttons. So the frame is made a little taller than the board and wider than the host by that margin,
+// and the host shows only the board: its squares come out as big as tinue's own (the host's width over the size).
+// The CSS for the host (#board) and the frame; null for a 3D board, which tilts into the margin and is shown whole.
+const EM = 0.04375; // PTN Ninja's em, as a share of the board's width
+const SLACK = 1.01; // the frame 1% taller than the board: still clearly "taller", whatever the rounding
+export function frameBox(look = {}, size = 6) {
+  if (look.board3D) return null;
+  const on = (k, d) => (k in look ? look[k] === true : d);
+  const labels = on('axisLabels', true) && !on('axisLabelsSmall', true) ? 1.5 * EM : 0;
+  const turn = on('turnIndicator', true) ? 2.25 * EM : 0, num = on('moveNumber', false) ? 1.75 * EM : 0;
+  // its vertical layout (the tray under the board) whenever it is on: tinue's frame is always taller than wide then
+  const [w, h] = on('verticalLayout', true) ? [labels + 1, num + turn + 1 + 1 / size + labels] : [labels + 1 + 1.75 / size, Math.max(turn, num) + 1 + labels];
+  const r = w / h, f = (x) => +x.toFixed(5);
+  return { ratio: f(r), host: `aspect-ratio:${f(r)};overflow:hidden`,
+    frame: `width:${f(100 / 0.9)}%;margin:${f(-(100 / r) * (SLACK / 0.9 - 1) / 2)}% 0 0 ${f(-100 / 0.9 * 0.05)}%;aspect-ratio:${f(r / SLACK)}` };
 }
 
 // ---- what the Settings page says under the field ----
