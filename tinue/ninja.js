@@ -2,20 +2,24 @@
 // embeds it. Same API as Board (board.js), so app.js doesn't care which one it has. Only loaded via import()
 // when the flag is set: everyone else fetches nothing from here or from ptn.ninja.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1795331497';
-import { parsePTN } from './shared/ptn.js?v=1795331497';
-import { buildPTN, focusedByPointer } from './board.js?v=1795331497';
-import { frameParams, lookUi } from './ninja-look.js?v=1795331497';
+import { Game } from './shared/tak.js?v=1795338435';
+import { parsePTN } from './shared/ptn.js?v=1795338435';
+import { Board, buildPTN, focusedByPointer, landOf } from './board.js?v=1795338435';
+import { frameParams, lookUi, frameBox } from './ninja-look.js?v=1795338435';
 
 const ORIGIN = 'https://ptn.ninja';
-// tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses).
+// tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses). The board as
+// tinue's own (board.css): not checkered, PTN Ninja's grid2 (board1 tiles on a board2 ground with a small gap, rounded
+// corners), no rings. primary, player1border and player1road are board.css's --pri, --p1b and --p1r, chosen to read
+// on the light tile (board.css has the ratios): player1road is what PTN Ninja tints White's road, flat win, hint and
+// line squares with, so it can't be White's cream.
 const THEME = {
-  id: 'tinue', name: 'tinue', boardStyle: 'blank', boardChecker: true,
+  id: 'tinue', name: 'tinue', boardStyle: 'grid2', boardChecker: false, rings: 0,
   vars: { 'piece-border-width': 1 },
   colors: {
-    primary: '#9cb83a', secondary: '#161512', ui: '#262421', accent: '#302e2c', panel: '#262421c0',
+    primary: '#86a52a', secondary: '#161512', ui: '#262421', accent: '#302e2c', panel: '#262421c0',
     board1: '#f0d9b5', board2: '#b58863', board3: '#262421',
-    player1: '#f6f1e7', player1road: '#f6f1e7', player1flat: '#f6f1e7', player1special: '#ffffff', player1border: '#8f8473',
+    player1: '#f6f1e7', player1road: '#7d7262', player1flat: '#f6f1e7', player1special: '#ffffff', player1border: '#857a69',
     player2: '#2f2c29', player2road: '#4a4540', player2flat: '#2f2c29', player2special: '#3d3935', player2border: '#0d0c0b',
     textLight: '#fafafacd', textDark: '#212121cd', umbra: '#00000033',
   },
@@ -28,24 +32,45 @@ const UI = {
   disableNavigation: true, disablePTN: true, disableText: true, flatCounts: true, turnIndicator: true,
   gameTimer: false, showHeader: false, showEval: false, showRoads: false, stackCounts: false, notifyGame: false,
   disableUndo: true, showPTN: false, showText: false, showControls: false, showScrubber: false, animateBoard: true,
+  showBoardTransformBtn: false, // (as by default; tinue turns the board with its own keys, kept per browser)
 };
 // PTN Ninja reads URL settings from the path as /&key=value (not a ?query, which it ignores)
 const PARAMS = '&' + Object.entries(UI).filter(([k]) => k !== 'theme').map(([k, v]) => `${k}=${v}`).join('&');
 // The player's own PTN Ninja look (Settings page, ninja-look.js): its settings over these, its theme (if it has one)
 // instead of tinue's. Without one, exactly tinue's. Those of UI's keys a look can change, for putting back when it goes.
-const withLook = (look) => ({ ...UI, ...look });
 const LOOK_BASE = { axisLabels: true, axisLabelsSmall: true, board3D: false, orthographic: false, perspective: 5, centerStackCounts: false, flatWinHighlights: true, verticalLayout: true, verticalLayoutAuto: true }; // PTN Ninja's own defaults (its src/store/ui/state.js)
-const FRAME_CSS = 'display:block;width:100%;aspect-ratio:1/1.3;border:0;border-radius:var(--corner,6px);background:#262421';
+// Every look key goes out at start, PTN Ninja's default under the player's look: a frame can carry a look tinue never
+// asked for (a 3D board seen after an earlier look was cleared), and a key left out keeps it.
+const withLook = (look) => ({ ...LOOK_BASE, ...UI, ...look });
+// The frame asks for no permissions: PTN Ninja shows its fullscreen button only when it may go fullscreen (so it is gone),
+// and nothing of its embed that tinue shows copies to the clipboard (that is its share and notes panels, all off here).
+const FRAME_CSS = 'display:block;border:0;background:#262421;';
+const OLD_SHAPE = { host: '', frame: 'width:100%;aspect-ratio:1/1.3' }; // a 3D board: the whole frame shown
 // tinue's orientation keys, for when focus is on the page rather than inside the iframe (PTN Ninja's own hotkeys
 // handle them there).
 const TRANSFORM = { '[': 'ROTATE_LEFT', ']': 'ROTATE_RIGHT', '-': 'ROTATE_180', ';': 'FLIP_HORIZONTAL', ':': 'FLIP_VERTICAL', '=': 'RESET_TRANSFORM' };
-const READY_TIMEOUT = 15000; // no PTN Ninja by then (blocked, offline, down): use tinue's own board instead
+// No PTN Ninja by then (blocked, offline, down, or a slow first visit): tinue's own board takes its place, so nobody
+// looks at an empty box for long. A cached PTN Ninja is up in ~0.1 s, a first visit on a desktop in ~0.5 s and on the
+// benchmark's slow phone in ~2 s. The time counts from when the frame started (index.html's data-t0), not from when
+// this module got going, which on a slow phone is already ~2.5 s in.
+// If it comes up later after all, it takes over at the next puzzle (load()), never in
+// the middle of one: a move begun on tinue's board is never lost to a swap.
+// (The other way, tinue's board at once and PTN Ninja swapped in when up, was not taken: on every visit, warm ones too,
+// the player would see one board, then another, and a swap mid-puzzle would have to carry a move half made.)
+const FALLBACK_MS = 2500;
 const store = {
   get(k) { try { return JSON.parse(localStorage.getItem('tinue.' + k)); } catch { return null; } },
   set(k, v) { try { localStorage.setItem('tinue.' + k, JSON.stringify(v)); } catch {} },
 };
 
+const OWN = new Set(['load', 'destroy', 'forget']);
+// After a load: how long to wait at most for PTN Ninja to say it has drawn it (its GAME_STATE), and how long its board
+// must have kept its size before the frame is first shown. (Before, a fixed 60 ms and then 250 ms.)
+const DRAW_MS = 100, QUIET_MS = 40;
+const frames = () => new Promise((r) => { const t = setTimeout(r, 50); requestAnimationFrame(() => requestAnimationFrame(() => { clearTimeout(t); r(); })); }); // (two frames; a hidden tab has none)
+
 export class NinjaBoard {
+  static FALLBACK_MS = FALLBACK_MS; // (tests shorten it)
   // look: the stored PTN Ninja look (prefs.ninja); index.html started the iframe with the same one in its address.
   constructor(el, { onMove, look = '' } = {}) {
     this.el = el; this.onMove = onMove; this.look = lookUi(look);
@@ -55,21 +80,28 @@ export class NinjaBoard {
     this.ptn = null; this.player = null; this.hl = [];
     // index.html usually started the iframe already (before the page's modules loaded); otherwise start it now
     let f = el.querySelector('iframe');
-    if (!f) { f = document.createElement('iframe'); f.allow = 'fullscreen; clipboard-write'; f.src = ORIGIN + '/' + frameParams(PARAMS, look); f.style.opacity = '0'; el.replaceChildren(f); }
+    if (!f) { f = document.createElement('iframe'); f.src = ORIGIN + '/' + frameParams(PARAMS, look); f.style.opacity = '0'; f.dataset.t0 = performance.now(); el.replaceChildren(f); }
     this.iframe = f;
     f.title = 'Tak board (PTN Ninja)';
-    f.style.cssText = FRAME_CSS + ';opacity:' + f.style.opacity + ';transition:opacity .15s';
+    this._shape(6);
     this.ready = new Promise((resolve) => { this._resolve = resolve; });
-    this._failTimer = setTimeout(() => this._fallback(), READY_TIMEOUT);
+    const spent = performance.now() - (+f.dataset.t0 || performance.now());
+    this._failTimer = setTimeout(() => this._fallback(), Math.max(0, NinjaBoard.FALLBACK_MS - spent));
     // PTN Ninja is up (its game exists) once it posts GAME_STATE, which it does once at boot. That can happen before
     // this module has even loaded: index.html starts the iframe early and a cached PTN Ninja boots in ~0.3 s, so
-    // index.html notes that first GAME_STATE in window.__ninjaUp. (Anything sooner isn't safe: PTN Ninja answers
+    // index.html notes that first GAME_STATE on that frame (data-up). It is the frame's own: a board that made its
+    // frame here (a second board, Rush's) waits for its own GAME_STATE. (Anything sooner isn't safe: PTN Ninja answers
     // messages before its game exists, and a game sent then throws.)
-    if (window.__ninjaUp) queueMicrotask(() => this._up());
-    window.addEventListener('message', (e) => {
-      if (e.source !== f.contentWindow || this.fb) return;
+    if (f.dataset.up) queueMicrotask(() => this._up());
+    // (every listener and timer of this board is let go by destroy())
+    this._offs = [];
+    const on = (t, type, fn) => { t.addEventListener(type, fn); this._offs.push(() => t.removeEventListener(type, fn)); };
+    on(window, 'message', (e) => {
+      if (e.source !== f.contentWindow) return;
       const { action, value } = e.data || {};
-      if (action === 'GAME_STATE') this._up();
+      if (this.fb) { if (action === 'GAME_STATE') this.lateUp = true; return; } // (it takes over at the next puzzle)
+      if (action === 'GAME_STATE') { this._up(); if (this._want && String(value?.tps).split(' ')[0] === this._want.tps) this._want.fire(); }
+      else if (action === 'SET_UI' && value?.boardSize) this.resizedAt = performance.now();
       else if (action === 'SET_UI' && value?.boardTransform) store.set('ninjaTransform', value.boardTransform); // kept per browser
       else if (action === 'INSERT_PLY') this._played(typeof value === 'string' ? value : value?.ptn ?? value?.text);
       else if (action === 'UNHANDLED_KEY' && value?.key) {
@@ -78,31 +110,48 @@ export class NinjaBoard {
         window.dispatchEvent(new KeyboardEvent('keydown', { key, code, shiftKey, ctrlKey, altKey, metaKey, bubbles: true, cancelable: true }));
       }
     });
-    window.addEventListener('keydown', (e) => {
+    on(window, 'keydown', (e) => {
       if (this.fb || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || !(e.key in TRANSFORM)) return;
-      if (e.target.closest?.('input, select, textarea, [contenteditable]')) return;
+      // a board out of sight (the puzzle page's while Rush is on screen) leaves the key to the board in sight, as Board does
+      if (!this.el.getClientRects().length || e.target.closest?.('input, select, textarea, [contenteditable]')) return;
       e.preventDefault(); this._send(TRANSFORM[e.key]);
     });
-    // Callers hold this object; after a fallback every call goes to tinue's own board instead.
+    // Callers hold this object; after a fallback every call goes to tinue's own board instead (but load, which may hand
+    // the board back to PTN Ninja, and destroy).
     return new Proxy(this, {
-      get: (t, k) => { const o = t.fb && k in t.fb ? t.fb : t; const v = o[k]; return typeof v === 'function' ? v.bind(o) : v; },
+      get: (t, k) => { const o = t.fb && k in t.fb && !OWN.has(k) ? t.fb : t; const v = o[k]; return typeof v === 'function' ? v.bind(o) : v; },
     });
   }
 
+  // The frame cut to PTN Ninja's board (ninja-look.js frameBox): squares as big as tinue's board's.
+  _shape(size) {
+    if (this.fb) return;
+    const b = frameBox(this.look, size) || OLD_SHAPE, f = this.iframe;
+    if (b.frame === this.shapeCss) return;
+    this.shapeCss = b.frame;
+    // (the host's own other styles kept: Rush's board host, say)
+    Object.assign(this.el.style, { borderRadius: 'var(--corner,6px)', background: '#262421', aspectRatio: b.ratio ? String(b.ratio) : '', overflow: b.ratio ? 'hidden' : '' });
+    f.style.cssText = FRAME_CSS + b.frame + ';opacity:' + (f.style.opacity || '0') + ';transition:opacity .15s';
+  }
+
   _up() {
-    if (!this._resolve || this.fb) return;
+    if (!this._resolve || this.fb || this.dead) return;
     clearTimeout(this._failTimer);
-    // tinue shows names nowhere else on the board, and they crowd the flat counts
+    this._greet();
+    this._resolve(); this._resolve = null;
+    if (!this._want) this._settle(250);
+  }
+  // tinue's settings and the player's look (tinue shows names nowhere else on the board, and they crowd the flat counts)
+  _greet() {
     this._post('SET_UI', { ...withLook(this.look), boardTransform: store.get('ninjaTransform') || [0, 0] });
     this._post('SHOW_NAMES', false);
-    this._resolve(); this._resolve = null;
-    this._settle();
   }
 
   // A new look from the Settings page (or the account): what the old one set and the new one doesn't goes back to
   // tinue's (or PTN Ninja's own default), the rest is the new one's. A page about to be shown waits for PTN Ninja anyway.
   setLook(stored) {
     const prev = this.look, look = this.look = lookUi(stored), out = {};
+    this._shape(this.games[0].size);
     for (const k of Object.keys(prev)) if (!(k in look)) out[k] = k in UI ? UI[k] : LOOK_BASE[k];
     Object.assign(out, look);
     return Object.keys(out).length ? this._send('SET_UI', out) : this.ready;
@@ -121,29 +170,53 @@ export class NinjaBoard {
   }
 
   // ---------- messaging ----------
-  _post(action, value) { if (!this.fb) this.iframe.contentWindow.postMessage(value === undefined ? { action } : { action, value }, ORIGIN); }
+  _post(action, value) { if (!this.fb && !this.dead) this.iframe.contentWindow.postMessage(value === undefined ? { action } : { action, value }, ORIGIN); }
   async _send(action, value) { await this.ready; this._post(action, value); }
 
-  // Show the iframe only once PTN Ninja has drawn what tinue last loaded and stopped resizing: no white page,
-  // no board jumping size. Each load restarts the short wait.
-  _settle() {
+  // Show the iframe only once PTN Ninja has drawn what tinue last loaded (_afterDraw) and stopped resizing (it posts
+  // its board's size as it changes): no white page, no board jumping size. Up with nothing loaded yet: shown after
+  // 250 ms, empty.
+  _settle(ms = 0) {
     if (this.shown) return;
     clearTimeout(this._settleTimer);
     this._settleTimer = setTimeout(() => {
-      if (this._resolve || this.fb) return;
+      if (this._resolve || this.fb || this.dead || this.shown) return;
+      const still = performance.now() - (this.resizedAt ?? -Infinity);
+      if (still < QUIET_MS) return this._settle(QUIET_MS - still);
       this.shown = true;
       requestAnimationFrame(() => { this.iframe.style.opacity = '1'; });
-    }, 250);
+    }, ms);
+  }
+  // A load has been sent: once PTN Ninja posts the GAME_STATE of the position it ends on (it posts one as it redraws),
+  // or after DRAW_MS whatever it says, and two frames later, its animation goes back on (on any sooner, the whole game
+  // would fly in) and the frame may be shown. load() doesn't wait for this; a move appended meanwhile does (append).
+  _afterDraw(tps) {
+    const gen = this.drawGen = (this.drawGen || 0) + 1;
+    let fire;
+    const drawn = new Promise((r) => { fire = r; });
+    this._want = { tps: tps.split(' ')[0], fire };
+    clearTimeout(this._animT); this._animT = setTimeout(fire, DRAW_MS);
+    this._drawn = drawn.then(frames).then(() => {
+      if (gen !== this.drawGen || this.dead) return; // (a later load's turn)
+      this._want = null; clearTimeout(this._animT);
+      this._post('SET_UI', { animateBoard: this.opts.animateBoard });
+      this._settle();
+    });
   }
 
-  // PTN Ninja never came up: put tinue's own board in its place, in the same state, and hand it every call.
+  // PTN Ninja isn't up in time: put tinue's own board in its place, in the same state, and hand it every call. The
+  // frame stays, out of sight (moving or dropping it would reload it), in case PTN Ninja comes up after all.
   async _fallback() {
-    if (this.fb || !this._resolve) return;
-    const { Board } = await import('./board.js?v=1795331497');
-    this.el.style.cssText = ''; // index.html's placeholder background
-    const fb = new Board(this.el, { onMove: this.onMove });
+    if (this.fb || !this._resolve || this.dead) return;
+    Object.assign(this.el.style, { borderRadius: '', background: '', aspectRatio: '', overflow: '', position: 'relative' }); // (no placeholder or cut any more)
+    this.iframe.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;border:0;visibility:hidden;pointer-events:none;opacity:0';
+    this.iframe.tabIndex = -1; this.shapeCss = null; this.shown = false;
+    const host = this.fbHost = document.createElement('div');
+    host.className = 'board-host';
+    this.el.append(host);
+    const fb = new Board(host, { onMove: this.onMove });
     this.fb = fb;
-    console.warn('PTN Ninja did not load; using tinue\'s board');
+    console.warn('PTN Ninja did not load in time; using tinue\'s board');
     await fb.ui(this.opts);
     if (this.player != null) await fb.setPlayer(this.player);
     if (this.ptn) { await fb.load(this.ptn); await fb.goTo(this.cur - 1); }
@@ -151,11 +224,38 @@ export class NinjaBoard {
     this._resolve(); this._resolve = null; // calls already waiting on PTN Ninja go nowhere now
   }
 
+  // Done with this board (another page takes its place): its listeners and timers go, and its frame with them (a
+  // PTN Ninja frame costs memory). Calls after this do nothing. tinue's own board in its place after a fallback has no
+  // destroy of its own: its element goes, and a board out of the page takes no keys or clicks.
+  destroy() {
+    if (this.dead) return;
+    this.dead = true;
+    for (const off of this._offs) off();
+    for (const t of [this._failTimer, this._settleTimer, this._lockT, this._animT]) clearTimeout(t);
+    this.iframe.remove(); this.fbHost?.remove();
+    this._resolve?.(); this._resolve = null; // (calls waiting on PTN Ninja go nowhere)
+  }
+
+  // PTN Ninja came up late: it takes the board back from tinue's (between puzzles: load()), with tinue's board's
+  // settings. tinue's board goes with its element (a board out of the page takes no keys or clicks).
+  _takeBack() {
+    const fb = this.fb;
+    this.fb = null; this.fbHost.remove(); this.fbHost = null;
+    Object.assign(this.opts, fb.opts); this.player = fb.player; this.lockUntil = fb.lockUntil; this.hl = [];
+    this.iframe.removeAttribute('tabindex');
+    this._shape(6);
+    this._greet();
+    this._post('SET_UI', { disableBoard: this._gated(), showRoads: this.opts.showRoads });
+    if (this.player != null) this._post('SET_PLAYER', this.player);
+    console.warn('PTN Ninja is up: back to it');
+  }
+
   // ---------- what the board shows (tracked here, since PTN Ninja doesn't report it) ----------
   get g() { return this.games[this.cur]; }
   get holding() { return false; } // PTN Ninja doesn't say whether stones are in hand
   _canon(g, ptn) { try { const mv = g.parseMove(ptn); return g.isLegal(mv) ? g.moveToPTN(mv) : null; } catch { return null; } }
-  _push(ptn) { const g = this.games.at(-1).clone(); g.apply(g.parseMove(ptn)); this.games.push(g); this.snaps.push({ ptn }); }
+  // (land: what the move sets down, for its sound: board.js landOf, read off the position before it)
+  _push(ptn) { const g = this.games.at(-1).clone(), mv = g.parseMove(ptn), land = landOf(g, mv), u = g.apply(mv); this.games.push(g); this.snaps.push({ ptn, smash: u.smashed, land }); }
   // A move made on PTN Ninja's board (or typed): like Board's _commit, the next move in line just steps forward.
   _played(ptn) {
     const canon = ptn && this._canon(this.g, ptn);
@@ -163,6 +263,9 @@ export class NinjaBoard {
     const next = this.snaps[this.cur + 1]?.ptn;
     if (next !== canon) { this.games.length = this.snaps.length = this.cur + 1; this._push(canon); }
     this.cur++; this.peeking = false;
+    // (as Board's _commit: the move's sound. PTN Ninja reports only finished moves, so a stack moved by hand there sounds
+    // as a whole when it is complete: its drops in a row, as a reply's would)
+    Board.onPly?.(canon, this.snaps[this.cur].smash, this.snaps[this.cur].land, this);
     // A different move mid-line: PTN Ninja made it a branch, so its ply numbers no longer match ours (stepping back
     // would show the old line). Give it the line as tinue has it, one straight line, at the same spot.
     if (next && next !== canon) this._relinearize();
@@ -184,54 +287,85 @@ export class NinjaBoard {
   // ---------- Board API ----------
   async load(ptn) {
     const { headers, moves } = parsePTN(ptn);
+    // tinue's board in PTN Ninja's place: PTN Ninja takes over now if it came up since, and this is another puzzle with
+    // no stones in tinue's board's hand. "Another puzzle" is the caller's word (forget() just before), not the start
+    // position: a puzzle with game history loads from the game's start, the same for every 6×6 one.
+    const between = this.between; this.between = false;
+    if (this.fb) {
+      if (!(this.lateUp && between && !this.fb.holding)) return this.fb.load(ptn);
+      this._takeBack();
+    }
     const komi = +(headers.Komi || 0);
     const g = headers.TPS ? Game.fromTPS(headers.TPS, komi) : new Game(+headers.Size || 5);
     g.komi = komi;
+    // (another position shown: as Board's load, which compares what it shows. The same PTN can be another position: a
+    // move made here since the last load (a spread on PTN Ninja, cancelled by Confirm moves) is not in it.)
+    const was = this.games?.[this.cur]?.toTPS?.();
     this.games = [g]; this.snaps = [{}]; this.ptn = ptn; this.headers = headers;
+    this._shape(g.size);
     for (const m of moves) { const c = this._canon(this.games.at(-1), m); if (!c) break; this._push(c); }
     this.cur = this.snaps.length - 1; this.peeking = false;
+    if (this.games[this.cur].toTPS() !== was) Board.onCut?.(this);
     // without PTN Ninja's fly-in animation for the whole game
     await this._send('SET_UI', { animateBoard: false });
-    this._post('HIGHLIGHT_SQUARES', []);
+    this._post('HIGHLIGHT_SQUARES', []); this.hl = []; this.shapeKey = null; // (a hint's squares go with the old line)
     this._post('SET_CURRENT_PTN', ptn);
     this._post('LAST');
-    await new Promise((r) => setTimeout(r, 60));
-    this._post('SET_UI', { animateBoard: this.opts.animateBoard });
-    this._settle();
+    this._afterDraw(this.games[this.cur].toTPS());
   }
   async append(ply) {
     const c = this._canon(this.games.at(-1), ply);
     if (!c) return;
+    const atEnd = this.cur === this.snaps.length - 1;
     this._push(c); this.cur = this.snaps.length - 1; this.peeking = false;
+    if (atEnd) Board.onPly?.(c, this.snaps[this.cur].smash, this.snaps[this.cur].land, this); // (as Board's append: silent while browsing back)
+    await this._drawn; // (animated, so not before the load's animation is back on)
     await this._send('APPEND_PLY', c);
   }
-  goTo(plyID) { this.cur = Math.max(0, Math.min(this.snaps.length - 1, plyID + 1)); this.peeking = false; return this._send('GO_TO_PLY', { plyID: this.cur - 1, isDone: true }); }
-  first() { this.cur = 0; this.peeking = false; return this._send('FIRST'); }
-  last() { this.cur = this.snaps.length - 1; this.peeking = false; return this._send('LAST'); }
+  // (a jump to another ply stops a move's drops still sounding, as Board's _show does)
+  _jump(i) { if (i !== this.cur) Board.onCut?.(this); this.cur = i; this.peeking = false; }
+  goTo(plyID) { this._jump(Math.max(0, Math.min(this.snaps.length - 1, plyID + 1))); return this._send('GO_TO_PLY', { plyID: this.cur - 1, isDone: true }); }
+  first() { this._jump(0); return this._send('FIRST'); }
+  last() { this._jump(this.snaps.length - 1); return this._send('LAST'); }
   // Half-step: the position before the next move, that move's squares highlighted (PTN Ninja's not-done ply).
   peek() { if (!this.snaps[this.cur + 1]) return false; this.peeking = true; this._send('GO_TO_PLY', { plyID: this.cur, isDone: false }); return true; }
   setPlayer(p) { this.player = p; return this._send('SET_PLAYER', p); }
   ui(v = {}) {
     Object.assign(this.opts, v);
     const out = {};
-    for (const k of ['disableBoard', 'showRoads', 'animateBoard']) if (k in v) out[k] = v[k];
-    // A new puzzle's first moments (lock): PTN Ninja's taps never reach the page, so its board is turned on only then.
-    const wait = this.lockUntil - performance.now();
-    if (out.disableBoard === false && wait > 0) {
-      out.disableBoard = true; clearTimeout(this._lockT);
-      this._lockT = setTimeout(() => { if (!this.opts.disableBoard) this.ui({ disableBoard: false }); }, wait + 1);
-    }
-    if ('disableBoard' in v || 'dropOnStray' in v) this._focus(!(out.disableBoard ?? this.opts.disableBoard) && !this.opts.dropOnStray);
+    for (const k of ['showRoads', 'animateBoard']) if (k in v) out[k] = v[k];
+    if ('disableBoard' in v) out.disableBoard = this._gated();
+    if ('disableBoard' in v || 'dropOnStray' in v) this._focus(!this._gated() && !this.opts.dropOnStray);
     return Object.keys(out).length ? this._send('SET_UI', out) : this.ready;
   }
-  highlight(squares = []) { this.hl = squares || []; return this._send('HIGHLIGHT_SQUARES', this.hl); }
+  // Whether PTN Ninja's board is off: while tinue has it off, and through a lock (a new puzzle's first moments: PTN
+  // Ninja's taps never reach the page, so its board is simply off then). A lock that runs out turns it back on, as
+  // ui() would; lock(Infinity) holds until the next lock().
+  _gated() {
+    clearTimeout(this._lockT);
+    const wait = this.lockUntil - performance.now();
+    if (this.opts.disableBoard || !(wait > 0)) return this.opts.disableBoard;
+    if (wait < Infinity) this._lockT = setTimeout(() => { if (!this.opts.disableBoard) this.ui({ disableBoard: false }); }, wait + 1);
+    return true;
+  }
+  highlight(squares = []) { this.hl = squares || []; this.shapeKey = null; return this._send('HIGHLIGHT_SQUARES', this.hl); }
+  // The analysis page's shapes (Board's shapes): PTN Ninja's embed has no arrows or rings, so line 1's squares are
+  // highlighted instead (only while no hint is shown), and nothing else. An empty list clears them.
+  shapes(list = []) {
+    if (this.hl.length) return this.ready;
+    const sqs = (list || []).find((x) => x.role === 'best')?.sqs || [], key = sqs.join(' ');
+    if (key === (this.shapeKey ?? '')) return this.ready;
+    this.shapeKey = key;
+    return this._send('HIGHLIGHT_SQUARES', sqs);
+  }
   cancel() { return this._send('CANCEL_MOVE'); }
   // Another puzzle (Board's forget): a move half-entered on PTN Ninja's board is dropped. Its taps and keys never reach
   // the page, so nothing else of it can be held here; the new position (SET_CURRENT_PTN) follows anyway.
-  forget() { return this.cancel(); }
-  // Board's lock: here the board stays off until then (ui), as it is during an intro. A move typed meanwhile still
-  // reaches app.js, whose tooSoon drops it.
-  lock(until) { this.lockUntil = until; }
+  // It also marks the next load as another puzzle's, where PTN Ninja, up late, may take over from tinue's board.
+  forget() { this.between = true; return this.fb ? this.fb.forget() : this.cancel(); }
+  // Board's lock: here the board is off until then (_gated), as it is during an intro; a lock already past turns it
+  // back on. A move typed meanwhile still reaches app.js, whose tooSoon drops it.
+  lock(until) { this.lockUntil = until; return this.ui({ disableBoard: this.opts.disableBoard }); }
   // A typed move: checked here, then played on PTN Ninja's board, which reports it back like a click.
   play(ptn) {
     // the same checks as Board's _canInput: input on, the mover's turn, game not over

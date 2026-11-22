@@ -2,10 +2,11 @@
 // judging a move by the puzzle's line, where an off-line move goes next (the puzzle page's adjudication: route,
 // playOutOutcome), the clock and its pauses, the combo and its time bonuses, and the end-of-run numbers.
 // public/rush.js owns the screen and the engines and calls these with the time it read.
-import { Game, colorOf, typeOf } from './shared/tak.js?v=1795331497';
-import { finalSquare } from './settings.js?v=1795331497';
-import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795331497';
-import * as SYM from './shared/sym.js?v=1795331497';
+import { Game, colorOf, typeOf } from './shared/tak.js?v=1795338435';
+import { finalSquare } from './settings.js?v=1795338435';
+import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795338435';
+import * as SYM from './shared/sym.js?v=1795338435';
+import { moveShape } from './analysis.js?v=1795338435';
 
 export const SIZE = 6; // Rush and Streak are 6×6 only (server/rush.js refuses any other size)
 export const RUSH_MS = 180e3; // 3:00
@@ -364,12 +365,13 @@ export function closeOpen(run, cur) {
     ...(cur.adj ? { played: cur.adj.canon, ...(cur.adj.look ? { po: cur.adj.look } : {}) } : {}) });
   return run;
 }
-// A result's mark on the end screen's list: the glyph, its colour, its word for screen readers, and any text after it.
+// A result's mark on the end screen's cards: the glyph, its colour, its word for screen readers, and the text after it
+// (a word, or the move played: a miss's, or a play-out's that was lost).
 export function resultMark(r) {
-  if (r.skipped) return { cls: 'muted', glyph: '–', sr: 'skipped', text: '' };
+  if (r.skipped) return { cls: 'muted', glyph: '–', sr: 'skipped', text: 'skipped' };
   if (r.unfinished) return { cls: 'muted', glyph: '·', sr: 'unfinished', text: 'unfinished' };
-  if (r.solved) return { cls: 'good', glyph: '✓', sr: 'solved', text: '' };
-  return { cls: 'bad', glyph: '✗', sr: 'failed, played', text: r.wrong || '' };
+  if (r.solved) return { cls: 'good', glyph: '✓', sr: 'solved', text: 'solved' };
+  return { cls: 'bad', glyph: '✗', sr: 'failed, played', text: r.wrong || r.played || '' };
 }
 // When a run ended, wall clock: performance.now() endedAt, read against now / wall taken together.
 export const playedAtOf = (endedAt, now, wall) => Math.round(wall - Math.max(0, now - endedAt));
@@ -388,7 +390,7 @@ export function boardFrom(p, line = []) {
 }
 // The colour to move (solver 1 = white), and whether it differs from the last puzzle's: a run mixes both colours, and
 // the stone and the board's ring pulse on a change so a player in the habit of one side notices.
-// name: the word the bar above the board shows beside the stone, so the side reads without telling two shades apart.
+// name: the side in a word (text, the line under the board and what is said, starts with it).
 export function turn(solver, prev = null) {
   const white = solver === 1, name = white ? 'White' : 'Black';
   return { color: white ? 'white' : 'black', name, text: `${name} to play.`, changed: prev != null && prev !== solver };
@@ -468,8 +470,13 @@ export function moveSquares(ptn) {
 // move), so the player sees the side and the squares they had; a solve or a skip shows the start and its first move.
 // r: the run's result with `at`, the moves accepted before the miss (rush.js keeps it; it isn't posted), and
 // `answer` when already known (a stored run keeps it, not the puzzle's tree).
-// Returns { size, toMove, cells (rank size first, file a first: { sq, dark, top: { color, type } | null, h }), last
-// (the move that led to the position, tinted as the board does), played, answer (each [start, final] squares), you (what was played, '' for a solve), want (the puzzle's move), text (both) }.
+// Returns { size, toMove, cells (rank size first, file a first: { sq, top: { color, type } | null, h, stack: the
+// whole stack, bottom first, [{ color, type }] }), last (the move that led to the position, tinted as the board does),
+// played, answer (each [start, final] squares), you (what was played, '' for a solve), want (the puzzle's move), text
+// (both), and for the end screen's picture (rush-look.js): tint ({ sqs, prim }: the squares the board tints for that
+// last move, as board.js stepSnap marks them) and marks ([{ shape (analysis.js moveShape), role: 'bad' | 'good',
+// color: the stone a placement would be }], the move played when wrong, then the puzzle's move) }. Squares are named
+// in the position's own labels: those the run showed it in.
 // A move adjudicated off the line (played: the move; po: how its play-out went, playOutLook) shows the position it was
 // played in and how the game ended, solved or not.
 export function review(p, r) {
@@ -478,7 +485,8 @@ export function review(p, r) {
   const g = startGame(p, at), answer = r.answer !== undefined ? r.answer : answerAt(p, at), n = p.size, cells = [];
   for (let row = n - 1; row >= 0; row--) for (let col = 0; col < n; col++) {
     const sq = row * n + col, stack = g.board[sq], t = stack.length ? stack[stack.length - 1] : -1;
-    cells.push({ sq: g.sqName(sq), dark: col % 2 === row % 2, top: t < 0 ? null : { color: colorOf(t), type: typeOf(t) }, h: stack.length });
+    cells.push({ sq: g.sqName(sq), top: t < 0 ? null : { color: colorOf(t), type: typeOf(t) }, h: stack.length,
+      stack: stack.map((x) => ({ color: colorOf(x), type: typeOf(x) })) });
   }
   const after = at.length ? `After ${at.join(' ')}, ` : '';
   const you = off ? (r.unfinished ? `${after ? after + 'you' : 'You'} played ${r.played}${r.po ? ` (move ${r.po.n} of ${r.po.cap})` : ''}; time ran out` : (after ? after + 'y' : 'Y') + 'ou played ' + r.played + '. ' + gameText(r.po, r.played, r.solved) + '.')
@@ -486,8 +494,14 @@ export function review(p, r) {
     : (at.length ? `After ${at.join(' ')}, you played ` : 'You played ') + (r.wrong || '?');
   const want = !answer ? '' : (r.solved && !off) || r.skipped ? `The first move was ${answer}` : off && r.solved ? `The puzzle’s line plays ${answer}` : `The move was ${answer}`;
   const led = at.length ? at.at(-1) : p.last; // the move that led here (none: no game on record)
-  return { size: n, toMove: g.toMove, cells, last: moveSquares(led), // (a move off the line that won is the one marked good: the line's own move is only named)
-    played: off && !r.solved ? moveSquares(r.played) : r.solved || r.skipped ? [] : moveSquares(r.wrong), answer: moveSquares(off && r.solved ? r.played : answer),
+  // (a move off the line that won is the one marked good: the line's own move is only named)
+  const bad = off && !r.solved ? r.played : r.solved || r.skipped ? null : r.wrong, good = off && r.solved ? r.played : answer;
+  const shape = (m, game) => { try { return m ? moveShape(m, n, game) : null; } catch { return null; } };
+  const ls = shape(led, new Game(n)), tint = !ls ? null : ls.kind === 'place' ? { sqs: [ls.sq], prim: [ls.sq] }
+    : { sqs: [ls.from, ...ls.drops.map((d) => d.sq)], prim: ls.drops.map((d) => d.sq) };
+  const marks = [[bad, 'bad'], [good, 'good']].map(([m, role]) => ({ shape: shape(m, g), role, color: g.toMove })).filter((x) => x.shape);
+  return { size: n, toMove: g.toMove, cells, last: moveSquares(led),
+    played: moveSquares(bad), answer: moveSquares(good), tint, marks,
     you, want, text: [you, want].filter(Boolean).join(' · ') };
 }
 
@@ -541,8 +555,9 @@ export function gameText(look, move, solved) {
 
 // ---------- this browser's history of runs (local only: never posted, not tied to an account) ----------
 // A finished run as stored: { v, t (ms, when it ended), mode, score, sum (summary), puzzles: [{ id, rating, solved,
-// skipped?, ms, wrong?, at?, answer, size, tps, komi, last? }] }: each puzzle carries what the look-back draws from
-// (its start, the moves before a miss, the puzzle's move there), not its tree. The newest HIST_MAX, in HIST_CHARS of
+// skipped?, ms, wrong?, at?, answer, size, tps, komi, last?, sym? }] }: each puzzle carries what the look-back draws from
+// (its start, the moves before a miss, the puzzle's move there), not its tree, and the symmetry it was shown under (so
+// its link opens the puzzle page as the player saw it: puzzleLink). Runs stored before 2026-11-19 have no sym. The newest HIST_MAX, in HIST_CHARS of
 // JSON (about 400 kB as stored), newest first.
 export const HIST_V = 1, HIST_MAX = 30, HIST_CHARS = 400e3;
 export function recordOf(run, puzzles, t) {
@@ -551,10 +566,12 @@ export function recordOf(run, puzzles, t) {
     const p = byId.get(r.id) || {}, at = r.played != null ? r.at || [] : r.solved || r.skipped ? [] : r.at || [];
     let answer = null;
     try { answer = answerAt(p, at); } catch {}
-    // (as the player saw it: p is the puzzle under its symmetry; the link to the puzzle page opens it as it is)
+    // (as the player saw it: p is the puzzle under its symmetry, and so is the puzzle page its link opens)
+    const sym = r.sym ?? p.sym;
     return { id: r.id, rating: Math.round(r.rating), solved: r.solved, ...(r.skipped ? { skipped: true } : {}), ms: Math.round(r.ms),
       ...(r.wrong ? { wrong: r.wrong, at } : {}), ...(r.unfinished ? { unfinished: true, at } : {}), ...(r.played != null ? { played: r.played, at, ...(r.po ? { po: r.po } : {}) } : {}),
-      answer, size: p.size, tps: p.tps, komi: p.komi || 0, ...(p.last ? { last: p.last } : {}) };
+      answer, size: p.size, tps: p.tps, komi: p.komi || 0, ...(p.last ? { last: p.last } : {}),
+      ...(SYM.SYMS.includes(sym) ? { sym } : {}) };
   }) };
 }
 const str = (v, max) => typeof v === 'string' && v.length > 0 && v.length <= max;
@@ -566,7 +583,8 @@ function validPuzzle(q) {
     && (q.skipped === undefined || typeof q.skipped === 'boolean') && (q.unfinished === undefined || typeof q.unfinished === 'boolean') && (q.wrong === undefined || str(q.wrong, 24))
     && (q.at === undefined || (Array.isArray(q.at) && q.at.length <= 200 && q.at.every((m) => str(m, 24))))
     && (q.answer === null || str(q.answer, 24)) && (q.last === undefined || str(q.last, 24))
-    && (q.played === undefined || str(q.played, 24)) && (q.po === undefined || validLook(q.po));
+    && (q.played === undefined || str(q.played, 24)) && (q.po === undefined || validLook(q.po))
+    && (q.sym === undefined || SYM.SYMS.includes(q.sym));
 }
 const ENDS = new Set(['win', 'proved', 'road', 'held', 'out', 'gaveup', 'left', 'time', 'noengine']);
 const validLook = (l) => !!l && typeof l === 'object' && (l.end === null || ENDS.has(l.end)) && (l.engine === 'Syntaks' || l.engine === 'Tiltak')
@@ -588,6 +606,52 @@ export function trimHistory(list, max = HIST_MAX, chars = HIST_CHARS) {
   return out;
 }
 export const addRun = (raw, rec) => trimHistory(historyOf([rec, ...(Array.isArray(raw) ? raw : [])]));
+
+// ---------- a stored puzzle's link to the puzzle page ----------
+// The puzzle page under the symmetry the run showed it in (app.js reads #/puzzle/<id>/<s>: public/pagesym.js), s = 0
+// too: an explicit /0 opens the puzzle unturned even while a turned visit of it is on screen (a plain link returns to
+// that visit as it stands). A record without sym (stored before records kept it) links plainly; rush.js then leaves
+// the page a note (lookFrom) so the page can work the symmetry out (symFromRecord).
+export const puzzleLink = (q) => '#/puzzle/' + encodeURIComponent(q.id) + (SYM.SYMS.includes(q.sym) ? '/' + q.sym : '');
+// What the puzzle page needs to recognise a stored puzzle's picture: its start, the move before it, the line up to the
+// answer shown, and that answer (all in the run's labels).
+export const lookFrom = (q) => ({ id: q.id, tps: q.tps, ...(q.last ? { last: q.last } : {}), at: q.at || [], answer: q.answer ?? null });
+// The symmetry a stored puzzle without one was shown under, from the puzzle as the server sends it (p: tps, tree,
+// meta.history) and the record's lookFrom: the symmetries that turn the puzzle's start into the record's, then (a
+// symmetric start draws the same picture under several, labelled differently) the one whose last move matches, then
+// whose tree replays the record's line (each move of the solver's a branch of it, each reply the one it names: the
+// line tells two mirror-equivalent replies apart where the answer alone cannot), then whose answer matches, the
+// smallest first. 0 when none does (a record from before Rush's symmetries, or a puzzle revised since).
+export function symFromRecord(p, look) {
+  const norm = (t) => { try { return Game.fromTPS(t).toTPS(); } catch { return null; } };
+  const want = norm(look?.tps);
+  if (!p || !want || typeof p.tps !== 'string') return 0;
+  const last = Array.isArray(p.meta?.history) ? p.meta.history.at(-1) : null;
+  const fits = SYM.SYMS.filter((s) => norm(SYM.tps(s, p.tps)) === want);
+  const at = Array.isArray(look.at) ? look.at : [];
+  const replays = (q) => {
+    let node = q.tree;
+    for (let i = 0; i < at.length; i += 2) {
+      const e = node && node !== 'win' ? node[at[i]] : null;
+      if (!e || (i + 1 < at.length && e.r !== at[i + 1])) return false;
+      node = e.n;
+    }
+    return true;
+  };
+  const score = (s) => {
+    let k = 0;
+    if (look.last != null && typeof last === 'string' && SYM.move(s, p.size, last) === look.last) k += 4;
+    try {
+      const q = SYM.orient(p, s);
+      if (at.length && replays(q)) k += 2;
+      if (look.answer != null && answerAt(q, at) === look.answer) k += 1;
+    } catch {}
+    return k;
+  };
+  let best = 0, top = -1;
+  for (const s of fits) { const k = score(s); if (k > top) { best = s; top = k; } }
+  return best;
+}
 
 // ---------- offline: spare runs fetched ahead, results waiting to be sent ----------
 // A run token is good for RUN_TTL_MS from when the server minted it (server/rush.js RUN_TTL, the same 30 days): a

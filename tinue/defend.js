@@ -1,17 +1,20 @@
 // The defender's reply in a play-out, for the puzzle page (app.js defenderTurn) and Rush (rush.js) alike: Syntaks in
-// the browser, else crux's /api/defend, else Tiltak in the browser. Moved out of app.js unchanged (same engines, same
+// the browser, else crux's /api/defend, else Tiltak in the browser (never on 6×6: tiltak.js supports). Moved out of app.js unchanged (same engines, same
 // requests, same time limits), so both pages play the same defence. po: the play-out (playon.js playOutOf), whose
 // local, slowLocal, ctl and fallback fields this keeps as the page did.
-import * as tiltak from './tiltak.js?v=1795331497';
-import * as syntaks from './syntaks.js?v=1795331497';
-import { api } from './api.js?v=1795331497';
-import { legalMove, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795331497';
+import * as tiltak from './tiltak.js?v=1795338435';
+import * as syntaks from './syntaks.js?v=1795338435';
+import { api } from './api.js?v=1795338435';
+import { legalMove, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795338435';
 
 // Syntaks's reply. It runs in the browser (syntaks.js, loaded when play-on starts; 1.5 s a reply). Until it has loaded,
 // or on a device too slow for a real defence (fewer than LOCAL_MIN_NODES in that time), crux answers (/api/defend,
 // 8 s). With neither, Tiltak in the browser defends the rest of the game, which is then unrated (playOnRated).
 export const LOCAL_MIN_NODES = 150e3; // ~100k nodes/s: a fraction of crux's ~2.6M nodes per reply
-export async function syntaksReply(po, tps, komi, live) {
+// x: the puzzle page's boundary for a visit under a symmetry (pagesym.js toServer): crux gets the position in the puzzle's
+// own orientation and its move comes back turned, so its cache and allowance see an ordinary visit. Rush passes none
+// (its turned position goes as it always has); the in-browser search sees the position as shown.
+export async function syntaksReply(po, tps, komi, live, x = null) {
   const legal = (r) => (r && legalMove(po.g, r.move) ? r : null);
   // Each in-browser search gets its 1.5 s plus 3 s (a worker the browser killed never answers); waiting for the
   // download (crux didn't answer) gets 20 s. Past either, crux or Tiltak defends.
@@ -20,7 +23,8 @@ export async function syntaksReply(po, tps, komi, live) {
     .then((r) => legal(r && { ...r, src: 'browser' }), () => null);
   const server = () => {
     po.ctl = new AbortController(); // aborted when the game ends, so crux drops the search
-    return api(`/api/defend?tps=${encodeURIComponent(tps)}&komi=${komi}`, null, { quiet: true, timeout: ENGINE_MS.crux, signal: po.ctl.signal }).then((r) => legal(r && { ...r, src: 'crux' }), () => null);
+    return api(`/api/defend?tps=${encodeURIComponent(x ? x.tps(tps, komi) : tps)}&komi=${komi}`, null, { quiet: true, timeout: ENGINE_MS.crux, signal: po.ctl.signal })
+      .then((r) => legal(r && { ...(x ? x.answer(r) : r), src: 'crux' }), () => null);
   };
   let r = null;
   if (po.local && syntaks.status() === 'ready' && !po.slowLocal) {
@@ -38,7 +42,8 @@ export async function syntaksReply(po, tps, komi, live) {
 // The defender's move in po.g (tps), from defenderTurn: { mv } (legal, canonical); { end: 'proved' } when Syntaks
 // dropped out of a proven play-out (no playing it out against Tiltak: the proven move is the solve); { end: 'noengine' }
 // when no engine moved (po.fallback set); null once live() is false. onFallback: Syntaks dropped out of an unproven
-// play-out and Tiltak takes over (po.fallback, po.fallbackAt set), for the page to redraw. reply: Syntaks's reply,
+// play-out and Tiltak takes over (po.fallback, po.fallbackAt set), for the page to redraw. Never on 6×6 (tiltak.js
+// supports: no Tiltak there): Syntaks dropping out of a 6×6 play-out is { end: 'noengine' }. reply: Syntaks's reply,
 // syntaksReply unless the caller wraps it.
 export async function defenderMove(po, { size, komi, tps, live, onFallback = () => {}, reply = syntaksReply }) {
   let mv = null;
@@ -47,7 +52,7 @@ export async function defenderMove(po, { size, komi, tps, live, onFallback = () 
     if (!live()) return null;
     mv = r && legalMove(po.g, r.move);
     if (!mv && po.proven) return { end: 'proved' };
-    if (!mv) { po.fallback = true; po.fallbackAt = po.mine; onFallback(); }
+    if (!mv) { po.fallback = true; po.fallbackAt = po.mine; if (tiltak.supports(size, komi)) onFallback(); }
   }
   if (!mv && tiltak.supports(size, komi)) {
     // (a worker that never answers mustn't stall the game: 6 s from when it's up (a cold start, fetching and compiling

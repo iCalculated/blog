@@ -22,7 +22,7 @@ export function freeOffer(s, { defender, held = false, uploading = false, over =
 // tiltakHere: that engine runs in this browser (syntaks.js / tiltak.js supports). A free game stays in the browser:
 // crux's /api/defend is the rated play-outs' lane (a priority job on a two-process pool, and a per-player allowance
 // they share), and a game that counts for nothing mustn't slow, crowd out or unrate one that counts. So Syntaks only
-// where it runs here, else Tiltak (which plays every board Syntaks defends), else no button. syntaksStatus: syntaks.js
+// where it runs here, else Tiltak (on 4×4 and 5×5 only: never a 6×6 game), else no button. syntaksStatus: syntaks.js
 // status(); once 'failed' it won't answer on this page, so the free game would be Tiltak's (freeTurn swaps): the card
 // names that. failed: engines that didn't answer a free game from this miss already (freeFails): not offered again,
 // or the button would wait out the same broken engine.

@@ -2,13 +2,14 @@
    Visual/interaction spec, read off PTN Ninja's components (numbers only; no code taken):
 
    LAYOUT (vertical layout, unplayed pieces on, axisLabelsSmall)
-   - Board = N×N square grid, light board1 / dark board2 checker; a square is light when file and rank
-     parity differ (a1 is dark). Unplayed-pieces tray below the board: board3, height = 1 square,
+   - Board = N×N square grid, not checkered: PTN Ninja's "grid2" board style with boardChecker off (no rings).
+     Every square is a board1 tile on a board2 ground, the tile inset 3.6% of a square on each side (a 7.2% gap
+     between two tiles, half that at the board's edge) with 4% corners; the gap comes out of the tile, so the
+     board and its squares keep their size. Unplayed-pieces tray below the board: board3, height = 1 square,
      bottom corners rounded 0.35em, where 1em (board font) = min(30px, 4.375% of board width).
    - Coordinates live inside the edge squares: rank at the top-left of the left column, file at the
      bottom-right of the bottom row; box 1.5em × 1.5em with font-size min(15% of a square, 15px);
-     text #212121cd on light squares (PTN Ninja uses #fafafacd on dark squares, only 2.5:1 on board2;
-     tinue uses near-black there too, 5.5:1).
+     text #212121cd, on the tile (11.7:1).
 
    PIECES (all lengths in % of a square; 1em on a piece = 1 square)
    - Flat: 50% × 50% square inset 25%, corner radius 10%, border 1.3% (border-width 1 × .013em).
@@ -26,7 +27,7 @@
      (N/2 − .875)·(k/(T−1)) squares from its edge, caps outermost, the next piece to be used next to the
      caps; outer pieces overlap inner ones. A selected tray piece is lifted 21%.
 
-   HIGHLIGHTS (opacity of a full-square overlay)
+   HIGHLIGHTS (opacity of an overlay the shape of the tile, as PTN Ninja's on grid2; roads cross the gap)
    - Last ply, primary color: .4 on the source/placed square, .75 on drop squares (and on a placed one).
    - highlight([sq]) suggestions, side-to-move road color: .4 (first square .8).
    - Squares in a move being entered: .5 (the origin, once left, .25). Hover on a valid square: .35
@@ -60,17 +61,24 @@
    Hover/selected stacks show their height (or pieces in hand / dropped here) on the top piece. */
 
 .tb-host { container-type: inline-size; }
+/* Colours on a board of light tiles (WCAG ratios against the tile #f0d9b5; ninja.js THEME has the same values):
+   - --pri, the last move: a deeper green than the site's #9cb83a, which at .4 was 1.21:1 on the tile; this is 1.32:1
+     at .4 and 1.70:1 at .75 (PTN Ninja takes the colour only, at its own opacities, so the colour is the lever).
+   - --p1b, White's outline: 3.07:1 (#8f8473 was 2.68:1); on the tile a white stone (1.22:1) reads by its outline.
+   - --p1r, White's marks (selection, hover, road, flat win; PTN Ninja's player1road, so its hints and line squares for
+     White too): White's cream was 1.03 to 1.17:1 on the tile, i.e. invisible. This warm grey, White's outline a shade
+     darker, is 1.30:1 at .25 up to 2.56:1 at .8, lighter than Black's #4a4540 (1.47 to 4.31:1). */
 .tb {
-  --b1: #f0d9b5; --b2: #b58863; --b3: #262421; --pri: #9cb83a; --hint: #2f86d6;
-  --p1: #f6f1e7; --p1s: #ffffff; --p1b: #8f8473; --p1r: #f6f1e7;
+  --b1: #f0d9b5; --b2: #b58863; --b3: #262421; --pri: #86a52a; --hint: #2f86d6;
+  --p1: #f6f1e7; --p1s: #ffffff; --p1b: #857a69; --p1r: #7d7262;
   /* --p2b: black stones' outline is light enough to separate stacked black stones (a near-black one merged them) */
   --p2: #2f2c29; --p2s: #3d3935; --p2b: #7a7168; --p2r: #4a4540;
-  --tl: #fafafacd; --td: #212121cd; --tdk: #1a1a1a; --um: #00000033;
+  --tl: #fafafacd; --td: #212121cd; --um: #00000033;
   --dur: .3s; --ease: cubic-bezier(.3, .3, .5, 1);
   position: relative; width: 100%; font-size: min(30px, 4.375cqw); line-height: 1;
   user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; touch-action: manipulation;
 }
-.tb-board { position: relative; z-index: 1; width: 100%; aspect-ratio: 1; background: var(--b1);
+.tb-board { position: relative; z-index: 1; width: 100%; aspect-ratio: 1; background: var(--b2);
   display: grid; grid-template-columns: repeat(var(--n), 1fr); grid-template-rows: repeat(var(--n), 1fr); }
 .tb-tray { width: 100%; aspect-ratio: var(--n) / 1; background: var(--b3); border-radius: 0 0 var(--corner, 6px) var(--corner, 6px); }
 /* flat-count bar: top flats per side (walls and caps don't count), komi as a hatched end of the side that gets it */
@@ -83,11 +91,22 @@
 .tb-f1 i { left: 0; background: repeating-linear-gradient(135deg, #ddd5c6 0 4px, var(--p1) 4px 8px); }
 .tb-f2 { background: var(--p2); color: var(--p1); text-align: right; }
 .tb-f2 i { right: 0; background: repeating-linear-gradient(135deg, var(--p2r) 0 4px, var(--p2) 4px 8px); }
+/* to-move trim: .tm1/.tm2 on the bar (board.js turnMark) = the side to move, none once the game is over. A 3px green
+   edge along the mover's half, next to the board, drawn over the komi hatch; absolute, so the bar keeps its size. The light
+   half takes a deeper shade of the accent: --pri on #f6f1e7 is 2.0:1, #6d8028 is 3.9:1 (3.0:1 on the hatch); the dark half
+   takes #9cb83a, 6.2:1 (4.2:1 on the hatch), pinned like the light half's so the plain board's darker --pri (#86a52a,
+   4.9:1) doesn't move it. No shape on purpose: without colour it reads as a darker or lighter stripe under one half. */
+.tb-fc.tm1 > .tb-f1::after, .tb-fc.tm2 > .tb-f2::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: var(--pri); }
+.tb-fc.tm1 > .tb-f1::after { background: #6d8028; }
+.tb-fc.tm2 > .tb-f2::after { background: #9cb83a; }
 
 /* squares */
 .tb-sq { position: relative; font-size: calc(100cqw / var(--n)); }
-.tb-sq.dk { background: var(--b2); }
-.tb-hl, .tb-rd, .tb-rd > i { position: absolute; inset: 0; pointer-events: none; }
+/* the tile, and the tints and the hint's ring in its shape (the gap between tiles stays the ground) */
+.tb-sq::before, .tb-hl, .tb-sq.s::after { position: absolute; inset: 3.6%; border-radius: 4%; pointer-events: none; }
+.tb-sq::before { content: ''; background: var(--b1); }
+.tb-rd, .tb-rd > i { position: absolute; inset: 0; pointer-events: none; }
 .tb-rd { z-index: 1; }
 .tb-hl { opacity: 0; transition: background-color var(--dur) var(--ease), opacity var(--dur) var(--ease); }
 .tb-cur { background: var(--pri); }
@@ -99,20 +118,23 @@
 .tb-sq.s .tb-pl, .tb.t2 .tb-sq.s .tb-pl { background: var(--hint); }
 .tb-sq.s .tb-pl { opacity: .35; }
 .tb-sq.s.sp .tb-pl { opacity: .5; }
-.tb-sq.s::after { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 0 .05em var(--hint); }
+.tb-sq.s::after { content: ''; box-shadow: inset 0 0 0 .05em var(--hint); }
 .tb-sq.s.sp::after { box-shadow: inset 0 0 0 .08em var(--hint); }
 .tb-sq.fw .tb-pl { opacity: .4; }
 .tb-sq.fw.o1 .tb-pl { background: var(--p1r); }
 .tb-sq.fw.o2 .tb-pl { background: var(--p2r); }
 .tb-sq.sel .tb-pl { opacity: .5; }
 .tb-sq.sel.selp .tb-pl { opacity: .25; }
+/* Black's selection at .5 is the ground's luminance (1.00:1), so its tile's edge only showed by hue; .65 is 3.11:1 on
+   the tile and 1.36:1 on the ground (White's .5 is 1.32:1 on the ground) */
+.tb.t2 .tb-sq.sel .tb-pl { opacity: .65; }
+.tb.t2 .tb-sq.sel.selp .tb-pl { opacity: .25; }
 .tb-sq.v { cursor: pointer; }
 @media (pointer: fine) { .tb-sq.v:not(.s):hover .tb-pl { opacity: .35; } }
 
 /* coordinates */
 .tb-lab { position: absolute; width: 1.5em; height: 1.5em; line-height: 1.5em; text-align: center;
   font-size: min(.15em, 15px); color: var(--td); pointer-events: none; z-index: 1; }
-.tb-sq.dk .tb-lab { color: var(--tdk); }
 .tb-lr { top: 0; left: 0; }
 .tb-lc { bottom: 0; right: 0; }
 
@@ -157,5 +179,41 @@
   font-size: min(.15em, 15px); color: var(--td); pointer-events: none; }
 .tb-st.p2 + .tb-cnt { color: var(--tl); }
 
+/* the analysis page's shapes (analysis.js shapesSvg, app.js paintShapes): engine lines in blue, distinct from the last
+   move's green (--pri) and the hint (--hint); yours orange and dashed; the opponent's threats red and thin, under the rest.
+   A layer over the pieces that no tap ever lands on. */
+.tb { --eng: #1565c0; --yours: #e07a1f; --threat: #d33; }
+.tb-ov { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; overflow: visible; transition: opacity .12s; }
+.tb-ov .sh { color: var(--eng); fill: currentColor; stroke: currentColor; }
+.tb-ov .best { opacity: .8; }
+.tb-ov .alt { opacity: .4; }
+.tb-ov .yours { color: var(--yours); opacity: .85; }
+.tb-ov .threat { color: var(--threat); opacity: .85; }
+.tb-ov .rg { fill: none; stroke-width: .06; }
+.tb-ov .alt .rg, .tb-ov .threat .rg { stroke-width: .045; }
+.tb-ov .yours .rg, .tb-ov .yours .sf { stroke-dasharray: .12 .08; }
+.tb-ov .sf { stroke-linecap: round; }
+.tb-ov .hd { stroke: none; }
+.tb-ov .sm { stroke-width: .08; stroke-linecap: round; }
+.tb-ov .gh { stroke: none; opacity: .45; }
+/* (White's faint stone, cream on the cream tile, is drawn by its outline, as a white stone is) */
+.tb-ov .gh.p1 { fill: var(--p1); stroke: var(--p1b); stroke-width: .02; opacity: .75; }
+/* (Black's at .45 came out the ground's brown, 1.05:1 on it: .6 and the black outline make it a stone again) */
+.tb-ov .gh.p2 { fill: var(--p2); stroke: var(--p2b); stroke-width: .02; opacity: .6; }
+.tb-ov .dc, .tb-ov .dd { stroke: #fff; stroke-width: .03; }
+.tb-ov text { fill: #fff; stroke: none; font: 700 .2px/1 var(--mono, ui-monospace, monospace); text-anchor: middle; dominant-baseline: central; }
+@media (prefers-reduced-motion: reduce) { .tb-ov { transition: none; } }
+
 .tb.na *, .tb.na { transition: none !important; }
 @media (prefers-reduced-motion: reduce) { .tb *, .tb { transition: none !important; } }
+
+/* the Rush end screen's still pictures (rush-look.js): the board's own squares, stones and overlay, drawn once, so
+   nothing moves and no stone asks for a layer of its own. The move played when it was wrong in red, under the
+   puzzle's move in green: as strong as an engine's line 1, a shade darker than the last move's tint (--pri) so the
+   two greens don't read as one. */
+.tb.still, .tb.still * { transition: none !important; }
+.tb.still .tb-pc { will-change: auto; }
+.tb { --mk-good: #2f8f1f; --mk-bad: #d32f2f; }
+.tb-ov .good { color: var(--mk-good); opacity: .9; }
+.tb-ov .bad { color: var(--mk-bad); opacity: .9; }
+.tb-ov .good .rg, .tb-ov .bad .rg { stroke-width: .09; }

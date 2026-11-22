@@ -1,23 +1,23 @@
-// Settings saved to the player's account (2026-11-20): the board, Confirm moves and the PTN Ninja look follow a named
-// account from device to device. This browser's prefs stay the working copy; the server keeps one object per account
-// (POST /api/settings; /api/me, /api/login and /api/register bring it back as `settings`). Guests and signed-out
+// Settings saved to the player's account (2026-11-20): the board, Confirm moves, Sound and the PTN Ninja look follow a
+// named account from device to device. This browser's prefs stay the working copy; the server keeps one object per
+// account (POST /api/settings; /api/me, /api/login and /api/register bring it back as `settings`). Guests and signed-out
 // players sync nothing. What app.js decides is here, so node can test it (scripts/test-prefsync.mjs).
 //
-// The same account (and, on the same site, the same browser storage) also holds settings this page doesn't have, the
-// beta's Engine arrows and Sound among them. This page never reads, applies or changes those: they are carried as they
-// are (OTHER), so the page that has them finds them as it left them.
-import { boardFrom, confirmOn } from './settings.js?v=1795331497';
-import { cleanLook } from './ninja-look.js?v=1795331497';
+// The same account (and, on the same site, the same browser storage) may also hold settings this page no longer has:
+// the beta's Engine arrows (2026-11, now no setting: arrows are on wherever the analysis view is). This page never
+// reads, applies or changes those: they are carried as they are (OTHER).
+import { boardFrom, confirmOn, soundOf, SOUND_DEFAULT } from './settings.js?v=1795338435';
+import { cleanLook } from './ninja-look.js?v=1795338435';
 
-export const SYNCED = ['board', 'confirm', 'ninja'];
-export const DEFAULTS = { board: 'tinue', confirm: false, ninja: '' };
-// Settings of other pages of this site (the beta) that may be in this browser's prefs and on the account.
-export const OTHER = ['arrows', 'sound'];
+export const SYNCED = ['board', 'confirm', 'sound', 'ninja'];
+export const DEFAULTS = { board: 'tinue', confirm: false, sound: SOUND_DEFAULT, ninja: '' };
+// Settings no page of this site has any more that may be in this browser's prefs and on the account.
+export const OTHER = ['arrows'];
 // The synced settings out of a prefs-shaped object, each read by the same reader the page uses (settings.js), so a
 // value from the server is cleaned exactly as one from this browser's storage is: junk reads as the default.
 export function syncedOf(p) {
   const o = p && typeof p === 'object' && !Array.isArray(p) ? p : {};
-  return { board: boardFrom('', o), confirm: confirmOn(o), ninja: cleanLook(o.ninja) };
+  return { board: boardFrom('', o), confirm: confirmOn(o), sound: soundOf(o), ninja: cleanLook(o.ninja) };
 }
 // Keys whose values differ (a and b both syncedOf's shape).
 export const diff = (a, b) => SYNCED.filter((k) => a[k] !== b[k]);
@@ -57,7 +57,7 @@ export function unsentKeys(mark, owner) {
   return SYNCED.filter((k) => mark.k.includes(k));
 }
 // The mark to store for this account with these of SYNCED's keys unsent (null: none at all). A key in the mark this
-// page doesn't sync (another page's own unsent change, the beta's Sound say) stays in it, for that page to send.
+// page doesn't sync (another page's own unsent change) stays in it, for that page to send.
 export function withUnsent(mark, owner, keys) {
   const others = mark && typeof mark === 'object' && mark.o === owner && Array.isArray(mark.k)
     ? mark.k.filter((k) => typeof k === 'string' && /^[a-z][A-Za-z0-9]{0,23}$/.test(k) && !SYNCED.includes(k)) : [];

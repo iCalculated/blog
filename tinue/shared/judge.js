@@ -5,8 +5,47 @@
 //
 // The play-on rules below moved here unchanged from public/playon.js, which re-exports them, so the page behaves as
 // before (scripts/test-playon.mjs).
+import { winMove } from './pns.js?v=1795338435';
 
 // ---- play-on rules (moved from public/playon.js) ----
+
+// The Tak rule (Sasha, 2026-11-21, a player's proposal on Discord: "if move is Tak, continue; if move is not Tak, 2 move
+// countdown. If Tak move comes in countdown, restart"; Sasha: no ceiling, "as long as you keep making Tak threats, it's
+// okay"). It replaces the move cap on the puzzle page (Rush keeps capMoves until its server takes longer play-outs).
+// Every move of the player's in the play-out, the move played out included, is Tak or not. A Tak move clears the
+// countdown; one that isn't starts it (or runs it down): TAK_COUNTDOWN more moves to make Tak, and if none of those is
+// Tak either, the play-out is over ('out') after the last of them. So quiet, quiet, quiet is out at the third; quiet,
+// quiet, Tak goes on; Tak forever never runs out. Deliberately no ceiling, repetition rule or progress test (Sasha).
+export const TAK_COUNTDOWN = 2;
+// Tak: after the mover's move (g: the game after it, not over), the mover would win on their next move if the opponent
+// did nothing: a road, or the flat count where a placement ends the game (winMove; the threats the prover searches).
+export const isTak = (g, mover) => !!winMove(g, mover);
+// po.quiet: how many of the player's moves in a row, up to the last, weren't Tak (0: the last was Tak). tak: the move
+// just counted was Tak. A missing answer (not a boolean) counts as Tak: never evidence for running out (I2).
+export function countTak(po, tak) { po.quiet = tak === false ? (po.quiet || 0) + 1 : 0; return po; }
+// Out: the countdown ran down without a Tak move.
+export const outOfTak = (po) => (po.quiet || 0) > TAK_COUNTDOWN;
+// Moves left to make Tak while the countdown runs (2 right after a quiet move, then 1), else null (no countdown).
+export const takLeft = (po) => (po.quiet > 0 && !outOfTak(po) ? TAK_COUNTDOWN + 1 - po.quiet : null);
+// The defender's replies in a play-out go into the attempt's move log (app.js logMove) from 2026-11-21, as 'po' entries
+// like the player's own, told apart by this PTN annotation on the move: the production server's log check
+// (server.js cleanLog: kinds ok|slow|miss|view|hint|po, a move matching its PTN pattern, which allows a trailing
+// [*'!?]) keeps them as they are, so no server change is needed, and Game.parseMove ignores the mark. Logs before
+// that date hold the player's play-out moves only. replyEntry: the logged move; isReplyEntry: whether an entry is one.
+export const REPLY_MARK = '!';
+export const replyEntry = (m) => m + REPLY_MARK;
+export const isReplyEntry = (e) => !!e && e.k === 'po' && typeof e.m === 'string' && e.m.endsWith(REPLY_MARK);
+// Whether the play-out has run out of moves under its rule: po.rule 'tak' (the puzzle page) or the move cap (Rush).
+export const outOfMoves = (po) => (po.rule === 'tak' ? outOfTak(po) : po.mine >= po.cap);
+// A 'no' ends the play-out (Sasha, 2026-11-21, review point F2: "yeah we should terminate playout early on miss"). The
+// check of the move played out answering 'no' (it doesn't force a win) while the play-out is still going ends it there
+// as a miss, its ending 'refuted', rated exactly as any other ending without the player's win (lossRated: the game
+// Syntaks defended counts, gameRated), so a 'no' no longer leaves unlimited rated tries at catching the engine out.
+// Only under the Tak rule (the puzzle page; Rush keeps the cap and its own handling), only a live play-out (one already
+// over keeps its ending), and never a proven one (a move proven to win is never refuted). 'unknown' (a timeout or a
+// failure) is not a 'no' and changes nothing.
+export const REFUTED = 'refuted';
+export const endsOnNo = (po, verdict) => verdict === 'no' && !!po && po.rule === 'tak' && !po.end && !po.proven;
 
 // How many of your moves you get, counting the move being played out. The puzzle had `pliesLeft` plies to go at that
 // node (an attacker node, so an odd number: your moves and the replies between them); you get those moves plus the
@@ -30,9 +69,10 @@ export function provenCap(pliesLeft, proofPlies, shown = 0) {
 }
 
 // Who defends: Syntaks on the server for 6×6 (any half-point komi it knows), else Tiltak in the browser where it plays
-// (4×4–6×6). null: no engine for this board, so the move is handled as before play-on.
+// (4×4/5×5). null: no engine for this board, so the move is handled as before play-on. 6×6 is never Tiltak's, whatever
+// tiltakSupports says (Sasha, 2026-11-21: no Tiltak on 6×6): a komi Syntaks doesn't know is null, as on 7×7.
 export function defender(size, komi, tiltakSupports) {
-  if (size === 6 && Math.abs(komi) <= 3.5 && Number.isInteger(komi * 2)) return 'syntaks';
+  if (size === 6) return Math.abs(komi) <= 3.5 && Number.isInteger(komi * 2) ? 'syntaks' : null;
   return tiltakSupports(size, komi) ? 'tiltak' : null;
 }
 
@@ -59,13 +99,16 @@ export const winRated = (po, how) => how === 'proved' || !!po.proven
 // Whether a game that ended without the player's win (kind, as endPlayOn gets it) is a rated miss. kind 'unload' is
 // the page going away (pagehide: reload, closed tab); 'left' is moving on to another puzzle in the page. Running out
 // of moves in a proven play-out whose proof length isn't known (po.proofPlies null) is unrated: the cap may not have
-// covered the proof.
-export const lossRated = (po, kind) => gameRated(po) && !(po.proven && (kind === 'unload' || (kind === 'out' && po.proofPlies == null)));
+// covered the proof. So is running out when the proof arrived only once the moves had run out (po.provedAtOut: during
+// the wait at the end, or after it while the check ran on): a move proven to win is never turned into a rated miss by
+// running out before its proof was known (the checker's attack on the quiet allowance, 2026-11-21).
+export const lossRated = (po, kind) => gameRated(po)
+  && !(po.proven && (kind === 'unload' || (kind === 'out' && (po.proofPlies == null || po.provedAtOut))));
 // Why such a game doesn't count, for the cards: unratedWhy's reasons, or 'proven-unload' (a proven play-out whose page
-// went away).
+// went away), 'proven-late' (proven only once out of moves), 'proven-length'.
 export const lossWhy = (po, kind) => lossRated(po, kind) ? null
   : po.proven && kind === 'unload' && gameRated(po) ? 'proven-unload'
-  : po.proven && kind === 'out' && gameRated(po) ? 'proven-length' : unratedWhy(po);
+  : po.proven && kind === 'out' && gameRated(po) ? (po.provedAtOut ? 'proven-late' : 'proven-length') : unratedWhy(po);
 // Whether a game ending now (kind, as endPlayOn gets it) is stalled: only the player leaving ('gaveup': Give up or
 // Solution; 'left' or 'unload') while the defender has owed a reply for more than STALL_MS. The defender's own ending (its road,
 // flats, a draw) never is, however slow the reply was, and neither is leaving once the reply is in hand
@@ -109,7 +152,8 @@ export function result(a) {
 //   inputs (all optional; anything missing or malformed is undecided, never evidence for a miss: I2):
 //     game   Game.result() right after the player's move ({ winner, kind } or null)
 //     tree   { key: true, reply } when the move is a key at the node, for the rev the client loaded
-//     left   plies left at the node (for the play-out cap)
+//     left   plies left at the node (kept with the play-out; the puzzle page's play-outs have no cap now)
+//     tak    whether the player's move makes Tak (isTak, from the game after it), for the Tak rule; missing: counts as Tak
 //     book   { pos, ver, win_len, exact, checked } the book row of the position after the move
 //     node   { pos, ver, model, refuted } the book_node verdict on the move
 //     deep   { kind: 'proved', plies, checked: true } | { kind: 'disproved' | 'undecided', reason }   (6×6, live)
@@ -211,8 +255,9 @@ const closeUndecided = (a, ply, evidence) => decide(a, ply, 'missed', false, evi
 
 function startPlayout(a, ply, inp, proven, proofPlies, evidence) {
   const left = inp.left;
-  const po = a.playout = { at: ply.n, engine: 'syntaks', fallback: false, line: [ply.move], proven, proofPlies,
-    left, cap: proven ? provenCap(left, proofPlies) : capMoves(left), mine: 1, replies: 0, owedSince: null, end: null, stalled: false };
+  // The Tak rule (no cap): the move played out is counted like every later one.
+  const po = a.playout = countTak({ at: ply.n, engine: 'syntaks', fallback: false, line: [ply.move], proven, proofPlies,
+    left, rule: 'tak', cap: null, mine: 1, replies: 0, owedSince: null, end: null, stalled: false }, inp.tak);
   // The move's verdict is the play-out's ending (I6: it decides as of this ply).
   record(a, { n: ply.n, move: ply.move, verdict: 'play', outcome: null, pending: true, evidence });
   const r = defenderReply(a, po, inp);
@@ -249,13 +294,13 @@ function playoutPly(a, ply, inp) {
     return endPlayout(a, kind);
   }
   if (typeof ply.move !== 'string' || !ply.move) return { verdict: 'ignored' };
-  po.line.push(ply.move); po.mine++;
+  po.line.push(ply.move); po.mine++; countTak(po, inp.tak);
   a.plies.push({ n: ply.n, move: ply.move, verdict: 'reply', outcome: null });
   const pg = gameResult(inp.game);
   if (pg === BAD) return endPlayout(a, 'invalid');
   const end = ending(pg, a.solver);
   if (end) return endPlayout(a, end);
-  if (po.mine >= po.cap) return endPlayout(a, 'out'); // (the caller waits for a proof first: capWait, playon.js)
+  if (outOfMoves(po)) return endPlayout(a, 'out'); // (the caller waits for a proof first: capWait, playon.js)
   return { verdict: 'reply', ...defenderReply(a, po, inp) };
 }
 
@@ -269,7 +314,7 @@ function endPlayout(a, kind) {
   const base = win ? winRated(po, kind) : unrated ? false : lossRated(po, kind);
   const why = base ? null : win ? unratedWhy(po) : unrated ? kind : lossWhy(po, kind);
   Object.assign(p, { pending: false, outcome: win ? 'solved' : 'missed', base, ...(why ? { why } : {}),
-    evidence: { ...p.evidence, playout: { why: kind, proven: !!po.proven, mine: po.mine, cap: po.cap, line: [...po.line] } } });
+    evidence: { ...p.evidence, playout: { why: kind, proven: !!po.proven, mine: po.mine, cap: po.cap, quiet: po.quiet, line: [...po.line] } } });
   return { verdict: win ? 'solved' : 'missed', why: kind, cap: po.cap };
 }
 
@@ -287,8 +332,10 @@ function act(a, ply, inp) {
   return decide(a, ply, 'missed', false, { kind: 'act', act: ply.act }, ply.act === 'expire' ? 'expired' : 'left');
 }
 
-// The final verdict of an earlier pending ply (row 11), or a proof landing in a live unproven play-out (raises the cap,
-// as makeProven does today, app.js:885-900; the game goes on).
+// The final verdict of an earlier pending ply (row 11), or a proof landing in a live unproven play-out (it becomes a
+// proven play-out, as makeProven does; the game goes on; with the Tak rule there is no cap to raise), or a 'no' landing
+// in one (it ends there, 'refuted', as app.js does: endsOnNo). Plies are judged in the order they come, so a win
+// judged before the 'no' stands (the play-out is over by then, and the 'no' is stale).
 function settle(a, n, final) {
   const f = typeof final === 'string' ? { kind: final } : isObj(final) ? final : {};
   const kind = f.kind === 'wins' && (f.fullDefense === true || f.checked === true) ? 'wins'
@@ -297,9 +344,10 @@ function settle(a, n, final) {
   if (!p) return { verdict: 'stale' };
   const po = a.playout;
   if (po && po.at === n) {
-    if (po.end || po.proven || kind !== 'wins') return { verdict: 'noted' }; // a 'no' or unknown: the game decides
+    if (endsOnNo(po, kind)) return endPlayout(a, REFUTED);
+    if (po.end || po.proven || kind !== 'wins') return { verdict: 'noted' }; // an unknown (or a 'no' outside the Tak rule): the game decides
     po.proven = true;
-    if (Number.isFinite(f.plies) && f.plies >= 0) { po.proofPlies = f.plies; po.cap = provenCap(po.left, f.plies, po.cap); }
+    if (Number.isFinite(f.plies) && f.plies >= 0) { po.proofPlies = f.plies; if (po.rule !== 'tak') po.cap = provenCap(po.left, f.plies, po.cap); }
     p.evidence = { kind: 'prover', src: f.src || 'pns', late: true };
     return { verdict: 'proven', cap: po.cap };
   }

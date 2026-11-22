@@ -3,8 +3,8 @@
 
 // The rules the judge needs (the move cap, who defends, how a game ends, which games count) live in shared/judge.js
 // (plan step S1) and are re-exported here unchanged, so the page and scripts/test-playon.mjs see the same functions.
-import { capMoves, proofMoves, provenCap } from './shared/judge.js?v=1795331497';
-export { capMoves, proofMoves, provenCap, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls } from './shared/judge.js?v=1795331497';
+import { capMoves, proofMoves, provenCap, countTak, outOfMoves, endsOnNo } from './shared/judge.js?v=1795338435';
+export { capMoves, proofMoves, provenCap, isTak, countTak, outOfTak, takLeft, outOfMoves, TAK_COUNTDOWN, REPLY_MARK, replyEntry, isReplyEntry, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls, endsOnNo, REFUTED } from './shared/judge.js?v=1795338435';
 
 // The cap's explanation, one plain sentence shown on the card (and as the number's tooltip). capNote: the puzzle's
 // bound (the moves it had left at that node, plus the spare: capMoves).
@@ -38,14 +38,20 @@ export function slowerWinsAt(p, path) {
 }
 // A play-out as it starts (app.js startPlayOn; Rush's driver makes the same): the move played out (miss) at ply `at`
 // of the puzzle's line, the line before it (base), the game after it (g), the puzzle's plies left there (left: the
-// usual cap, capMoves) and who defends. A proven one's cap is raised by applyProofLength.
-export const playOutOf = ({ miss, at, base, g, proven, left, key, engine }) => ({ miss, at, base, line: [miss], g, proven,
-  mine: 1, cap: capMoves(left), capNote: capNote(left), left, proofPlies: null, key, engine, fallback: false, thinking: false, end: null });
+// usual cap, capMoves) and who defends. A proven one's cap is raised by applyProofLength. tak (the puzzle page): the
+// play-out runs under the Tak rule instead of the cap (judge.js TAK_COUNTDOWN; rule 'tak', no cap), tak being whether
+// the move played out is Tak (isTak). Rush passes none and keeps the cap.
+export const playOutOf = ({ miss, at, base, g, proven, left, key, engine, tak }) => {
+  const po = { miss, at, base, line: [miss], g, proven, mine: 1, cap: capMoves(left), capNote: capNote(left), left, proofPlies: null, key,
+    engine, fallback: false, thinking: false, end: null };
+  return typeof tak === 'boolean' ? countTak(Object.assign(po, { rule: 'tak', cap: null, capNote: null }), tak) : po;
+};
 // A proven play-out's cap once its proof's length is known (provenCap: never lower than the cap shown, whose note then
 // stays). Returns false when plies isn't a length (nothing changed). (Moved from app.js setProofLength.)
 export function applyProofLength(po, plies) {
   if (!Number.isFinite(plies)) return false;
   po.proofPlies = plies;
+  if (po.rule === 'tak') return true; // (no cap to raise: the length only decides whether running out is rated, lossRated)
   const cap = provenCap(po.left, plies, po.cap);
   // Today the cap shown here is always capMoves(po.left) (no earlier length raised it), so this always rewrites the
   // note. If a later change lets the cap rise twice, a cap above both bounds keeps the note that set it.
@@ -53,6 +59,15 @@ export function applyProofLength(po, plies) {
   po.cap = cap;
   return true;
 }
+
+// What the server keeps of a result's move log (server.js cleanLog, unchanged on main): at most LOG.max entries, each
+// with ms within LOG.ms (an hour); one entry over either and it stores no log at all. A play-out has no ceiling now, so
+// the page stops adding entries before either (logOk), keeping the head of the log rather than losing all of it.
+export const LOG = { max: 64, ms: 3600e3 };
+// What the server keeps from its 2026-11-21 'server (for main)' commit on (server.js LOG_MAX). LOG.max rises to it only
+// once that server is live: against the older one a longer log would be stored as none at all.
+export const LOG_NEXT = 512;
+export const logOk = (log, ms) => log.length < LOG.max && Number.isFinite(ms) && ms >= 0 && ms <= LOG.ms;
 
 // Who defended, by name, for the cards (Syntaks only while it defends; once it drops out, Tiltak). (Moved from app.js.)
 export const defenderName = (po) => (po.engine === 'syntaks' && !po.fallback ? 'Syntaks' : 'Tiltak');
@@ -99,10 +114,25 @@ export function heldResend(h, owner, alive) {
   // never a rated miss for a move proven to win)
   const settled = typeof h.win === 'boolean';
   const result = settled ? { win: h.win, ...(h.casual ? { casual: true } : { theme: h.theme }) } : { win: false, casual: true };
-  // A settled record keeps its move log (settledHeld): the server stores only the first result for a puzzle, so a
-  // resend without it would lose that attempt's log for good.
-  return { build: +h.b || 0, body: { puzzleId: h.id, ...result, ms: h.ms, ...(settled && Array.isArray(h.log) && h.log.length ? { log: h.log } : {}) } };
+  // A record keeps its move log: a settled one always (settledHeld), an unsettled one when it has one (runOnHeld: out
+  // under the Tak rule, the check still running). The server stores only the first result for a puzzle, so a resend
+  // without it would lose that attempt's log for good.
+  return { build: +h.b || 0, body: { puzzleId: h.id, ...result, ms: h.ms, ...(Array.isArray(h.log) && h.log.length ? { log: h.log } : {}) } };
 }
+// The held record of a play-out that ran out under the Tak rule while its check runs on (app.js endPlayOn): still
+// unsettled (a crash before the check answers resends an unrated miss: heldResend), but with the game's log, which is
+// complete by then. prev: the record startPlayOn held ({ id, ms }); log: as report() would send it (oriented).
+export const runOnHeld = (prev, log) => ({ id: prev.id, ms: prev.ms, ...(log?.length ? { log } : {}) });
+
+// Leaving a puzzle (kind 'left': on to another puzzle in this page) after its play-out ran out under the Tak rule while
+// the check still runs: the check is not stopped, and settles the old puzzle in the background (app.js abandonCheck),
+// so running out never pre-empts a proof, wherever the player goes next in this page (2026-11-21 review). Leaving any
+// other way ('unload': the page going away, 'auth': a log-out or log-in, which must send it under the identity that
+// played it, 'again': the same puzzle opened again, whose new result would otherwise land first and stand, as the server
+// keeps the first) settles it now, as a rated miss (lossRated: the move isn't proven), and the card says so (end.note.checking).
+// Mid-game (no end yet) leaving is still giving up, and a proven or decided one has nothing to wait for.
+export const leftRunsOn = (c, kind) => kind === 'left' && !!c?.playOn && c.playOn.rule === 'tak' && c.playOn.end === 'out'
+  && !c.playOn.proven && c.final == null;
 // The record report() keeps for a settled result until the server has it (app.js heldRec): what heldResend sends.
 // timing: { ms, log } as report() sends them.
 export const settledHeld = (id, timing, win, casual, theme) =>
@@ -119,16 +149,40 @@ export const heldDisplaced = (prev, nextId, owner) =>
 // or 'unchecked' (a later, minor check: dropped, the move noted as unchecked).
 export const quickOutcome = (quick, minor) => quick === 'wins' || quick === 'no' ? quick : minor ? 'unchecked' : 'pending';
 
-// At the cap, whether to wait before ending the game 'out' (a wait that can only raise the cap):
-//   'length': a proven play-out whose proof length is still being measured (lengthPending) and isn't known;
+// Out of moves (outOfMoves: at the cap, or the Tak rule's countdown run down), whether to wait before ending the game
+// 'out' (a wait for what could change that ending):
+//   'length': a proven play-out whose proof length is still being measured (lengthPending) and isn't known (under the
+//   cap it could raise the cap; under the Tak rule it only decides whether the 'out' is rated, lossRated);
 //   'proof': an unproven Syntaks play-on (no fallback) whose full check is still running (checkLive): a proof would
-//   make it a proven play-out with a cap covering the proof. (With Tiltak a proof ends the game as a solve by itself.)
-// null: end it now. CAP_WAIT_MS: how long each wait may take.
+//   make it a proven play-out (under the cap: with a cap covering the proof; under the Tak rule: an unrated out,
+//   lossRated provedAtOut). (With Tiltak a proof ends the game as a solve by itself.)
+// null: end it now. CAP_WAIT_MS: how long each wait may take (the same under both rules). Under the Tak rule a check
+// still running after the 'proof' wait is not stopped by the ending (app.js endPlayOn): the result is held until it
+// answers, so running out never pre-empts a proof.
 export const CAP_WAIT_MS = { length: 30e3, proof: 20e3 };
 export function capWait(po, { lengthPending = false, checkLive = false } = {}) {
-  if (po.mine < po.cap || po.end) return null;
+  if (!outOfMoves(po) || po.end) return null;
   if (po.proven) return po.proofPlies == null && lengthPending ? 'length' : null;
   return checkLive && provenPlayOut(po.engine) && !po.fallback ? 'proof' : null;
+}
+// When the page ends a play-out on a 'no' (judge.js endsOnNo; app.js startPlayOn's handler and defenderTurn). The
+// event-order rule: the page judges events in the order it handles them, and a move counts once the page has accepted
+// it (playOnMove plays it onto the game, synchronously from the board's input). So a winning move accepted before the
+// 'no' is handled is a solve (the play-out is over, and the 'no' finds nothing to end); a 'no' handled first ends the
+// play-out, and a move not yet accepted (stones in hand, or one waiting for Confirm) never counts. What happens, by
+// what the page is doing when the 'no' is handled:
+//   'now':   the player's turn (stones in hand, a move waiting for Confirm, a hidden tab included): it ends now.
+//   'reply': the defender's reply is being chosen or played onto the board (po.thinking, or s.busy while it animates):
+//            the play-out ends as soon as that reply is on the board, before the player's turn opens, unless the reply
+//            itself ended the game (the defender's road, flats or a draw: that ending stands, rated the same way).
+//   'wait':  the countdown has run down and the page is waiting for the check at the end (capWait 'proof'): the wait
+//            ends with the 'no' and the play-out ends 'out', as before this rule (the same rating).
+//   null:    nothing ends: not a 'no' (an 'unknown' changes nothing), not the Tak rule (Rush), already over, or proven.
+// busy: the page's s.busy (the board is mid-animation or locked for the defender).
+export function noEnding(po, verdict, { busy = false } = {}) {
+  if (!endsOnNo(po, verdict)) return null;
+  if (po.waiting) return 'wait';
+  return po.thinking || busy ? 'reply' : 'now';
 }
 // The engines' time limits, in one place so Rush's server can bound its pauses by them (server/rush.js, rush-rules.js
 // pauseMax): the first still-wins check's quick answer and its run-on (engine.js checkStill's defaults, pinned there

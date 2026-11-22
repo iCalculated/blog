@@ -16,7 +16,11 @@
 // A move whose verdict the page does not know yet (the still-wins check) is queued held: hold() returns fill(verdict);
 // a held ply (and everything queued after it) waits until filled or HOLD_MS, then goes as it stands ('judging').
 //
+// A puzzle shown under a symmetry (pagesym.js: opened from a Rush run) is posted in its own orientation: open() takes the
+// visit's sym from p, and a ply's move is turned back as it is queued (the queue outlives the page, which alone knows
+// the sym), so the judge sees exactly what an ordinary visit would send.
 // No DOM here: createOutbox takes everything it needs, so scripts/test-outbox.mjs drives it with fakes.
+import * as SYM from './shared/sym.js?v=1795338435';
 
 export const KEY = 'tinue.outbox';
 export const MAX_ITEMS = 64, MAX_PLY = 64, MAX_AGE = 3600e3, HOLD_MS = 10e3, MAX_FAILS = 4, TIMEOUT_MS = 15e3, PAGEHIDE_MAX = 8;
@@ -96,6 +100,7 @@ export function createOutbox({ url, fetch, storage, token, now = Date.now, later
   function push(att, fields, hold = 0) {
     if (!att || att.n >= MAX_PLY || !enabled || att.owner !== ownerOf(token())) return null;
     const n = att.n++;
+    if (att.sym && typeof fields.move === 'string') fields = { ...fields, move: SYM.move(SYM.inverse(att.sym), att.size, fields.move) };
     const b = { puzzleId: att.puzzleId, ...(att.rev != null ? { rev: att.rev } : {}), nonce: att.nonce, ply: n, ...fields,
       ...(att.theme ? { theme: att.theme } : {}), ...(build ? { b: build } : {}) };
     const e = { k: att.nonce, n, o: att.owner, t: now(), h: hold ? now() + hold : 0, b };
@@ -114,7 +119,9 @@ export function createOutbox({ url, fetch, storage, token, now = Date.now, later
     open(p, theme) {
       const tk = token();
       if (!enabled || stopped || !tk || !p || typeof p.id !== 'string') return null;
-      return { nonce: nonce(), puzzleId: p.id, rev: Number.isInteger(p.rev) ? p.rev : null, theme: theme || '', owner: ownerOf(tk), n: 0, closed: false };
+      // (sym, size: in memory only, for push; never sent)
+      const sym = Number.isInteger(p.sym) && p.sym > 0 && p.sym < 8 && Number.isInteger(p.size) ? p.sym : 0;
+      return { nonce: nonce(), puzzleId: p.id, rev: Number.isInteger(p.rev) ? p.rev : null, theme: theme || '', owner: ownerOf(tk), n: 0, closed: false, ...(sym ? { sym, size: p.size } : {}) };
     },
     move(att, move, { clientVerdict, ms: t } = {}) { return !!push(att, { move, clientVerdict: verdict(clientVerdict), ms: ms(t) }); },
     act(att, act, { clientVerdict, ms: t, seen } = {}) {

@@ -1,10 +1,11 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795331497';
-import { parsePTN } from './shared/ptn.js?v=1795331497';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795338435';
+import { parsePTN } from './shared/ptn.js?v=1795338435';
+import { dispPoint, shapesSvg, stackPiece, SP, GAP } from './analysis.js?v=1795338435';
 
-const SP = 7, GAP = 3; // stack step (% of a square) and how many steps a carried hand is lifted
+// (SP, GAP: the stack step, % of a square, and how many steps a carried hand is lifted; analysis.js stackPiece)
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
 const FILES = 'abcdefgh';
 // Board orientation: a 2×2 matrix [a, b, c, d] taking centred logical (file, rank) to display (x, y), y up.
@@ -12,6 +13,8 @@ const FILES = 'abcdefgh';
 const ID = [1, 0, 0, 1];
 const OPS = { ']': [0, 1, -1, 0], '[': [0, -1, 1, 0], '-': [-1, 0, 0, -1], ';': [-1, 0, 0, 1], ':': [1, 0, 0, -1], '=': null };
 const mul = ([p, q, r, t], [a, b, c, d]) => [p * a + q * c, p * b + q * d, r * a + t * c, r * b + t * d];
+// The side to move as the flat-count bar marks it: 1 or 2, or 0 once the game is over (nobody moves).
+export const turnMark = (g) => (g.result() ? 0 : g.toMove);
 const loadOrient = () => { try { const m = JSON.parse(localStorage.getItem('tinue.orient')); if (Array.isArray(m) && m.length === 4) return m; } catch {} return ID; };
 
 // ---------- positions with piece identities (so a move can be animated piece by piece) ----------
@@ -42,6 +45,18 @@ function initialSnap(g, P) {
   return { g, st, ty, hl: null };
 }
 
+// What a move sets down, for its sound (sound.js playMove's info), read off the position before it: a placement's piece;
+// a stack move's top piece (the last to land) and, per square dropped on, what it lands on ('board': the square was
+// empty, 'piece').
+const KIND = { [FLAT]: 'flat', [WALL]: 'wall', [CAP]: 'cap' };
+export function landOf(g, mv) {
+  if (mv.kind === 'p') return { piece: KIND[mv.type] || 'flat' };
+  const size = g.size, from = g.board[mv.sq], [dr, dc] = STEP[mv.dir], onto = [];
+  let r = Math.floor(mv.sq / size), c = mv.sq % size;
+  for (let i = 0; i < mv.drops.length; i++) { r += dr; c += dc; onto.push(g.board[r * size + c].length ? 'piece' : 'board'); }
+  return { top: KIND[typeOf(from[from.length - 1])] || 'flat', onto };
+}
+
 function stepSnap(s, P, ptn) {
   const g = s.g.clone();
   const mv = g.parseMove(ptn);
@@ -67,9 +82,9 @@ function stepSnap(s, P, ptn) {
     }
     hl = { sqs, prim: sqs.slice(1) };
   }
-  const canon = g.moveToPTN(mv);
-  g.apply(mv);
-  return { g, st, ty, hl, ptn: canon };
+  const canon = g.moveToPTN(mv), land = landOf(g, mv);
+  const u = g.apply(mv);
+  return { g, st, ty, hl, ptn: canon, smash: u.smashed, land }; // (smash: a wall flattened; land: landOf; for the sound)
 }
 
 // Squares of a finished road with dead ends pruned (what gets drawn at full strength), plus its axes.
@@ -100,6 +115,15 @@ document.addEventListener('focusin', (e) => { if (performance.now() - lastPointe
 export const focusedByPointer = (el) => pointerFocused.has(el);
 
 export class Board {
+  // The sound hooks, set by app.js to sound.js (kept out of this file, which node tests import):
+  // onPly(ptn, smash, info) on every move played or appended at the line's end, on any board; info is landOf's
+  //   { piece } or { top, onto }, plus byHand when the move was a stack built by hand whose drops onLand already sounded.
+  // onLand([{ piece, onto, drop: true, smash }]) as pieces of a stack being moved by hand land, one input at a time.
+  // onCut() when the board jumps to another position (a load, a step back, a jump): queued drops stop.
+  // Each gets the board it came from as its last argument (app.js: a board out of sight makes no sound).
+  static onPly = null;
+  static onLand = null;
+  static onCut = null;
   constructor(el, { onMove } = {}) {
     this.el = el; this.onMove = onMove;
     el.classList.add('tb-host');
@@ -177,6 +201,14 @@ export class Board {
     this._render();
   }
   async cancel() { this.sel = null; this._render(); }
+  // The analysis page's shapes (app.js paintShapes; analysis.js shapesSvg draws them): arrows, rings and ghosts for the
+  // engine's lines and the opponent's threats. They belong to the position they were set on: drawn only while that
+  // position is shown, and not while stones are in hand or the next move is peeked at; an empty list clears them.
+  shapes(list = []) {
+    this.shapesList = list || []; this.shapesSnap = this.snaps[this.cur];
+    this._drawShapes();
+  }
+  get shapesVisible() { return !!this.shapesList?.length && this.snaps[this.cur] === this.shapesSnap && !this.sel && !this.peekHl; }
   // Another puzzle: drop whatever input was under way on the last one (stones in hand, a number key kept for when input
   // opens (_flushKey), a touch or long press in progress), so none of it lands on the new position.
   forget() { this.sel = null; this.pendKey = null; this.gen++; this.forgotAt = performance.now(); this._render(false); }
@@ -237,7 +269,7 @@ export class Board {
     for (const sq of order) {
       const r = (sq / n) | 0, c = sq % n, [dc, dr] = this._disp(sq);
       const d = document.createElement('div');
-      d.className = 'tb-sq ' + (c % 2 !== r % 2 ? 'lt' : 'dk');
+      d.className = 'tb-sq';
       d.dataset.sq = sq;
       d.innerHTML = '<div class="tb-hl tb-cur"></div><div class="tb-hl tb-pl"></div><div class="tb-rd"><i class="m"></i><i class="n"></i><i class="e"></i><i class="s"></i><i class="w"></i></div>' +
         (dc === 0 ? `<span class="tb-lab tb-lr">${this.M[2] ? FILES[c] : r + 1}</span>` : '') + (dr === 0 ? `<span class="tb-lab tb-lc">${this.M[0] ? FILES[c] : r + 1}</span>` : '');
@@ -256,21 +288,54 @@ export class Board {
       this.pcEls.push(p); pcs.append(p);
     }
     this.boardEl.append(pcs);
+    // the shapes' layer: above the pieces, never in the way of a tap (pointer-events: none, board.css)
+    this.boardEl.insertAdjacentHTML('beforeend', `<svg class="tb-ov" aria-hidden="true" viewBox="0 0 ${n} ${n}"></svg>`);
+    this.ovEl = this.boardEl.lastChild; this._ovHtml = '';
+    this._drawShapes();
+  }
+  _drawShapes() {
+    if (!this.ovEl) return;
+    const html = this.shapesVisible ? shapesSvg(this.shapesList, this.n, this.M) : '';
+    if (html !== this._ovHtml) { this.ovEl.innerHTML = html; this._ovHtml = html; }
   }
 
   // Coordinates doubled and centred (2i − (n−1)) so every turn and mirror stays in integers.
-  _disp(sq) {
-    const h = this.n - 1, [a, b, c, d] = this.M, X = 2 * (sq % this.n) - h, Y = 2 * ((sq / this.n) | 0) - h;
-    return [(a * X + b * Y + h) / 2, (c * X + d * Y + h) / 2];
-  }
+  _disp(sq) { return dispPoint(sq, this.n, this.M); } // (analysis.js: the shapes are placed with the same maths)
   _logical(dc, dr) {
     const h = this.n - 1, [a, b, c, d] = this.M, X = 2 * dc - h, Y = 2 * dr - h;
     return ((b * X + d * Y + h) / 2) * this.n + (a * X + c * Y + h) / 2;
   }
 
-  _show(i, animate = false) {
+  _show(i, animate = false, byHand = false) {
     this.cur = i; this.sel = null; this.peekHl = null;
     this._render(animate);
+    // A move played or appended at the end of the line (animate): its sound. Loads, jumps and restores are silent, and
+    // stop the drops of a move still sounding, unless the position shown is the same (last() after append()).
+    const sn = this.snaps[i], key = sn.g.toTPS();
+    if (animate && i > 0) Board.onPly?.(sn.ptn, sn.smash, { ...sn.land, ...(byHand ? { byHand: true } : {}) }, this);
+    else if (key !== this._shownKey) Board.onCut?.(this);
+    this._shownKey = key;
+  }
+
+  // The pieces of a stack in hand that have landed since the last call: one sound per input, the moment it lands (a
+  // tap, a click, a key). sel.heard is what has sounded, per drop square; a stone taken back off a square (right click)
+  // sounds again when it is set down again. Putting stones back on the origin before leaving it is silent, as are
+  // picking up and cancelling.
+  _landings(sel = this.sel) {
+    if (sel?.t !== 'stack' || sel.path.length < 2) return;
+    const s = this.snaps[this.cur], o = s.st[sel.path[0]], hand = o.slice(o.length - sel.picked), heard = sel.heard || [], out = [];
+    let off = 0;
+    sel.drops.forEach((d, j) => {
+      const prev = Math.min(heard[j] || 0, d);
+      if (d > prev) {
+        const grp = hand.slice(off + prev, off + d), top = grp[grp.length - 1], sq = sel.path[j + 1];
+        const piece = KIND[s.ty[top]] || 'flat', last = j === sel.drops.length - 1;
+        out.push({ piece, onto: prev || s.st[sq].length ? 'piece' : 'board', drop: true, smash: last && sel.flat != null && piece === 'cap' });
+      }
+      off += d;
+    });
+    sel.heard = sel.drops.slice();
+    if (out.length) Board.onLand?.(out, this);
   }
 
   // A number key (or `) pressed while the board is briefly busy (the intro, the reply, the reset after a miss) is
@@ -375,6 +440,11 @@ export class Board {
   _unmovedStack() { return this.sel?.t === 'stack' && this.sel.path.length === 1; }
 
   _squareClick(sq, alt) {
+    const r = this._squareClick1(sq, alt);
+    this._landings();
+    return r;
+  }
+  _squareClick1(sq, alt) {
     if (!this._canInput()) return;
     const v = this._view();
     if (!this._valid(v).has(sq)) {
@@ -469,6 +539,11 @@ export class Board {
   // Number keys, Enter and ` (PTN Ninja's hotkeys). They lift from the stack under the pointer, then drop on the
   // square under the pointer until the first drop, then on the next square along the line. Never place a stone.
   _keyCount(k) {
+    const r = this._keyCount1(k);
+    this._landings();
+    return r;
+  }
+  _keyCount1(k) {
     const sel = this.sel, s = this.snaps[this.cur], g = s.g, n = this.n;
     if (!this._canInput() || this._locked() || sel?.t === 'tray') return false;
     if (!sel) {
@@ -520,10 +595,11 @@ export class Board {
   _finish() {
     const sel = this.sel, g = this.snaps[this.cur].g;
     const ptn = g.moveToPTN({ kind: 'm', sq: sel.path[0], dir: sel.dir, drops: sel.drops });
-    this._commit(ptn);
+    this._landings(sel); // (the last stones, now: the move is complete and plays nothing more)
+    this._commit(ptn, true);
   }
 
-  _commit(ptn) {
+  _commit(ptn, byHand = false) {
     let next;
     try { next = stepSnap(this.snaps[this.cur], this.P, ptn); } catch { this.cancel(); return; }
     // Like PTN Ninja: playing the move that already comes next just steps forward (the rest of the line is
@@ -531,7 +607,7 @@ export class Board {
     if (this.snaps[this.cur + 1]?.ptn === next.ptn) next = this.snaps[this.cur + 1];
     else { this.snaps.length = this.cur + 1; this.snaps.push(next); }
     this.hlSquares = [];
-    this._show(this.cur + 1, true);
+    this._show(this.cur + 1, true, byHand);
     this.onMove?.(next.ptn);
   }
 
@@ -559,6 +635,7 @@ export class Board {
     const w1 = f[1] + Math.max(0, -k), w2 = f[2] + Math.max(0, k), tot = w1 + w2;
     const pct = tot ? Math.min(88, Math.max(12, (100 * w1) / tot)) : 50;
     const [s1, s2] = this.fcEl.children;
+    this._set(this.fcEl, 'tm', turnMark(g), (x) => { this.fcEl.className = 'tb-fc' + (x ? ' tm' + x : ''); });
     this._set(s1, 'w', pct, (x) => { s1.style.width = x + '%'; });
     this._set(s2, 'w', 100 - pct, (x) => { s2.style.width = x + '%'; });
     [[s1, f[1], -k, w1], [s2, f[2], k, w2]].forEach(([el, flats, km, w]) => {
@@ -572,7 +649,7 @@ export class Board {
     const selSqs = this.sel?.t === 'stack' ? this.sel.path : [];
     for (let sq = 0; sq < n * n; sq++) {
       const top = g.top(sq);
-      let cls = 'tb-sq ' + (sq % n % 2 !== ((sq / n) | 0) % 2 ? 'lt' : 'dk');
+      let cls = 'tb-sq';
       if (top >= 0) cls += ' o' + colorOf(top);
       if (hl?.sqs.includes(sq)) cls += ' c' + (hl.prim.includes(sq) ? ' cp' : '');
       const hi = this.hlSquares.indexOf(sq);
@@ -594,16 +671,11 @@ export class Board {
       const stack = st[sq], len = stack.length;
       if (!len) continue;
       const [dc, dr] = this._disp(sq);
-      const over = Math.max(0, len - 10 - n);
       for (let z = 0; z < len; z++) {
-        const id = stack[z], up = v.lifted.has(id), wall = ty[id] === WALL, imm = len - z > n;
-        let y = SP * (z + (up ? GAP : 0));
-        if (len > n && z >= len - n) y -= SP * (len - n);
-        if (wall && len > 1) y -= SP;
-        if (imm) y -= SP * over;
+        const id = stack[z], wall = ty[id] === WALL, { y, imm, ov, z: zi } = stackPiece(len, z, n, wall, v.lifted.has(id));
         onBoard.add(id);
-        this._piece(id, dc * 100, -(dr * 100 + y), 10000 + z + (up ? GAP : 0) - (imm ? over : 0),
-          (wall ? ' S' : ty[id] === CAP ? ' C' : '') + (imm ? ' im' : '') + (z < over ? ' ov' : '') + (id === v.first ? ' fs' : ''));
+        this._piece(id, dc * 100, -(dr * 100 + y), zi,
+          (wall ? ' S' : ty[id] === CAP ? ' C' : '') + (imm ? ' im' : '') + (ov ? ' ov' : '') + (id === v.first ? ' fs' : ''));
       }
       if (sq === this.hover || selSqs.includes(sq)) counts.set(stack[len - 1], len);
     }
@@ -629,6 +701,7 @@ export class Board {
       this._set(c, 't', t > 1 || (t && this.sel) ? String(t) : '', (x) => { c.textContent = x; });
     }
 
+    this._drawShapes();
     if (!anim) { void this.root.offsetWidth; this.root.classList.remove('na'); }
   }
 

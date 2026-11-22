@@ -26,8 +26,8 @@ window.__tinueNinja = (function () {
 if (window.__tinueNinja) document.head.append(Object.assign(document.createElement('link'), { rel: 'preconnect', href: 'https://ptn.ninja' }));</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="board.css?v=1795331497">
-<link rel="stylesheet" href="style.css?v=1795331497">
+<link rel="stylesheet" href="board.css?v=1795338435">
+<link rel="stylesheet" href="style.css?v=1795338435">
 <style>.booting main, .booting .credits { visibility: hidden; }</style>
 <script>setTimeout(() => document.documentElement.classList.remove("booting"), 2000);</script>
 <meta name="googlebot" content="noindex"><meta name="bingbot" content="noindex">
@@ -55,12 +55,13 @@ if (window.__tinueNinja) document.head.append(Object.assign(document.createEleme
       // takes this iframe over and shows it once the puzzle is drawn). Otherwise this does nothing and fetches nothing.
       if (window.__tinueNinja) {
         const b = document.getElementById('board'), f = document.createElement('iframe');
-        b.style.cssText = 'background:#262421;border-radius:var(--corner,6px)'; // placeholder until it's shown
-        f.style.cssText = 'display:block;width:100%;aspect-ratio:1/1.3;border:0;opacity:0';
-        f.allow = 'fullscreen; clipboard-write';
-        // PTN Ninja says it's up once (GAME_STATE), possibly before ninja.js has loaded to hear it
-        addEventListener('message', function up(e) { if (e.source === f.contentWindow && e.data && e.data.action === 'GAME_STATE') { window.__ninjaUp = true; removeEventListener('message', up); } });
-        var src = '&moveNumber=false&unplayedPieces=true&disableStoneCycling=true&showBoardPrefsBtn=false&disableNavigation=true&disablePTN=true&disableText=true&flatCounts=true&turnIndicator=true&gameTimer=false&showHeader=false&showEval=false&showRoads=false&stackCounts=false&notifyGame=false&disableUndo=true&showPTN=false&showText=false&showControls=false&showScrubber=false&animateBoard=true'; // same settings as UI in ninja.js
+        // placeholder until it's shown, in the shape ninja.js gives a 6×6 board (ninja-look.js frameBox; ninja.js redoes
+        // it for the player's look and the puzzle's size before anything shows)
+        b.style.cssText = 'border-radius:var(--corner,6px);background:#262421;aspect-ratio:0.79045;overflow:hidden';
+        f.style.cssText = 'display:block;border:0;background:#262421;width:111.11111%;margin:-7.73119% 0 0 -5.55556%;aspect-ratio:0.78262;opacity:0';
+        // PTN Ninja says it's up once (GAME_STATE), possibly before ninja.js has loaded to hear it: noted on this frame
+        addEventListener('message', function up(e) { if (e.source === f.contentWindow && e.data && e.data.action === 'GAME_STATE') { f.dataset.up = '1'; removeEventListener('message', up); } });
+        var src = '&moveNumber=false&unplayedPieces=true&disableStoneCycling=true&showBoardPrefsBtn=false&disableNavigation=true&disablePTN=true&disableText=true&flatCounts=true&turnIndicator=true&gameTimer=false&showHeader=false&showEval=false&showRoads=false&stackCounts=false&notifyGame=false&disableUndo=true&showPTN=false&showText=false&showControls=false&showScrubber=false&animateBoard=true&showBoardTransformBtn=false'; // same settings as UI in ninja.js
         // The player's PTN Ninja look (Settings page) over them, as ninja-look.js frameParams lays it: only its keys, each
         // value of its form (b: true/false, p: 1 to 10, t: a compressed theme), so nothing else reaches the address.
         try {
@@ -73,6 +74,7 @@ if (window.__tinueNinja) document.head.append(Object.assign(document.createEleme
           });
         } catch (e) {}
         f.src = 'https://ptn.ninja/' + src;
+        f.dataset.t0 = performance.now(); // (ninja.js counts its wait for PTN Ninja from here)
         b.append(f);
       }
     </script>
@@ -118,7 +120,7 @@ if (window.__tinueNinja) document.head.append(Object.assign(document.createEleme
   <p>tinue is free software under the <a href="LICENSE.txt">GNU GPL v3</a>. <a href="https://github.com/iCalculated/blog/tree/main/tinue">Source code</a>.</p>
 </footer>
 
-<script src="config.js?v=1795331497"></script>
-<script type="module" src="app.js?v=1795331497"></script>
+<script src="config.js?v=1795338435"></script>
+<script type="module" src="app.js?v=1795338435"></script>
 </body>
 </html>
