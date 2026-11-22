@@ -532,6 +532,14 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 #rush-board-wrap { transition: opacity var(--rush-base) var(--rush-ease); }
 #rush-board-wrap.rush-over { opacity: .55; }
 #rush-board-wrap.rush-over.miss .tb { --pri: #ff9a90; } /* (the last move's thread in board.css --mk-bad's red) */
+/* Rush on PTN Ninja's board (ninja.js borrow): the page's one frame stays in the puzzle page's #board (moving an iframe
+   reloads it) and is laid over Rush's board. Meanwhile the puzzle page is laid out but takes no room and shows nothing
+   (display:none would stop the frame drawing), and the frame's ancestors there are static, so it is placed against the
+   page. tinue's board stays under the frame, out of sight, keeping the box the frame fills. */
+#view-puzzle.hidden.lend { display: block !important; visibility: hidden; height: 0; min-height: 0; overflow: hidden; margin: 0; padding: 0; border: 0; }
+#view-puzzle.lend #board-wrap, #view-puzzle.lend #board, #view-puzzle.lend .board-col { position: static !important; }
+#rush-board.lent { background: #262421; border-radius: var(--corner, 6px); }
+#rush-board.lent > * { visibility: hidden; }
 @media (max-width: 600px) {
   .rush-page { margin-top: 8px; padding: 0 8px; }
   .rush-modes, .rush-boards { grid-template-columns: 1fr; }

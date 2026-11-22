@@ -1,6 +1,6 @@
 // The analysis page's pure parts (after a puzzle): no DOM, no engines, so scripts/test-analysis.mjs runs them in node.
 // solverLines runs in the tactics worker (public/engine-worker.js, engine.lines) and in tests.
-import { Game, winningMoves, DIRS, WALL, CAP, typeOf } from './shared/tak.js?v=1795344949';
+import { Game, winningMoves, DIRS, WALL, CAP, typeOf } from './shared/tak.js?v=1795367575';
 
 // A link that opens a line in PTN Ninja: the PTN, lz-string compressed (compressToEncodedURIComponent, passed in so
 // the compressor loads only when a link is shown), at `ply` plies shown (0: the start, so no ply parameter), with an
@@ -18,12 +18,21 @@ function immediateWins(g, road = false) {
   return out;
 }
 
+// Placements: one per square, the flat if it is there, else the wall, else the capstone (in the order given otherwise).
+const PLACE = /^[SC]?[a-z][1-9]$/;
+function onePerSquare(moves) {
+  const rk = (m) => (m[0] === 'S' ? 1 : m[0] === 'C' ? 2 : 0), sq = (m) => m.replace(/^[SC]/, ''), pick = new Map();
+  for (const m of moves) if (PLACE.test(m) && !(pick.has(sq(m)) && rk(pick.get(sq(m))) <= rk(m))) pick.set(sq(m), m);
+  return moves.filter((m) => !PLACE.test(m) || pick.get(sq(m)) === m);
+}
+
 // What our own solver knows about a position (every size; exact within its plies), for the analysis panel:
 //   wins1:   moves that win at once (canonical PTN)
 //   wins3:   moves that force a win in 3 plies (win in 2 moves) and don't win at once; null when the search ran out of
 //            `budget` nodes (partial: true)
 //   threats: the moves the side NOT to move would win with at once if it were its turn (a road threat: "Tak"), one per
-//            square for placements (a capstone there wins only where a flat does, so 'Cf1' is left out beside 'f1')
+//            square for placements: a flat rather than a capstone or a wall there ('Cf1' beside 'f1' is the same road; a
+//            wall makes no road but fills the board as well as a flat does, so 'Sd1' beside 'd1' is the same flat win)
 //   tinue:   the side to move can't win at once and every move it has leaves a road win (exact, 2 plies): a forced win
 //            on flats (the board filling, the last stone) is a threat to win, not tinuë
 //   pinned:  for each move asked about (as given): 'win1' | 'win3' | 'no3' (no win within 3 plies) | '?' (unknown:
@@ -41,7 +50,7 @@ export function solverLines(g, { budget = 3e5, pinned = [] } = {}) {
   }
   const me = g.toMove, them = 3 - me;
   const h = g.clone(); h.toMove = them;
-  const all = immediateWins(h), threats = all.filter((m) => !(m[0] === 'C' && all.includes(m.slice(1))));
+  const all = immediateWins(h), threats = onePerSquare(all);
   let tinue = !wins1.length && immediateWins(h, true).length > 0;
   if (tinue) for (const m of g.legalMoves()) {
     const u = g.apply(m);
@@ -123,6 +132,37 @@ export function evalLabel(ev) {
   return '…';
 }
 
+// The chip's words spoken for the side ahead (the header speaks in colours too, so a chip never says "1%" under
+// "White 99%"): { text, side: 1 | 2 (whose colour the chip is filled with) | 0 (nobody ahead, or nothing known) }.
+// mover: the side to move at the position shown (ev is its view).
+export function chipLabel(ev, mover) {
+  if (!ev) return { text: '…', side: 0 };
+  if (ev.kind === 'win') return { text: `wins in ${ev.n}`, side: mover };
+  if (ev.kind === 'loss') return { text: ev.n ? `wins in ${ev.n}` : 'wins', side: 3 - mover };
+  if (ev.kind === 'prob') {
+    const w = mover === 1 ? ev.p : 1 - ev.p;
+    return Math.abs(w - 0.5) < 0.05 ? { text: 'even', side: 0 } : { text: `${Math.round(Math.max(w, 1 - w) * 100)}%`, side: w > 0.5 ? 1 : 2 };
+  }
+  if (ev.kind === 'nowin') return { text: `no win ≤${ev.n ?? 2}`, side: 0 };
+  return { text: '…', side: 0 };
+}
+
+// A line's moves with their numbers, as the move list writes them: "25." before White's move, "25…" only when the line
+// opens on Black's. ply: the plies played before the line's first move (Game.ply). [{ num: '25.' | '25…' | '', ptn }]
+export function numberedPV(pv, ply) {
+  return (pv || []).map((ptn, k) => {
+    const p = ply + k, n = Math.floor(p / 2) + 1;
+    return { num: p % 2 === 0 ? `${n}.` : k === 0 ? `${n}…` : '', ptn };
+  });
+}
+// A move's parts, for a quiet colouring: [{ t: text, c: 'n' (count, drops) | 'q' (square) | 'd' (direction) | 'k'
+// (S, C, the smash's *) }]. Anything that doesn't parse is one plain part.
+export function ptnParts(ptn) {
+  const m = /^([1-9]?)([SC]?)([a-z][1-9])([<>+-]?)([1-9]*)(\*?)$/.exec(ptn || '');
+  if (!m) return [{ t: ptn || '', c: 'q' }];
+  return [[m[1], 'n'], [m[2], 'k'], [m[3], 'q'], [m[4], 'd'], [m[5], 'n'], [m[6], 'k']].filter(([t]) => t).map(([t, c]) => ({ t, c }));
+}
+
 // Ordering: wins (fewest moves; proven first on a tie) > chances (highest first) > "no win ≤N" > losses (longest first)
 // > not searched yet. Lines that tie keep the order they came in (the engine's). A chance ranks by l.rp when set
 // (mergeLines: one search's lines keep the engine's order).
@@ -182,11 +222,27 @@ export function mergeLines(lines, solver, pinned = [], cap = 3, canon = (m) => m
     if (p.tags?.includes('played') && !at.has(key(p.move))) continue; // the game's move: a tag on a line, never a line of its own
     add(l);
   }
+  // A capstone and a flat on one square with the same proven result are one row (Cc3 beside c3, both "wins in 2"): the
+  // one a pin is on (the puzzle's move, yours), else the flat, with the other's tags.
+  for (const c of [...out]) {
+    if (c.move?.[0] !== 'C') continue;
+    const f = at.get(key(c.move.slice(1)));
+    if (!f || !sameProof(c.ev, f.ev)) continue;
+    const [keep, drop] = c.tags.some((t) => PINS.includes(t)) && !f.tags.some((t) => PINS.includes(t)) ? [c, f] : [f, c];
+    for (const t of drop.tags) if (!keep.tags.includes(t)) keep.tags.push(t);
+    out.splice(out.indexOf(drop), 1);
+  }
   const sorted = out.sort(cmp);
   const kept = sorted.slice(0, cap);
-  for (const l of sorted.slice(cap)) if (kept.length < cap + 2 && l.tags.some((t) => PINS.includes(t))) kept.push(l);
+  // past `cap`: the puzzle's move, and one of yours (the first by rank), never more
+  let yours = kept.some((l) => l.tags.includes('yours'));
+  for (const l of sorted.slice(cap)) {
+    if (l.tags.includes('puzzle')) kept.push(l);
+    else if (l.tags.includes('yours') && !yours) { kept.push(l); yours = true; }
+  }
   return kept;
 }
+const sameProof = (a, b) => !!a?.proven && !!b?.proven && a.kind === b.kind && (a.kind === 'win' || a.kind === 'loss') && a.n === b.n;
 // Whether `a` says more than `b` about a move: a proof beats an opinion; between proofs the shorter win.
 function better(a, b) {
   if (!a || a.kind === 'pending') return false;
@@ -284,28 +340,50 @@ export function stackPiece(len, z, n, wall = false, up = false) {
   return { y, imm, ov: z < over, z: 10000 + z + (up ? GAP : 0) - (imm ? over : 0) };
 }
 
-// SVG markup for a viewBox of 0 0 n n (one unit a square, y down) over the board. list: [{ shape (moveShape), role:
-// 'best' | 'alt' | 'yours' | 'threat', color: 1 | 2 (whose stone a placement would be) }]. Drawn bottom to top:
-// threats, other lines, yours, line 1. A placement is a ring and a faint ghost of the stone; a spread an arrow from
-// the stack to its last drop square, with the number carried at its tail, and a count on each drop square when the
-// stones are split over more than one (3d3>12 and 3d3>21 differ only there); a smash is a bar across the head.
-// Colours and strengths are board.css's (.tb-ov). The Rush end screen's pictures (rush-look.js) add two roles drawn as
-// strongly as line 1: 'bad', the move played when it was wrong (red), under 'good', the puzzle's move (green); there
-// two moves can share a square or a line, so an item may carry r (a placement ring's radius, .42 unless given), shift
-// (a spread's arrow moved sideways by that much of a square, so two along one line both show) and lead (the count of
-// stones carried moved that far along its own arrow, so two spreads off one stack each show theirs).
-const ORDER = { threat: 0, alt: 1, yours: 2, bad: 3, best: 4, good: 4 };
+// SVG markup for a viewBox of 0 0 n n (one unit a square, y down) over the board. list: [{ shape (moveShape), role,
+// color: 1 | 2 (whose stone a placement would be) }]. A placement is a ring and a faint ghost of the stone; a spread an
+// arrow from the stack to its last drop square, with the number carried at its tail, and a count on each drop square
+// when the stones are split over more than one (3d3>12 and 3d3>21 differ only there); a smash is a bar across the head.
+// Colours and strengths are board.css's (.tb-ov).
+// The analysis page's roles (app.js paintShapes), drawn bottom to top: 'alt' (the line selected below line 1), 'yours'
+// (your move, selected), 'best' (line 1), then the opponent's threats on top of them all, thin, so the threat a move
+// blocks is never hidden under that move's own ring or arrow. Each of these marks is drawn over a dark casing (.cs), so
+// it reads on the cloth and across a cream stone alike. A threat is a small ring inside the square it wins on (inside an
+// engine ring, which is larger), one ring per square however many threats end there, and a spread's threat an arrow
+// that stops at that ring, so three threats into one square read as one target with tails. The stones an analysis
+// line's spread carries and drops (its count discs) are drawn last of all (.lb), so no threat covers a count.
+// The Rush end screen's pictures (rush-look.js) add two roles drawn as strongly as line 1, without casings: 'bad', the
+// move played when it was wrong (red), under 'good', the puzzle's move (green); there two moves can share a square or a
+// line, so an item may carry r (a placement ring's radius, .42 unless given; paintShapes uses it too, for a selected
+// line placing on line 1's square), shift (a spread's arrow moved sideways by that much of a square, so two along one
+// line both show) and lead (the count of stones carried moved that far along its own arrow, so two spreads off one
+// stack each show theirs).
+const ORDER = { alt: 1, yours: 2, bad: 3, best: 4, good: 4, threat: 5 };
 const STRONG = new Set(['best', 'good', 'bad']);
+const CASED = { best: 0.07, alt: 0.055, yours: 0.06, threat: 0.045 }; // (the ring's stroke width, for the roles with a casing)
+// Ring radii, so that rings on one square never share a band (radius ± (stroke + casing) / 2): line 1's .42 (.36-.48),
+// a selected line placing on line 1's square inset at ALT_IN (.26-.36), a threat on an empty square THREAT_R (.15-.25,
+// over the ghost stone). A threat that ends on a stone rings it from outside, THREAT_ON (.35-.45: past a flat's rounded
+// corners, ~.34 from the centre, so a flat never reads as a capstone); no engine ring can be on an occupied square.
+export const THREAT_R = 0.2, THREAT_ON = 0.4, ALT_IN = 0.31, CASE_W = 0.05;
 const f2 = (x) => +x.toFixed(3);
 export function shapesSvg(list, n, M) {
   const at = (sq) => { const [dc, dr] = dispPoint(sq, n, M); return [dc + 0.5, n - 1 - dr + 0.5]; };
-  const out = [];
-  for (const { shape: s, role = 'alt', color = 1, r = 0.42, shift = 0, lead = 0 } of [...(list || [])].filter((x) => x?.shape).sort((a, b) => (ORDER[a.role] ?? 1) - (ORDER[b.role] ?? 1))) {
-    const strong = STRONG.has(role), thin = role === 'threat';
-    let g = '';
+  const out = [], ringed = new Set(), labels = [];
+  for (const { shape: s, role = 'alt', color = 1, r: r0, shift = 0, lead = 0 } of [...(list || [])].filter((x) => x?.shape).sort((a, b) => (ORDER[a.role] ?? 1) - (ORDER[b.role] ?? 1))) {
+    const strong = STRONG.has(role), thin = role === 'threat', rw = CASED[role], cased = rw != null;
+    const r = r0 ?? (thin ? THREAT_R : 0.42);
+    let g = '', cs = '', lb = '';
+    // a ring: cased, its width inline (board.css's .rg width is for the Rush roles)
+    const ring = (x, y) => {
+      if (!cased) return `<circle class="rg" cx="${x}" cy="${y}" r="${r}"/>`;
+      cs += `<circle class="cs" cx="${x}" cy="${y}" r="${r}" style="stroke-width:${f2(rw + CASE_W)}"/>`;
+      return `<circle class="rg" cx="${x}" cy="${y}" r="${r}" style="stroke-width:${rw}"/>`;
+    };
     if (s.kind === 'place') {
       const [x, y] = at(s.sq);
-      g += `<circle class="rg" cx="${x}" cy="${y}" r="${r}"/>`;
+      if (!thin) g += ring(x, y);
+      else if (!ringed.has(s.sq)) { ringed.add(s.sq); g += ring(x, y); }
       if (!thin) {
         if (s.type === 'C') g += `<circle class="gh p${color}" cx="${x}" cy="${y}" r=".25"/>`;
         else if (s.type === 'S') g += `<rect class="gh p${color}" x="${f2(x - 0.094)}" y="${f2(y - 0.25)}" width=".19" height=".5" rx=".04" transform="rotate(${color === 1 ? -45 : 45} ${x} ${y})"/>`;
@@ -315,30 +393,43 @@ export function shapesSvg(list, n, M) {
       let [x0, y0] = at(s.from), [x1, y1] = at(s.to);
       const len = Math.hypot(x1 - x0, y1 - y0), ux = (x1 - x0) / len, uy = (y1 - y0) / len, px = -uy, py = ux;
       if (shift) { x0 += px * shift; y0 += py * shift; x1 += px * shift; y1 += py * shift; }
-      const w = thin ? 0.07 : strong ? 0.16 : 0.09, hl = thin ? 0.24 : strong ? 0.34 : 0.26, hw = thin ? 0.15 : strong ? 0.27 : 0.19;
-      const tx = x1 + ux * 0.12, ty = y1 + uy * 0.12, bx = tx - ux * hl, by = ty - uy * hl;
-      g += `<line class="sf" x1="${f2(x0)}" y1="${f2(y0)}" x2="${f2(bx + ux * 0.02)}" y2="${f2(by + uy * 0.02)}" stroke-width="${w}"/>`;
-      g += `<polygon class="hd" points="${f2(tx)},${f2(ty)} ${f2(bx + px * hw)},${f2(by + py * hw)} ${f2(bx - px * hw)},${f2(by - py * hw)}"/>`;
-      if (s.smash) g += `<line class="sm" x1="${f2(tx + ux * 0.04 + px * 0.3)}" y1="${f2(ty + uy * 0.04 + py * 0.3)}" x2="${f2(tx + ux * 0.04 - px * 0.3)}" y2="${f2(ty + uy * 0.04 - py * 0.3)}"/>`;
+      const w = thin ? 0.07 : strong ? 0.16 : 0.09, hl = thin ? 0.22 : strong ? 0.34 : 0.26, hw = thin ? 0.14 : strong ? 0.27 : 0.19;
+      // (a threat's head stops at its target's ring; the others' tip .12 past the target's centre)
+      const tx = thin ? x1 - ux * (r + 0.02) : x1 + ux * 0.12, ty = thin ? y1 - uy * (r + 0.02) : y1 + uy * 0.12, bx = tx - ux * hl, by = ty - uy * hl;
+      if (thin && !ringed.has(s.to)) { ringed.add(s.to); g += ring(x1, y1); }
+      const shaft = `x1="${f2(x0)}" y1="${f2(y0)}" x2="${f2(bx + ux * 0.02)}" y2="${f2(by + uy * 0.02)}"`;
+      const head = `points="${f2(tx)},${f2(ty)} ${f2(bx + px * hw)},${f2(by + py * hw)} ${f2(bx - px * hw)},${f2(by - py * hw)}"`;
+      const bar = `x1="${f2(tx + ux * 0.04 + px * 0.3)}" y1="${f2(ty + uy * 0.04 + py * 0.3)}" x2="${f2(tx + ux * 0.04 - px * 0.3)}" y2="${f2(ty + uy * 0.04 - py * 0.3)}"`;
+      if (cased) {
+        cs += `<line class="cs" ${shaft} stroke-width="${f2(w + CASE_W)}"/><polygon class="cs" ${head} stroke-width="${CASE_W}"/>`;
+        if (s.smash) cs += `<line class="cs" ${bar} stroke-width="${f2(0.08 + CASE_W)}"/>`;
+      }
+      g += `<line class="sf" ${shaft} stroke-width="${w}"/>`;
+      g += `<polygon class="hd" ${head}/>`;
+      if (s.smash) g += `<line class="sm" ${bar}/>`;
       const cx0 = x0 + ux * lead, cy0 = y0 + uy * lead;
-      if (!thin && s.carry > 1) g += `<circle class="dc" cx="${f2(cx0)}" cy="${f2(cy0)}" r=".17"/><text x="${f2(cx0)}" y="${f2(cy0)}">${s.carry}</text>`;
+      // (the counts of an analysis line go on a layer of their own over the threats, so a threat ring never hides one)
+      const put = (m) => { if (cased) lb += m; else g += m; };
+      if (!thin && s.carry > 1) put(`<circle class="dc" cx="${f2(cx0)}" cy="${f2(cy0)}" r=".17"/><text x="${f2(cx0)}" y="${f2(cy0)}">${s.carry}</text>`);
       if (!thin && s.drops.length > 1) for (const { sq, k } of s.drops) {
-        const [x, y] = at(sq), cx = x + px * 0.3, cy = y + py * 0.3;
-        g += `<circle class="dd" cx="${f2(cx)}" cy="${f2(cy)}" r=".14"/><text x="${f2(cx)}" y="${f2(cy)}">${k}</text>`;
+        // (an analysis line's drop counts follow its shift, so two collinear lines' counts sit apart)
+        const [x, y] = at(sq), o = 0.3 + (cased ? 2 * shift : 0), cx = x + px * o, cy = y + py * o;
+        put(`<circle class="dd" cx="${f2(cx)}" cy="${f2(cy)}" r=".14"/><text x="${f2(cx)}" y="${f2(cy)}">${k}</text>`);
       }
     }
-    out.push(`<g class="sh ${role}">${g}</g>`);
+    out.push(`<g class="sh ${role}">${cs}${g}</g>`);
+    if (lb) labels.push(`<g class="sh lb ${role}">${lb}</g>`);
   }
-  return out.join('');
+  return out.join('') + labels.join('');
 }
 
-// The opponent's threats as shown: one per square for placements (solverLines already) and one per stack and
+// The opponent's threats as shown: one per square for placements (the flat; solverLines already) and one per stack and
 // direction for spreads (2f6<, 3f6<12, f6< ... are one threat: that stack going left), the one carrying fewest stones.
 export function threatGroups(threats, n) {
   const out = new Map(), g = new Game(n);
   for (const t of threats || []) {
     let k = t, w = 0;
-    try { const mv = g.parseMove(t); if (mv.kind === 'm') { k = mv.sq + mv.dir; w = mv.drops.reduce((a, b) => a + b, 0) * 10 + mv.drops.length; } } catch {}
+    try { const mv = g.parseMove(t); if (mv.kind === 'm') { k = mv.sq + mv.dir; w = mv.drops.reduce((a, b) => a + b, 0) * 10 + mv.drops.length; } else { k = 'p' + mv.sq; w = mv.type === WALL ? 1 : mv.type === CAP ? 2 : 0; } } catch {}
     const have = out.get(k);
     if (!have || w < have.w) out.set(k, { t, w });
   }

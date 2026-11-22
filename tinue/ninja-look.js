@@ -9,7 +9,7 @@
 // name and targetBranch are lz-string compressed; theme is a built-in theme's id or a theme as JSON, either one usually
 // lz-string compressed (its own Share links compress even an id), and it falls back to the default when unreadable.
 // The same settings can be sent later as one SET_UI message (README "API"), where theme is an id or a theme object.
-import { compressToEncodedURIComponent as lz, decompressFromEncodedURIComponent as unlz } from './vendor/lz-string.js?v=1795344949';
+import { compressToEncodedURIComponent as lz, decompressFromEncodedURIComponent as unlz } from './vendor/lz-string.js?v=1795367575';
 
 // The settings tinue passes on, with the kind of value each takes (b: true/false, p: a whole number 1 to 10, t: a
 // theme). index.html's early iframe start has the same table (scripts/test-ninja-look.mjs holds them together).
@@ -189,6 +189,14 @@ export function frameBox(look = {}, size = 6) {
   const r = w / h, f = (x) => +x.toFixed(5);
   return { ratio: f(r), host: `aspect-ratio:${f(r)};overflow:hidden`,
     frame: `width:${f(100 / 0.9)}%;margin:${f(-(100 / r) * (SLACK / 0.9 - 1) / 2)}% 0 0 ${f(-100 / 0.9 * 0.05)}%;aspect-ratio:${f(r / SLACK)}` };
+}
+// The same shape as numbers, for a frame laid over a box rather than put in it (Rush, ninja.js borrow): per unit of the
+// board's width, the frame's width and height and where its top left corner sits from the board's. null for 3D.
+export function frameGeom(look = {}, size = 6) {
+  const b = frameBox(look, size);
+  if (!b) return null;
+  const r = b.ratio;
+  return { ratio: r, w: 1 / 0.9, h: SLACK / 0.9 / r, x: -0.05 / 0.9, y: -(1 / r) * (SLACK / 0.9 - 1) / 2 };
 }
 
 // ---- what the Settings page says under the field ----

@@ -209,20 +209,24 @@
   font-size: min(.15em, 15px); color: var(--td); pointer-events: none; }
 .tb-st.p2 + .tb-cnt { color: var(--tl); }
 
-/* the analysis page's shapes (analysis.js shapesSvg, app.js paintShapes): engine lines in blue, distinct from the last
-   move's straw (--pri); yours orange and dashed; the opponent's threats red and thin, under the rest. A layer over the
-   pieces that no tap ever lands on. Light shades, since the cloth is a mid tone (a darker blue, orange or red is the
-   cloth's own luminance): line 1 at .8 3.03:1, yours 2.96:1, threats 2.8:1. */
-.tb { --eng: #9fd0ff; --yours: #ffb36b; --threat: #ff8f85; }
+/* the analysis page's shapes (analysis.js shapesSvg, app.js paintShapes): engine lines in blue (line 1 solid, the
+   selected line dashed), distinct from the last move's straw (--pri); yours orange and dashed; the opponent's threats
+   red and thin, on top of the rest. A layer over the pieces that no tap ever lands on. Every mark at full strength over a dark casing (.cs, drawn under it in the same
+   shape, wider): light shades, since the cloth is a mid tone (a darker blue, orange or red is the cloth's own
+   luminance), and the casing carries them across a cream stone. On the cloth: line 1 3.80:1, yours 3.50:1, threats
+   3.27:1; across a cream stone the casing at .75 (7.1:1 on it), and each mark 4.6:1 or better on its casing. */
+.tb { --eng: #9fd0ff; --yours: #ffb36b; --threat: #ffa59c; --case: #121816; }
 .tb-ov { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; overflow: visible; transition: opacity .12s; }
 .tb-ov .sh { color: var(--eng); fill: currentColor; stroke: currentColor; }
-.tb-ov .best { opacity: .8; }
-.tb-ov .alt { opacity: .4; }
-.tb-ov .yours { color: var(--yours); opacity: .85; }
-.tb-ov .threat { color: var(--threat); opacity: .85; }
+.tb-ov .best { opacity: 1; }
+.tb-ov .alt { opacity: 1; }
+.tb-ov .yours { color: var(--yours); opacity: 1; }
+.tb-ov .threat { color: var(--threat); opacity: 1; }
+.tb-ov .cs { fill: none; stroke: var(--case); stroke-opacity: .75; stroke-linecap: round; stroke-linejoin: round; }
+.tb-ov polygon.cs { fill: var(--case); fill-opacity: .75; }
 .tb-ov .rg { fill: none; stroke-width: .06; }
-.tb-ov .alt .rg, .tb-ov .threat .rg { stroke-width: .045; }
-.tb-ov .yours .rg, .tb-ov .yours .sf { stroke-dasharray: .12 .08; }
+/* (line 1 solid; the line selected beside it, and yours, dashed: which arrow is the engine's best reads at a glance) */
+.tb-ov .yours .rg, .tb-ov .yours .sf, .tb-ov .alt .rg, .tb-ov .alt .sf { stroke-dasharray: .12 .08; }
 .tb-ov .sf { stroke-linecap: round; }
 .tb-ov .hd { stroke: none; }
 .tb-ov .sm { stroke-width: .08; stroke-linecap: round; }
