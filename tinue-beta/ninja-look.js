@@ -9,7 +9,7 @@
 // name and targetBranch are lz-string compressed; theme is a built-in theme's id or a theme as JSON, either one usually
 // lz-string compressed (its own Share links compress even an id), and it falls back to the default when unreadable.
 // The same settings can be sent later as one SET_UI message (README "API"), where theme is an id or a theme object.
-import { compressToEncodedURIComponent as lz, decompressFromEncodedURIComponent as unlz } from './vendor/lz-string.js?v=1795371035';
+import { compressToEncodedURIComponent as lz, decompressFromEncodedURIComponent as unlz } from './vendor/lz-string.js?v=1795386881';
 
 // The settings tinue passes on, with the kind of value each takes (b: true/false, p: a whole number 1 to 10, t: a
 // theme). index.html's early iframe start has the same table (scripts/test-ninja-look.mjs holds them together).
@@ -67,7 +67,7 @@ export function cleanTheme(t) {
 // A theme value as pasted: a built-in id, or an id or JSON, lz-compressed or plain. { id } | { theme } | null.
 function readTheme(v) {
   if (THEMES.includes(v)) return { id: v };
-  if (v.length > MAX) return null;
+  if (v.length > MAX_IN) return null;
   let s = /^[A-Za-z0-9+$ -]+$/.test(v) ? unlz(v) : null;
   if (s && THEMES.includes(s)) return { id: s };
   if (!(s && s.startsWith('{'))) s = v.startsWith('{') ? v : null;
@@ -84,6 +84,14 @@ export function parseLook(input) {
   let s = typeof input === 'string' ? input.trim() : '';
   if (!s) return res;
   if (s.length > MAX_IN) return { ...res, error: 'That is too long to be PTN Ninja settings.' };
+  // A theme on its own, as PTN Ninja's theme editor copies it (JSON), or just a built-in theme's name.
+  if (s.startsWith('{') || THEMES.includes(s.toLowerCase())) {
+    const t = s.startsWith('{') ? readTheme(s) : { id: s.toLowerCase() };
+    if (!t) return { ...res, error: 'That theme could not be read. Copy it again from PTN Ninja’s theme editor.' };
+    res.look.theme = t.id ?? t.theme; res.applied.push('theme');
+    if (encodeLook(res.look).length > MAX) return { ...res, look: {}, applied: [], error: 'That theme is too long to keep.' };
+    return res;
+  }
   // a link: only ptn.ninja's (with or without https://); anything else with a scheme is refused
   if (/^(?:https?:\/\/)?(?:www\.)?ptn\.ninja(?:[/?#]|$)/i.test(s)) {
     let u;

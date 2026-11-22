@@ -6,7 +6,7 @@
 // shapesSvg: a ring and a faint stone for a placement, an arrow with the stones carried for a spread): the move played
 // when it was wrong in red, the puzzle's move in green.
 // Pure (no DOM), so node tests it against the real Board's position: scripts/test-rush-look.mjs.
-import { dispPoint, shapesSvg, stackPiece } from './analysis.js?v=1795371030';
+import { dispPoint, shapesSvg, stackPiece } from './analysis.js?v=1795386876';
 
 const FILES = 'abcdefgh';
 const ID = [1, 0, 0, 1];

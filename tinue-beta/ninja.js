@@ -2,10 +2,10 @@
 // embeds it. Same API as Board (board.js), so app.js doesn't care which one it has. Only loaded via import()
 // when the flag is set: everyone else fetches nothing from here or from ptn.ninja.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1795371035';
-import { parsePTN } from './shared/ptn.js?v=1795371035';
-import { Board, buildPTN, focusedByPointer, landOf } from './board.js?v=1795371035';
-import { frameParams, lookUi, frameBox, frameGeom } from './ninja-look.js?v=1795371035';
+import { Game } from './shared/tak.js?v=1795386881';
+import { parsePTN } from './shared/ptn.js?v=1795386881';
+import { Board, buildPTN, focusedByPointer, landOf } from './board.js?v=1795386881';
+import { frameParams, lookUi, frameBox, frameGeom } from './ninja-look.js?v=1795386881';
 
 const ORIGIN = 'https://ptn.ninja';
 // tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses). The board as
