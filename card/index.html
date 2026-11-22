@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>card</title>
+<meta name="description" content="make a contact card anyone can scan">
+<meta name="theme-color" content="#161616">
+<meta property="og:title" content="card">
+<meta property="og:description" content="a contact card anyone can scan">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #161616; --panel: #1e1e1e; --line: #2e2e2e;
+    --ink: #dcd8cf; --dim: #8a867e; --accent: #9fd6c2; --paper: #f4f1ea;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 "IBM Plex Mono", ui-monospace, Menlo, monospace;
+    min-height: 100dvh;
+  }
+  main {
+    max-width: 440px; margin: 0 auto;
+    padding: max(28px, env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom));
+  }
+  h1 { font-size: 15px; font-weight: 500; margin: 0 0 20px; letter-spacing: .02em; }
+  h1 a { color: var(--dim); text-decoration: none; }
+  h1 span { color: var(--dim); font-weight: 400; }
+  [hidden] { display: none !important; }
+
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  button, .btn {
+    font: inherit; color: var(--ink); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 14px; cursor: pointer; flex: 1 1 auto; text-align: center;
+    text-decoration: none; -webkit-tap-highlight-color: transparent;
+  }
+  button:hover, .btn:hover { border-color: var(--dim); }
+  button:active, .btn:active { transform: translateY(1px); }
+  button.primary { background: var(--accent); color: #10201b; border-color: var(--accent); font-weight: 500; }
+  button:focus-visible, input:focus-visible, textarea:focus-visible, .btn:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 1px;
+  }
+
+  .fields { margin: 18px 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
+  .fields label { display: flex; align-items: baseline; border-top: 1px solid var(--line); }
+  .fields label:first-child { border-top: 0; }
+  .fields span { flex: 0 0 76px; padding: 11px 0 11px 14px; color: var(--dim); font-size: 13px; }
+  .fields input, .fields textarea {
+    flex: 1; min-width: 0; font: inherit; font-size: 16px; color: var(--ink);
+    background: transparent; border: 0; padding: 11px 14px 11px 6px; resize: none;
+  }
+  .fields input::placeholder, .fields textarea::placeholder { color: #55524c; }
+  .fields input:focus, .fields textarea:focus { outline: none; background: #232323; }
+
+  .qr {
+    background: var(--paper); border-radius: 14px; padding: 14px;
+    display: grid; place-items: center; margin: 18px 0 10px;
+  }
+  .qr canvas { width: 100%; height: auto; max-width: 340px; image-rendering: pixelated; display: block; }
+  .qr p { color: #6b675f; margin: 40px 0; font-size: 13px; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-bottom: 10px; }
+  .seg button { border: 0; border-radius: 0; background: transparent; color: var(--dim); padding: 8px; font-size: 13px; }
+  .seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); }
+  .hint { color: var(--dim); font-size: 12.5px; margin: 8px 2px 16px; }
+  .hint a { color: var(--ink); }
+
+  .card { margin: 6px 0 18px; }
+  .card .name { font-size: 26px; line-height: 1.2; font-weight: 500; margin: 0 0 4px; overflow-wrap: anywhere; }
+  .card .sub { color: var(--dim); margin: 0 0 16px; }
+  .card .lines { border-top: 1px solid var(--line); }
+  .card .lines a, .card .lines div {
+    display: flex; gap: 12px; padding: 11px 2px; border-bottom: 1px solid var(--line);
+    color: var(--ink); text-decoration: none; overflow-wrap: anywhere;
+  }
+  .card .lines i { font-style: normal; color: var(--dim); flex: 0 0 52px; font-size: 13px; padding-top: 1px; }
+  .card .lines a:hover b { color: var(--accent); }
+  .card .lines b { font-weight: 400; min-width: 0; white-space: pre-wrap; }
+
+  #toast {
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 13px;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  #toast.on { opacity: 1; }
+  body.drag main { outline: 2px dashed var(--accent); outline-offset: -8px; }
+</style>
+</head>
+<body>
+<main>
+  <!-- make a card -->
+  <section id="edit" hidden>
+    <h1>card <span>· make one anyone can scan</span></h1>
+
+    <div class="row">
+      <button id="pick" hidden>pick from contacts</button>
+      <button id="file">import a .vcf</button>
+      <input id="fileInput" type="file" accept=".vcf,.vcard,text/vcard,text/x-vcard" hidden>
+    </div>
+    <p class="hint" id="importHint">or paste / drop a contact anywhere on this page</p>
+
+    <form class="fields" id="form" autocomplete="on" onsubmit="return false">
+      <label><span>name</span><input name="fn" autocomplete="name" placeholder="ada lovelace" enterkeyhint="next"></label>
+      <label><span>phone</span><input name="tel" type="tel" autocomplete="tel" inputmode="tel" placeholder="+1 555 010 0199" enterkeyhint="next"></label>
+      <label><span>email</span><input name="email" type="email" autocomplete="email" inputmode="email" placeholder="ada@example.com" autocapitalize="off" enterkeyhint="next"></label>
+      <label><span>org</span><input name="org" autocomplete="organization" placeholder="optional" enterkeyhint="next"></label>
+      <label><span>title</span><input name="title" autocomplete="organization-title" placeholder="optional" enterkeyhint="next"></label>
+      <label><span>site</span><input name="url" type="url" autocomplete="url" inputmode="url" placeholder="optional" autocapitalize="off" enterkeyhint="next"></label>
+      <label><span>note</span><textarea name="note" rows="1" placeholder="optional"></textarea></label>
+    </form>
+
+    <div class="seg" role="group" aria-label="what the qr holds">
+      <button data-mode="vcard" aria-pressed="true">qr adds the contact</button>
+      <button data-mode="link" aria-pressed="false">qr opens the card</button>
+    </div>
+    <div class="qr"><canvas id="qrEdit" hidden></canvas><p id="qrEmpty">add a name to get a code</p></div>
+    <p class="hint" id="modeHint"></p>
+
+    <div class="row">
+      <button class="primary" id="open">open my card</button>
+      <button id="shareEdit">share link</button>
+      <button id="saveEdit">save qr</button>
+    </div>
+    <p class="hint">nothing is uploaded. the card lives in the link itself, and this draft is kept only on this device. <a href="#" id="clear">clear</a></p>
+  </section>
+
+  <!-- someone's card -->
+  <section id="view" hidden>
+    <h1><a href="./">card</a></h1>
+    <div class="card">
+      <p class="name" id="vName"></p>
+      <p class="sub" id="vSub"></p>
+      <div class="lines" id="vLines"></div>
+    </div>
+    <div class="row">
+      <button class="primary" id="add">add to contacts</button>
+      <button id="shareView">share</button>
+    </div>
+    <div class="qr"><canvas id="qrView"></canvas></div>
+    <p class="hint">scan to add this contact. <a href="#" id="editCopy">edit</a> · <a href="./">make your own</a></p>
+  </section>
+</main>
+<div id="toast" role="status"></div>
+
+<script src="qrcode.js"></script>
+<script>
+(() => {
+  const FIELDS = ['fn', 'tel', 'email', 'org', 'title', 'url', 'note'];
+  const STORE = 'card.draft', MODE = 'card.mode';
+  const $ = id => document.getElementById(id);
+  const form = $('form');
+  qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+
+  // ---------- data ----------
+  const clean = d => {
+    const o = {};
+    for (const k of FIELDS) { const v = (d[k] || '').trim(); if (v) o[k] = v; }
+    return o;
+  };
+  const list = s => (s || '').split(/[,\n]/).map(x => x.trim()).filter(Boolean);
+  const href = u => /^[a-z][a-z0-9+.-]*:/i.test(u) ? u : 'https://' + u;
+
+  const b64e = s => btoa(String.fromCharCode(...new TextEncoder().encode(s)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const b64d = s => new TextDecoder().decode(Uint8Array.from(
+    atob(s.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)));
+  const encode = d => b64e(JSON.stringify(clean(d)));
+  const decode = h => {
+    try { const o = JSON.parse(b64d(h)); return o && typeof o === 'object' && o.fn ? clean(o) : null; }
+    catch { return null; }
+  };
+  const linkFor = d => location.origin + location.pathname + '#' + encode(d);
+
+  // ---------- vcard ----------
+  const esc = s => s.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/([,;])/g, '\\$1');
+  const unesc = s => s.replace(/\\(.)/g, (_, c) => c === 'n' || c === 'N' ? '\n' : c);
+  const splitUnescaped = (s, ch) => {
+    const out = [''];
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === '\\' && i + 1 < s.length) { out[out.length - 1] += s[i] + s[++i]; }
+      else if (s[i] === ch) out.push('');
+      else out[out.length - 1] += s[i];
+    }
+    return out;
+  };
+
+  function toVCard(d, nl = '\n') {
+    d = clean(d);
+    const parts = (d.fn || '').split(/\s+/);
+    const family = parts.length > 1 ? parts.pop() : '';
+    const L = ['BEGIN:VCARD', 'VERSION:3.0',
+      `N:${esc(family)};${esc(parts.join(' '))};;;`, `FN:${esc(d.fn || '')}`];
+    if (d.org) L.push('ORG:' + esc(d.org));
+    if (d.title) L.push('TITLE:' + esc(d.title));
+    list(d.tel).forEach(t => L.push('TEL;TYPE=CELL:' + t));
+    list(d.email).forEach(e => L.push('EMAIL:' + e));
+    if (d.url) L.push('URL:' + href(d.url));
+    if (d.note) L.push('NOTE:' + esc(d.note));
+    L.push('END:VCARD');
+    return L.join(nl);
+  }
+
+  function parseVCard(text) {
+    const m = /BEGIN:VCARD[\s\S]*?END:VCARD/i.exec(text);
+    if (!m) return null;
+    const d = { tel: [], email: [] }; let n = '';
+    for (const line of m[0].replace(/\r?\n[ \t]/g, '').split(/\r?\n/)) {
+      const p = /^(?:[\w-]+\.)?([\w-]+)((?:;[^:]*)?):(.*)$/.exec(line);
+      if (!p) continue;
+      const key = p[1].toUpperCase(); let v = p[3];
+      if (/QUOTED-PRINTABLE/i.test(p[2])) {
+        try { v = decodeURIComponent(v.replace(/=\s*$/, '').replace(/%/g, '%25').replace(/=([0-9A-F]{2})/gi, '%$1')); } catch {}
+      }
+      if (key === 'FN') d.fn = unesc(v);
+      else if (key === 'N') { const [fam, giv] = splitUnescaped(v, ';').map(unesc); n = [giv, fam].filter(Boolean).join(' '); }
+      else if (key === 'ORG') d.org = d.org || splitUnescaped(v, ';').map(unesc).filter(Boolean).join(', ');
+      else if (key === 'TITLE') d.title = d.title || unesc(v);
+      else if (key === 'TEL') d.tel.push(v.replace(/^tel:/i, ''));
+      else if (key === 'EMAIL') d.email.push(unesc(v));
+      else if (key === 'URL') d.url = d.url || unesc(v);
+      else if (key === 'NOTE') d.note = d.note || unesc(v);
+    }
+    d.fn = d.fn || n || d.org || '';
+    d.tel = [...new Set(d.tel)].join(', '); d.email = [...new Set(d.email)].join(', ');
+    return d.fn || d.tel || d.email ? clean(d) : null;
+  }
+
+  // ---------- qr ----------
+  function drawQR(canvas, text) {
+    let qr;
+    for (const level of ['M', 'L']) {
+      try { qr = qrcode(0, level); qr.addData(text, 'Byte'); qr.make(); break; } catch { qr = null; }
+    }
+    if (!qr) return false;
+    const n = qr.getModuleCount(), quiet = 3, total = n + quiet * 2;
+    const px = Math.max(4, Math.ceil(1024 / total));
+    canvas.width = canvas.height = total * px;
+    const g = canvas.getContext('2d');
+    g.fillStyle = '#f4f1ea'; g.fillRect(0, 0, canvas.width, canvas.height);
+    g.fillStyle = '#161616';
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++)
+      if (qr.isDark(r, c)) g.fillRect((c + quiet) * px, (r + quiet) * px, px, px);
+    return true;
+  }
+
+  // ---------- small helpers ----------
+  let toastT;
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.classList.add('on');
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1800);
+  }
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+    del(k) { try { localStorage.removeItem(k); } catch {} },
+  };
+  const slug = d => (d.fn || 'contact').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '') || 'contact';
+
+  function download(blob, name) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+  }
+  async function share(d) {
+    const url = linkFor(d);
+    if (navigator.share) {
+      try { await navigator.share({ title: d.fn, url }); } catch {}
+      return;
+    }
+    try { await navigator.clipboard.writeText(url); toast('link copied'); }
+    catch { prompt('copy this link', url); }
+  }
+  function saveQR(canvas, d) {
+    canvas.toBlob(async blob => {
+      const file = new File([blob], slug(d) + '-qr.png', { type: 'image/png' });
+      if (matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) {
+        try { await navigator.share({ files: [file] }); return; } catch (e) { if (e.name === 'AbortError') return; }
+      }
+      download(blob, file.name);
+    }, 'image/png');
+  }
+  const addContact = d =>
+    download(new Blob([toVCard(d, '\r\n')], { type: 'text/vcard;charset=utf-8' }), slug(d) + '.vcf');
+
+  // ---------- editor ----------
+  let mode = store.get(MODE) === 'link' ? 'link' : 'vcard';
+  const read = () => clean(Object.fromEntries(FIELDS.map(k => [k, form.elements[k].value])));
+  function fill(d) {
+    for (const k of FIELDS) form.elements[k].value = d[k] || '';
+    grow(); refresh();
+  }
+  function grow() {
+    const t = form.elements.note; t.style.height = 'auto'; t.style.height = t.scrollHeight + 'px';
+  }
+  function refresh() {
+    const d = read(), ok = !!d.fn;
+    store.set(STORE, JSON.stringify(d));
+    document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === mode));
+    const drawn = ok && drawQR($('qrEdit'), mode === 'vcard' ? toVCard(d) : linkFor(d));
+    $('qrEdit').hidden = !drawn; $('qrEmpty').hidden = drawn;
+    $('qrEmpty').textContent = ok ? 'too much text for one code. trim the note?' : 'add a name to get a code';
+    $('modeHint').textContent = mode === 'vcard'
+      ? 'a phone camera offers "add contact" straight from this code. works offline.'
+      : 'this code opens the card page, with one tap to add the contact.';
+    for (const id of ['open', 'shareEdit', 'saveEdit']) $(id).disabled = !ok;
+  }
+  function importText(text) {
+    const d = parseVCard(text || '');
+    if (!d) return false;
+    fill(d); toast('imported ' + (d.fn || 'contact')); return true;
+  }
+  const importFile = async f => { if (f && !importText(await f.text())) toast("couldn't read that as a contact"); };
+
+  function initEdit(seed) {
+    $('view').hidden = true; $('edit').hidden = false; document.title = 'card';
+    let d = seed;
+    if (!d) { try { d = JSON.parse(store.get(STORE) || '{}'); } catch { d = {}; } }
+    fill(d || {});
+  }
+
+  form.addEventListener('input', () => { grow(); refresh(); });
+  document.querySelector('.seg').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    mode = b.dataset.mode; store.set(MODE, mode); refresh();
+  });
+  $('file').onclick = () => $('fileInput').click();
+  $('fileInput').onchange = e => { importFile(e.target.files[0]); e.target.value = ''; };
+  $('open').onclick = () => { location.hash = encode(read()); };
+  $('shareEdit').onclick = () => share(read());
+  $('saveEdit').onclick = () => saveQR($('qrEdit'), read());
+  $('clear').onclick = e => { e.preventDefault(); store.del(STORE); fill({}); };
+
+  // contact picker (android chrome; ios safari behind a flag)
+  if (navigator.contacts && navigator.contacts.select) {
+    $('pick').hidden = false;
+    $('pick').onclick = async () => {
+      try {
+        const want = ['name', 'tel', 'email'];
+        const props = (await navigator.contacts.getProperties()).filter(p => want.includes(p));
+        const [c] = await navigator.contacts.select(props, { multiple: false });
+        if (!c) return;
+        fill({ fn: (c.name || [])[0] || '', tel: (c.tel || []).join(', '), email: (c.email || []).join(', ') });
+      } catch {}
+    };
+  }
+  if (/iPhone|iPad/.test(navigator.userAgent))
+    $('importHint').textContent = 'in contacts: share contact → save to files, then import it here. or paste one.';
+
+  // paste / drop a vcard anywhere
+  document.addEventListener('paste', e => {
+    if ($('edit').hidden) return;
+    const cd = e.clipboardData; if (!cd) return;
+    const f = [...cd.files].find(f => /vcard|\.vcf$/i.test(f.type + f.name));
+    if (f) { e.preventDefault(); importFile(f); return; }
+    const t = cd.getData('text/vcard') || cd.getData('text/plain');
+    if (/BEGIN:VCARD/i.test(t) && importText(t)) e.preventDefault();
+  });
+  let dragN = 0;
+  addEventListener('dragenter', e => { e.preventDefault(); dragN++; document.body.classList.add('drag'); });
+  addEventListener('dragleave', () => { if (--dragN <= 0) { dragN = 0; document.body.classList.remove('drag'); } });
+  addEventListener('dragover', e => e.preventDefault());
+  addEventListener('drop', e => {
+    e.preventDefault(); dragN = 0; document.body.classList.remove('drag');
+    if ($('edit').hidden) return;
+    const f = e.dataTransfer.files[0];
+    if (f) importFile(f); else importText(e.dataTransfer.getData('text/plain'));
+  });
+
+  // ---------- viewer ----------
+  let shown = null;
+  function initView(d) {
+    shown = d;
+    $('edit').hidden = true; $('view').hidden = false; document.title = d.fn + ' · card';
+    $('vName').textContent = d.fn;
+    $('vSub').textContent = [d.title, d.org].filter(Boolean).join(' · ');
+    $('vSub').hidden = !$('vSub').textContent;
+    const lines = $('vLines'); lines.textContent = '';
+    const line = (label, text, url) => {
+      const el = document.createElement(url ? 'a' : 'div');
+      if (url) { el.href = url; if (/^https?:/i.test(url)) { el.target = '_blank'; el.rel = 'noopener noreferrer'; } }
+      const i = document.createElement('i'); i.textContent = label;
+      const b = document.createElement('b'); b.textContent = text;
+      el.append(i, b); lines.append(el);
+    };
+    list(d.tel).forEach(t => line('phone', t, 'tel:' + t.replace(/[^\d+]/g, '')));
+    list(d.email).forEach(e => line('email', e, 'mailto:' + e));
+    if (d.url) { const u = href(d.url); line('site', d.url.replace(/^https?:\/\//i, '').replace(/\/$/, ''), /^https?:/i.test(u) ? u : null); }
+    if (d.note) line('note', d.note);
+    lines.hidden = !lines.children.length;
+    if (!drawQR($('qrView'), toVCard(d))) drawQR($('qrView'), linkFor(d));
+    scrollTo(0, 0);
+  }
+  $('add').onclick = () => addContact(shown);
+  $('shareView').onclick = () => share(shown);
+  $('editCopy').onclick = e => {
+    e.preventDefault(); const d = shown;
+    history.pushState(null, '', location.pathname); initEdit(d);
+  };
+
+  // ---------- route ----------
+  function route() {
+    const d = location.hash.length > 1 ? decode(location.hash.slice(1)) : null;
+    d ? initView(d) : initEdit();
+  }
+  addEventListener('hashchange', route);
+  addEventListener('popstate', route);
+  route();
+})();
+</script>
+</body>
+</html>
