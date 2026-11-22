@@ -15,11 +15,11 @@
   --good: #7fb83a;      /* text on panels 6.5:1 */
   --bad: #ec7a74;       /* text on panels 5.6:1, on bg3 4.9:1 */
   --gold: #d59020;
-  --board-ground: #b58863; /* board.css --b2: the ground between the board's tiles */
-  --p1: #f6f1e7;
-  --p1-edge: #857a69;   /* board.css --p1b: a white stone's outline */
-  --p2: #2f2c29;
-  --p2-edge: #7a7168;   /* board.css --p2b: a black stone's outline */
+  --board-ground: #4a6761; /* board.css --b1: the felt board's cloth */
+  --p1: #ece7db;
+  --p1-edge: #9a948a;   /* board.css --p1b: a white stone's outline */
+  --p2: #151b1a;
+  --p2-edge: #5f6b67;   /* board.css --p2b: a black stone's outline */
 
   --ctl: 34px;          /* height of every button / select / input */
   --r-ctl: 4px;         /* control radius */
@@ -271,7 +271,7 @@ a.tag:hover { border-color: var(--accent); color: var(--fg-hi); }
 .moves .eng .pvm:hover { background: var(--bg4); color: var(--fg-hi); }
 .moves .eng .tag { flex: none; padding: 1px 6px; border-radius: 3px; font: var(--fs-xs)/1.4 "Noto Sans", -apple-system, sans-serif; color: var(--muted); background: var(--bg3); }
 .moves .eng .tag.puzzle { color: var(--good); }
-.moves .eng .tag.yours { color: #e8a25c; } /* board.css --yours, lightened for text: 7:1 on panels */
+.moves .eng .tag.yours { color: #e8a25c; } /* an orange near board.css --yours (the board's lighter shade), for text: 7:1 on panels */
 .moves .threat { margin: 4px 0 0; height: 17px; font: var(--fs-xs)/1.4 "Noto Sans", -apple-system, sans-serif; color: var(--bad); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* one line: its title has it all */
 @media (prefers-reduced-motion: reduce) { .moves .eng .bar i { transition: none; } }
 /* The analysis view off (app.js ANALYSIS, the production build): production's one engine row as it was before the view,
@@ -465,8 +465,8 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .rush-look-txt .bad { color: var(--bad); }
 /* the marks' key: a short bar in each mark's colour (board.css --mk-bad / --mk-good) */
 .rush-key .k { display: inline-block; width: 14px; height: 4px; border-radius: 2px; vertical-align: middle; margin: 0 5px 0 0; }
-.rush-key .k.bad { background: #d32f2f; }
-.rush-key .k.good { background: #2f8f1f; margin-left: 0; }
+.rush-key .k.bad { background: #ff9a90; }
+.rush-key .k.good { background: #a6e88a; margin-left: 0; }
 .rush-key .k.good:not(:first-child) { margin-left: 10px; }
 /* run: clock, score and combo in one row above the board */
 /* the board (with its tray, ~1.24× as tall as wide) and the row above it fit the window's height on a desktop too */
@@ -502,12 +502,11 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 #rush-skip:disabled { background: none; border-color: transparent; color: var(--muted); opacity: 1; }
 #rush-giveup { flex: none; }
 .rush-clock.paused { opacity: .55; } /* (the engine's time: never charged) */
-/* the colour to move, without reading: the stone drawn on a square of the board's ground to the left of the clock,
-   where both stones stand out (white 2.8:1, black 4.4:1; on the board's light tile white is 1.2:1), and the square
-   itself shows on the bar (4.9:1). A new colour to move swells the stone once, inside the square. */
+/* the colour to move, without reading: the stone drawn on a square of the board's cloth to the left of the clock,
+   as it stands on the board (white 5.0:1, black 2.8:1), and the square itself shows on the bar (2.5:1). A new colour to move swells the stone once, inside the square. */
 .rush-turn { flex: none; position: relative; width: 36px; height: 36px; border-radius: 3px; background: var(--board-ground); }
-/* the stone as board.css .tb-st draws a flat: half the square, its outline, 10% corners, a soft shadow */
-.rush-turn i { position: absolute; inset: 25%; box-sizing: border-box; border: 1px solid var(--p1-edge); border-radius: 10%; background: var(--p1); box-shadow: 0 1px 2px #0003; }
+/* the stone as board.css .tb-st draws a flat: about half the square, its outline, 13% corners, a soft shadow */
+.rush-turn i { position: absolute; inset: 24%; box-sizing: border-box; border: 1px solid var(--p1-edge); border-radius: 13%; background: var(--p1); box-shadow: 0 1px 2px #0003; }
 .rush-turn.black i { background: var(--p2); border-color: var(--p2-edge); }
 .rush-turn.sm { display: inline-block; width: 22px; height: 22px; vertical-align: -6px; margin-right: 6px; }
 .rush-turn.flip i { animation: rush-stone var(--rush-base) var(--rush-ease); }
@@ -532,7 +531,7 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 /* the run's end: the board stays a beat, dimmed (a Streak's losing move in red), before the end screen */
 #rush-board-wrap { transition: opacity var(--rush-base) var(--rush-ease); }
 #rush-board-wrap.rush-over { opacity: .55; }
-#rush-board-wrap.rush-over.miss .tb-cur { background: var(--bad-fill); }
+#rush-board-wrap.rush-over.miss .tb { --pri: #ff9a90; } /* (the last move's thread in board.css --mk-bad's red) */
 @media (max-width: 600px) {
   .rush-page { margin-top: 8px; padding: 0 8px; }
   .rush-modes, .rush-boards { grid-template-columns: 1fr; }

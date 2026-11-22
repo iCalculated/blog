@@ -1,12 +1,12 @@
 // The Rush end screen's pictures of a puzzle: a still copy of tinue's board (board.js, board.css) drawn as one string of
 // HTML, so a run of 60 puzzles costs no Board, no key handler and no timer per picture. It draws what the board draws
-// for a position: the plain tiles, the coordinates where the board puts them, every stone of every stack placed
+// for a position: the felt and its seams, the coordinates where the board puts them, every stone of every stack placed
 // by the board's own maths (analysis.js stackPiece: the top n stones up the square, the rest as slivers up its side),
 // the tint on the move that led there, and the two moves that matter as the analysis overlay draws a line (analysis.js
 // shapesSvg: a ring and a faint stone for a placement, an arrow with the stones carried for a spread): the move played
 // when it was wrong in red, the puzzle's move in green.
 // Pure (no DOM), so node tests it against the real Board's position: scripts/test-rush-look.mjs.
-import { dispPoint, shapesSvg, stackPiece } from './analysis.js?v=1795338781';
+import { dispPoint, shapesSvg, stackPiece } from './analysis.js?v=1795344919';
 
 const FILES = 'abcdefgh';
 const ID = [1, 0, 0, 1];
