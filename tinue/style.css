@@ -111,14 +111,16 @@ button.danger { background: var(--bad-fill); border-color: var(--bad-fill); colo
 .ptn-in { width: 100%; margin-top: 8px; font-family: var(--mono); }
 .ptn-in:not(:focus) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
 .ptn-in[aria-invalid="true"] { border-color: var(--bad); }
+.ptn-err { margin: 4px 0 0; color: var(--bad); font-size: var(--fs-xs); }
+.ptn-err:empty, .ptn-in:not(:focus) ~ .ptn-err { display: none; } /* (shown with the box, which hides when it loses focus) */
 
 /* ---------- side panels ---------- */
 /* feedback card: icon | title | the puzzle's actions (Hint / Solution, then Next puzzle), the explanation underneath */
 .feedback { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "icon title act" "icon text text";
   column-gap: 12px; row-gap: 2px; align-items: center; }
 .feedback .icon { grid-area: icon; align-self: start; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; font-weight: 700; }
-.feedback .icon.turn { background: var(--p1); border: 2px solid var(--p1-edge); }
-.feedback .icon.turn.p2 { background: var(--p2); border-color: #9a948c; }
+.feedback .icon.turn { background: var(--p1); border: 2px solid var(--p1-edge); color: var(--p2); } /* (the "…" while checking: the page's grey vanished on White's disc) */
+.feedback .icon.turn.p2 { background: var(--p2); border-color: #9a948c; color: var(--p1); }
 .feedback .icon.good { background: var(--good-fill); color: #fff; }
 .feedback .icon.bad { background: var(--bad-fill); color: #fff; }
 .feedback .body { display: contents; }
@@ -244,7 +246,8 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .glossary dl { display: grid; grid-template-columns: minmax(120px, 180px) 1fr; gap: 10px 20px; background: var(--bg2); border-radius: var(--r-panel); padding: var(--pad) 20px; }
 .glossary dt { color: var(--fg-hi); font-weight: 600; }
 .glossary dd { margin: 0; }
-.glossary dd .practice { font-size: var(--fs-xs); margin-left: 8px; }
+.glossary dd .practice { font-size: var(--fs-xs); white-space: nowrap; }
+.glossary dd .gap { word-spacing: 8px; } /* (the space before Practice: dropped at a line break, as a margin isn't) */
 .flush { margin: 0; }
 .page .panel { margin-top: 8px; }
 .credits { max-width: 640px; margin: 40px auto 0; padding: 16px 16px 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--fs-xs); line-height: 1.6; text-align: center; text-wrap: balance; }
@@ -481,7 +484,7 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
   .rush-clock { font-size: 24px; }
   .rush-score b { font-size: 24px; }
   .rush-clock:not(.hidden) + .rush-score b { font-size: 20px; }
-  table.t.rush-list td, table.t.rush-list th { padding: 7px 10px; }
+  table.t.rush-list td, table.t.rush-list th, table.t.hist td, table.t.hist th { padding: 7px 10px; }
   .rush-mini { width: min(100%, 280px); }
 }
 /* A narrow bar, by its own width: a phone's, and a desktop's in a short window (the board, and the bar with it, takes

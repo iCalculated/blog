@@ -5,16 +5,16 @@
 // engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused while they work. Nothing here is rated,
 // and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { Board, buildPTN } from './board.js?v=1795304211';
-import { api, store, token } from './api.js?v=1795304211';
-import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795304211';
-import * as R from './rush-rules.js?v=1795304211';
-import * as engine from './engine.js?v=1795304211';
-import * as tiltak from './tiltak.js?v=1795304211';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795304211';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795304211';
-import { busy, BUSY_MS } from './busy.js?v=1795304211';
-import * as SYM from './shared/sym.js?v=1795304211';
+import { Board, buildPTN } from './board.js?v=1795308640';
+import { api, store, token } from './api.js?v=1795308640';
+import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795308640';
+import * as R from './rush-rules.js?v=1795308640';
+import * as engine from './engine.js?v=1795308640';
+import * as tiltak from './tiltak.js?v=1795308640';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795308640';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795308640';
+import { busy, BUSY_MS } from './busy.js?v=1795308640';
+import * as SYM from './shared/sym.js?v=1795308640';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -841,7 +841,7 @@ async function endRun(wrong = null, played = false) {
 // The end screen for a run: s, the run just played (Play again, its best and the post's answer to come), or null for
 // one from the recent runs (when it was played, Back only; at, its row there, which Back gives the focus to).
 function showEnd(rec, s, at = null) {
-  const sum = rec.sum, mode = rec.mode, played = sum.clockMs ?? sum.ms; // (time on the clock: the engine's pauses aren't the player's)
+  const sum = rec.sum, mode = rec.mode, played = R.timePlayed(rec); // (the engine's pauses aren't the player's)
   section('rush-end');
   const stats = mode === 'rush'
     ? [['Moves', sum.moves], ['Accuracy', pct(sum.accuracy)], ['Best combo', sum.bestCombo],
@@ -925,7 +925,7 @@ async function showBest(r, mode, s, out = null) {
   const nb = r?.newBest, el = $('#rush-newbest');
   // a best is gold; where the run went is plain news (kept for later) or a failure (red), never gold
   el.className = 'rush-newbest' + (!nb && (out === 'keep' || out === 'left') ? ' rush-when' : !nb && out === 'drop' ? ' bad' : '');
-  el.textContent = nb === 'all' ? 'New best score!' : nb === 'week' ? 'Your best this week!' : nb === 'today' ? 'Your best today!' : out === 'keep' ? 'Saved here. Will send when online.' : out === 'drop' ? 'Couldn’t send this run.' : out === 'left' ? 'Saved as left unfinished.' : '';
+  el.textContent = nb ? R.newBestText(nb) : out === 'keep' ? 'Saved here. Will send when online.' : out === 'drop' ? 'Couldn’t send this run.' : out === 'left' ? 'Saved as left unfinished.' : '';
 }
 
 // Another page: a run in progress ends here, posted as abandoned once a move was made (see abandon).

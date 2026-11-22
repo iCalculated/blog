@@ -2,10 +2,10 @@
 // judging a move by the puzzle's line, where an off-line move goes next (the puzzle page's adjudication: route,
 // playOutOutcome), the clock and its pauses, the combo and its time bonuses, and the end-of-run numbers.
 // public/rush.js owns the screen and the engines and calls these with the time it read.
-import { Game, colorOf, typeOf } from './shared/tak.js?v=1795304211';
-import { finalSquare } from './settings.js?v=1795304211';
-import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795304211';
-import * as SYM from './shared/sym.js?v=1795304211';
+import { Game, colorOf, typeOf } from './shared/tak.js?v=1795308640';
+import { finalSquare } from './settings.js?v=1795308640';
+import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795308640';
+import * as SYM from './shared/sym.js?v=1795308640';
 
 export const SIZE = 6; // Rush and Streak are 6×6 only (server/rush.js refuses any other size)
 export const RUSH_MS = 180e3; // 3:00
@@ -254,6 +254,13 @@ export function summary(run) {
     highest: solved.length ? Math.max(...solved.map((r) => r.rating)) : null,
   };
 }
+// Time played as the end screen shows it. Rush: the clock, which starts at the first move. Streak has no clock, so the
+// clock's start would leave out the thinking before the first move: its time is the puzzles' own (the list under it),
+// less the engine's pauses, which are never the player's.
+export function timePlayed(rec) {
+  const s = rec.sum, clock = s.clockMs ?? s.ms;
+  return rec.mode === 'rush' ? clock : Math.max(0, rec.puzzles.reduce((t, p) => t + p.ms, 0) - (s.ms - clock));
+}
 // Moves are posted in the puzzle's own orientation (sym: the symmetry it was shown under, shared/sym.js), so rows from
 // different runs line up; the player saw them turned. paused: the run's engine time, never on its clock.
 export function resultBody(run, build = 0, env = null) {
@@ -428,6 +435,8 @@ export function whenText(t, now = Date.now(), locale = undefined) {
   return d.toLocaleString(locale, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
     ...(d.getFullYear() !== n.getFullYear() ? { year: 'numeric' } : {}) });
 }
+// The end screen's line for a new best (the post's newBest): plain, and no "score", which Streak doesn't have.
+export const newBestText = (nb) => ({ all: 'New all-time best', week: 'New best this week', today: 'New best today' })[nb] ?? '';
 // A recent-runs row as a screen reader says it (the row itself shows the same in columns).
 export function recentLabel(rec, when) {
   if (rec.mode !== 'rush') return `Streak, ${rec.score}, ${when}`;

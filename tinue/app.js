@@ -1,20 +1,21 @@
-import { Game } from './shared/tak.js?v=1795304211';
-import { unplayedPlies } from './shared/ptn.js?v=1795304211';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795304211';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795304211';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795304211';
-import * as engine from './engine.js?v=1795304211';
-import { showLineOn } from './lines.js?v=1795304211';
-import * as tiltak from './tiltak.js?v=1795304211';
-import * as syntaks from './syntaks.js?v=1795304211';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795304211';
-import { createNext } from './next.js?v=1795304211';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795304211';
-import { createOutbox } from './outbox.js?v=1795304211';
-import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795304211';
-import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795304211';
-import * as defend from './defend.js?v=1795304211';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795304211';
+import { Game } from './shared/tak.js?v=1795308640';
+import { unplayedPlies } from './shared/ptn.js?v=1795308640';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795308640';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795308640';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795308640';
+import * as engine from './engine.js?v=1795308640';
+import { showLineOn } from './lines.js?v=1795308640';
+import * as tiltak from './tiltak.js?v=1795308640';
+import * as syntaks from './syntaks.js?v=1795308640';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795308640';
+import { createNext } from './next.js?v=1795308640';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795308640';
+import { createOutbox } from './outbox.js?v=1795308640';
+import { boardFrom, confirmOn, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795308640';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795308640';
+import * as defend from './defend.js?v=1795308640';
+import { whenText } from './rush-rules.js?v=1795308640';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795308640';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -144,7 +145,7 @@ const guestId = () => {
 // PTN Ninja in an iframe instead of tinue's board (same API), by the Board style setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795304211')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
+const board = NINJA ? new (await import('./ninja.js?v=1795308640')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn) })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
 board.ui({ disableBoard: true }); // no input until a puzzle is loaded
 let S = null; // current puzzle state
@@ -156,11 +157,19 @@ function renderUser() {
   store.set('me', me ? { name: me.name } : null); // a guest is { name: null }
   if (me) { store.set('myRating', me.rating); store.set('myProv', !!me.provisional); } // shown before /api/me answers next time
   if (me?.name) {
-    // Name with a small menu on hover/focus: History, Log out (with an inline confirm).
+    // Name with a small menu on hover/focus: History, Sign out (with an inline confirm).
     box.innerHTML = `<div class="menu"><button class="link name" aria-haspopup="true">${esc(me.name)}</button>
-      <div class="pop" role="menu"><a href="#/me" role="menuitem">History</a><button class="link" id="logout" role="menuitem">Log out</button>
-        <div class="confirm hidden" id="logout-confirm"><p>You’ll need your login token (on your History page) to sign back in on this device.</p><button class="danger" id="logout-yes">Log out</button></div></div></div>`;
-    $('#logout').onclick = () => { $('#logout-confirm').classList.remove('hidden'); $('#logout').classList.add('hidden'); };
+      <div class="pop" role="menu"><a href="#/me" role="menuitem">History</a><button class="link" id="logout" role="menuitem">Sign out</button>
+        <div class="confirm hidden" id="logout-confirm"><p>You’ll need your login token (on your History page) to sign back in on this device.</p><button class="danger" id="logout-yes">Sign out</button></div></div></div>`;
+    // (a keyboard press moves focus onto the confirm: the button it pressed hides, and the menu lives on focus)
+    $('#logout').onclick = (e) => { $('#logout-confirm').classList.remove('hidden'); $('#logout').classList.add('hidden'); if (!e.detail) $('#logout-yes').focus(); };
+    // Once the menu closes (neither hovered nor focused), the confirm folds back into Sign out, so the menu never
+    // reopens stuck on it.
+    const menu = box.querySelector('.menu'), fold = () => setTimeout(() => {
+      if (!menu.isConnected || menu.matches(':hover, :focus-within')) return;
+      menu.querySelector('#logout-confirm').classList.add('hidden'); menu.querySelector('#logout').classList.remove('hidden');
+    });
+    menu.addEventListener('mouseleave', fold); menu.addEventListener('focusout', fold);
     $('#logout-yes').onclick = async () => { await abandonCheck(S); restoreLeft(); await api('/api/logout', {}); authEpoch++; signIn++; setToken(null); forgetNext(); me = null; session.length = 0; saveSession(); renderUser(); refreshPage(); };
   } else {
     // One quiet button; claiming a name (or pasting a token) happens in a small popover.
@@ -1485,8 +1494,8 @@ const shownOver = () => {
   const line = shownLine(), g = gameAt(line.slice(0, S.view ?? line.length)), r = g.result();
   return r && { ...r, dragon: r.kind === 'road' && g.hasRoad(1) && g.hasRoad(2) };
 };
-const overNote = (r) => `Game over here: ${!r.winner ? 'a draw' : r.dragon ? `${colorName(r.winner)} completed both roads at once, and the player who moved wins (the dragon clause)` : `${colorName(r.winner)} ${r.kind === 'road' ? 'made a road' : 'won on flats'}`}. `
-  + `Step back${finePointer.matches ? ' (←)' : ''} or click an earlier move to explore from there.`;
+const overNote = (r) => `${!r.winner ? 'A draw' : r.dragon ? `${colorName(r.winner)} completed both roads at once, and the player who moved wins (the dragon clause)` : `${colorName(r.winner)} ${r.kind === 'road' ? 'made a road' : 'won on flats'}`}. `
+  + `Step back${finePointer.matches ? ' (←)' : ''} or click a move to explore.`;
 // A win outside the puzzle's line: proven by the search, or won on the board against an engine (play on).
 const slowWinText = (w) => {
   const m = esc(w.move), po = w.playOn;
@@ -1494,7 +1503,7 @@ const slowWinText = (w) => {
     : po?.how === 'win' ? `${m} won against ${po.engine}, so it counts as solved`
     : `${m} forces a win too, so it counts as solved`;
 };
-const solvedTitle = () => S.outcome === 'viewed' ? 'Solution shown' : S.outcome === 'miss' ? 'Solved, after a miss' : 'Solved';
+const solvedTitle = () => S.outcome === 'viewed' ? 'Solution shown' : S.outcome === 'miss' ? 'Solved on retry' : 'Solved';
 // Review dock (Shy picked it from mockups): on phones in portrait, once the puzzle is over, the result with Next
 // puzzle, Tiltak's line and the step buttons are pinned to the bottom of the screen. It only exists while pinned;
 // everywhere else the move panel keeps its usual order (engine line, moves, steps) and the card keeps the result.
@@ -2035,9 +2044,15 @@ function typedMove() {
   if (!ptn) return;
   const ok = board.play(ptn);
   inp.setAttribute('aria-invalid', ok ? 'false' : 'true');
+  $('#ptn-err').textContent = typedErr(ptn, ok); // (a red edge alone was easy to miss, and silent to a screen reader)
   if (ok) inp.value = ''; else inp.select();
 }
-$('#ptn-in').addEventListener('input', (e) => e.target.removeAttribute('aria-invalid'));
+// One message for a refused typed move: board.play() can't tell bad notation from an illegal move.
+const typedErr = (ptn, ok) => (ok ? '' : `Can’t play ${ptn} here.`);
+// Cleared on typing, and on leaving the box: the board may move on meanwhile, and the message spoke of that position.
+const typedOk = (e) => { e.target.removeAttribute('aria-invalid'); $('#ptn-err').textContent = ''; };
+$('#ptn-in').addEventListener('input', typedOk);
+$('#ptn-in').addEventListener('blur', typedOk);
 
 async function renderFilters() {
   const t = await api('/api/themes' + (prefs.size ? '?size=' + prefs.size : ''));
@@ -2074,12 +2089,15 @@ function show(id) {
   for (const a of document.querySelectorAll('[data-nav]')) a.classList.toggle('on', a.getAttribute('href') === (location.hash.replace(/^(#\/[a-z]*).*$/, '$1') || '#/').replace('#/puzzle', '#/'));
 }
 
+// A theme's Practice link: the count alone (no "1 puzzles"), never split across lines. The gap before it is a space
+// (widened in CSS), not a margin, so a link that wraps to a new line starts at its edge instead of indented.
+const practiceLink = (k, n) => `<span class="gap"> </span><a href="#/" class="practice" data-theme="${k}">Practice (${n.toLocaleString()})</a>`;
 async function glossaryPage() {
   show('view-glossary');
   const t = await api('/api/themes' + (prefs.size ? '?size=' + prefs.size : '')); // counts for the Board you practice on
   const slug = (w) => w.toLowerCase().replace(/[^a-z]+/g, '-');
   const themeRows = Object.entries(THEMES).filter(([k, v]) => v.group !== 'Board').map(([k, v]) =>
-    `<dt id="${k}">${v.name}</dt><dd>${esc(v.desc)}${t.themes[k] ? ` <a href="#/" class="practice" data-theme="${k}">Practice (${t.themes[k].toLocaleString()} puzzles)</a>` : ''}</dd>`).join('');
+    `<dt id="${k}">${v.name}</dt><dd>${esc(v.desc)}${t.themes[k] ? practiceLink(k, t.themes[k]) : ''}</dd>`).join('');
   $('#view-glossary').innerHTML = `<div class="glossary"><h1>Glossary</h1>
     <h2>Tak basics</h2><dl>${GLOSSARY.map(([w, d]) => `<dt id="${slug(w)}">${w}</dt><dd>${esc(d)}</dd>`).join('')}</dl>
     <h2>Puzzle themes</h2><p class="muted">Every puzzle is tagged automatically from its solution. You can drill one theme from the Theme menu on the puzzle page.</p>
@@ -2088,6 +2106,11 @@ async function glossaryPage() {
   if (anchor) document.getElementById(anchor)?.scrollIntoView({ block: 'center' });
 }
 
+// History's Change and When cells, in the words the rest of the site uses: the puzzle page's signs (a real minus),
+// "unrated" (never "casual"), and Rush's short dates ("Today, 2:41 PM": no seconds, which wrapped on phones).
+const histChange = (r) => r.refund && !Math.round(r.user_delta) ? '<span class="muted">0</span>' // a refund's change is its net effect, often nothing
+  : r.rated ? `<span class="delta ${r.user_delta >= 0 ? 'up' : 'down'}">${signed(r.user_delta)}</span>` : '<span class="muted">unrated</span>';
+const histWhen = (t, now = Date.now()) => { try { return whenText(t, now); } catch { return new Date(t).toLocaleString(); } };
 async function mePage() {
   show('view-me');
   const el = $('#view-me');
@@ -2107,12 +2130,10 @@ async function mePage() {
     <p class="muted">${me.games} rated puzzle${me.games === 1 ? '' : 's'}, ${me.wins} solved first try.${tok ? ' Your login token (paste on another device):' : ''}</p>
     ${tok ? `<div class="token"><input id="token-out" readonly value="${esc(tok)}" aria-label="Login token"><button id="token-copy">Copy</button></div>` : ''}
     <div class="chart"><svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"><path d="${path}" fill="none" stroke="#3692e7" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>
-    <table class="t"><tr><th>Puzzle</th><th>Result</th><th>Puzzle rating</th><th>Δ</th><th>When</th></tr>
+    <table class="t hist"><tr><th>Puzzle</th><th>Result</th><th>Puzzle rating</th><th>Change</th><th>When</th></tr>
     ${h.map((r) => `<tr><td><a href="#/puzzle/${esc(r.puzzle_id)}">#${esc(r.puzzle_id)}</a> <span class="muted">${r.size}×${r.size}, ${r.plies} ${r.plies === 1 ? 'ply' : 'plies'}</span></td>
       <td>${r.win ? '✓' : '✗'}${r.refund ? ' <span class="muted" title="Refunded: counted as solved">refunded</span>' : ''}</td><td>${Math.round(r.puzzle_rating)}</td>
-      <td>${r.refund && !Math.round(r.user_delta) ? '<span class="muted">0</span>' // a refund's Δ is its net effect, often nothing
-        : r.rated ? `<span class="delta ${r.user_delta >= 0 ? 'up' : 'down'}">${r.user_delta >= 0 ? '+' : ''}${Math.round(r.user_delta)}</span>` : '<span class="muted">casual</span>'}</td>
-      <td class="muted">${new Date(r.ts).toLocaleString()}</td></tr>`).join('')}</table>`;
+      <td>${histChange(r)}</td><td class="muted">${esc(histWhen(r.ts))}</td></tr>`).join('')}</table>`;
   const out = $('#token-out');
   if (out) {
     out.onfocus = () => out.select();
@@ -2150,7 +2171,7 @@ async function route() {
   if (page === 'glossary') return glossaryPage();
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795304211')).enter(); } // loaded on first visit
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795308640')).enter(); } // loaded on first visit
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   // Keeping the puzzle on screen: a Next this navigation superseded may have left it mid-way (needsRestore, busy) after

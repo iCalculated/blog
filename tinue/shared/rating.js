@@ -2,7 +2,7 @@
 // New players start at 1500 ± 500 (as on Lichess) and puzzles at their prior ± 250: uncertain ratings move fast,
 // settled ones slowly, and a result from an uncertain player moves a puzzle less.
 // scripts/simulate-newcomers.mjs (and, for Glicko over Elo, scripts/archive/simulate-glicko.mjs) show why these numbers were picked.
-import { update, cap, blend, PLAYER_START, PUZZLE_START, PROVISIONAL_RD, provisional } from './glicko.js?v=1795304211';
+import { update, cap, blend, PLAYER_START, PUZZLE_START, PROVISIONAL_RD, provisional } from './glicko.js?v=1795308640';
 
 const CLUELESS_RD = 230;
 
