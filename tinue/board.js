@@ -1,9 +1,9 @@
 // tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
 // of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
 // board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795367575';
-import { parsePTN } from './shared/ptn.js?v=1795367575';
-import { dispPoint, shapesSvg, stackPiece, SP, GAP } from './analysis.js?v=1795367575';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795367932';
+import { parsePTN } from './shared/ptn.js?v=1795367932';
+import { dispPoint, shapesSvg, stackPiece, SP, GAP } from './analysis.js?v=1795367932';
 
 // (SP, GAP: the stack step, % of a square, and how many steps a carried hand is lifted; analysis.js stackPiece)
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]

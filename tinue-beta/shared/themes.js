@@ -2,9 +2,9 @@
 // marked fullWeight: those are a challenge, not a drill, and count in full (Sasha, 2026-11-20: Deep tinuë).
 export const THEMES = {
   roadIn1:   { name: 'Road in 1',     group: 'Length', desc: 'You can complete a road right now. Find it.' },
-  tinueIn2:  { name: 'Tinuë in 2',    group: 'Length', desc: 'Force a road in two of your moves, whatever the opponent does in between.' },
-  tinueIn3:  { name: 'Tinuë in 3',    group: 'Length', desc: 'Force a road in three of your moves.' },
-  tinueIn4:  { name: 'Tinuë in 4+',   group: 'Length', desc: 'Longer forced wins.' },
+  tinueIn2:  { name: 'Road in 2',     group: 'Length', desc: 'Force a road in two of your moves, whatever the opponent does in between.' },
+  tinueIn3:  { name: 'Road in 3',     group: 'Length', desc: 'Force a road in three of your moves.' },
+  tinueIn4:  { name: 'Road in 4+',    group: 'Length', desc: 'Longer forced wins.' },
   deep:      { name: 'Deep tinuë',    group: 'Length', fullWeight: true, desc: 'Forced roads six to eight of your moves long. A solver searched every other first move and found none that forces a road as fast.' }, // the ids: scripts/deep-proven.jsonl
   gaelet:    { name: 'Flat win',      group: 'Goal',   desc: 'Win on flat count instead of a road: the board fills up or someone runs out of pieces, and you have more flats on top. Tak players call a forced flat win a "gaelet".' },
   fork:      { name: 'Fork',          group: 'Motif',  desc: 'Your move creates two road threats through two different empty squares. The opponent can only block one.' }, // USTA's term; was 'Double threat'
