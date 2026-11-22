@@ -1,25 +1,27 @@
-import { Game } from './shared/tak.js?v=1795284866';
-import { unplayedPlies } from './shared/ptn.js?v=1795284866';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795284866';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795284866';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795284866';
-import * as engine from './engine.js?v=1795284866';
-import { showLineOn } from './lines.js?v=1795284866';
-import * as tiltak from './tiltak.js?v=1795284866';
-import * as syntaks from './syntaks.js?v=1795284866';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795284866';
-import { createNext } from './next.js?v=1795284866';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795284866';
-import { createOutbox } from './outbox.js?v=1795284866';
-import * as sound from './sound.js?v=1795284866';
-import { boardFrom, confirmOn, arrowsOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795284866';
-import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof } from './playon.js?v=1795284866';
-import * as defend from './defend.js?v=1795284866';
-import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, endLine, evalLabel, mergeLines, pickCandidates, pinnedAt, moveShape, drawAlt, threatGroups } from './analysis.js?v=1795284866';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795284866';
-import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795284866';
-import { syncedOf, decide, diff, changesBody, unsentKeys, afterPost, syncStatus } from './prefsync.js?v=1795284866';
-import { parseLook, encodeLook, cleanLook, lookReport } from './ninja-look.js?v=1795284866';
+import { Game } from './shared/tak.js?v=1795314232';
+import { unplayedPlies } from './shared/ptn.js?v=1795314232';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795314232';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795314232';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795314232';
+import * as engine from './engine.js?v=1795314232';
+import { showLineOn } from './lines.js?v=1795314232';
+import * as tiltak from './tiltak.js?v=1795314232';
+import * as syntaks from './syntaks.js?v=1795314232';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795314232';
+import { createNext } from './next.js?v=1795314232';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795314232';
+import { createOutbox } from './outbox.js?v=1795314232';
+import * as sound from './sound.js?v=1795314232';
+import { boardFrom, confirmOn, arrowsOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795314232';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof, isTak, countTak, outOfMoves, takLeft, TAK_COUNTDOWN, replyEntry, logOk, leftRunsOn, runOnHeld } from './playon.js?v=1795314232';
+import { copy } from './playon-copy.js?v=1795314232';
+import * as defend from './defend.js?v=1795314232';
+import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, quickLine, evalLabel, mergeLines, pickCandidates, pinnedAt, moveShape, drawAlt, threatGroups } from './analysis.js?v=1795314232';
+import { whenText } from './rush-rules.js?v=1795314232';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795314232';
+import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795314232';
+import { syncedOf, decide, diff, changesBody, unsentKeys, afterPost, syncStatus } from './prefsync.js?v=1795314232';
+import { parseLook, encodeLook, cleanLook, lookReport } from './ninja-look.js?v=1795314232';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -158,7 +160,7 @@ const guestId = () => {
 // PTN Ninja in an iframe instead of tinue's board (same API), by the Board style setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795284866')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn), look: prefs.ninja })
+const board = NINJA ? new (await import('./ninja.js?v=1795314232')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn), look: prefs.ninja })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
 // Sounds (sound.js): every move played or appended on any board (this page's, Rush's, PTN Ninja's) sounds what it set
 // down and where (board.js landOf); a stack moved by hand sounds each drop as it lands (onLand) and nothing more when
@@ -184,12 +186,20 @@ function renderUser() {
   renderSyncStatus(); // (the Settings page says whether settings follow the account)
   if (me) { store.set('myRating', me.rating); store.set('myProv', !!me.provisional); } // shown before /api/me answers next time
   if (me?.name) {
-    // Name with a small menu on hover/focus: History, Log out (with an inline confirm).
+    // Name with a small menu on hover/focus: History, Sign out (with an inline confirm).
     box.innerHTML = `<div class="menu"><button class="link name" aria-haspopup="true">${esc(me.name)}</button>
-      <div class="pop" role="menu"><a href="#/me" role="menuitem">History</a><a href="#/settings" role="menuitem">Settings</a><button class="link" id="logout" role="menuitem">Log out</button>
-        <div class="confirm hidden" id="logout-confirm"><p>You’ll need your login token (on your History page) to sign back in on this device.</p><button class="danger" id="logout-yes">Log out</button></div></div></div>`;
-    $('#logout').onclick = () => { $('#logout-confirm').classList.remove('hidden'); $('#logout').classList.add('hidden'); };
-    $('#logout-yes').onclick = async () => { await abandonCheck(S); restoreLeft(); await api('/api/logout', {}); authEpoch++; signIn++; setToken(null); forgetNext(); me = null; serverSettings = null; syncState = 'saved'; // (this device keeps its settings)
+      <div class="pop" role="menu"><a href="#/me" role="menuitem">History</a><a href="#/settings" role="menuitem">Settings</a><button class="link" id="logout" role="menuitem">Sign out</button>
+        <div class="confirm hidden" id="logout-confirm"><p>You’ll need your login token (on your History page) to sign back in on this device.</p><button class="danger" id="logout-yes">Sign out</button></div></div></div>`;
+    // (a keyboard press moves focus onto the confirm: the button it pressed hides, and the menu lives on focus)
+    $('#logout').onclick = (e) => { $('#logout-confirm').classList.remove('hidden'); $('#logout').classList.add('hidden'); if (!e.detail) $('#logout-yes').focus(); };
+    // Once the menu closes (neither hovered nor focused), the confirm folds back into Sign out, so the menu never
+    // reopens stuck on it.
+    const menu = box.querySelector('.menu'), fold = () => setTimeout(() => {
+      if (!menu.isConnected || menu.matches(':hover, :focus-within')) return;
+      menu.querySelector('#logout-confirm').classList.add('hidden'); menu.querySelector('#logout').classList.remove('hidden');
+    });
+    menu.addEventListener('mouseleave', fold); menu.addEventListener('focusout', fold);
+    $('#logout-yes').onclick = async () => { await abandonAll({ auth: true }); restoreLeft(); await api('/api/logout', {}); authEpoch++; signIn++; setToken(null); forgetNext(); me = null; serverSettings = null; syncState = 'saved'; // (this device keeps its settings)
        session.length = 0; saveSession(); renderUser(); refreshPage(); };
   } else {
     // One quiet button; claiming a name (or pasting a token) happens in a small popover.
@@ -230,7 +240,7 @@ function renderUser() {
       const t = $('#tok-in').value.trim();
       const r = await api('/api/login', { token: t });
       if (r.error) return showErr('#tok-err', 'That token doesn’t match an account.');
-      await abandonCheck(S); restoreLeft(); // a held result goes out under the identity that played it
+      await abandonAll({ auth: true }); restoreLeft(); // a held result goes out under the identity that played it
       authEpoch++; signIn++; setToken(t); forgetNext(); me = r.user; session.length = 0; saveSession(); serverSettings = null; renderUser(); settingsArrived(r); refreshPage();
     };
   }
@@ -417,7 +427,7 @@ async function loadById(id, s = 0, look = null) {
   if (!puzzle) { try { ({ puzzle } = judgeSeen(await api('/api/puzzle/' + encodeURIComponent(id)))); } catch { restoreLeft(); return; } }
   if (t !== loadSeq) return;
   if (puzzle && !s && look?.id === puzzle.id) {
-    try { s = (await import('./rush-rules.js?v=1795284866')).symFromRecord(puzzle, look); } catch { s = 0; }
+    try { s = (await import('./rush-rules.js?v=1795314232')).symFromRecord(puzzle, look); } catch { s = 0; }
     if (t !== loadSeq) return;
   }
   // The one place a puzzle is oriented (pagesym.js): the page works in the turned labels from here on; the server's
@@ -459,7 +469,7 @@ const fromEngine = (s, r) => s.x.answer(r);
 let lz = null, lzLoad = null;
 const ninjaHref = () => lz && ninjaUrl({ ptn: ptnFor(shownLine()), ply: S.view ?? shownLine().length, name: 'tinue #' + S.p.id }, lz);
 function loadLz() {
-  lzLoad ||= import('./vendor/lz-string.js?v=1795284866').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
+  lzLoad ||= import('./vendor/lz-string.js?v=1795314232').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
 }
 function refreshNinja() {
   if (!S || S.placeholder || S.status !== 'solved') return;
@@ -557,8 +567,8 @@ function runServer(s, key, g, plies) {
     if (!miss) return;
     const c = g.clone();
     try { c.play(miss.move); } catch { return; }
-    const res = c.result();
-    if (res) { S.eng = { ...S.eng, lines: [...S.eng.lines, endLine(miss.move, res, mover)] }; return setLines(s, key); } // (it ends the game: nothing to search)
+    const q = quickLine(c, miss.move, mover, s.x.back);
+    if (q) { S.eng = { ...S.eng, lines: [...S.eng.lines, q] }; return setLines(s, key); } // (it ends the game, or hands over a win in 1: nothing to search)
     setTimeout(() => {
       // (live() alone is not enough: stepping away and back within the 400 ms gives the same key, and this visit's
       // own search, under a new ctl, asks again)
@@ -605,10 +615,8 @@ function runTiltak(s, key, g, plies) {
     for (const m of cands) {
       const c = g.clone();
       try { c.play(m); } catch { continue; }
-      const res = c.result();
-      let cl;
-      if (res) cl = endLine(m, res, mover);
-      else {
+      let cl = quickLine(c, m, mover, s.x.back); // (ends the game or hands over a win in 1: Tiltak would only say "0%")
+      if (!cl) {
         const cr = await tiltak.analyze({ tps: s.x.tps(c.toTPS(), komi), size, komi, ms: 600 }).catch(() => null);
         if (!live()) return;
         if (!cr) continue;
@@ -706,6 +714,7 @@ function showLine(line, idx) { return showLineOn(board, S, line, idx, ptnFor); }
 async function start(p, theme = '', p0 = p) {
   if (S?.free) leaveFree(S, 'left'); // (its engine stops; nothing to send)
   abandonCheck(S); // leaving a puzzle whose check is still running (any route: Next, a link, a filter change)
+  for (const r of runningOn) if (r.p.id === p.id) abandonCheck(r, { again: true }); // (leftRunsOn: no second try while it runs on)
   board.forget(); // nothing begun on the last puzzle's board (stones in hand, a held number key, a touch) carries over
   dropPending(); // a move held on the last puzzle is gone with it (the new position is loaded below)
   engine.interrupt(); tiltak.stop(); anaCtl?.abort(); // nothing from the previous puzzle should still be thinking
@@ -806,7 +815,8 @@ function syncClock() {
   else if (S.hiddenAt != null) { S.hiddenMs += t - S.hiddenAt; S.hiddenAt = null; }
 }
 // ms: when the move was made (callers read it before any engine check, which can take seconds).
-const logMove = (k, m, ms = elapsed()) => { if (S && !S.resultSent && S.t0 != null && S.log.length < 64) S.log.push(m ? { m, ms, k } : { ms, k }); };
+// (logOk: within what the server keeps, else nothing more is added: a long play-out keeps its log's head)
+const logMove = (k, m, ms = elapsed()) => { if (S && !S.resultSent && S.t0 != null && logOk(S.log, ms)) S.log.push(m ? { m, ms, k } : { ms, k }); };
 document.addEventListener('visibilitychange', syncClock);
 
 const pliesLeft = () => pliesLeftOf(S.node); // (playon.js: Rush's play-outs use it too)
@@ -1025,7 +1035,7 @@ async function report(win, s = S, flags = s, { keepalive = false, ms } = {}) {
 function settleCheck(s, verdict, opts) {
   const c = s.checkPending, held = s.held || [];
   if (!c) return;
-  s.checkPending = null; s.held = null;
+  s.checkPending = null; s.held = null; runningOn.delete(s);
   let sent;
   if (verdict === 'wins' || verdict === 'no') (s.proven ||= new Map()).set(c.key, verdict);
   if (verdict === 'wins') {
@@ -1052,7 +1062,7 @@ function settleCheck(s, verdict, opts) {
     // the check decides.
     // (a proven play-out: lossRated, see playon.js)
     const po = c.playOn, unrated = !po ? verdict !== 'no' : !lossRated(po, po.end);
-    if (unrated) { s.unchecked = c.miss; s.uncheckedWhy = po ? { why: po.end === 'noengine' ? 'noengine' : lossWhy(po, po.end), at: po.fallbackAt || 0, engine: defenderName(po) } : null; }
+    if (unrated) { s.unchecked = c.miss; s.uncheckedWhy = po ? { why: po.end === 'noengine' ? 'noengine' : lossWhy(po, po.end), at: po.fallbackAt || 0, engine: defenderName(po), rule: po.rule } : null; }
     s.log.length = Math.min(s.log.length, c.logLen); // the miss decided it: nothing after it belongs in its log
     sent = report(false, s, c.flags, opts);
   }
@@ -1061,9 +1071,14 @@ function settleCheck(s, verdict, opts) {
 }
 
 // Leaving a puzzle (or the page) while its check runs: there's no answer to wait for, so the miss goes in unrated.
+// opts.auth: a log-out or log-in (the result goes out now, under the identity that played it); opts.again: the same
+// puzzle opened again (its result goes out now, before the new attempt's could land first and stand instead).
 function abandonCheck(s, opts) {
   shadowLeave(s, opts?.keepalive ? 'unload' : 'leave');
   if (!s?.checkPending) return s?.quickCheck ? abandonQuick(s, opts) : null;
+  // Out under the Tak rule with the check still running, and on to another puzzle: the check isn't stopped; it settles
+  // this puzzle in the background (startPlayOn's handler), so a proof that lands then still makes it unrated (leftRunsOn).
+  if (leftRunsOn(s.checkPending, opts?.keepalive ? 'unload' : opts?.auth ? 'auth' : opts?.again ? 'again' : 'left')) { runningOn.add(s); return null; }
   // Leaving in the middle of a play-on counts as giving up (rated miss), or leaving would be the way out of a lost game.
   // ('unload': the page itself is going away (pagehide); 'left': on to another puzzle in this page. Ordinary play-on
   // treats them alike; a proven play-out lost to the page going away is unrated: playon.js lossRated.)
@@ -1078,13 +1093,17 @@ function abandonQuick(s, opts) {
   const { miss, chk, tMove: ms } = s.quickCheck;
   s.quickCheck = null; s.checking = null; chk.cancel();
   if (s.resultSent) return null;
-  if (s.t0 != null && s.log.length < 64) s.log.push({ m: miss, ms, k: 'miss' });
+  if (s.t0 != null && logOk(s.log, ms)) s.log.push({ m: miss, ms, k: 'miss' });
   s.decidedMs ??= ms;
   s.misses.push({ at: s.moves.length, ptn: miss });
   s.unchecked = miss; s.status = 'retry'; s.refutation = null; s.needsRestore = true;
   return report(false, s, s, { ...opts, ms });
 }
-addEventListener('pagehide', () => { abandonCheck(S, { keepalive: true }); shadow((o) => o.pagehide()); });
+// Puzzles left while their check runs on (abandonCheck, leftRunsOn): each leaves the set when it settles (settleCheck).
+// The page going away, or a log-out or log-in, settles them all now (a rated miss each: the card said so).
+const runningOn = new Set();
+const abandonAll = (opts) => Promise.all([abandonCheck(S, opts), ...[...runningOn].filter((s) => s !== S).map((s) => abandonCheck(s, opts))]);
+addEventListener('pagehide', () => { abandonAll({ keepalive: true }); shadow((o) => o.pagehide()); });
 // A result held when the page died (crash, a keepalive that didn't make it, or an upload that failed), before anything
 // is served: what it goes as, or whether it's dropped, is playon.js heldResend. Unreachable: kept for the next load.
 async function flushHeld() {
@@ -1128,7 +1147,8 @@ function startPlayOn(s, canon, plies, chk, tMove, proven = false, proofPlies) {
   logMove(proven ? 'slow' : 'miss', canon, tMove); s.decidedMs ??= tMove;
   if (!proven) s.misses.push({ at: s.moves.length, ptn: canon }); // (a proven play-out's move is a miss only if it fails)
   chk ||= { final: new Promise(() => {}), cancel() {} }; // nothing left to check
-  const po = s.playOn = playOutOf({ miss: canon, at: s.moves.length, base: plies.slice(0, -1), g: gameAt(plies), proven, left, key: provenKey(canon), engine: playOnDefender() });
+  // (the Tak rule: the move played out is counted too, playon.js playOutOf)
+  const g = gameAt(plies), po = s.playOn = playOutOf({ miss: canon, at: s.moves.length, base: plies.slice(0, -1), g, proven, left, key: provenKey(canon), engine: playOnDefender(), tak: isTak(g, s.solver) });
   if (proven) setProofLength(s, po, proofPlies);
   s.checkPending = { miss: canon, at: s.moves.length, key: provenKey(canon), chk, hadMs, logLen: s.log.length, playOn: po,
     fastest: s.node === 'win' ? finisher(s.g) : Object.keys(s.node)[0], // the puzzle's own move here, for the solved card
@@ -1139,7 +1159,10 @@ function startPlayOn(s, canon, plies, chk, tMove, proven = false, proofPlies) {
   chk.final.then((v) => {
     const c = s.checkPending;
     if (c?.chk !== chk) return;
-    if (c.playOn.end) return settleCheck(s, v); // (only after 'noengine': a lost game stops the check)
+    // (after 'noengine', or after running out under the Tak rule: the check runs on. A proof then makes that 'out' an
+    // unrated miss, never a rated one: lossRated provedAtOut)
+    if (c.playOn.end === 'out' && v === 'wins') { po.proven = po.provedAtOut = true; return settleCheck(s, 'unknown'); }
+    if (c.playOn.end) return settleCheck(s, v);
     if (v === 'wins') makeProven(s, po); else c.final = v; // a proof makes it a proven play-out; anything else waits
   });
   defend.warmDefender(po, s.p.size, s.p.komi || 0); // (Syntaks fetched on first use, or Tiltak started: defend.js)
@@ -1159,6 +1182,9 @@ function makeProven(s, po) {
   const c = s.checkPending;
   if (po.proven || po.end || c?.playOn !== po) return;
   if (!upgradeToProven(po)) return endPlayOn(s, 'proved'); // (playon.js: Tiltak defends, so no proven play-out)
+  // Proved while waiting at the end under the Tak rule (playOnMove): the countdown has run down, so it ends 'out', but
+  // unrated (lossRated provedAtOut). (Under the cap the proof could raise the cap and the game went on.)
+  if (po.rule === 'tak' && po.waiting === 'proof') po.provedAtOut = true;
   c.final = 'wins';
   (s.proven ||= new Map()).set(c.key, 'wins');
   if (c.logEntry) c.logEntry.k = 'slow';
@@ -1205,6 +1231,7 @@ async function defenderTurn(s, po) {
   const mv = d.mv;
   po.thinking = false; // the reply is in hand: leaving while the board plays it isn't the defender being overdue (stalls)
   po.g.play(mv); po.line.push(mv);
+  logMove('po', replyEntry(mv)); // (so a play-out can be judged again from its log: playon.js replyEntry)
   await board.append(mv); await board.last();
   if (!live()) return;
   const end = ending(po.g.result(), s.solver);
@@ -1229,10 +1256,11 @@ async function playOnMove(ptn) {
   const end = ending(po.g.result(), s.solver);
   shadow((o) => o.move(s.ob, canon, { clientVerdict: !end ? 'reply' : end === 'win' ? 'solved' : 'missed', ms: elapsed(s) }));
   if (end) return endPlayOn(s, end);
-  if (po.mine >= po.cap) {
-    // Out of moves, unless what's still being worked out would raise the cap: the proof's length (proven) or the
-    // proof itself (unproven, Syntaks). Wait for it (moves blocked; Give up, Solution and leaving still work, and the
-    // wait isn't the defender being overdue), then go on if the cap rose.
+  if (po.rule === 'tak') countTak(po, isTak(po.g, s.solver)); // (the Tak rule: one winMove call, microseconds)
+  if (outOfMoves(po)) {
+    // Out of moves (the cap, or the Tak rule's countdown run down), unless what's still being worked out could change
+    // that: the proof's length (proven) or the proof itself (unproven, Syntaks). Wait for it (moves blocked; Give up,
+    // Solution and leaving still work, and the wait isn't the defender being overdue), then go on if the cap rose.
     const c = s.checkPending;
     const why = capWait(po, { lengthPending: !!po.lengthP, checkLive: c?.playOn === po && c.final === undefined });
     if (why) {
@@ -1241,7 +1269,7 @@ async function playOnMove(ptn) {
       if (S !== s || s.playOn !== po || po.end) return;
       po.waiting = null;
     }
-    if (po.mine >= po.cap) return endPlayOn(s, 'out');
+    if (outOfMoves(po)) return endPlayOn(s, 'out');
   }
   defenderTurn(s, po);
 }
@@ -1278,16 +1306,22 @@ function endPlayOn(s, kind, opts) {
   if (S === s && kind !== 'left' && kind !== 'unload') sound.verdict('wrong', 120); // a lost play-out (not one left), after its last move's sounds
   if (po.proven) s.misses.push({ at: po.at, ptn: po.miss }); // a proven play-out not finished: a miss on the card
   // byYou: the last ply was the player's (line[0] is theirs), e.g. a move that completed only the defender's road
-  s.refutation = { miss: po.miss, kind: 'playon', how: kind, n: po.mine, engine: defenderName(po), proven: !!po.proven,
+  s.refutation = { miss: po.miss, kind: 'playon', how: kind, n: po.mine, engine: defenderName(po), proven: !!po.proven, rule: po.rule,
     byYou: po.line.length % 2 === 1 };
   if (kind === 'noengine') s.refutation = { miss: po.miss, kind: 'unknown' };
   // A lost game (Syntaks held, out of moves, Give up, left) is final: the check is stopped and the miss sent now, rated
   // only if gameRated (settleCheck). With no engine at all ('noengine', po.fallback set) the check still runs, so a
   // proof can make it a solve, but a miss is unrated whatever it says.
   let sent = null;
+  // Out under the Tak rule with the check still running (it outlasted the wait at the end): it runs on, and the result
+  // is held until it answers (startPlayOn's handler), so running out never pre-empts a proof (2026-11-21).
+  const runOn = kind === 'noengine' || (kind === 'out' && po.rule === 'tak');
   if (c?.playOn === po) {
-    if (kind !== 'noengine' || po.proven) { c.chk.cancel(); sent = settleCheck(s, 'unknown', opts); } // (proven: nothing to wait for)
+    if (!runOn || po.proven) { c.chk.cancel(); sent = settleCheck(s, 'unknown', opts); } // (proven: nothing to wait for)
     else if (c.final) sent = settleCheck(s, c.final, opts);
+    // (held on: the game's log goes into the held record, so a page that dies before the check answers resends the
+    // unrated miss with it, playon.js heldResend)
+    if (s.checkPending === c && !s.resultSent && heldRec.get()?.id === s.p.id) heldRec.set(runOnHeld(heldRec.get(), s.log.length ? s.x.log(s.log) : null));
   }
   if (kind === 'left' || kind === 'unload') { s.needsRestore = true; return sent; } // the board is put back only if this puzzle stays (restoreLeft)
   s.busy = true;
@@ -1739,16 +1773,16 @@ const shownOver = () => {
   const line = shownLine(), g = gameAt(line.slice(0, S.view ?? line.length)), r = g.result();
   return r && { ...r, dragon: r.kind === 'road' && g.hasRoad(1) && g.hasRoad(2) };
 };
-const overNote = (r) => `Game over here: ${!r.winner ? 'a draw' : r.dragon ? `${colorName(r.winner)} completed both roads at once, and the player who moved wins (the dragon clause)` : `${colorName(r.winner)} ${r.kind === 'road' ? 'made a road' : 'won on flats'}`}. `
-  + `Step back${finePointer.matches ? ' (←)' : ''} or click an earlier move to explore from there.`;
+const overNote = (r) => `${!r.winner ? 'A draw' : r.dragon ? `${colorName(r.winner)} completed both roads at once, and the player who moved wins (the dragon clause)` : `${colorName(r.winner)} ${r.kind === 'road' ? 'made a road' : 'won on flats'}`}. `
+  + `Step back${finePointer.matches ? ' (←)' : ''} or click a move to explore.`;
 // A win outside the puzzle's line: proven by the search, or won on the board against an engine (play on).
 const slowWinText = (w) => {
   const m = esc(w.move), po = w.playOn;
-  return po?.proven && po.how !== 'proved' ? `${m} forces a win, and you played it out against ${po.engine}, so it counts as solved`
-    : po?.how === 'win' ? `${m} won against ${po.engine}, so it counts as solved`
+  return po?.proven && po.how !== 'proved' ? esc(copy('solved.proven', { m: w.move, E: po.engine }))
+    : po?.how === 'win' ? esc(copy('solved.unproven', { m: w.move, E: po.engine }))
     : `${m} forces a win too, so it counts as solved`;
 };
-const solvedTitle = () => S.outcome === 'viewed' ? 'Solution shown' : S.outcome === 'miss' ? 'Solved, after a miss' : 'Solved';
+const solvedTitle = () => S.outcome === 'viewed' ? 'Solution shown' : S.outcome === 'miss' ? 'Solved on retry' : 'Solved';
 // Review dock (Shy picked it from mockups): on phones in portrait, once the puzzle is over, the result with Next
 // puzzle, Tiltak's line and the step buttons are pinned to the bottom of the screen. It only exists while pinned;
 // everywhere else the move panel keeps its usual order (engine line, moves, steps) and the card keeps the result.
@@ -1828,7 +1862,8 @@ const playOnUnratedText = (u) => u.why === 'tiltak' ? 'Not rated: Tiltak defende
   : u.why === 'nomove' ? `Not rated: ${u.engine} hadn’t moved yet.`
   : u.why === 'stalled' ? 'Not rated: Syntaks didn’t answer in time.'
   : u.why === 'noengine' ? 'Not rated: no engine could answer.'
-  : u.why === 'proven-length' ? `Not rated: ${esc(S.unchecked)} is proven to win, and its length wasn’t known in time to set the move limit.`
+  : u.why === 'proven-length' ? esc(copy('end.unrated.provenLength', { m: S.unchecked }))
+  : u.why === 'proven-late' ? esc(copy('end.unrated.provenLate', { m: S.unchecked }))
   : u.why === 'proven-unload' ? `Not rated: ${esc(S.unchecked)} is proven to win, and the page closed during the play-out.`
   : `Not rated: Syntaks dropped out ${u.at > 1 ? `after ${u.at} moves` : 'at the start'}, so Tiltak defended.`;
 // The feedback card (a live region). Returns whether Next puzzle should take keyboard focus once it is drawn.
@@ -1875,23 +1910,19 @@ function renderFeedback(mood, delta) {
       : `<div class="icon turn p${S.solver}"></div><div class="body"><h2>Playing on</h2>
         <p>From ${m}, ${E} defends${fg.swapped ? ' (Syntaks stopped answering here)' : ''}. ${counts}<span class="po-line po-status">${fg.thinking ? `${E} is thinking…` : 'Your move.'}</span></p></div>${playActions}${more}`;
   } else if (S.playOn) {
-    // Play on (see startPlayOn). The wording is Shy's approved spec (2026-11-15).
-    const po = S.playOn, E = defenderName(po), m = esc(po.miss);
-    {
-      const n = po.thinking ? po.mine : po.mine + 1;
-      const cap = `<span class="cap" title="${esc(po.capNote)}">${po.cap}</span>`;
-      const why = `<span class="po-line">${esc(po.capNote)}</span>`; // where the cap comes from (playon.js capNote)
-      // at the cap, waiting for something that could give more moves (playOnMove)
-      const waitLine = po.waiting === 'length' ? `Out of moves at ${po.cap} unless the proven win is longer: measuring it…`
-        : po.waiting === 'proof' ? `Out of moves at ${po.cap} unless ${m} is proven to win: still checking…` : '';
-      // A proven play-out (Syntaks only): the move wins, and the game shows it. A hold is a rated miss (lossRated).
-      if (po.proven) fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>${po.provedLate ? 'Proved: play it out' : 'That wins: play it out'}</h2>
-        <p>${m} forces a win. Now show it on the board: ${E} defends to the end. Make a road (or win on flats) within ${cap} of your moves, counting ${m}, and it counts as solved. If ${E} holds${gameRated(po) ? ', or you give up or view the solution' : ''}, it’s a miss.${why}<span class="po-line po-status">${waitLine || `Move ${n} of ${po.cap}${po.thinking ? ` · ${E} is thinking…` : ''}`}</span></p></div>
-        <div class="actions"><button data-act="giveup"${busy('giveup', po.t0) ? ' disabled' : ''}>Give up</button><button data-act="solution" title="Give up and view the solution">Solution</button></div>`;
-      else fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>Play it out</h2>
-        <p>We couldn’t check ${m} in time, so show it on the board: ${E} defends. Win within ${cap} of your moves (counting ${m}) and it counts as solved. If ${E} holds, it’s a miss.${po.engine !== 'syntaks' ? ' Against Tiltak, how the game ends doesn’t count toward your rating (a proof that your move wins still does).' : ''}${po.fallback && po.engine === 'syntaks' ? '<span class="po-line">Syntaks is unreachable; Tiltak, in your browser, defends now, so how this game ends doesn’t count toward your rating (a proof that your move wins still does).</span>' : ''}${why}<span class="po-line po-status">${waitLine || `Move ${n} of ${po.cap}${po.thinking ? ` · ${E} is thinking…` : ''}`}</span></p></div>
-        <div class="actions"><button data-act="giveup"${busy('giveup', po.t0) ? ' disabled' : ''}>Give up</button><button data-act="solution" title="Give up and view the solution">Solution</button></div>`;
-    }
+    // Play on under the Tak rule (startPlayOn; judge.js TAK_COUNTDOWN). Its words are playon-copy.js's, by id (the move
+    // cap's, Shy's spec of 2026-11-15, went with the cap; Rush keeps them in rush-rules.js while it keeps the cap).
+    const po = S.playOn, E = defenderName(po), m = esc(po.miss), k = TAK_COUNTDOWN, c = (id, v) => esc(copy(id, { E, m: po.miss, k, k1: k + 1, ...v }));
+    const n = po.thinking ? po.mine : po.mine + 1, left = takLeft(po), last = po.line[2 * (po.mine - 1)]; // (the player's moves: line[0], [2], ...)
+    const status = po.waiting ? c(`po.wait.${po.waiting}`)
+      : (left == null ? c('po.status.tak', { n }) : c(left === 1 ? 'po.status.countdown1' : 'po.status.countdown', { move: last, left }))
+        + (po.thinking ? c('po.status.thinking') : '');
+    const rule = `<span class="po-line">${c('po.rule')}</span><span class="po-line po-status" title="${c('po.tip.tak')}">${status}</span>`;
+    const acts = `<div class="actions"><button data-act="giveup"${busy('giveup', po.t0) ? ' disabled' : ''}>Give up</button><button data-act="solution" title="Give up and view the solution">Solution</button></div>`;
+    if (po.proven) fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>${c(po.provedLate ? 'po.title.provedLate' : 'po.title.proven')}</h2>
+        <p>${c('po.intro.proven', { orGiveUp: gameRated(po) ? copy('po.intro.orGiveUp') : '' })}${rule}</p></div>${acts}`;
+    else fbHtml = `<div class="icon turn p${S.solver}"></div><div class="body"><h2>${c('po.title.unproven')}</h2>
+        <p>${c('po.intro.unproven')}${po.engine !== 'syntaks' ? ' Against Tiltak, how the game ends doesn’t count toward your rating (a proof that your move wins still does).' : ''}${po.fallback && po.engine === 'syntaks' ? '<span class="po-line">Syntaks is unreachable; Tiltak, in your browser, defends now, so how this game ends doesn’t count toward your rating (a proof that your move wins still does).</span>' : ''}${rule}</p></div>${acts}`;
   } else if (S.status === 'solved') {
     const title = solvedTitle();
     const slow = S.slowWin ? `${slowWinText(S.slowWin)}${S.slowWin.fastest ? `; the puzzle’s line plays ${esc(S.slowWin.fastest)} instead` : ''}. ` : '';
@@ -1903,10 +1934,12 @@ function renderFeedback(mood, delta) {
       <div class="actions"><button class="primary" data-act="next">Next puzzle</button></div>`;
   } else if (S.status === 'retry' && S.refutation?.kind === 'playon') {
     const r = S.refutation, E = r.engine, mv = `${r.n} move${r.n === 1 ? '' : 's'}`;
-    const gaveUp = r.how === 'gaveup' || r.how === 'left' || r.how === 'unload';
-    const h2 = gaveUp ? 'You gave up' : r.how === 'out' ? 'Out of moves'
+    const gaveUp = r.how === 'gaveup' || r.how === 'left' || r.how === 'unload', takOut = r.how === 'out' && r.rule === 'tak';
+    const tc = (id) => esc(copy(id, { E, m: r.miss, mv, k: TAK_COUNTDOWN, k1: TAK_COUNTDOWN + 1 }));
+    const h2 = gaveUp ? 'You gave up' : takOut ? tc('end.h2.out') : r.how === 'out' ? 'Out of moves'
       : r.how === 'road' ? (r.byYou ? `Your move completed ${E}’s road` : `${E} made a road`) : `${E} held`;
     const lead = gaveUp ? `You gave up on ${esc(r.miss)} after ${mv}`
+      : takOut ? tc(r.proven ? 'end.lead.outProven' : 'end.lead.out')
       : r.proven ? { unfinished: `${esc(r.miss)} wins, but you didn’t finish it in ${mv}: ${E} held`,
         escaped: `${esc(r.miss)} wins, but ${E} got out of it after ${mv}`,
         'own-road': `${esc(r.miss)} wins, but your move ${r.n} completed ${E}’s road` }[provenLossLead(r.how, r.byYou)]
@@ -1914,6 +1947,7 @@ function renderFeedback(mood, delta) {
     // (the server's own answer decides "counts": a repeat attempt or an out-of-date page is recorded unrated: missNote)
     const rated = !S.checkPending && !S.notCounted && !S.casualWhy && S.serverRated !== false;
     const rest = rated ? ', so it counts as a miss. Keep trying or view the solution.'
+      : takOut && S.checkPending ? `. ${tc('end.note.checking')} Keep trying or view the solution.` // (the check runs on: endPlayOn)
       : '. ' + (S.casualWhy === 'unchecked' && S.uncheckedWhy?.why ? `${playOnUnratedText(S.uncheckedWhy)} Keep trying or view the solution.` : missNote());
     fbHtml = `<div class="icon bad">✗</div><div class="body"><h2>${h2}<span class="dslot"></span></h2>
       <p>${hintNote}${lead}${rest}</p></div>${playActions}`;
@@ -2473,9 +2507,15 @@ function typedMove() {
   if (!ptn) return;
   const ok = board.play(ptn);
   inp.setAttribute('aria-invalid', ok ? 'false' : 'true');
+  $('#ptn-err').textContent = typedErr(ptn, ok); // (a red edge alone was easy to miss, and silent to a screen reader)
   if (ok) inp.value = ''; else inp.select();
 }
-$('#ptn-in').addEventListener('input', (e) => e.target.removeAttribute('aria-invalid'));
+// One message for a refused typed move: board.play() can't tell bad notation from an illegal move.
+const typedErr = (ptn, ok) => (ok ? '' : `Can’t play ${ptn} here.`);
+// Cleared on typing, and on leaving the box: the board may move on meanwhile, and the message spoke of that position.
+const typedOk = (e) => { e.target.removeAttribute('aria-invalid'); $('#ptn-err').textContent = ''; };
+$('#ptn-in').addEventListener('input', typedOk);
+$('#ptn-in').addEventListener('blur', typedOk);
 
 async function renderFilters() {
   const t = await api('/api/themes' + (prefs.size ? '?size=' + prefs.size : ''));
@@ -2512,12 +2552,15 @@ function show(id) {
   for (const a of document.querySelectorAll('[data-nav]')) a.classList.toggle('on', a.getAttribute('href') === (location.hash.replace(/^(#\/[a-z]*).*$/, '$1') || '#/').replace('#/puzzle', '#/'));
 }
 
+// A theme's Practice link: the count alone (no "1 puzzles"), never split across lines. The gap before it is a space
+// (widened in CSS), not a margin, so a link that wraps to a new line starts at its edge instead of indented.
+const practiceLink = (k, n) => `<span class="gap"> </span><a href="#/" class="practice" data-theme="${k}">Practice (${n.toLocaleString()})</a>`;
 async function glossaryPage() {
   show('view-glossary');
   const t = await api('/api/themes' + (prefs.size ? '?size=' + prefs.size : '')); // counts for the Board you practice on
   const slug = (w) => w.toLowerCase().replace(/[^a-z]+/g, '-');
   const themeRows = Object.entries(THEMES).filter(([k, v]) => v.group !== 'Board').map(([k, v]) =>
-    `<dt id="${k}">${v.name}</dt><dd>${esc(v.desc)}${t.themes[k] ? ` <a href="#/" class="practice" data-theme="${k}">Practice (${t.themes[k].toLocaleString()} puzzles)</a>` : ''}</dd>`).join('');
+    `<dt id="${k}">${v.name}</dt><dd>${esc(v.desc)}${t.themes[k] ? practiceLink(k, t.themes[k]) : ''}</dd>`).join('');
   $('#view-glossary').innerHTML = `<div class="glossary"><h1>Glossary</h1>
     <h2>Tak basics</h2><dl>${GLOSSARY.map(([w, d]) => `<dt id="${slug(w)}">${w}</dt><dd>${esc(d)}</dd>`).join('')}</dl>
     <h2>Puzzle themes</h2><p class="muted">Every puzzle is tagged automatically from its solution. You can drill one theme from the Theme menu on the puzzle page.</p>
@@ -2526,6 +2569,11 @@ async function glossaryPage() {
   if (anchor) document.getElementById(anchor)?.scrollIntoView({ block: 'center' });
 }
 
+// History's Change and When cells, in the words the rest of the site uses: the puzzle page's signs (a real minus),
+// "unrated" (never "casual"), and Rush's short dates ("Today, 2:41 PM": no seconds, which wrapped on phones).
+const histChange = (r) => r.refund && !Math.round(r.user_delta) ? '<span class="muted">0</span>' // a refund's change is its net effect, often nothing
+  : r.rated ? `<span class="delta ${r.user_delta >= 0 ? 'up' : 'down'}">${signed(r.user_delta)}</span>` : '<span class="muted">unrated</span>';
+const histWhen = (t, now = Date.now()) => { try { return whenText(t, now); } catch { return new Date(t).toLocaleString(); } };
 async function mePage() {
   show('view-me');
   const el = $('#view-me');
@@ -2545,11 +2593,10 @@ async function mePage() {
     <p class="muted">${me.games} rated puzzle${me.games === 1 ? '' : 's'}, ${me.wins} solved first try.${tok ? ' Your login token (paste on another device):' : ''}</p>
     ${tok ? `<div class="token"><input id="token-out" readonly value="${esc(tok)}" aria-label="Login token"><button id="token-copy">Copy</button></div>` : ''}
     <div class="chart"><svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" preserveAspectRatio="none"><path d="${path}" fill="none" stroke="#3692e7" stroke-width="2" vector-effect="non-scaling-stroke"/></svg></div>
-    <table class="t"><tr><th>Puzzle</th><th>Result</th><th>Puzzle rating</th><th>Δ</th><th>When</th></tr>
+    <table class="t hist"><tr><th>Puzzle</th><th>Result</th><th>Puzzle rating</th><th>Change</th><th>When</th></tr>
     ${h.map((r) => `<tr><td><a href="#/puzzle/${esc(r.puzzle_id)}">#${esc(r.puzzle_id)}</a> <span class="muted">${r.size}×${r.size}, ${r.plies} ${r.plies === 1 ? 'ply' : 'plies'}</span></td>
-      <td>${r.win ? '✓' : '✗'}</td><td>${Math.round(r.puzzle_rating)}</td>
-      <td>${r.rated ? `<span class="delta ${r.user_delta >= 0 ? 'up' : 'down'}">${r.user_delta >= 0 ? '+' : ''}${Math.round(r.user_delta)}</span>` : '<span class="muted">casual</span>'}</td>
-      <td class="muted">${new Date(r.ts).toLocaleString()}</td></tr>`).join('')}</table>`;
+      <td>${r.win ? '✓' : '✗'}${r.refund ? ' <span class="muted" title="Refunded: counted as solved">refunded</span>' : ''}</td><td>${Math.round(r.puzzle_rating)}</td>
+      <td>${histChange(r)}</td><td class="muted">${esc(histWhen(r.ts))}</td></tr>`).join('')}</table>`;
   const out = $('#token-out');
   if (out) {
     out.onfocus = () => out.select();
@@ -2592,9 +2639,9 @@ async function route() {
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
   if (page === 'settings') return settingsPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795284866')).enter(); } // loaded on first visit
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795314232')).enter(); } // loaded on first visit
   // The sound lab (sound-lab.js): beta builds only; elsewhere #/sounds is no page at all (it falls through to puzzles)
-  if (page === 'sounds' && window.TINUE_BETA && $('#view-sounds')) { show('view-sounds'); return (labPage ||= await import('./sound-lab.js?v=1795284866')).enter($('#view-sounds')); }
+  if (page === 'sounds' && window.TINUE_BETA && $('#view-sounds')) { show('view-sounds'); return (labPage ||= await import('./sound-lab.js?v=1795314232')).enter($('#view-sounds')); }
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   // Keeping the puzzle on screen: a Next this navigation superseded may have left it mid-way (needsRestore, busy) after
@@ -2610,7 +2657,7 @@ async function route() {
     const zero = symArg === '0';
     let want = sym, found = false;
     if (!sym && !zero && look?.id === id && S?.p.id === id && S.p0) {
-      try { want = (await import('./rush-rules.js?v=1795284866')).symFromRecord(S.p0, look); found = true; } catch {}
+      try { want = (await import('./rush-rules.js?v=1795314232')).symFromRecord(S.p0, look); found = true; } catch {}
       if (nav !== loadSeq) return; // a newer navigation (or load) came while that module loaded: this one is stale
     }
     // A plain link (no symmetry, no Rush note) to the puzzle on screen returns to the visit as it stands, turned or

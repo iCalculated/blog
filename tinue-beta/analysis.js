@@ -1,6 +1,6 @@
 // The analysis page's pure parts (after a puzzle): no DOM, no engines, so scripts/test-analysis.mjs runs them in node.
 // solverLines runs in the tactics worker (public/engine-worker.js, engine.lines) and in tests.
-import { Game, winningMoves, DIRS, WALL, CAP, typeOf } from './shared/tak.js?v=1795284866';
+import { Game, winningMoves, DIRS, WALL, CAP, typeOf } from './shared/tak.js?v=1795314232';
 
 // A link that opens a line in PTN Ninja: the PTN, lz-string compressed (compressToEncodedURIComponent, passed in so
 // the compressor loads only when a link is shown), at `ply` plies shown (0: the start, so no ply parameter), with an
@@ -98,6 +98,19 @@ export function fromChild(r, move, mover) {
 export function endLine(move, res, mover, src = 'solver') {
   const ev = res.winner === mover ? { kind: 'win', n: 1, proven: true } : res.winner ? { kind: 'loss', n: 0, proven: true } : { kind: 'prob', p: 0.5 };
   return { move, pv: [move], ev, src, tags: [] };
+}
+// A candidate or a miss judged without a search, from c (the position after `move`): one that ends the game (endLine),
+// or one that leaves the opponent a win on the spot, a proven "loses in 1" with that reply. Tiltak never reports a
+// mate, so a search of such a move only ever said "0%". null: nothing exact to say, search it.
+// The reply shown: a flat rather than the capstone on the same square, then the first by back(m) (pagesym.js toServer
+// back: the move in the puzzle's own orientation), so every turn of the board shows the same reply, turned.
+export function quickLine(c, move, mover, back = (m) => m) {
+  const res = c.result();
+  if (res) return endLine(move, res, mover);
+  const all = winningMoves(c, 1).moves, ws = all.filter((m) => !(m[0] === 'C' && all.includes(m.slice(1))));
+  if (!ws.length) return null;
+  const reply = ws.reduce((a, b) => (back(b) < back(a) ? b : a));
+  return { move, pv: [move, reply], ev: { kind: 'loss', n: 1, proven: true }, src: 'solver', tags: [] };
 }
 
 // The chip's words, from the mover's side.

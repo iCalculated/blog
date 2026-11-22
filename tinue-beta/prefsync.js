@@ -2,8 +2,8 @@
 // look follow a named account from device to device. This browser's prefs stay the working copy; the server keeps one
 // object per account (POST /api/settings; /api/me, /api/login and /api/register bring it back as `settings`). Guests and
 // signed-out players sync nothing. What app.js decides is here, so node can test it (scripts/test-prefsync.mjs).
-import { boardFrom, confirmOn, arrowsOn, soundOf, SOUND_DEFAULT } from './settings.js?v=1795284866';
-import { cleanLook } from './ninja-look.js?v=1795284866';
+import { boardFrom, confirmOn, arrowsOn, soundOf, SOUND_DEFAULT } from './settings.js?v=1795314232';
+import { cleanLook } from './ninja-look.js?v=1795314232';
 
 export const SYNCED = ['board', 'confirm', 'arrows', 'sound', 'ninja'];
 export const DEFAULTS = { board: 'tinue', confirm: false, arrows: true, sound: SOUND_DEFAULT, ninja: '' };

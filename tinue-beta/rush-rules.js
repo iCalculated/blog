@@ -2,11 +2,11 @@
 // judging a move by the puzzle's line, where an off-line move goes next (the puzzle page's adjudication: route,
 // playOutOutcome), the clock and its pauses, the combo and its time bonuses, and the end-of-run numbers.
 // public/rush.js owns the screen and the engines and calls these with the time it read.
-import { Game, colorOf, typeOf } from './shared/tak.js?v=1795284866';
-import { finalSquare } from './settings.js?v=1795284866';
-import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795284866';
-import * as SYM from './shared/sym.js?v=1795284866';
-import { moveShape } from './analysis.js?v=1795284866';
+import { Game, colorOf, typeOf } from './shared/tak.js?v=1795314232';
+import { finalSquare } from './settings.js?v=1795314232';
+import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795314232';
+import * as SYM from './shared/sym.js?v=1795314232';
+import { moveShape } from './analysis.js?v=1795314232';
 
 export const SIZE = 6; // Rush and Streak are 6×6 only (server/rush.js refuses any other size)
 export const RUSH_MS = 180e3; // 3:00
@@ -255,6 +255,13 @@ export function summary(run) {
     highest: solved.length ? Math.max(...solved.map((r) => r.rating)) : null,
   };
 }
+// Time played as the end screen shows it. Rush: the clock, which starts at the first move. Streak has no clock, so the
+// clock's start would leave out the thinking before the first move: its time is the puzzles' own (the list under it),
+// less the engine's pauses, which are never the player's.
+export function timePlayed(rec) {
+  const s = rec.sum, clock = s.clockMs ?? s.ms;
+  return rec.mode === 'rush' ? clock : Math.max(0, rec.puzzles.reduce((t, p) => t + p.ms, 0) - (s.ms - clock));
+}
 // Moves are posted in the puzzle's own orientation (sym: the symmetry it was shown under, shared/sym.js), so rows from
 // different runs line up; the player saw them turned. paused: the run's engine time, never on its clock.
 export function resultBody(run, build = 0, env = null) {
@@ -383,9 +390,19 @@ export function boardFrom(p, line = []) {
 }
 // The colour to move (solver 1 = white), and whether it differs from the last puzzle's: a run mixes both colours, and
 // the stone and the board's ring pulse on a change so a player in the habit of one side notices.
+// name: the word the bar above the board shows beside the stone, so the side reads without telling two shades apart.
 export function turn(solver, prev = null) {
-  const white = solver === 1;
-  return { color: white ? 'white' : 'black', text: white ? 'White to play.' : 'Black to play.', changed: prev != null && prev !== solver };
+  const white = solver === 1, name = white ? 'White' : 'Black';
+  return { color: white ? 'white' : 'black', name, text: `${name} to play.`, changed: prev != null && prev !== solver };
+}
+// The line under the board. While a move is adjudicated: the puzzle page's card heading and status (adj). Otherwise
+// the side to move comes first, always: a player reads it before anything else, and the last puzzle's ending (head,
+// after a play-out) follows it, named as the last puzzle's, never in front of it (Discord, 2026-11-21: "a bunch of
+// text that appears before the actually important info of who is to play").
+export function noteText({ toMove = '', head = null, adj = null, waiting = false }) {
+  if (adj) return adj;
+  if (head) return `${toMove} Last puzzle: ${head}.`;
+  return waiting ? `${toMove} The clock starts with your first move.` : toMove;
 }
 // The puzzle just finished, as Storm shows it: a mark and its rating (whole; ratings are stored as reals).
 export function lastText(r) {
@@ -395,17 +412,18 @@ export function lastText(r) {
   return r.solved ? { text: `✓ ${n}`, cls: 'good', label: `Last puzzle solved, rated ${n}` }
     : { text: `✗ ${n}`, cls: 'bad', label: `Last puzzle failed, rated ${n}` };
 }
-// What a screen reader hears once per puzzle (rush.js say()): the result (lastText's), in Rush the time it moved the
-// clock by, then whose turn it is next, or how the run ended. bonus: ms gained on the puzzle (0 or more).
-// 'Solved. 3 seconds added. Black to play.' · 'Wrong. 10 seconds lost. White to play.' · 'Wrong. Streak over.'
-export function sayText({ r = null, mode, bonus = 0, next = null, over = false }) {
+// What a screen reader hears once per puzzle (rush.js say()), in the order the screen shows it: whose turn it is next
+// first (as the line under the board), then the last puzzle's ending after a play-out (head, as that line), then the
+// result (lastText's) and in Rush the time it moved the clock by. At the run's end there is no next: the ending, the
+// result, how the run ended. bonus: ms gained on the puzzle (0 or more).
+// 'Black to play. Solved. 3 seconds added.' · 'White to play. Wrong. 10 seconds lost.' · 'Wrong. Streak over.'
+export function sayText({ r = null, mode, bonus = 0, next = null, over = false, head = null }) {
   const v = lastText(r), rush = mode === 'rush';
   const parts = v ? [{ good: 'Solved.', bad: 'Wrong.', skip: 'Skipped.' }[v.cls]] : [];
   if (v && rush && v.cls === 'good' && bonus > 0) parts.push(`${bonus / 1000} seconds added.`);
   if (v && rush && v.cls === 'bad') parts.push(`${WRONG_MS / 1000} seconds lost.`);
-  if (over) parts.push(rush ? 'Time’s up.' : 'Streak over.');
-  else if (next) parts.push(next);
-  return parts.join(' ');
+  if (over) return [head ? `${head}.` : null, ...parts, rush ? 'Time’s up.' : 'Streak over.'].filter(Boolean).join(' ');
+  return [next, head ? `Last puzzle: ${head}.` : null, ...parts].filter(Boolean).join(' ');
 }
 // When a stored run was played, short: 'Today, 8:05 PM', 'Yesterday, 8:05 PM', 'Nov 16, 8:05 PM', and the year only
 // when it isn't this one ('Dec 30, 2025, 8:05 PM'). Local time; locale as the browser's unless given.
@@ -419,6 +437,8 @@ export function whenText(t, now = Date.now(), locale = undefined) {
   return d.toLocaleString(locale, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
     ...(d.getFullYear() !== n.getFullYear() ? { year: 'numeric' } : {}) });
 }
+// The end screen's line for a new best (the post's newBest): plain, and no "score", which Streak doesn't have.
+export const newBestText = (nb) => ({ all: 'New all-time best', week: 'New best this week', today: 'New best today' })[nb] ?? '';
 // A recent-runs row as a screen reader says it (the row itself shows the same in columns).
 export function recentLabel(rec, when) {
   if (rec.mode !== 'rush') return `Streak, ${rec.score}, ${when}`;

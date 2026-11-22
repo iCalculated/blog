@@ -111,14 +111,16 @@ button.danger { background: var(--bad-fill); border-color: var(--bad-fill); colo
 .ptn-in { width: 100%; margin-top: 8px; font-family: var(--mono); }
 .ptn-in:not(:focus) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
 .ptn-in[aria-invalid="true"] { border-color: var(--bad); }
+.ptn-err { margin: 4px 0 0; color: var(--bad); font-size: var(--fs-xs); }
+.ptn-err:empty, .ptn-in:not(:focus) ~ .ptn-err { display: none; } /* (shown with the box, which hides when it loses focus) */
 
 /* ---------- side panels ---------- */
 /* feedback card: icon | title | the puzzle's actions (Hint / Solution, then Next puzzle), the explanation underneath */
 .feedback { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "icon title act" "icon text text";
   column-gap: 12px; row-gap: 2px; align-items: center; }
 .feedback .icon { grid-area: icon; align-self: start; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-size: 20px; font-weight: 700; }
-.feedback .icon.turn { background: var(--p1); border: 2px solid var(--p1-edge); }
-.feedback .icon.turn.p2 { background: var(--p2); border-color: #9a948c; }
+.feedback .icon.turn { background: var(--p1); border: 2px solid var(--p1-edge); color: var(--p2); } /* (the "…" while checking: the page's grey vanished on White's disc) */
+.feedback .icon.turn.p2 { background: var(--p2); border-color: #9a948c; color: var(--p1); }
 .feedback .icon.good { background: var(--good-fill); color: #fff; }
 .feedback .icon.bad { background: var(--bad-fill); color: #fff; }
 .feedback .body { display: contents; }
@@ -293,7 +295,8 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .glossary dl { display: grid; grid-template-columns: minmax(120px, 180px) 1fr; gap: 10px 20px; background: var(--bg2); border-radius: var(--r-panel); padding: var(--pad) 20px; }
 .glossary dt { color: var(--fg-hi); font-weight: 600; }
 .glossary dd { margin: 0; }
-.glossary dd .practice { font-size: var(--fs-xs); margin-left: 8px; }
+.glossary dd .practice { font-size: var(--fs-xs); white-space: nowrap; }
+.glossary dd .gap { word-spacing: 8px; } /* (the space before Practice: dropped at a line break, as a margin isn't) */
 .flush { margin: 0; }
 .page .panel { margin-top: 8px; }
 .credits { max-width: 640px; margin: 40px auto 0; padding: 16px 16px 28px; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--fs-xs); line-height: 1.6; text-align: center; text-wrap: balance; }
@@ -500,6 +503,12 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .rush-turn.black i { background: var(--p2); border-color: var(--p2-edge); }
 .rush-turn.sm { display: inline-block; width: 22px; height: 22px; vertical-align: -6px; margin-right: 6px; }
 .rush-turn.flip i { animation: rush-stone var(--rush-base) var(--rush-ease); }
+/* the stone and its name, first in the bar: the side to move is read before the clock, and in words as well as shade
+   (players on Discord, 2026-11-21, couldn't tell whose turn it was). In the bar, so nothing under it can push it down. */
+.rush-side { flex: none; display: flex; align-items: center; gap: 8px; }
+.rush-side-txt { display: flex; flex-direction: column; line-height: 1.1; }
+.rush-side-txt b { font-size: 17px; color: var(--fg-hi); }
+.rush-side-txt span { font-size: var(--fs-xs); color: var(--muted); }
 @keyframes rush-stone { 40% { transform: scale(1.2); } }
 /* the puzzle just finished, as Storm's: one fixed spot under the board, flush right; it pops in when a result arrives */
 .rush-note { flex: 1; min-width: 0; }
@@ -526,6 +535,52 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
   .rush-clock { font-size: 24px; }
   .rush-score b { font-size: 24px; }
   .rush-clock:not(.hidden) + .rush-score b { font-size: 20px; }
+  table.t.hist td, table.t.hist th { padding: 7px 10px; }
+}
+/* A narrow bar, by its own width: a phone's, and a desktop's in a short window (the board, and the bar with it, takes
+   its width from the window's height there). The phone's sizes, and room for the side to move's name: its stone a little
+   smaller, the combo's two words stacked over the bar (the bar keeps its height), the pop taking the second line's place,
+   which steps aside for it as above. Below 440 px the desktop sizes no longer fit with a long combo. (The bar's height
+   stays, so the board doesn't move.) */
+.rush-run { container: rush / inline-size; }
+@container rush (max-width: 440px) {
+  .rush-hud { gap: 10px; padding-left: 10px; padding-right: 10px; }
+  .rush-clock { font-size: 24px; }
+  .rush-score b { font-size: 24px; }
+  .rush-clock:not(.hidden) + .rush-score b { font-size: 20px; }
+  .rush-side { gap: 6px; }
+  .rush-side .rush-turn { width: 32px; height: 32px; }
+  .rush-side-txt b { font-size: 15px; }
+  .rush-combo-text { flex-direction: column; gap: 0; line-height: 1.1; }
+  .rush-combo-bar { margin-top: 3px; }
+  .rush-pop { top: 13px; left: 0; right: auto; }
+}
+/* the narrowest bars (a 320 px phone, a window under about 610 px tall): a little tighter again, so a two-digit combo's
+   words stay inside the bar */
+@container rush (max-width: 330px) {
+  .rush-hud { gap: 8px; padding-left: 8px; padding-right: 8px; }
+  .rush-clock { font-size: 22px; }
+  .rush-clock:not(.hidden) + .rush-score { padding-left: 8px; }
+  .rush-score { gap: 4px; }
+  .rush-side { gap: 5px; }
+  .rush-side .rush-turn { width: 28px; height: 28px; }
+  .rush-side-txt b { font-size: 14px; }
+}
+/* (without container queries: the same rules where .rush-run's width says the bar is that narrow, a phone-wide window
+   or one under 746 px tall, (745 - 200) / 1.24 < 440) */
+@supports not (container-type: inline-size) {
+  @media (max-width: 600px), (max-height: 745px) {
+    .rush-hud { gap: 10px; padding-left: 10px; padding-right: 10px; }
+    .rush-clock { font-size: 24px; }
+    .rush-score b { font-size: 24px; }
+    .rush-clock:not(.hidden) + .rush-score b { font-size: 20px; }
+    .rush-side { gap: 6px; }
+    .rush-side .rush-turn { width: 32px; height: 32px; }
+    .rush-side-txt b { font-size: 15px; }
+    .rush-combo-text { flex-direction: column; gap: 0; line-height: 1.1; }
+    .rush-combo-bar { margin-top: 3px; }
+    .rush-pop { top: 13px; left: 0; right: auto; }
+  }
 }
 /* thumb-sized targets on touch screens (the board and its tray have their own) */
 @media (pointer: coarse) {

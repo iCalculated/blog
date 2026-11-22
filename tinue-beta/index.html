@@ -26,8 +26,8 @@ window.__tinueNinja = (function () {
 if (window.__tinueNinja) document.head.append(Object.assign(document.createElement('link'), { rel: 'preconnect', href: 'https://ptn.ninja' }));</script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="board.css?v=1795284866">
-<link rel="stylesheet" href="style.css?v=1795284866">
+<link rel="stylesheet" href="board.css?v=1795314232">
+<link rel="stylesheet" href="style.css?v=1795314232">
 <style>.booting main, .booting .credits { visibility: hidden; }</style>
 <script>setTimeout(() => document.documentElement.classList.remove("booting"), 2000);</script>
 <meta name="googlebot" content="noindex"><meta name="bingbot" content="noindex">
@@ -77,7 +77,7 @@ if (window.__tinueNinja) document.head.append(Object.assign(document.createEleme
       }
     </script>
     <div id="confirm-bar" class="confirm-bar idle" hidden><span class="msg" id="confirm-msg"></span><button type="button" id="confirm-no">Cancel</button><button type="button" class="primary" id="confirm-yes">Confirm</button></div>
-    <form id="ptn-form" class="ptn-form"><input id="ptn-in" class="ptn-in" aria-label="Type a move" placeholder="Type a move, e.g. c3 or 2a1>11" autocomplete="off" autocapitalize="off" spellcheck="false" disabled></form>
+    <form id="ptn-form" class="ptn-form"><input id="ptn-in" class="ptn-in" aria-label="Type a move" aria-describedby="ptn-err" placeholder="Type a move, e.g. c3 or 2a1>11" autocomplete="off" autocapitalize="off" spellcheck="false" disabled><p id="ptn-err" class="ptn-err" role="alert"></p></form>
   </section>
 
   <aside class="side">
@@ -98,7 +98,7 @@ if (window.__tinueNinja) document.head.append(Object.assign(document.createEleme
             <option value="harder">Harder (+300)</option><option value="hardest">Hardest (+600)</option>
           </select>
         </label>
-        <label class="field"><span>Board</span>
+        <label class="field"><span>Board size</span>
           <select id="size"><option value="6">6×6</option></select>
         </label>
       </div>
@@ -137,7 +137,7 @@ if (window.__tinueNinja) document.head.append(Object.assign(document.createEleme
   <p>tinue is free software under the <a href="LICENSE.txt">GNU GPL v3</a>. <a href="https://github.com/iCalculated/blog/tree/main/tinue">Source code</a>.</p>
 </footer>
 
-<script src="config.js?v=1795284866"></script>
-<script type="module" src="app.js?v=1795284866"></script>
+<script src="config.js?v=1795314232"></script>
+<script type="module" src="app.js?v=1795314232"></script>
 </body>
 </html>
