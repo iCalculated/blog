@@ -94,38 +94,38 @@
 <main>
   <!-- make a card -->
   <section id="edit" hidden>
-    <h1>card <span>· make one anyone can scan</span></h1>
+    <h1>card</h1>
 
     <div class="row">
-      <button id="pick" hidden>pick from contacts</button>
-      <button id="file">import a .vcf</button>
+      <button id="pick" hidden>pick contact</button>
+      <button id="paste" hidden>paste contact</button>
+      <button id="file">import .vcf</button>
       <input id="fileInput" type="file" accept=".vcf,.vcard,text/vcard,text/x-vcard" hidden>
     </div>
-    <p class="hint" id="importHint">or paste / drop a contact anywhere on this page</p>
+    <p class="hint" id="importHint" hidden></p>
 
     <form class="fields" id="form" autocomplete="on" onsubmit="return false">
       <label><span>name</span><input name="fn" autocomplete="name" placeholder="ada lovelace" enterkeyhint="next"></label>
-      <label><span>phone</span><input name="tel" type="tel" autocomplete="tel" inputmode="tel" placeholder="+1 555 010 0199" enterkeyhint="next"></label>
-      <label><span>email</span><input name="email" type="email" autocomplete="email" inputmode="email" placeholder="ada@example.com" autocapitalize="off" enterkeyhint="next"></label>
-      <label><span>org</span><input name="org" autocomplete="organization" placeholder="optional" enterkeyhint="next"></label>
-      <label><span>title</span><input name="title" autocomplete="organization-title" placeholder="optional" enterkeyhint="next"></label>
-      <label><span>site</span><input name="url" type="url" autocomplete="url" inputmode="url" placeholder="optional" autocapitalize="off" enterkeyhint="next"></label>
-      <label><span>note</span><textarea name="note" rows="1" placeholder="optional"></textarea></label>
+      <label><span>phone</span><input name="tel" type="tel" autocomplete="tel" inputmode="tel" placeholder="+44 20 7946 0199" enterkeyhint="next"></label>
+      <label><span>email</span><input name="email" type="email" autocomplete="email" inputmode="email" placeholder="ada@ada.example" autocapitalize="off" enterkeyhint="next"></label>
+      <label><span>org</span><input name="org" autocomplete="organization" placeholder="analytical engines" enterkeyhint="next"></label>
+      <label><span>site</span><input name="url" type="url" autocomplete="url" inputmode="url" placeholder="ada.example" autocapitalize="off" enterkeyhint="next"></label>
+      <label><span>note</span><textarea name="note" rows="1" placeholder="wrote the first program"></textarea></label>
     </form>
 
     <div class="seg" role="group" aria-label="what the qr holds">
-      <button data-mode="vcard" aria-pressed="true">qr adds the contact</button>
-      <button data-mode="link" aria-pressed="false">qr opens the card</button>
+      <button data-mode="vcard" aria-pressed="true">adds contact</button>
+      <button data-mode="link" aria-pressed="false">opens card</button>
     </div>
-    <div class="qr"><canvas id="qrEdit" hidden></canvas><p id="qrEmpty">add a name to get a code</p></div>
+    <div class="qr"><canvas id="qrEdit" hidden></canvas><p id="qrEmpty">add a name</p></div>
     <p class="hint" id="modeHint"></p>
 
     <div class="row">
-      <button class="primary" id="open">open my card</button>
+      <button class="primary" id="open">open card</button>
       <button id="shareEdit">share link</button>
       <button id="saveEdit">save qr</button>
     </div>
-    <p class="hint">nothing is uploaded. the card lives in the link itself, and this draft is kept only on this device. <a href="#" id="clear">clear</a></p>
+    <p class="hint">nothing is uploaded. card is in the link, draft in this browser. <a href="#" id="clear">clear</a></p>
   </section>
 
   <!-- someone's card -->
@@ -141,7 +141,7 @@
       <button id="shareView">share</button>
     </div>
     <div class="qr"><canvas id="qrView"></canvas></div>
-    <p class="hint">scan to add this contact. <a href="#" id="editCopy">edit</a> · <a href="./">make your own</a></p>
+    <p class="hint">scan to add. <a href="#" id="editCopy">edit</a> · <a href="./">make one</a></p>
   </section>
 </main>
 <div id="toast" role="status"></div>
@@ -149,7 +149,7 @@
 <script src="qrcode.js"></script>
 <script>
 (() => {
-  const FIELDS = ['fn', 'tel', 'email', 'org', 'title', 'url', 'note'];
+  const FIELDS = ['fn', 'tel', 'email', 'org', 'url', 'note'];
   const STORE = 'card.draft', MODE = 'card.mode';
   const $ = id => document.getElementById(id);
   const form = $('form');
@@ -195,7 +195,6 @@
     const L = ['BEGIN:VCARD', 'VERSION:3.0',
       `N:${esc(family)};${esc(parts.join(' '))};;;`, `FN:${esc(d.fn || '')}`];
     if (d.org) L.push('ORG:' + esc(d.org));
-    if (d.title) L.push('TITLE:' + esc(d.title));
     list(d.tel).forEach(t => L.push('TEL;TYPE=CELL:' + t));
     list(d.email).forEach(e => L.push('EMAIL:' + e));
     if (d.url) L.push('URL:' + href(d.url));
@@ -218,7 +217,6 @@
       if (key === 'FN') d.fn = unesc(v);
       else if (key === 'N') { const [fam, giv] = splitUnescaped(v, ';').map(unesc); n = [giv, fam].filter(Boolean).join(' '); }
       else if (key === 'ORG') d.org = d.org || splitUnescaped(v, ';').map(unesc).filter(Boolean).join(', ');
-      else if (key === 'TITLE') d.title = d.title || unesc(v);
       else if (key === 'TEL') d.tel.push(v.replace(/^tel:/i, ''));
       else if (key === 'EMAIL') d.email.push(unesc(v));
       else if (key === 'URL') d.url = d.url || unesc(v);
@@ -273,7 +271,7 @@
       return;
     }
     try { await navigator.clipboard.writeText(url); toast('link copied'); }
-    catch { prompt('copy this link', url); }
+    catch { prompt('copy link', url); }
   }
   function saveQR(canvas, d) {
     canvas.toBlob(async blob => {
@@ -303,18 +301,34 @@
     document.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.mode === mode));
     const drawn = ok && drawQR($('qrEdit'), mode === 'vcard' ? toVCard(d) : linkFor(d));
     $('qrEdit').hidden = !drawn; $('qrEmpty').hidden = drawn;
-    $('qrEmpty').textContent = ok ? 'too much text for one code. trim the note?' : 'add a name to get a code';
+    $('qrEmpty').textContent = ok ? 'too much text for a qr' : 'add a name';
     $('modeHint').textContent = mode === 'vcard'
-      ? 'a phone camera offers "add contact" straight from this code. works offline.'
-      : 'this code opens the card page, with one tap to add the contact.';
+      ? 'contact is in the qr, works offline'
+      : 'links to the card page';
     for (const id of ['open', 'shareEdit', 'saveEdit']) $(id).disabled = !ok;
   }
+  // plain text, e.g. a contact copied from a phone's address book
+  function parsePlain(text) {
+    const d = { tel: [], email: [] };
+    for (const raw of text.split(/\r?\n/)) {
+      const line = raw.replace(/^[^:]{1,12}:\s+/, '').trim();
+      if (!line) continue;
+      const em = line.match(/[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+/);
+      if (em) { d.email.push(em[0]); continue; }
+      if (/^\+?[\d\s().-]{7,}$/.test(line)) { d.tel.push(line); continue; }
+      if (/^(https?:\/\/|www\.)\S+$/i.test(line)) { d.url = d.url || line; continue; }
+      if (!d.fn && line.length <= 60) d.fn = line;
+    }
+    if (!d.tel.length && !d.email.length) return null;
+    d.tel = d.tel.join(', '); d.email = d.email.join(', ');
+    return clean(d);
+  }
   function importText(text) {
-    const d = parseVCard(text || '');
+    const d = parseVCard(text || '') || parsePlain(text || '');
     if (!d) return false;
     fill(d); toast('imported ' + (d.fn || 'contact')); return true;
   }
-  const importFile = async f => { if (f && !importText(await f.text())) toast("couldn't read that as a contact"); };
+  const importFile = async f => { if (f && !importText(await f.text())) toast("couldn't read contact"); };
 
   function initEdit(seed) {
     $('view').hidden = true; $('edit').hidden = false; document.title = 'card';
@@ -328,6 +342,14 @@
     const b = e.target.closest('button'); if (!b) return;
     mode = b.dataset.mode; store.set(MODE, mode); refresh();
   });
+  if (navigator.clipboard && navigator.clipboard.readText) {
+    $('paste').hidden = false;
+    $('paste').onclick = async () => {
+      let t = '';
+      try { t = await navigator.clipboard.readText(); } catch { return; }
+      if (!importText(t)) toast('no contact found');
+    };
+  }
   $('file').onclick = () => $('fileInput').click();
   $('fileInput').onchange = e => { importFile(e.target.files[0]); e.target.value = ''; };
   $('open').onclick = () => { location.hash = encode(read()); };
@@ -349,7 +371,7 @@
     };
   }
   if (/iPhone|iPad/.test(navigator.userAgent))
-    $('importHint').textContent = 'in contacts: share contact → save to files, then import it here. or paste one.';
+    { $('importHint').textContent = 'in contacts: share contact → save to files'; $('importHint').hidden = false; }
 
   // paste / drop a vcard anywhere
   document.addEventListener('paste', e => {
@@ -358,7 +380,7 @@
     const f = [...cd.files].find(f => /vcard|\.vcf$/i.test(f.type + f.name));
     if (f) { e.preventDefault(); importFile(f); return; }
     const t = cd.getData('text/vcard') || cd.getData('text/plain');
-    if (/BEGIN:VCARD/i.test(t) && importText(t)) e.preventDefault();
+    if (/BEGIN:VCARD/i.test(t) ? importText(t) : (!/^(INPUT|TEXTAREA)$/.test(e.target.tagName) && importText(t))) e.preventDefault();
   });
   let dragN = 0;
   addEventListener('dragenter', e => { e.preventDefault(); dragN++; document.body.classList.add('drag'); });
@@ -377,7 +399,7 @@
     shown = d;
     $('edit').hidden = true; $('view').hidden = false; document.title = d.fn + ' · card';
     $('vName').textContent = d.fn;
-    $('vSub').textContent = [d.title, d.org].filter(Boolean).join(' · ');
+    $('vSub').textContent = d.org || '';
     $('vSub').hidden = !$('vSub').textContent;
     const lines = $('vLines'); lines.textContent = '';
     const line = (label, text, url) => {
