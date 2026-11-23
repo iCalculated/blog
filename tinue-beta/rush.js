@@ -5,19 +5,19 @@
 // with the puzzle page's own rules and engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused
 // while they work. Nothing here is rated, and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { buildPTN } from './board-kit.js?v=1795423678';
-import { SAYS } from './ninja.js?v=1795423678';
-import { api, store, token } from './api.js?v=1795423678';
-import { confirmOn, takesHeldKey } from './settings.js?v=1795423678';
-import * as R from './rush-rules.js?v=1795423678';
-import { picture, pictureHTML } from './rush-look.js?v=1795423678';
-import * as engine from './engine.js?v=1795423678';
-import * as tiltak from './tiltak.js?v=1795423678';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795423678';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795423678';
-import { busy, BUSY_MS } from './busy.js?v=1795423678';
-import * as SYM from './shared/sym.js?v=1795423678';
-import * as sound from './sound.js?v=1795423678'; // (moves click through board-kit.js hooks.onPly, set by app.js; the verdicts are played here)
+import { buildPTN } from './board-kit.js?v=1795457078';
+import { SAYS } from './ninja.js?v=1795457078';
+import { api, store, token } from './api.js?v=1795457078';
+import { confirmOn, takesHeldKey } from './settings.js?v=1795457078';
+import * as R from './rush-rules.js?v=1795457078';
+import { picture, pictureHTML } from './rush-look.js?v=1795457078';
+import * as engine from './engine.js?v=1795457078';
+import * as tiltak from './tiltak.js?v=1795457078';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795457078';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795457078';
+import { busy, BUSY_MS } from './busy.js?v=1795457078';
+import * as SYM from './shared/sym.js?v=1795457078';
+import * as sound from './sound.js?v=1795457078'; // (moves click through board-kit.js hooks.onPly, set by app.js; the verdicts are played here)
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -152,6 +152,9 @@ function boardMissing() {
   err.classList.add('board');
   err.innerHTML = `<span>${esc(board.iframe.dataset.down === 'stopped' ? SAYS.stopped : SAYS.load)}</span><button type="button" id="rush-retry">Retry</button>`;
   $('#rush-retry').onclick = () => { err.textContent = ''; err.classList.remove('board'); board.retry(); startRun(); };
+  // PTN Ninja coming up late after all (a slow load): the message goes by itself, and Start is as it was
+  const g = gen;
+  board.whenUp().then(() => { if (g === gen && !(st && !st.ended) && err.isConnected && err.classList.contains('board')) { err.textContent = ''; err.classList.remove('board'); } });
 }
 
 const section = (id) => { for (const s of ['rush-start', 'rush-run', 'rush-end']) $('#' + s).classList.toggle('hidden', s !== id); };
@@ -996,7 +999,7 @@ function lookBack(rec) {
   }
 }
 // The end screen's line for a run the board ended (boardDied)
-export const BOARD_ENDED = 'The board (PTN Ninja) stopped answering, so this run ended. It doesn’t count against you.';
+export const BOARD_ENDED = 'The board (PTN Ninja) stopped answering, so this run ended. It isn’t kept, and doesn’t count against you.';
 async function showBest(r, mode, s, out = null) {
   if (st !== s) return;
   const best = r?.best ?? await bestFor();

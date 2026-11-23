@@ -18,9 +18,10 @@
 for (const l of document.querySelectorAll('link[rel="apple-touch-icon"], link[rel="manifest"]')) l.href = l.href;</script>
 <link rel="preconnect" href="https://ptn.ninja"><!-- the board is PTN Ninja's: its iframe starts below, once the stylesheets are in -->
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="board.css?v=1795423678">
-<link rel="stylesheet" href="style.css?v=1795423678">
+<!-- (the font's stylesheet doesn't hold up the page: the board's iframe below starts without waiting for it) -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&display=swap" media="print" onload="this.media='all'">
+<link rel="stylesheet" href="board.css?v=1795457078">
+<link rel="stylesheet" href="style.css?v=1795457078">
 <style>.booting main, .booting .credits { visibility: hidden; }</style>
 <script>setTimeout(() => document.documentElement.classList.remove("booting"), 2000);</script>
 <meta name="googlebot" content="noindex"><meta name="bingbot" content="noindex">
@@ -66,6 +67,7 @@ for (const l of document.querySelectorAll('link[rel="apple-touch-icon"], link[re
             src = src.replace(new RegExp('&' + k + '=[^&]*'), '') + '&' + k + '=' + v;
           });
         } catch (e) {}
+        if (typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches) src = src.replace('&animateBoard=true', '&animateBoard=false'); // (as ninja.js: no moving pieces)
         f.src = 'https://ptn.ninja/' + src;
         f.dataset.t0 = performance.now(); // (ninja.js counts its wait for PTN Ninja from here)
         f.addEventListener('load', function () { f.dataset.loaded = performance.now(); }, { once: true }); // (and from its page loading)
@@ -114,7 +116,7 @@ for (const l of document.querySelectorAll('link[rel="apple-touch-icon"], link[re
   <p>tinue is free software under the <a href="LICENSE.txt">GNU GPL v3</a>. <a href="https://github.com/iCalculated/blog/tree/main/tinue">Source code</a>.</p>
 </footer>
 
-<script src="config.js?v=1795423678"></script>
-<script type="module" src="app.js?v=1795423678"></script>
+<script src="config.js?v=1795457078"></script>
+<script type="module" src="app.js?v=1795457078"></script>
 </body>
 </html>

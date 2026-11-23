@@ -18,7 +18,7 @@
 // Never 6×6, though Tiltak plays it: 6×6 is Syntaks's alone (Sasha, 2026-11-21: "we shouldn't have any tiltak analysis
 // in 6x6"). Where Syntaks can't answer on 6×6 the page says so (the solver's verdict, no engine) and Tiltak isn't asked:
 // supports() is false and analyze() refuses, so no caller (analysis, play-out, free game, Rush) can reach it.
-import { canonPTN } from './shared/ptn.js?v=1795423678';
+import { canonPTN } from './shared/ptn.js?v=1795457078';
 
 export const SUPPORTED = Object.freeze({ sizes: [4, 5], komi: [0, 2] });
 export const supports = (size, komi = 0) => SUPPORTED.sizes.includes(size) && (komi == null || komi >= -5 && komi <= 5);

@@ -3,10 +3,10 @@
 // When PTN Ninja can't be loaded, is too slow, or stops answering, a plain message with Retry takes the board's place:
 // nothing is judged meanwhile (no move can be made), and nothing else is put there.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1795423678';
-import { parsePTN } from './shared/ptn.js?v=1795423678';
-import { buildPTN, focusedByPointer, landOf, hooks } from './board-kit.js?v=1795423678';
-import { frameParams, lookUi, frameBox, frameGeom } from './ninja-look.js?v=1795423678';
+import { Game } from './shared/tak.js?v=1795457078';
+import { parsePTN } from './shared/ptn.js?v=1795457078';
+import { buildPTN, focusedByPointer, landOf, hooks } from './board-kit.js?v=1795457078';
+import { frameParams, lookUi, frameBox, frameGeom } from './ninja-look.js?v=1795457078';
 
 const ORIGIN = 'https://ptn.ninja';
 // tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses). The board as
@@ -52,16 +52,21 @@ const OLD_SHAPE = { host: '', frame: 'width:100%;aspect-ratio:1/1.3' }; // a 3D 
 // handle them there).
 const TRANSFORM = { '[': 'ROTATE_LEFT', ']': 'ROTATE_RIGHT', '-': 'ROTATE_180', ';': 'FLIP_HORIZONTAL', ':': 'FLIP_VERTICAL', '=': 'RESET_TRANSFORM' };
 // How long PTN Ninja gets, and when it counts as not there (NinjaBoard.MS; tests shorten them):
-// up      at most this long from the frame's start (index.html's data-t0) for PTN Ninja to come up (its first GAME_STATE).
-//         A cached PTN Ninja is up in ~0.1 s, a first visit on a desktop in ~0.7 s, on Slow 4G in ~6.5 s.
+// up      at most this long from the frame's start (index.html's data-t0) for PTN Ninja to come up (its first GAME_STATE)
+//         while its page is still loading. A cached PTN Ninja is up in ~0.1 s, a first visit on a desktop in ~0.7 s, on
+//         Slow 4G in ~6.5 s, at 500 kbps with a slow CPU in ~26 s: a page still arriving is slow, not gone, so this is
+//         long (only a connection that hangs outright waits it out; a blocked ptn.ninja is caught by loaded).
 // loaded  once the frame's page has loaded (its load event: a blocked or failing ptn.ninja loads an error page, and then
 //         nothing comes), this long more at most. PTN Ninja boots ~1 s after its page loads on a slow phone.
 // note    "Loading the board…" from this long on (before it, the empty board's box says nothing).
 // heart   a board in use asks PTN Ninja for its theme (GET_THEME, answered in ~2 ms whatever it shows) this often;
 // dead    and after that, or after a load, waits this long for the answer. No answer: the board has stopped answering.
-// A hidden tab is never held to these (its timers and the frame's are slowed): it is checked again once shown.
+// A hidden tab is never held to these (its timers and the frame's are slowed): it is checked again once shown, with
+// GRACE more at least (a frame throttled while hidden gets a moment to come up before it is called down).
 // PTN Ninja coming up or answering later, at any time, puts the board back in the message's place, as it was.
-const MS = { up: 15000, loaded: 8000, note: 4000, heart: 1000, dead: 3000 };
+const MS = { up: 45000, loaded: 8000, note: 4000, heart: 1000, dead: 3000, grace: 3000 };
+// Reduced motion (the system's setting): PTN Ninja's pieces don't move, as tinue's own board didn't.
+const still = () => !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 // What the board's place says (minimal, in tinue's voice). load: never came up; stopped: stopped answering.
 export const SAYS = { note: 'Loading the board…', load: 'The board (PTN Ninja) didn’t load.', stopped: 'The board (PTN Ninja) stopped answering.' };
 const store = {
@@ -107,7 +112,7 @@ export class NinjaBoard {
     f.title = 'Tak board (PTN Ninja)';
     this._shape(6);
     this.ready = new Promise((resolve) => { this._resolve = resolve; });
-    this._waiters = [];
+    this._waiters = []; this._ups = [];
     // (every listener and timer of this board is let go by destroy())
     this._offs = [];
     const on = (t, type, fn) => { t.addEventListener(type, fn); this._offs.push(() => t.removeEventListener(type, fn)); };
@@ -126,9 +131,14 @@ export class NinjaBoard {
     on(f, 'load', () => { f.dataset.loaded = performance.now(); this._wait(); });
     on(window, 'keydown', (e) => this._key(e));
     on(document, 'visibilitychange', () => { if (!document.hidden) { this._wait(); this._beat(); } });
+    // reduced motion turned on or off: PTN Ninja follows (whichever board has the frame)
+    const mq = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
+    if (mq?.addEventListener && mq.removeEventListener) on(mq, 'change', () => { const o = f.ninjaOwner || this; o._post('SET_UI', { animateBoard: o._anim() }); });
     if (f.dataset.up) queueMicrotask(() => this._alive()); else this._wait();
   }
-  _src() { return ORIGIN + '/' + frameParams(PARAMS, this.lookStored); }
+  _src() { return ORIGIN + '/' + frameParams(still() ? PARAMS.replace('&animateBoard=true', '&animateBoard=false') : PARAMS, this.lookStored); }
+  // Whether PTN Ninja animates moves: tinue's setting for now (off while loading a whole game), never with reduced motion.
+  _anim() { return !!this.opts.animateBoard && !still(); }
 
   // ---------- up, loading, down ----------
   // 'loading' (not up yet, or reloading after Retry), 'up', or 'down' (the message is shown).
@@ -136,7 +146,9 @@ export class NinjaBoard {
   get available() { return this.state === 'up'; }
   // Resolves once the frame is up or down (Rush's Start waits on it).
   settled() { return this.state === 'loading' ? new Promise((r) => this._waiters.push(r)) : Promise.resolve(); }
-  _changed() { for (const r of this._waiters.splice(0)) r(); try { this.onState?.(this.state); } catch (e) { console.warn(e); } }
+  // Resolves once the frame is up (now, or whenever PTN Ninja comes up or answers again; Rush clears its message then).
+  whenUp() { if (this.lender) return this.lender.whenUp(); return this.state === 'up' ? Promise.resolve() : new Promise((r) => this._ups.push(r)); }
+  _changed() { for (const r of this._waiters.splice(0)) r(); if (this.state === 'up') for (const r of this._ups.splice(0)) r(); try { this.onState?.(this.state); } catch (e) { console.warn(e); } }
 
   // Not up yet: the message once it has been too long (MS.up from the frame's start, or MS.loaded from its page loading),
   // "Loading the board…" from MS.note on.
@@ -145,10 +157,12 @@ export class NinjaBoard {
     clearTimeout(this._waitT); clearTimeout(this._noteT);
     if (this.dead || f.dataset.up || f.dataset.down) return;
     const now = performance.now(), t0 = +f.dataset.t0 || now;
-    const by = Math.min(t0 + NinjaBoard.MS.up, f.dataset.loaded ? +f.dataset.loaded + NinjaBoard.MS.loaded : Infinity);
+    let by = Math.min(t0 + NinjaBoard.MS.up, f.dataset.loaded ? +f.dataset.loaded + NinjaBoard.MS.loaded : Infinity);
+    if (this._hiddenAt) by = Math.max(by, now + (NinjaBoard.MS.grace ?? 3000)); // (the deadline passed while the tab was hidden)
+    this._hiddenAt = false;
     this._waitT = setTimeout(() => {
       if (this.dead || f.dataset.up || f.dataset.down) return;
-      if (document.hidden) return; // (checked again once shown: visibilitychange)
+      if (document.hidden) { this._hiddenAt = true; return; } // (checked again once shown, with a grace: visibilitychange)
       this._down('load');
     }, Math.max(0, by - now));
     if (this._owns()) this._noteT = setTimeout(() => { if (!f.dataset.up && !f.dataset.down && !this.dead) this._say('note'); }, Math.max(0, t0 + NinjaBoard.MS.note - now));
@@ -157,7 +171,7 @@ export class NinjaBoard {
   _alive() {
     const f = this.iframe, was = f.dataset.down;
     clearTimeout(this._waitT); clearTimeout(this._noteT);
-    if (was) { delete f.dataset.down; console.warn('PTN Ninja is answering again'); }
+    if (was) { delete f.dataset.down; f.removeAttribute('tabindex'); console.warn('PTN Ninja is answering again'); }
     if (this._resolve) { // the first time
       this._resolve(); this._resolve = null;
       this._say(null);
@@ -178,6 +192,7 @@ export class NinjaBoard {
     const f = this.iframe;
     if (this.dead || f.dataset.down) return;
     f.dataset.down = why;
+    f.tabIndex = -1; // (out of the Tab order while it's out of sight: Tab goes to Retry)
     clearTimeout(this._waitT); clearTimeout(this._noteT); clearTimeout(this._beatT);
     console.warn(why === 'load' ? 'PTN Ninja did not load' : 'PTN Ninja stopped answering');
     if (this._owns()) this._say(why);
@@ -185,11 +200,12 @@ export class NinjaBoard {
   }
   // Retry: the frame loads PTN Ninja again (with the look as it is now), and the wait starts over. Once up, the board
   // gets back everything it was showing (_restore).
+  // A frame that came up meanwhile (late, but healthy) isn't loaded again.
   retry() {
     if (this.lender) return this.lender.retry();
     const f = this.iframe;
-    if (this.dead) return;
-    delete f.dataset.up; delete f.dataset.down; delete f.dataset.loaded;
+    if (this.dead || this.state === 'up') return;
+    delete f.dataset.up; delete f.dataset.down; delete f.dataset.loaded; f.removeAttribute('tabindex');
     f.dataset.t0 = performance.now();
     this._reloaded = !this._resolve; // (up before: everything goes again once it is up)
     this.shown = false; f.style.opacity = '0';
@@ -293,7 +309,7 @@ export class NinjaBoard {
 
   // tinue's settings and the player's look (tinue shows names nowhere else on the board, and they crowd the flat counts)
   _greet() {
-    this._post('SET_UI', { ...withLook(this.look), boardTransform: store.get('ninjaTransform') || [0, 0] });
+    this._post('SET_UI', { ...withLook(this.look), animateBoard: this._anim(), boardTransform: store.get('ninjaTransform') || [0, 0] });
     this._post('SHOW_NAMES', false);
   }
 
@@ -356,7 +372,7 @@ export class NinjaBoard {
     this._drawn = drawn.then(frames).then(() => {
       if (gen !== this.drawGen || this.dead) return; // (a later load's turn)
       this._want = null; clearTimeout(this._animT);
-      this._post('SET_UI', { animateBoard: this.opts.animateBoard });
+      this._post('SET_UI', { animateBoard: this._anim() });
       this._settle();
     });
     if (this.lender) this._answered(this.seen); // (Rush: every puzzle's load is answered; the puzzle page has the heartbeat)
@@ -407,7 +423,7 @@ export class NinjaBoard {
     this._post('SET_UI', { animateBoard: false });
     this._post('SET_CURRENT_PTN', ptn);
     this._post('GO_TO_PLY', { plyID: this.cur - 1, isDone: true });
-    setTimeout(() => this._post('SET_UI', { animateBoard: this.opts.animateBoard }), 60);
+    setTimeout(() => this._post('SET_UI', { animateBoard: this._anim() }), 60);
   }
 
   // ---------- the board's API (app.js, rush.js, lines.js) ----------
@@ -455,7 +471,8 @@ export class NinjaBoard {
   ui(v = {}) {
     Object.assign(this.opts, v);
     const out = {};
-    for (const k of ['showRoads', 'animateBoard']) if (k in v) out[k] = v[k];
+    if ('showRoads' in v) out.showRoads = v.showRoads;
+    if ('animateBoard' in v) out.animateBoard = this._anim();
     if ('disableBoard' in v) out.disableBoard = this._gated();
     if ('disableBoard' in v || 'dropOnStray' in v) this._focus(!this._gated() && !this.opts.dropOnStray);
     return Object.keys(out).length ? this._send('SET_UI', out) : this.ready;
