@@ -2,11 +2,11 @@
 // judging a move by the puzzle's line, where an off-line move goes next (the puzzle page's adjudication: route,
 // playOutOutcome), the clock and its pauses, the combo and its time bonuses, and the end-of-run numbers.
 // public/rush.js owns the screen and the engines and calls these with the time it read.
-import { Game, colorOf, typeOf } from './shared/tak.js?v=1795392346';
-import { finalSquare } from './settings.js?v=1795392346';
-import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795392346';
-import * as SYM from './shared/sym.js?v=1795392346';
-import { moveShape } from './analysis.js?v=1795392346';
+import { Game, colorOf, typeOf } from './shared/tak.js?v=1795423678';
+import { finalSquare } from './settings.js?v=1795423678';
+import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795423678';
+import * as SYM from './shared/sym.js?v=1795423678';
+import { moveShape } from './analysis.js?v=1795423678';
 
 export const SIZE = 6; // Rush and Streak are 6×6 only (server/rush.js refuses any other size)
 export const RUSH_MS = 180e3; // 3:00
@@ -151,18 +151,6 @@ export function startClock(run, now) { if (run.startedAt == null) run.startedAt 
 // user"): the clock stops while a check runs or the defender thinks, and runs whenever it is the player's turn. Only a
 // move that needs the engine pauses it (rush.js). In Streak, with no clock, the pauses are still counted (data).
 export function pause(run, now) { if (run.pausedAt == null && !run.over) run.pausedAt = now; }
-// PTN Ninja's board stopped answering mid-run (rush.js, ninja.js _die: tinue's board takes over): the time the run
-// waited on it is given back to the clock, as a pause, up to BOARD_CREDIT_MS, once. Not more: the server takes a run's
-// paused time only up to its moves' own pauses plus 1 s of slack (server/rush.js), and the wait is about a second
-// (ninja.js DEAD_MS) on top of a heartbeat's half second. Nothing while the clock hasn't started, is already paused (the
-// engine's pause covers it) or the run is over. Returns what was credited.
-export const BOARD_CREDIT_MS = 800;
-export function creditBoard(run, ms) {
-  if (run.mode !== 'rush' || run.over || run.startedAt == null || run.pausedAt != null || !(ms > 0)) return 0;
-  const d = Math.min(ms, BOARD_CREDIT_MS);
-  run.pausedMs += d;
-  return d;
-}
 // Ends a pause; returns the time credited to it (0 if none was running). room: the most it may credit (pauseMax less
 // what the move already had): a pause past its bound, e.g. a page frozen while the engine worked, is charged to the
 // clock beyond it, so a post never claims more engine time than the server takes.

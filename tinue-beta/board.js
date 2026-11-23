@@ -1,9 +1,14 @@
-// tinue's own Tak board: looks and plays like PTN Ninja's 2D board (what PlayTak embeds), at a tiny fraction
-// of the weight. Rules come from shared/tak.js; the visual and interaction spec is summarized at the top of
-// board.css (which the page links).
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795392346';
-import { parsePTN } from './shared/ptn.js?v=1795392346';
-import { dispPoint, shapesSvg, stackPiece, SP, GAP } from './analysis.js?v=1795392346';
+// RETIRED (2026-11-22): tinue's own Tak board. PTN Ninja (ninja.js) is the only board; constructing this one throws
+// at once, in every build. The code stays in the repository for now and the page never loads this file: what the page
+// needs of it (buildPTN, landOf, turnMark, focusedByPointer, the sound hooks) is in board-kit.js, re-exported here.
+// (Was: tinue's own board, modeled on PTN Ninja's 2D board; spec at the top of board.css.)
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795423678';
+import { parsePTN } from './shared/ptn.js?v=1795423678';
+import { dispPoint, shapesSvg, stackPiece, SP, GAP } from './analysis.js?v=1795423678';
+import { turnMark, landOf, focusedByPointer, buildPTN, hooks } from './board-kit.js?v=1795423678';
+export { turnMark, landOf, focusedByPointer, buildPTN, hooks };
+
+export const RETIRED = "tinue's own board is retired: PTN Ninja is the only board";
 
 // (SP, GAP: the stack step, % of a square, and how many steps a carried hand is lifted; analysis.js stackPiece)
 const STEP = { '+': [1, 0], '-': [-1, 0], '>': [0, 1], '<': [0, -1] }; // [dRow, dCol]
@@ -13,8 +18,6 @@ const FILES = 'abcdefgh';
 const ID = [1, 0, 0, 1];
 const OPS = { ']': [0, 1, -1, 0], '[': [0, -1, 1, 0], '-': [-1, 0, 0, -1], ';': [-1, 0, 0, 1], ':': [1, 0, 0, -1], '=': null };
 const mul = ([p, q, r, t], [a, b, c, d]) => [p * a + q * c, p * b + q * d, r * a + t * c, r * b + t * d];
-// The side to move as the flat-count bar marks it: 1 or 2, or 0 once the game is over (nobody moves).
-export const turnMark = (g) => (g.result() ? 0 : g.toMove);
 const loadOrient = () => { try { const m = JSON.parse(localStorage.getItem('tinue.orient')); if (Array.isArray(m) && m.length === 4) return m; } catch {} return ID; };
 
 // ---------- positions with piece identities (so a move can be animated piece by piece) ----------
@@ -49,13 +52,6 @@ function initialSnap(g, P) {
 // a stack move's top piece (the last to land) and, per square dropped on, what it lands on ('board': the square was
 // empty, 'piece').
 const KIND = { [FLAT]: 'flat', [WALL]: 'wall', [CAP]: 'cap' };
-export function landOf(g, mv) {
-  if (mv.kind === 'p') return { piece: KIND[mv.type] || 'flat' };
-  const size = g.size, from = g.board[mv.sq], [dr, dc] = STEP[mv.dir], onto = [];
-  let r = Math.floor(mv.sq / size), c = mv.sq % size;
-  for (let i = 0; i < mv.drops.length; i++) { r += dr; c += dc; onto.push(g.board[r * size + c].length ? 'piece' : 'board'); }
-  return { top: KIND[typeOf(from[from.length - 1])] || 'flat', onto };
-}
 
 function stepSnap(s, P, ptn) {
   const g = s.g.clone();
@@ -107,12 +103,6 @@ function roadOf(g, color) {
   return { set, ns, ew };
 }
 
-// Elements that got focus from a pointer press (a click leaves buttons focused in Chrome and Firefox).
-const pointerFocused = new WeakSet();
-let lastPointer = -1e9;
-document.addEventListener('pointerdown', () => { lastPointer = performance.now(); }, true);
-document.addEventListener('focusin', (e) => { if (performance.now() - lastPointer < 500) pointerFocused.add(e.target); else pointerFocused.delete(e.target); }, true);
-export const focusedByPointer = (el) => pointerFocused.has(el);
 
 export class Board {
   // The sound hooks, set by app.js to sound.js (kept out of this file, which node tests import):
@@ -125,6 +115,7 @@ export class Board {
   static onLand = null;
   static onCut = null;
   constructor(el, { onMove } = {}) {
+    throw new Error(RETIRED); // (PTN Ninja is the only board: nothing may put this one on screen)
     this.el = el; this.onMove = onMove;
     el.classList.add('tb-host');
     this.opts = { disableBoard: false, showRoads: false, animateBoard: true, dropOnStray: false };
@@ -517,7 +508,7 @@ export class Board {
     if (e.key in OPS) { e.preventDefault(); return this.orient(e.key); }
     // Enter on a button/link the keyboard focused presses it; one merely left focused by a mouse click doesn't take it
     // (Chrome marks it :focus-visible on any key press, so that can't tell the two apart)
-    if (e.key === 'Enter' && e.target.closest?.('a, button, summary') && !pointerFocused.has(e.target)) return;
+    if (e.key === 'Enter' && e.target.closest?.('a, button, summary') && !focusedByPointer(e.target)) return;
     const k = e.key === 'Enter' ? 'all' : e.key === '`' ? 'own' : /^[1-8]$/.test(e.key) ? +e.key : 0;
     if (!k) return;
     if (k === 'all' && this._locked()) return; // (the second press of a double Enter = Continue)
@@ -749,21 +740,3 @@ export class Board {
   }
 }
 
-// Build a PTN game. `moves` are played from `tps` (or the empty board when tps is null).
-export function buildPTN({ size, komi = 0, tps = null, moves = [], white = 'White', black = 'Black' }) {
-  const head = [`[Size "${size}"]`, `[Komi "${komi}"]`, `[Player1 "${white}"]`, `[Player2 "${black}"]`, `[Opening "swap"]`];
-  let moveNo = 1, color = 1;
-  if (tps) {
-    head.push(`[TPS "${tps}"]`);
-    const [, turn, num] = tps.split(' ');
-    color = +turn; moveNo = +num;
-  }
-  let out = '';
-  for (const m of moves) {
-    if (color === 1) out += `${moveNo}. ${m} `;
-    else out += (out ? '' : `${moveNo}. -- `) + `${m}\n`;
-    if (color === 2) moveNo++;
-    color = 3 - color;
-  }
-  return head.join('\n') + '\n\n' + out.trim();
-}

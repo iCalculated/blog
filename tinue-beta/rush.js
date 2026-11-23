@@ -1,22 +1,23 @@
 // The Rush page (#/rush): Rush (3 minutes, as many puzzles as you can) and Streak (until the first mistake), as
 // Lichess's Puzzle Storm and Puzzle Streak. This module owns the run; the rules are in rush-rules.js (pure, tested),
-// the board is tinue's own, or PTN Ninja's when that is the player's Board setting (the puzzle page's frame, borrowed
-// for each run: ninja.js lend), and the server's part is server/rush.js. A move off the puzzle's line is adjudicated
+// the board is PTN Ninja's (the puzzle page's frame, borrowed for each run: ninja.js lend), and the server's part is
+// server/rush.js. A move off the puzzle's line is adjudicated
 // with the puzzle page's own rules and engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused
 // while they work. Nothing here is rated, and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { Board, buildPTN } from './board.js?v=1795392346';
-import { api, store, token } from './api.js?v=1795392346';
-import { finalSquare, squareName, confirmOn, takesHeldKey } from './settings.js?v=1795392346';
-import * as R from './rush-rules.js?v=1795392346';
-import { picture, pictureHTML } from './rush-look.js?v=1795392346';
-import * as engine from './engine.js?v=1795392346';
-import * as tiltak from './tiltak.js?v=1795392346';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795392346';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795392346';
-import { busy, BUSY_MS } from './busy.js?v=1795392346';
-import * as SYM from './shared/sym.js?v=1795392346';
-import * as sound from './sound.js?v=1795392346'; // (moves click through Board.onPly, set by app.js; the verdicts are played here)
+import { buildPTN } from './board-kit.js?v=1795423678';
+import { SAYS } from './ninja.js?v=1795423678';
+import { api, store, token } from './api.js?v=1795423678';
+import { confirmOn, takesHeldKey } from './settings.js?v=1795423678';
+import * as R from './rush-rules.js?v=1795423678';
+import { picture, pictureHTML } from './rush-look.js?v=1795423678';
+import * as engine from './engine.js?v=1795423678';
+import * as tiltak from './tiltak.js?v=1795423678';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795423678';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795423678';
+import { busy, BUSY_MS } from './busy.js?v=1795423678';
+import * as SYM from './shared/sym.js?v=1795423678';
+import * as sound from './sound.js?v=1795423678'; // (moves click through board-kit.js hooks.onPly, set by app.js; the verdicts are played here)
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -46,9 +47,7 @@ const MODE = {
 };
 
 let view = null, board = null, built = false;
-// PTN Ninja's board, when it is the player's Board setting (app.js hands Rush the puzzle page's NinjaBoard, whose frame
-// each run borrows: ninja.js lend). Null on tinue's board, and then nothing below that reads it does anything.
-// Everything else is the same on both: the rules, the clock, the bar, the server calls, the end screen.
+// The puzzle page's NinjaBoard (app.js hands it over), whose frame each run borrows (ninja.js lend).
 let frame = null;
 // { mode }: this page's own choice. Rush is 6×6 only (R.SIZE): an older stored size is ignored, as are cached bests for
 // other sizes.
@@ -92,22 +91,13 @@ function build() {
       <p class="sr-only" id="rush-say" role="status"></p>
     </section>
     <section class="rush-end hidden" id="rush-end"></section>`;
-  const own = new Board($('#rush-board'), { onMove: (ptn) => moveIn(ptn) });
-  // (on PTN Ninja: tinue's board stays, under the frame while a run has it, and takes over if PTN Ninja stops answering)
-  board = frame ? frame.lend($('#rush-board'), { onMove: (ptn) => moveIn(ptn), under: own, onDead: boardDied }) : own;
+  board = frame.lend($('#rush-board'), { onMove: (ptn) => moveIn(ptn), onDead: boardDied });
   board.ui({ disableBoard: true });
   $('#rush-skip').onclick = skip;
   $('#rush-giveup').onclick = giveUp;
   $('#rush-confirm-yes').onclick = confirmHeld;
   $('#rush-confirm-no').onclick = cancelHeld;
-  // A held move (Confirm moves): a tap on its final square confirms, anywhere else on the board cancels. Captured, so
-  // the (disabled) board never sees it.
-  $('#rush-board').addEventListener('click', (e) => {
-    if (!held) return;
-    e.stopPropagation(); e.preventDefault();
-    const sq = e.target.closest?.('.tb-sq');
-    if (sq && squareName(+sq.dataset.sq, st.cur.p.size) === finalSquare(held.ptn)) confirmHeld(); else cancelHeld();
-  }, true);
+  // (A held move (Confirm moves) is confirmed with Confirm or Enter: taps on PTN Ninja's board stay inside its frame.)
   // Keys while a move is held, as on the puzzle page (settings.js takesHeldKey): Enter confirms and Esc cancels. Moves come
   // only from the board here: Rush has no typed moves (the owner's call; a run is played on the board).
   window.addEventListener('keydown', (e) => {
@@ -128,7 +118,7 @@ function build() {
   $('#rush-board').addEventListener('pointerdown', (e) => { if (!st?.cur || st.ended) return; st.inputs.add(e.pointerType === 'mouse' ? 'mouse' : 'touch'); R.touchMove(st.cur, performance.now()); }, true);
   window.addEventListener('keydown', (e) => { if (st?.cur && !st.ended && !view.classList.contains('hidden') && (e.key.length === 1 || e.key === 'Enter') && !e.target?.closest?.('input, select, textarea')) R.touchMove(st.cur, performance.now()); }, true);
   const away = () => { if (st?.cur && !st.ended) st.cur.hidden = true; };
-  window.addEventListener('blur', frame ? () => setTimeout(() => frameBlur(away)) : away);
+  window.addEventListener('blur', () => setTimeout(() => frameBlur(away)));
   document.addEventListener('visibilitychange', () => { if (document.hidden) { away(); snapshot(st); } else unsnapshot(st); });
   window.addEventListener('pagehide', () => abandon(st, true));
   // Back from the back/forward cache after pagehide sent the run: it ends here, not toward a post refused as a repeat.
@@ -139,16 +129,29 @@ function build() {
 // PTN Ninja's frame took the focus (a tap on its board, or the board handing it the keyboard): the page isn't away. As on
 // the puzzle page (app.js), a move waiting for Confirm keeps the keyboard: Esc cancels, Enter confirms.
 function frameBlur(away) {
-  if (document.activeElement !== board.iframe || board.fb) return away();
+  if (document.activeElement !== board.iframe) return away();
   if (held) board.iframe.blur();
 }
-// PTN Ninja stopped answering mid-run (ninja.js _die): the run goes on on tinue's board, and the time it waited is given
-// back to the clock, up to R.BOARD_CREDIT_MS (R.creditBoard).
-function boardDied(ms) {
+// PTN Ninja stopped answering mid-run (ninja.js _die): the run ends there, and the end screen says why. One with a move
+// made goes as abandoned (abandon(): never a best, never on the leaderboard; the server takes it as it is), one without
+// sends nothing; either way it isn't kept as a run of this browser's. Not paused for a reload instead: the server takes
+// a run's paused time only up to its moves' own pauses plus 1 s, so a run can't honestly wait out a Retry.
+function boardDied() {
   const s = st;
-  if (!s || s.ended || s.credited) return;
-  s.credited = R.creditBoard(s.run, ms) > 0;
-  render();
+  if (!s || s.ended) return;
+  s.boardDown = true;
+  abandon(s);
+  if (s.cur?.adj) stopAdj(s.cur, 'left');
+  endRun();
+}
+// The board isn't there for a run (PTN Ninja didn't load, or stopped answering): said in Start's place, with Retry.
+function boardMissing() {
+  const go = $('#rush-go'), err = $('#rush-err');
+  if (go) { go.disabled = false; go.textContent = 'Start'; }
+  if (!err) return;
+  err.classList.add('board');
+  err.innerHTML = `<span>${esc(board.iframe.dataset.down === 'stopped' ? SAYS.stopped : SAYS.load)}</span><button type="button" id="rush-retry">Retry</button>`;
+  $('#rush-retry').onclick = () => { err.textContent = ''; err.classList.remove('board'); board.retry(); startRun(); };
 }
 
 const section = (id) => { for (const s of ['rush-start', 'rush-run', 'rush-end']) $('#' + s).classList.toggle('hidden', s !== id); };
@@ -305,12 +308,14 @@ const bestTable = (b) => (b?.today == null && b?.week == null && b?.all == null 
 // ---------- the run ----------
 async function startRun() {
   const mode = modeChoice(), g = ++gen, go = $('#rush-go');
-  if (go) { go.disabled = true; go.textContent = frame && !board.frameUp ? 'Loading board…' : 'Loading…'; }
-  const up = frame ? board.frameReady() : null; // (Start waits for PTN Ninja's board too, ninja.js READY_MS at most)
-  if ($('#rush-err')) $('#rush-err').textContent = '';
-  // A spare run kept in this browser starts at once, with or without a connection; else one is fetched.
-  let got = null;
-  try { const t = R.takeSpare(read(SPARE_KEY), mode, Date.now()); if (t.spare) { got = t.spare; write(SPARE_KEY, t.rest); } } catch {}
+  if (go) { go.disabled = true; go.textContent = !board.frameUp ? 'Loading board…' : 'Loading…'; }
+  // Start waits for the board (PTN Ninja up and answering: ninja.js MS.up at most), so the clock never starts without it
+  const up = board.frameReady();
+  if ($('#rush-err')) { $('#rush-err').textContent = ''; $('#rush-err').classList.remove('board'); }
+  // A spare run kept in this browser starts at once, with or without a connection; else one is fetched. (A spare is
+  // taken out of storage only once the board is there.)
+  let got = null, rest = null;
+  try { const t = R.takeSpare(read(SPARE_KEY), mode, Date.now()); if (t.spare) { got = t.spare; rest = t.rest; } } catch {}
   if (!got) {
     let r;
     try { r = await api(`/api/rush/run?mode=${mode}&size=${R.SIZE}`); } catch { r = null; }
@@ -322,7 +327,10 @@ async function startRun() {
     }
     got = { puzzles: r.puzzles, token: r.run, pages: [{ start: r.start, ids: r.puzzles.map((p) => p.id), sig: r.sig }] };
   }
-  if (up) { await up; if (g !== gen) return; }
+  const ok = await up;
+  if (g !== gen) return;
+  if (!ok) return boardMissing();
+  if (rest) write(SPARE_KEY, rest);
   abandon(st); // a run left for a new one
   if (st?.cur?.adj) stopAdj(st.cur, 'left');
   st = { who: R.who(token), run: R.newRun(mode), puzzles: got.puzzles.map(turned), idx: -1, cur: null, more: null, timer: null, ended: false, g, inputs: new Set(),
@@ -345,7 +353,7 @@ async function startRun() {
   $('#rush-skip').disabled = false; $('#rush-skip').textContent = 'Skip';
   $('#rush-confirm').hidden = !confirmOn(store.get('prefs', {}));
   if (mode === 'rush') st.timer = setInterval(tick, 100);
-  if (frame) { board.giveBack(); board.borrow(R.SIZE); } // (the frame over the board now shown; tinue's board if it isn't up)
+  board.giveBack(); board.borrow(R.SIZE); // (the frame over the board now shown)
   nextPuzzle();
   morePuzzles();
   topUp(); // the spare just used, or the first, is replaced in the background
@@ -854,7 +862,7 @@ async function endRun(wrong = null, played = false) {
   if (mode === 'rush') $('#rush-clock-t').textContent = '0:00';
   const wrap = $('#rush-board-wrap');
   wrap.classList.add('rush-over');
-  if (frame) board.dim(true); // (the frame is over the board, not in its wrap)
+  board.dim(true); // (the frame is over the board, not in its wrap)
   // (the board drew the move as it was made: it is appended only if it isn't already the last one there)
   if (s.cur) s.cur.reply = null; // (a reply still due stays off the board)
   if (wrong && mode === 'streak') {
@@ -866,12 +874,13 @@ async function endRun(wrong = null, played = false) {
   const rec = R.recordOf(s.run, s.puzzles, Date.now());
   // The run's end: now (the clock ran out, the pool ran dry), or after the beat when a streak's miss ended it, so it
   // doesn't land on the wrong sound; a clock emptied by a wrong move's 10 s waits for that sound to finish too.
-  if (!wrong && !s.gone) sound.later('rushEnd', Math.max(0, (s.wrongAt ?? -1e9) + 250 - performance.now(), (s.goodAt ?? -1e9) + 80 - performance.now()));
+  if (!wrong && !s.gone && !s.boardDown) sound.later('rushEnd', Math.max(0, (s.wrongAt ?? -1e9) + 250 - performance.now(), (s.goodAt ?? -1e9) + 80 - performance.now()));
   await new Promise((r) => setTimeout(r, END_BEAT_MS));
   if (wrong && !s.gone && st === s) sound.play('rushEnd');
-  if (s.gone !== 'left') saveRun(rec); // kept whether or not the post below succeeds (a run left unfinished isn't one)
-  if (frame && st === s) board.giveBack();
+  if (s.gone !== 'left' && !s.boardDown) saveRun(rec); // kept whether or not the post below succeeds (a run left unfinished isn't one)
+  if (st === s) board.giveBack();
   if (st === s) showEnd(rec, s);
+  if (s.boardDown) return showBest(null, null, s, 'board'); // (sent as abandoned already, or nothing to send)
   if (s.gone) return showBest(null, null, s, s.gone === 'left' ? 'left' : null); // already sent (pagehide)
   // Posted here when the run ended by itself (the clock, or a streak's miss); one left unfinished is posted as abandoned
   // (abandon(): leave(), a new run, pagehide), never a best.
@@ -894,7 +903,7 @@ function showEnd(rec, s, at = null) {
       ['Time played', sec(played)], ['Per move', sec(sum.perMove)], ['Hardest solved', sum.highest ?? '–']]
     : [['Hardest solved', sum.highest ?? '–'], ['Time played', sec(played)]];
   const hint = window.matchMedia?.('(hover: hover)').matches ? 'Click a puzzle to see it larger.' : 'Tap a puzzle to see it larger.';
-  $('#rush-end').innerHTML = (s ? `<h1 tabindex="-1">${mode === 'rush' ? 'Time’s up' : 'Streak over'}</h1>
+  $('#rush-end').innerHTML = (s ? `<h1 tabindex="-1">${s.boardDown ? 'Run ended' : mode === 'rush' ? 'Time’s up' : 'Streak over'}</h1>
     <p class="rush-newbest" id="rush-newbest" aria-live="polite"></p>` : `<h1 tabindex="-1">${MODE[mode].name}</h1><p class="rush-newbest rush-when">${esc(when(rec.t))}</p>`) + `
     <p class="rush-hero"><span>${mode === 'rush' ? 'Score' : 'Streak'}</span><b>${sum.score}</b></p>
     <dl class="rush-stats">${stats.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('')}</dl>
@@ -905,7 +914,8 @@ function showEnd(rec, s, at = null) {
     <ol class="rush-cards" id="rush-cards">${rec.puzzles.map((r, i) => cardHTML(rec, i)).join('')}</ol>
     <dialog class="rush-dlg" id="rush-look" aria-labelledby="rush-look-h"></dialog>` : '<p class="muted">No puzzles played.</p>'}`;
   if (rec.puzzles.length) lookBack(rec);
-  if (s) $('#rush-again').onclick = () => { st = null; startRun(); };
+  // (no board: back to Start, which waits for it again, Retry reloading it first)
+  if (s) $('#rush-again').onclick = () => { st = null; if (board.frameUp) return startRun(); if (board.iframe.dataset.down) board.retry(); renderStart(); startRun(); };
   $('#rush-back').onclick = () => {
     st = null; renderStart();
     (at != null && view.querySelector(`.rush-recent-row[data-i="${at}"]`) || $('#rush-go'))?.focus();
@@ -921,7 +931,7 @@ const resultHTML = (r) => { const m = R.resultMark(r); return `<span class="${m.
 // larger picture with the words (lookHTML) in a dialog, with Previous and Next through the run.
 // rec: R.recordOf (a run just played, or a stored one); each of its puzzles is both the position and the result.
 // The board's orientation (the player's own turn or mirror, [ ] - ; : =, kept in this browser) is the Rush board's.
-const orientOf = () => (frame && board.frameM()) || board?.M || [1, 0, 0, 1]; // (PTN Ninja's own turn of its board)
+const orientOf = () => board?.frameM?.() || [1, 0, 0, 1]; // (PTN Ninja's own turn of its board)
 const viewOf = (q) => { try { return R.review(q, q); } catch { return null; } }; // (a stored position that doesn't parse: nothing to draw)
 function picHTML(q) { const v = viewOf(q); return v ? pictureHTML(picture(v, orientOf())) : '<div class="rush-pic none"></div>'; }
 function cardHTML(rec, i) {
@@ -985,6 +995,8 @@ function lookBack(rec) {
     noteLink(li.querySelector('a'), rec.puzzles[i]);
   }
 }
+// The end screen's line for a run the board ended (boardDied)
+export const BOARD_ENDED = 'The board (PTN Ninja) stopped answering, so this run ended. It doesn’t count against you.';
 async function showBest(r, mode, s, out = null) {
   if (st !== s) return;
   const best = r?.best ?? await bestFor();
@@ -992,8 +1004,8 @@ async function showBest(r, mode, s, out = null) {
   $('#rush-end-best').innerHTML = `<h2>Your best</h2>${bestTable(best?.[s.run.mode])}`;
   const nb = r?.newBest, el = $('#rush-newbest');
   // a best is gold; where the run went is plain news (kept for later) or a failure (red), never gold
-  el.className = 'rush-newbest' + (!nb && (out === 'keep' || out === 'left') ? ' rush-when' : !nb && out === 'drop' ? ' bad' : '');
-  el.textContent = nb ? R.newBestText(nb) : out === 'keep' ? 'Saved here. Will send when online.' : out === 'drop' ? 'Couldn’t send this run.' : out === 'left' ? 'Saved as left unfinished.' : '';
+  el.className = 'rush-newbest' + (!nb && (out === 'keep' || out === 'left' || out === 'board') ? ' rush-when' : !nb && out === 'drop' ? ' bad' : '');
+  el.textContent = nb ? R.newBestText(nb) : out === 'board' ? BOARD_ENDED : out === 'keep' ? 'Saved here. Will send when online.' : out === 'drop' ? 'Couldn’t send this run.' : out === 'left' ? 'Saved as left unfinished.' : '';
 }
 
 // Another page: a run in progress ends here, posted as abandoned once a move was made (see abandon).
@@ -1004,5 +1016,5 @@ export function leave() {
   abandon(st);
   if (st?.cur?.adj) stopAdj(st.cur, 'left');
   if (st) { clearInterval(st.timer); st = null; dropHeld(); board?.ui({ disableBoard: true }); }
-  if (frame) board?.giveBack();
+  board?.giveBack();
 }

@@ -723,7 +723,7 @@ const hidden = () => typeof document !== 'undefined' && !!document.hidden;
 // A one-off sound (play, later, verdict) twice within REPEAT_MS plays once, and so does one move (opts.key, playMove);
 // the landings of a hand are each their own sound however fast they come.
 // A move's sounds still queued on the audio clock (a spread's later drops): cut() stops them. A new move cuts them
-// (playMove, playLanding), and so does a jump to another position (board.js Board.onCut, set by app.js).
+// (playMove, playLanding), and so does a jump to another position (board-kit.js hooks.onCut, set by app.js).
 // What the player's own hand queued (playLanding: a capstone moving on alone to flatten a wall) is never stopped: the
 // next board event (Rush's reply 80 ms later, the next puzzle's load) must not silence the move just made.
 const queued = new Set(); // { src, t (audio clock), hand, rec }
@@ -827,11 +827,11 @@ export function play(name, opts) {
 // One piece landing (see pieceSound): playPiece({ piece: 'flat' | 'wall' | 'cap', onto: 'board' | 'piece', drop }).
 export const playPiece = (p) => playSeq([[0, p?.smash ? 'smash' : pieceSound(p)]], { cut: true });
 
-// Pieces landing by hand, one input at a time (board.js Board.onLand): usually one; two when the rest of the hand is
+// Pieces landing by hand, one input at a time (board-kit.js hooks.onLand; unused on PTN Ninja, which reports whole moves): usually one; two when the rest of the hand is
 // set down before the capstone moves on alone to flatten a wall.
 export const playLanding = (list) => playSeq(landingSounds(list), { cut: true, hand: true });
 
-// A whole move at once (see moveSounds). Board.onPly calls playMove(ptn, smash, info): info { piece } for a placement,
+// A whole move at once (see moveSounds). hooks.onPly (board-kit.js) calls playMove(ptn, smash, info): info { piece } for a placement,
 // { top, onto } for a stack move (board.js landOf); info.byHand: its pieces already sounded as they landed (playLanding),
 // so nothing plays.
 // While a verdict plays (holdMoves), a move's sound waits for it: Rush's next puzzle puts its intro move on the board at

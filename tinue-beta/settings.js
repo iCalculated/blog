@@ -1,53 +1,19 @@
-// Settings of the Settings page (#/settings): which board, whether a finished move waits to be confirmed, and Sound.
-// They live in the browser's prefs with the others (and an account's settings: prefsync.js); off and tinue's own board
-// are the defaults, under which the page behaves as it did before. What app.js decides is here, so node can
-// test it (scripts/test-settings.mjs).
-import { busy } from './busy.js?v=1795392346';
+// Settings of the Settings page (#/settings): whether a finished move waits to be confirmed, and Sound (the board's
+// look is ninja-look.js). They live in the browser's prefs with the others (and an account's settings: prefsync.js);
+// off is the default. What app.js decides is here, so node can test it (scripts/test-settings.mjs).
+// There is no Board setting any more (2026-11-22): PTN Ninja is the only board, whatever a stored setting or a
+// ?board= in the address says.
+import { busy } from './busy.js?v=1795423678';
 
-// ---- board ----
-// ?board= in the address wins, so a shared ?board=ninja link keeps working (any other value is tinue's board, as
-// before); without it, the setting. index.html makes the same choice before the modules load (window.__tinueNinja,
-// to start PTN Ninja early); scripts/test-settings.mjs runs that copy against this one.
-export function boardFrom(search, prefs) {
-  const q = new URLSearchParams(search || '');
-  if (q.has('board')) return q.get('board') === 'ninja' ? 'ninja' : 'tinue';
-  return prefs?.board === 'ninja' ? 'ninja' : 'tinue';
-}
 export const confirmOn = (prefs) => prefs?.confirm === true;
 // Sound: 'off', or the voice of the move sounds, 'light' | 'thunk' | 'deep' (sound.js VOICES). Nothing is stored until
 // the setting changes; a value from before the voices (true, 'on') or none is the default voice, false or 'off' is off.
 export const SOUND_DEFAULT = 'thunk';
 export const soundOf = (prefs) => { const s = prefs?.sound; return s === false || s === 'off' ? 'off' : s === 'light' || s === 'thunk' || s === 'deep' ? s : SOUND_DEFAULT; };
 export const soundOn = (prefs) => soundOf(prefs) !== 'off';
-// The address's query without ?board=: a switch reloads without it, or the flag the page was opened with would win.
-export function withoutBoardFlag(search) {
-  const q = new URLSearchParams(search || '');
-  q.delete('board');
-  const s = q.toString();
-  return s ? '?' + s : '';
-}
-// The board is chosen at boot, so switching reloads. Now only if nothing would be sent or lost by it: no puzzle, or
-// one not begun (no move, miss, hint or result; nothing being checked or played out). Otherwise the reload waits for
-// the next puzzle (app.js loadNext), so switching mid-puzzle never sends a result, never ends a play-out, and isn't a
-// free restart.
-// Nor while a result is still uploading (uploading: app.js reporting.size): the reload would cut it off, and an
-// ordinary result isn't kept anywhere for a resend.
-export const switchNow = (s, uploading = 0) => !uploading && (!s || !!s.placeholder
-  || (s.status === 'play' && !s.moves?.length && !s.misses?.length && !s.hinted && !s.resultSent && !s.checkPending && !s.quickCheck && !s.playOn));
-// A switch made mid-puzzle reloads as the next puzzle loads (app.js loadNext), when nothing is held or still uploading,
-// as a newer build does by itself; otherwise it waits for the Next after that.
-export const switchAtNext = ({ wanted, leaving, held, uploading }) => !!wanted && !leaving && !held && !uploading;
-// Whether a Board choice was really stored (read back): where site storage is blocked the write is silently
-// dropped, and a reload would come back on the old board, signed out (the token was kept in memory only).
-export const boardSaved = (stored, board) => boardFrom('', stored) === board;
-// The line under the Settings page's Board select: what isn't plain from the selects.
-export function settingsNote({ unsaved, switching, linkBoard, ninja, confirm }) {
-  if (unsaved) return "Settings can't be saved in this browser.";
-  const out = [];
-  if (switching) out.push('The board changes with the next puzzle.');
-  else if (linkBoard) out.push(`This link opens ${linkBoard === 'ninja' ? 'PTN Ninja' : 'tinue'}.`); // (?board=, over the setting)
-  if (ninja && confirm) out.push('With PTN Ninja, confirm with the button or Enter.');
-  return out.join(' ');
+// The line under the Settings page's list: what isn't plain from the controls.
+export function settingsNote({ unsaved } = {}) {
+  return unsaved ? "Settings can't be saved in this browser." : '';
 }
 
 // ---- confirm moves ----
@@ -123,7 +89,7 @@ export function takesHeldKey({ key, typed, field, bar, control }) {
   return !bar && !control;
 }
 
-// Taps on tinue's board while a move is held (app.js; PTN Ninja's are inside its frame, out of the page's reach): its
+// Taps on the board's element while a move is held (app.js; PTN Ninja's taps are inside its frame, out of the page's reach, so these are taps around it): its
 // final square confirms, anything else on it cancels (tap(target)). Captured, so the board itself never sees them. A
 // touch is decided on touchend as board.js does (a scroll or a pinch isn't a tap), and only one that began after the
 // move was held.

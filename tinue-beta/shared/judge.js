@@ -5,7 +5,7 @@
 //
 // The play-on rules below moved here unchanged from public/playon.js, which re-exports them, so the page behaves as
 // before (scripts/test-playon.mjs).
-import { winMove } from './pns.js?v=1795392346';
+import { winMove } from './pns.js?v=1795423678';
 
 // ---- play-on rules (moved from public/playon.js) ----
 
