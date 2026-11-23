@@ -2,11 +2,11 @@
 // judging a move by the puzzle's line, where an off-line move goes next (the puzzle page's adjudication: route,
 // playOutOutcome), the clock and its pauses, the combo and its time bonuses, and the end-of-run numbers.
 // public/rush.js owns the screen and the engines and calls these with the time it read.
-import { Game, colorOf, typeOf } from './shared/tak.js?v=1795386881';
-import { finalSquare } from './settings.js?v=1795386881';
-import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795386881';
-import * as SYM from './shared/sym.js?v=1795386881';
-import { moveShape } from './analysis.js?v=1795386881';
+import { Game, colorOf, typeOf } from './shared/tak.js?v=1795392346';
+import { finalSquare } from './settings.js?v=1795392346';
+import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795392346';
+import * as SYM from './shared/sym.js?v=1795392346';
+import { moveShape } from './analysis.js?v=1795392346';
 
 export const SIZE = 6; // Rush and Streak are 6×6 only (server/rush.js refuses any other size)
 export const RUSH_MS = 180e3; // 3:00

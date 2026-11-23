@@ -1,5 +1,6 @@
-// The PTN Ninja look (Settings page): a player pastes a ptn.ninja link or just its settings (&axisLabels=false&theme=…)
-// and tinue's embedded PTN Ninja (ninja.js) takes the settings that only change how the board looks. Pure, so node
+// The PTN Ninja look (Settings page): a player pastes a theme's code (PTN Ninja's theme editor shares it as JSON), a
+// theme's name, a ptn.ninja link or just its settings (&axisLabels=false&theme=…), and tinue's embedded PTN Ninja
+// (ninja.js) takes the settings that only change how the board looks. Pure, so node
 // tests it (scripts/test-ninja-look.mjs). Nothing pasted ever reaches the page as HTML, and the iframe's address is
 // only ever https://ptn.ninja/ plus the settings below, each value checked.
 //
@@ -9,7 +10,7 @@
 // name and targetBranch are lz-string compressed; theme is a built-in theme's id or a theme as JSON, either one usually
 // lz-string compressed (its own Share links compress even an id), and it falls back to the default when unreadable.
 // The same settings can be sent later as one SET_UI message (README "API"), where theme is an id or a theme object.
-import { compressToEncodedURIComponent as lz, decompressFromEncodedURIComponent as unlz } from './vendor/lz-string.js?v=1795386881';
+import { compressToEncodedURIComponent as lz, decompressFromEncodedURIComponent as unlz } from './vendor/lz-string.js?v=1795392346';
 
 // The settings tinue passes on, with the kind of value each takes (b: true/false, p: a whole number 1 to 10, t: a
 // theme). index.html's early iframe start has the same table (scripts/test-ninja-look.mjs holds them together).
@@ -64,16 +65,41 @@ export function cleanTheme(t) {
   out.colors = colors;
   return out;
 }
-// A theme value as pasted: a built-in id, or an id or JSON, lz-compressed or plain. { id } | { theme } | null.
+// tinue's board as it was until 2026-11-21 (Lichess-style brown checkers), as a PTN Ninja theme: the "tinue legacy"
+// choice of the theme select. Stored like a pasted theme (PTN Ninja doesn't know it by name).
+export const LEGACY = cleanTheme({
+  id: 'tinue-legacy', name: 'tinue legacy', boardStyle: 'blank', boardChecker: true,
+  vars: { 'piece-border-width': 1 },
+  colors: {
+    primary: '#9cb83a', secondary: '#161512', ui: '#262421', accent: '#302e2c', panel: '#262421c0',
+    board1: '#f0d9b5', board2: '#b58863', board3: '#262421',
+    player1: '#f6f1e7', player1road: '#f6f1e7', player1flat: '#f6f1e7', player1special: '#ffffff', player1border: '#8f8473',
+    player2: '#2f2c29', player2road: '#4a4540', player2flat: '#2f2c29', player2special: '#3d3935', player2border: '#0d0c0b',
+    textLight: '#fafafacd', textDark: '#212121cd', umbra: '#00000033',
+  },
+});
+// Known by its id and name, not its colours: a look stored before LEGACY last changed still reads as tinue legacy, and
+// reading it (readTheme) gives today's LEGACY, so a change to it reaches everyone who picked it.
+const isLegacy = (t) => !!t && typeof t === 'object' && t.id === LEGACY.id && t.name === LEGACY.name;
+// A built-in theme by its id or by PTN Ninja's name for it, in any case ('Zen', 'BubbleTron'); 'legacy' is tinue's old board.
+const named = (v) => { const l = v.toLowerCase(); return THEMES.includes(l) ? { id: l } : l === 'legacy' || l === 'tinue-legacy' ? { theme: LEGACY } : null; };
+// A theme value as pasted: a built-in id or name, or an id or JSON, lz-compressed or plain (JSON as PTN Ninja's theme
+// editor shares it, pretty-printed or not). { id } | { theme } | null.
 function readTheme(v) {
-  if (THEMES.includes(v)) return { id: v };
-  if (v.length > MAX_IN) return null;
-  let s = /^[A-Za-z0-9+$ -]+$/.test(v) ? unlz(v) : null;
-  if (s && THEMES.includes(s)) return { id: s };
-  if (!(s && s.startsWith('{'))) s = v.startsWith('{') ? v : null;
-  if (!s) return null;
-  try { const t = cleanTheme(JSON.parse(s)); return t ? { theme: t } : null; } catch { return null; }
+  const b = named(v);
+  if (b) return b;
+  let s = null;
+  if (v.startsWith('{')) s = v;
+  else if (v.length <= MAX && /^[A-Za-z0-9+$ -]+$/.test(v)) {
+    s = unlz(v);
+    const id = s && named(s);
+    if (id) return id;
+    if (!(s && s.startsWith('{'))) return null;
+  } else return null;
+  try { const t = cleanTheme(JSON.parse(s)); return t ? { theme: isLegacy(t) ? LEGACY : t } : null; } catch { return null; }
 }
+// What tinue says to a link of PTN Ninja's own that has no look in it: none of its share links carry one.
+export const NO_LOOK_LINK = 'PTN Ninja’s game links don’t carry its look. Choose a theme above, or paste a theme’s code from PTN Ninja’s theme editor.';
 
 // ---- reading a paste ----
 // { look: { key: value } as tinue keeps it, applied: [keys], kept: [keys], unknown: [keys], bad: [keys], error } where
@@ -84,15 +110,15 @@ export function parseLook(input) {
   let s = typeof input === 'string' ? input.trim() : '';
   if (!s) return res;
   if (s.length > MAX_IN) return { ...res, error: 'That is too long to be PTN Ninja settings.' };
-  // A theme on its own, as PTN Ninja's theme editor copies it (JSON), or just a built-in theme's name.
-  if (s.startsWith('{') || THEMES.includes(s.toLowerCase())) {
-    const t = s.startsWith('{') ? readTheme(s) : { id: s.toLowerCase() };
-    if (!t) return { ...res, error: 'That theme could not be read. Copy it again from PTN Ninja’s theme editor.' };
-    res.look.theme = t.id ?? t.theme; res.applied.push('theme');
-    if (encodeLook(res.look).length > MAX) return { ...res, look: {}, applied: [], error: 'That theme is too long to keep.' };
-    return res;
+  // a theme on its own: its code (JSON), a built-in theme's name, or a theme value as a link carries it (lz-compressed)
+  if (s.startsWith('{') || /^[A-Za-z0-9+$-]+$/.test(s)) {
+    const t = readTheme(s);
+    if (t) { res.look.theme = t.id ?? t.theme; res.applied.push('theme'); }
+    else if (s.startsWith('{')) return { ...res, error: 'That theme’s code could not be read.' };
+    if (t) { if (encodeLook(res.look).length > MAX) return { ...res, look: {}, applied: [], error: 'That theme is too big to keep.' }; return res; }
   }
   // a link: only ptn.ninja's (with or without https://); anything else with a scheme is refused
+  let link = false;
   if (/^(?:https?:\/\/)?(?:www\.)?ptn\.ninja(?:[/?#]|$)/i.test(s)) {
     let u;
     try { u = new URL(/^https?:/i.test(s) ? s : 'https://' + s); } catch { return { ...res, error: 'That link could not be read.' }; }
@@ -100,6 +126,8 @@ export function parseLook(input) {
     s = u.pathname.slice(1) + (u.hash.startsWith('#/') ? u.hash.slice(2) : '');
     const at = s.indexOf('&');
     s = at < 0 ? '' : s.slice(at);
+    if (u.search.length > 1) s += '&' + u.search.slice(1); // settings written as a query (?theme=zen): read the same
+    link = true;
   } else if (/^[a-z][a-z0-9+.-]*:/i.test(s) || s.startsWith('//') || /^[\w-]+(\.[\w-]+)+\//.test(s)) {
     return { ...res, error: 'Only ptn.ninja links can be used here.' };
   } else if (!s.startsWith('&')) {
@@ -129,6 +157,8 @@ export function parseLook(input) {
   }
   // the stored form must fit: a custom theme is the only thing that can make it too long
   if (encodeLook(res.look).length > MAX) { delete res.look.theme; res.applied = res.applied.filter((x) => x !== 'theme'); res.bad.push('theme'); }
+  // a game link as PTN Ninja makes them (its Share, its short links ptn.ninja/s/…): PTN, name and ply only, never a look
+  if (link && !res.applied.length && !res.kept.length && !res.unknown.length && !res.bad.length) res.error = NO_LOOK_LINK;
   return res;
 }
 
@@ -147,15 +177,28 @@ export function encodeLook(look) {
 export const cleanLook = (stored) => (typeof stored === 'string' && stored.length <= MAX ? encodeLook(parseLook(stored).look) : '');
 // The stored string as SET_UI values (the theme as an id or an object), for ninja.js.
 export const lookUi = (stored) => (typeof stored === 'string' && stored.length <= MAX ? parseLook(stored).look : {});
+// The stored string as the paste box shows it: the same settings, a built-in theme by its id and tinue's legacy one as
+// legacy (both read back as they are), only a theme of the player's own still compressed.
+export function showLook(stored) {
+  const look = lookUi(stored);
+  let out = '';
+  for (const [k, kind] of Object.entries(LOOK)) {
+    if (!(k in look)) continue;
+    const v = look[k];
+    out += '&' + k + '=' + (kind !== 't' ? String(v) : typeof v === 'string' ? v : isLegacy(v) ? 'legacy' : lz(JSON.stringify(v)));
+  }
+  return out;
+}
 
 // ---- the theme select (Settings page): the same stored string as the paste box, so the two stay one setting ----
-// What it shows for a stored look: '' (tinue's own), a built-in id, or 'custom' (a pasted theme of the player's own).
-export const themeOf = (stored) => { const t = lookUi(stored).theme; return t == null ? '' : typeof t === 'string' ? t : 'custom'; };
+// What it shows for a stored look: '' (tinue's own), a built-in id, 'legacy' (tinue's old board) or 'custom' (a pasted
+// theme of the player's own).
+export const themeOf = (stored) => { const t = lookUi(stored).theme; return t == null ? '' : typeof t === 'string' ? t : isLegacy(t) ? 'legacy' : 'custom'; };
 // The stored look with its theme changed to `id` ('' for tinue's own); its other settings kept. 'custom' or anything not
 // built in changes nothing.
 export function withTheme(stored, id) {
   const look = lookUi(stored);
-  if (id === '') delete look.theme; else if (THEMES.includes(id)) look.theme = id; else return cleanLook(stored);
+  if (id === '') delete look.theme; else if (THEMES.includes(id)) look.theme = id; else if (id === 'legacy') look.theme = LEGACY; else return cleanLook(stored);
   return encodeLook(look);
 }
 // PTN Ninja's names for them (its en-us strings)
@@ -212,7 +255,7 @@ const NAMES = { axisLabels: 'axis labels', axisLabelsSmall: 'axis labels inside 
   perspective: '3D perspective', centerStackCounts: 'centred stack counts', stackCounts: 'stack counts', flatCounts: 'flat counts',
   flatWinHighlights: 'flat win highlights', moveNumber: 'move number', turnIndicator: 'turn indicator', verticalLayout: 'vertical layout',
   verticalLayoutAuto: 'automatic layout' };
-const said = (k, v) => k === 'theme' ? (typeof v === 'string' ? `theme ${v}` : 'a custom theme')
+const said = (k, v) => k === 'theme' ? (typeof v === 'string' ? `theme ${v}` : isLegacy(v) ? 'theme tinue legacy' : 'a custom theme')
   : k === 'perspective' ? `3D perspective ${v}` : `${NAMES[k]} ${v ? 'on' : 'off'}`;
 const list = (ks) => ks.slice(0, 12).join(', ') + (ks.length > 12 ? ` and ${ks.length - 12} more` : '');
 // Plain text (the page sets it as textContent). The keys listed are only ever [A-Za-z0-9] (safeKey).

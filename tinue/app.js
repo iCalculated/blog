@@ -1,27 +1,27 @@
-import { Game } from './shared/tak.js?v=1795386876';
-import { unplayedPlies } from './shared/ptn.js?v=1795386876';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795386876';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795386876';
-import { Board, buildPTN, focusedByPointer } from './board.js?v=1795386876';
-import * as engine from './engine.js?v=1795386876';
-import { showLineOn } from './lines.js?v=1795386876';
-import * as tiltak from './tiltak.js?v=1795386876';
-import * as syntaks from './syntaks.js?v=1795386876';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795386876';
-import { createNext } from './next.js?v=1795386876';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795386876';
-import { createOutbox } from './outbox.js?v=1795386876';
-import * as sound from './sound.js?v=1795386876';
-import { boardFrom, confirmOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795386876';
-import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof, isTak, countTak, outOfMoves, takLeft, TAK_COUNTDOWN, replyEntry, logOk, leftRunsOn, runOnHeld, noEnding, REFUTED } from './playon.js?v=1795386876';
-import { copy } from './playon-copy.js?v=1795386876';
-import { OTHER, syncedOf, decide, diff, changesBody, carried, unsentKeys, withUnsent, afterPost, syncStatus } from './prefsync.js?v=1795386876';
-import { parseLook, encodeLook, cleanLook, lookReport, THEMES as NINJA_THEMES, themeOf, withTheme, themeName } from './ninja-look.js?v=1795386876';
-import * as defend from './defend.js?v=1795386876';
-import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, quickLine, mergeLines, pickCandidates, pinnedAt, moveShape, threatGroups, chipLabel, numberedPV, ptnParts, THREAT_ON, ALT_IN } from './analysis.js?v=1795386876';
-import { whenText } from './rush-rules.js?v=1795386876';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795386876';
-import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795386876';
+import { Game } from './shared/tak.js?v=1795392342';
+import { unplayedPlies } from './shared/ptn.js?v=1795392342';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795392342';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795392342';
+import { Board, buildPTN, focusedByPointer } from './board.js?v=1795392342';
+import * as engine from './engine.js?v=1795392342';
+import { showLineOn } from './lines.js?v=1795392342';
+import * as tiltak from './tiltak.js?v=1795392342';
+import * as syntaks from './syntaks.js?v=1795392342';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795392342';
+import { createNext } from './next.js?v=1795392342';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795392342';
+import { createOutbox } from './outbox.js?v=1795392342';
+import * as sound from './sound.js?v=1795392342';
+import { boardFrom, confirmOn, soundOn, soundOf, withoutBoardFlag, switchNow, squareName, holds, phaseKey, pending, pendingAct, holdTaps, switchAtNext, boardSaved, settingsNote, takesHeldKey } from './settings.js?v=1795392342';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof, isTak, countTak, outOfMoves, takLeft, TAK_COUNTDOWN, replyEntry, logOk, leftRunsOn, runOnHeld, noEnding, REFUTED } from './playon.js?v=1795392342';
+import { copy } from './playon-copy.js?v=1795392342';
+import { OTHER, syncedOf, decide, diff, changesBody, carried, unsentKeys, withUnsent, afterPost, syncStatus } from './prefsync.js?v=1795392342';
+import { parseLook, encodeLook, cleanLook, lookReport, THEMES as NINJA_THEMES, themeOf, withTheme, themeName, showLook } from './ninja-look.js?v=1795392342';
+import * as defend from './defend.js?v=1795392342';
+import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, quickLine, mergeLines, pickCandidates, pinnedAt, moveShape, threatGroups, chipLabel, numberedPV, ptnParts, THREAT_ON, ALT_IN } from './analysis.js?v=1795392342';
+import { whenText } from './rush-rules.js?v=1795392342';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795392342';
+import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795392342';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -160,7 +160,7 @@ const guestId = () => {
 // PTN Ninja in an iframe instead of tinue's board (same API), by the Board setting or ?board=ninja (which wins:
 // settings.js boardFrom). Loaded only when chosen. A finished move goes through moveIn (Confirm moves).
 const NINJA = boardFrom(location.search, prefs) === 'ninja';
-const board = NINJA ? new (await import('./ninja.js?v=1795386876')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn), look: prefs.ninja })
+const board = NINJA ? new (await import('./ninja.js?v=1795392342')).NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn), look: prefs.ninja })
   : new Board($('#board'), { onMove: (ptn) => moveIn(ptn) });
 // Sounds (sound.js): every move played or appended on any board (this page's, Rush's, PTN Ninja's) sounds what it set
 // down and where (board.js landOf); a stack moved by hand sounds each drop as it lands (onLand) and nothing more when
@@ -434,7 +434,7 @@ async function loadById(id, s = 0, look = null) {
   if (!puzzle) { try { ({ puzzle } = judgeSeen(await api('/api/puzzle/' + encodeURIComponent(id)))); } catch { restoreLeft(); return; } }
   if (t !== loadSeq) return;
   if (puzzle && !s && look?.id === puzzle.id) {
-    try { s = (await import('./rush-rules.js?v=1795386876')).symFromRecord(puzzle, look); } catch { s = 0; }
+    try { s = (await import('./rush-rules.js?v=1795392342')).symFromRecord(puzzle, look); } catch { s = 0; }
     if (t !== loadSeq) return;
   }
   // The one place a puzzle is oriented (pagesym.js): the page works in the turned labels from here on; the server's
@@ -469,14 +469,17 @@ function gameAt(plies) {
 const enginePos = (plies) => ({ size: S.p.size, komi: S.p.komi || 0, tps: S.hist.length ? null : S.p0.tps, plies: plies.map(S.x.back) });
 const fromEngine = (s, r) => s.x.answer(r);
 
-// PTN Ninja links (the puzzle's info and the step buttons, after the puzzle): the line on the board, at the position
-// shown. lz-string (public/vendor) loads on the first solved puzzle; until it arrives the links have no href.
+// PTN Ninja links (the step buttons, and with the analysis view the puzzle's info too; only once the puzzle is over,
+// since they carry its solution): the line on the board, at the position shown. Built from the puzzle, not the board, so
+// they are the same on either board. No theme or look rides along: ptn.ninja opened on its own ignores them (it shows
+// that browser's own PTN Ninja look). lz-string (public/vendor) loads on the first puzzle over; until it arrives the
+// links have no href.
 // Under a symmetry (pagesym.js) the link opens what the player is looking at, in the shown labels: PTN Ninja is not the
 // server (nothing is recorded or judged there), and a board that turned on the way over would read as a different game.
 let lz = null, lzLoad = null;
 const ninjaHref = () => lz && ninjaUrl({ ptn: ptnFor(shownLine()), ply: S.view ?? shownLine().length, name: 'tinue #' + S.p.id }, lz);
 function loadLz() {
-  lzLoad ||= import('./vendor/lz-string.js?v=1795386876').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
+  lzLoad ||= import('./vendor/lz-string.js?v=1795392342').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
 }
 function refreshNinja() {
   if (!S || S.placeholder || S.status !== 'solved') return;
@@ -2164,7 +2167,7 @@ function renderInfo(done) {
       <hr><div>${themes.map((t) => `<a class="tag" href="#/glossary/${t}" title="${esc(THEMES[t].desc)}">${THEMES[t].name}</a>`).join('') || '<span class="sub">No themes</span>'}</div>`;
     const sb = $('#share-link');
     if (sb) sb.onclick = () => sharePuzzle(p);
-    if (ANALYSIS) loadLz();
+    loadLz(); // (for the ↗ by the step buttons)
   }
 
 }
@@ -2234,7 +2237,7 @@ function renderMoves(docked, delta, focusNext) {
   const dockNote = notice ? esc(notice.body) : S.notCounted ? notCountedText() : uncheckedText() ? uncheckedText() : S.slowWin ? `${slowWinText(S.slowWin)}.${S.casualWhy === 'tiltak' ? ' Not rated: Tiltak defended.' : ''}` : S.casual ? 'You used a hint, so this one didn’t count.' : shownOver() ? 'Game over here. Step back with ◀ to explore.' : '';
   const engSlot = `<div class="eng-slot${ANALYSIS ? '' : ' row'}">${engineHtml}</div>`;
   const scroller = `<div class="mscroll" role="group" aria-label="Moves"><div class="mtable">${rows}</div></div>`;
-  const nav = `<div class="nav"><button data-step="first" title="Start" aria-label="Start">⏮</button><button data-step="prev" title="Back (←)" aria-label="Back">◀</button><button data-step="next" title="Forward (→)" aria-label="Forward">▶</button><button data-step="last" title="Current position" aria-label="Current position">⏭</button>${ANALYSIS && S.status === 'solved' ? '<a class="navlink" data-ninja target="_blank" rel="noopener" title="Open this line in PTN Ninja" aria-label="Open this line in PTN Ninja">↗</a>' : ''}${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
+  const nav = `<div class="nav"><button data-step="first" title="Start" aria-label="Start">⏮</button><button data-step="prev" title="Back (←)" aria-label="Back">◀</button><button data-step="next" title="Forward (→)" aria-label="Forward">▶</button><button data-step="last" title="Current position" aria-label="Current position">⏭</button>${S.status === 'solved' ? '<a class="navlink" data-ninja target="_blank" rel="noopener" title="Open this line in PTN Ninja" aria-label="Open this line in PTN Ninja">↗</a>' : ''}${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
   mv.innerHTML = docked ? scroller + `<div class="dock"><div class="dock-res">${dockHead}<button class="primary" data-act="next">Next puzzle</button>${dockNote ? `<p>${dockNote}</p>` : ''}</div>${engSlot}${nav}</div>`
     : engSlot + scroller + nav;
   fitDock();
@@ -2542,10 +2545,10 @@ function settingsPage() {
       <div class="panel set-list">
         ${sel('board', 'Board', 'The board you solve puzzles on: tinue’s own, or the one from ptn.ninja. Rush uses it too.', '<p class="set-desc set-note hidden" id="st-note"></p>')}
         <div class="set-item"><label for="st-ninja-theme">PTN Ninja theme</label><select id="st-ninja-theme" aria-describedby="st-ninja-theme-d">
-          <option value="">tinue’s own</option>${NINJA_THEMES.map((id) => `<option value="${id}">${themeName(id)}</option>`).join('')}<option value="custom" hidden>Custom</option></select>
+          <option value="">tinue’s own</option><option value="legacy">tinue legacy</option>${NINJA_THEMES.map((id) => `<option value="${id}">${themeName(id)}</option>`).join('')}<option value="custom" hidden>Custom</option></select>
           <p class="set-desc" id="st-ninja-theme-d">The colours of the PTN Ninja board. A theme of your own can be pasted below.</p></div>
         <div class="set-item"><label for="st-ninja">PTN Ninja look</label>
-          <form id="st-ninja-form" class="set-look"><input id="st-ninja" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="st-ninja-d st-ninja-msg" placeholder="A ptn.ninja link, or &amp;axisLabels=false&amp;theme=…">
+          <form id="st-ninja-form" class="set-look"><input id="st-ninja" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="st-ninja-d st-ninja-msg" placeholder="A theme’s code, or &amp;axisLabels=false&amp;theme=zen">
             <button type="submit" id="st-ninja-use">Use</button><button type="button" id="st-ninja-clear">Clear</button></form>
           <p class="set-desc" id="st-ninja-d"></p><p class="set-desc set-msg" id="st-ninja-msg" aria-live="polite"></p></div>
         ${sel('confirm', 'Confirm moves', 'A move waits on the board until you confirm it: tap its square again, press Confirm or Enter.')}
@@ -2584,9 +2587,9 @@ function renderLookField(fresh = false) {
   th.value = cur;
   $('#st-ninja-clear').disabled = !on || !prefs.ninja;
   $('#st-ninja-d').textContent = on
-    ? 'Paste a ptn.ninja link, or just its settings, to use its look here: axis labels, counts, layout, 3D and theme. Settings tinue needs are left out.'
+    ? 'A theme’s code from PTN Ninja’s theme editor, or settings as in a ptn.ninja link: axis labels, counts, layout, 3D.'
     : 'Choose PTN Ninja as the board to use this: it changes how the PTN Ninja board looks.';
-  if (document.activeElement !== inp) inp.value = prefs.ninja || '';
+  if (document.activeElement !== inp) inp.value = showLook(prefs.ninja || '');
   if (fresh) $('#st-ninja-msg').textContent = prefs.ninja ? lookReport(parseLook(prefs.ninja)) : '';
 }
 renderPending();
@@ -2780,9 +2783,9 @@ async function route() {
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
   if (page === 'settings') return settingsPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795386876')).enter({ frame: NINJA ? board : null }); } // loaded on first visit; PTN Ninja's frame, which Rush borrows
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795392342')).enter({ frame: NINJA ? board : null }); } // loaded on first visit; PTN Ninja's frame, which Rush borrows
   // The sound lab (sound-lab.js): beta builds only; elsewhere #/sounds is no page at all (it falls through to puzzles)
-  if (page === 'sounds' && window.TINUE_BETA && $('#view-sounds')) { show('view-sounds'); return (labPage ||= await import('./sound-lab.js?v=1795386876')).enter($('#view-sounds')); }
+  if (page === 'sounds' && window.TINUE_BETA && $('#view-sounds')) { show('view-sounds'); return (labPage ||= await import('./sound-lab.js?v=1795392342')).enter($('#view-sounds')); }
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   // Keeping the puzzle on screen: a Next this navigation superseded may have left it mid-way (needsRestore, busy) after
@@ -2798,7 +2801,7 @@ async function route() {
     const zero = symArg === '0';
     let want = sym, found = false;
     if (!sym && !zero && look?.id === id && S?.p.id === id && S.p0) {
-      try { want = (await import('./rush-rules.js?v=1795386876')).symFromRecord(S.p0, look); found = true; } catch {}
+      try { want = (await import('./rush-rules.js?v=1795392342')).symFromRecord(S.p0, look); found = true; } catch {}
       if (nav !== loadSeq) return; // a newer navigation (or load) came while that module loaded: this one is stale
     }
     // A plain link (no symmetry, no Rush note) to the puzzle on screen returns to the visit as it stands, turned or
