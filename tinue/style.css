@@ -105,9 +105,15 @@ button.danger { background: var(--bad-fill); border-color: var(--bad-fill); colo
 .panel { background: var(--bg2); border-radius: var(--r-panel); padding: var(--pad); box-shadow: 0 2px 2px rgba(0,0,0,.25); }
 .page { max-width: 900px; margin: 24px auto; padding: 0 16px; }
 
-/* ---------- board (our own PTN-Ninja-style board: public/board.js + board.css) ---------- */
+/* ---------- board (PTN Ninja's, in an iframe: public/ninja.js) ---------- */
 .board-wrap { position: relative; }
-.board-host { width: 100%; }
+.board-host { width: 100%; position: relative; }
+/* PTN Ninja loading slowly, or not there: a plain line (and Retry) in the board's place, nothing that looks half-loaded */
+.board-down { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 16px; background: #262421; border-radius: inherit; text-align: center; }
+.board-down p { margin: 0; color: var(--muted); font-size: var(--fs-sm); max-width: 28ch; }
+.board-down[data-kind="load"] p, .board-down[data-kind="stopped"] p { color: var(--fg-hi); font-size: var(--fs-md, 15px); }
+.board-down button[hidden] { display: none; }
 /* typed moves for keyboard players: invisible until tabbed to */
 .ptn-in { width: 100%; margin-top: 8px; font-family: var(--mono); }
 .ptn-in:not(:focus) { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); border: 0; }
@@ -396,6 +402,8 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .rush-go { min-width: 140px; }
 .rush-err { margin: 6px 0 0; color: var(--bad); font-size: var(--fs-sm); }
 .rush-err:empty { margin: 0; } /* (no space kept: an error, when there is one, pushes the rest down) */
+/* the board not there (PTN Ninja didn't load, or stopped answering): said plainly, not as an error, with Retry */
+.rush-err.board { color: var(--fg-hi); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .rush-small { font-size: var(--fs-sm); }
 .rush-boards { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); align-items: start; }
 .rush-boards .panel { margin-top: 0; }
@@ -535,11 +543,10 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 /* Rush on PTN Ninja's board (ninja.js borrow): the page's one frame stays in the puzzle page's #board (moving an iframe
    reloads it) and is laid over Rush's board. Meanwhile the puzzle page is laid out but takes no room and shows nothing
    (display:none would stop the frame drawing), and the frame's ancestors there are static, so it is placed against the
-   page. tinue's board stays under the frame, out of sight, keeping the box the frame fills. */
+   page. Rush's #rush-board is only the box the frame fills. */
 #view-puzzle.hidden.lend { display: block !important; visibility: hidden; height: 0; min-height: 0; overflow: hidden; margin: 0; padding: 0; border: 0; }
 #view-puzzle.lend #board-wrap, #view-puzzle.lend #board, #view-puzzle.lend .board-col { position: static !important; }
-#rush-board.lent { background: #262421; border-radius: var(--corner, 6px); }
-#rush-board.lent > * { visibility: hidden; }
+#rush-board { background: #262421; border-radius: var(--corner, 6px); aspect-ratio: 0.79045; } /* the frame's box (ninja.js _size sets it per look and size) */
 @media (max-width: 600px) {
   .rush-page { margin-top: 8px; padding: 0 8px; }
   .rush-modes, .rush-boards { grid-template-columns: 1fr; }

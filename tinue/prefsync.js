@@ -1,23 +1,24 @@
-// Settings saved to the player's account (2026-11-20): the board, Confirm moves, Sound and the PTN Ninja look follow a
+// Settings saved to the player's account (2026-11-20): Confirm moves, Sound and the board's look follow a
 // named account from device to device. This browser's prefs stay the working copy; the server keeps one object per
 // account (POST /api/settings; /api/me, /api/login and /api/register bring it back as `settings`). Guests and signed-out
 // players sync nothing. What app.js decides is here, so node can test it (scripts/test-prefsync.mjs).
 //
 // The same account (and, on the same site, the same browser storage) may also hold settings this page no longer has:
 // the beta's Engine arrows (2026-11, now no setting: arrows are on wherever the analysis view is). This page never
-// reads, applies or changes those: they are carried as they are (OTHER).
-import { boardFrom, confirmOn, soundOf, SOUND_DEFAULT } from './settings.js?v=1795392342';
-import { cleanLook } from './ninja-look.js?v=1795392342';
+// reads, applies or changes those: they are carried as they are (OTHER). So is the Board setting (2026-11-22: PTN Ninja
+// is the only board): a stored 'board' is never read, and never rewritten or dropped either.
+import { confirmOn, soundOf, SOUND_DEFAULT } from './settings.js?v=1795457293';
+import { cleanLook } from './ninja-look.js?v=1795457293';
 
-export const SYNCED = ['board', 'confirm', 'sound', 'ninja'];
-export const DEFAULTS = { board: 'tinue', confirm: false, sound: SOUND_DEFAULT, ninja: '' };
+export const SYNCED = ['confirm', 'sound', 'ninja'];
+export const DEFAULTS = { confirm: false, sound: SOUND_DEFAULT, ninja: '' };
 // Settings no page of this site has any more that may be in this browser's prefs and on the account.
-export const OTHER = ['arrows'];
+export const OTHER = ['arrows', 'board'];
 // The synced settings out of a prefs-shaped object, each read by the same reader the page uses (settings.js), so a
 // value from the server is cleaned exactly as one from this browser's storage is: junk reads as the default.
 export function syncedOf(p) {
   const o = p && typeof p === 'object' && !Array.isArray(p) ? p : {};
-  return { board: boardFrom('', o), confirm: confirmOn(o), sound: soundOf(o), ninja: cleanLook(o.ninja) };
+  return { confirm: confirmOn(o), sound: soundOf(o), ninja: cleanLook(o.ninja) };
 }
 // Keys whose values differ (a and b both syncedOf's shape).
 export const diff = (a, b) => SYNCED.filter((k) => a[k] !== b[k]);

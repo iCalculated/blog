@@ -10,7 +10,7 @@
 // name and targetBranch are lz-string compressed; theme is a built-in theme's id or a theme as JSON, either one usually
 // lz-string compressed (its own Share links compress even an id), and it falls back to the default when unreadable.
 // The same settings can be sent later as one SET_UI message (README "API"), where theme is an id or a theme object.
-import { compressToEncodedURIComponent as lz, decompressFromEncodedURIComponent as unlz } from './vendor/lz-string.js?v=1795392342';
+import { compressToEncodedURIComponent as lz, decompressFromEncodedURIComponent as unlz } from './vendor/lz-string.js?v=1795457293';
 
 // The settings tinue passes on, with the kind of value each takes (b: true/false, p: a whole number 1 to 10, t: a
 // theme). index.html's early iframe start has the same table (scripts/test-ninja-look.mjs holds them together).
@@ -65,10 +65,11 @@ export function cleanTheme(t) {
   out.colors = colors;
   return out;
 }
-// tinue's board as it was until 2026-11-21 (Lichess-style brown checkers), as a PTN Ninja theme: the "tinue legacy"
-// choice of the theme select. Stored like a pasted theme (PTN Ninja doesn't know it by name).
+// tinue's board as it was until 2026-11-21 (Lichess-style brown checkers), as a PTN Ninja theme: the "tinue classic"
+// choice of the theme select (named "tinue legacy" until 2026-11-22; looks stored then carry that name). Stored like a
+// pasted theme (PTN Ninja doesn't know it by name).
 export const LEGACY = cleanTheme({
-  id: 'tinue-legacy', name: 'tinue legacy', boardStyle: 'blank', boardChecker: true,
+  id: 'tinue-legacy', name: 'tinue classic', boardStyle: 'blank', boardChecker: true,
   vars: { 'piece-border-width': 1 },
   colors: {
     primary: '#9cb83a', secondary: '#161512', ui: '#262421', accent: '#302e2c', panel: '#262421c0',
@@ -78,11 +79,14 @@ export const LEGACY = cleanTheme({
     textLight: '#fafafacd', textDark: '#212121cd', umbra: '#00000033',
   },
 });
-// Known by its id and name, not its colours: a look stored before LEGACY last changed still reads as tinue legacy, and
-// reading it (readTheme) gives today's LEGACY, so a change to it reaches everyone who picked it.
-const isLegacy = (t) => !!t && typeof t === 'object' && t.id === LEGACY.id && t.name === LEGACY.name;
-// A built-in theme by its id or by PTN Ninja's name for it, in any case ('Zen', 'BubbleTron'); 'legacy' is tinue's old board.
-const named = (v) => { const l = v.toLowerCase(); return THEMES.includes(l) ? { id: l } : l === 'legacy' || l === 'tinue-legacy' ? { theme: LEGACY } : null; };
+// Known by its id and one of its names, not its colours: a look stored before LEGACY last changed (or was renamed) still
+// reads as tinue classic, and reading it (readTheme) gives today's LEGACY, so a change to it reaches everyone who picked it.
+const LEGACY_NAMES = new Set(['tinue classic', 'tinue legacy']);
+const isLegacy = (t) => !!t && typeof t === 'object' && t.id === LEGACY.id && LEGACY_NAMES.has(t.name);
+// What can be typed for it, in any case and spacing: 'classic' alone is PTN Ninja's own Classic.
+const LEGACY_SAID = new Set(['legacy', 'tinue-legacy', 'tinue legacy', 'tinue classic', 'classic tinue', 'tinue-classic']);
+// A built-in theme by its id or by PTN Ninja's name for it, in any case ('Zen', 'BubbleTron'); or tinue classic.
+const named = (v) => { const l = v.toLowerCase().trim().replace(/\s+/g, ' '); return THEMES.includes(l) ? { id: l } : LEGACY_SAID.has(l) ? { theme: LEGACY } : null; };
 // A theme value as pasted: a built-in id or name, or an id or JSON, lz-compressed or plain (JSON as PTN Ninja's theme
 // editor shares it, pretty-printed or not). { id } | { theme } | null.
 function readTheme(v) {
@@ -110,6 +114,8 @@ export function parseLook(input) {
   let s = typeof input === 'string' ? input.trim() : '';
   if (!s) return res;
   if (s.length > MAX_IN) return { ...res, error: 'That is too long to be PTN Ninja settings.' };
+  // tinue classic by name, spaces and all ('tinue classic', 'classic tinue')
+  if (/^[A-Za-z -]+$/.test(s) && named(s)?.theme) { res.look.theme = LEGACY; res.applied.push('theme'); return res; }
   // a theme on its own: its code (JSON), a built-in theme's name, or a theme value as a link carries it (lz-compressed)
   if (s.startsWith('{') || /^[A-Za-z0-9+$-]+$/.test(s)) {
     const t = readTheme(s);
@@ -177,21 +183,21 @@ export function encodeLook(look) {
 export const cleanLook = (stored) => (typeof stored === 'string' && stored.length <= MAX ? encodeLook(parseLook(stored).look) : '');
 // The stored string as SET_UI values (the theme as an id or an object), for ninja.js.
 export const lookUi = (stored) => (typeof stored === 'string' && stored.length <= MAX ? parseLook(stored).look : {});
-// The stored string as the paste box shows it: the same settings, a built-in theme by its id and tinue's legacy one as
-// legacy (both read back as they are), only a theme of the player's own still compressed.
+// The stored string as the paste box shows it: the same settings, a built-in theme by its id and tinue classic as
+// tinue-classic (both read back as they are), only a theme of the player's own still compressed.
 export function showLook(stored) {
   const look = lookUi(stored);
   let out = '';
   for (const [k, kind] of Object.entries(LOOK)) {
     if (!(k in look)) continue;
     const v = look[k];
-    out += '&' + k + '=' + (kind !== 't' ? String(v) : typeof v === 'string' ? v : isLegacy(v) ? 'legacy' : lz(JSON.stringify(v)));
+    out += '&' + k + '=' + (kind !== 't' ? String(v) : typeof v === 'string' ? v : isLegacy(v) ? 'tinue-classic' : lz(JSON.stringify(v)));
   }
   return out;
 }
 
 // ---- the theme select (Settings page): the same stored string as the paste box, so the two stay one setting ----
-// What it shows for a stored look: '' (tinue's own), a built-in id, 'legacy' (tinue's old board) or 'custom' (a pasted
+// What it shows for a stored look: '' (tinue felt), a built-in id, 'legacy' (tinue classic) or 'custom' (a pasted
 // theme of the player's own).
 export const themeOf = (stored) => { const t = lookUi(stored).theme; return t == null ? '' : typeof t === 'string' ? t : isLegacy(t) ? 'legacy' : 'custom'; };
 // The stored look with its theme changed to `id` ('' for tinue's own); its other settings kept. 'custom' or anything not
@@ -255,7 +261,7 @@ const NAMES = { axisLabels: 'axis labels', axisLabelsSmall: 'axis labels inside 
   perspective: '3D perspective', centerStackCounts: 'centred stack counts', stackCounts: 'stack counts', flatCounts: 'flat counts',
   flatWinHighlights: 'flat win highlights', moveNumber: 'move number', turnIndicator: 'turn indicator', verticalLayout: 'vertical layout',
   verticalLayoutAuto: 'automatic layout' };
-const said = (k, v) => k === 'theme' ? (typeof v === 'string' ? `theme ${v}` : isLegacy(v) ? 'theme tinue legacy' : 'a custom theme')
+const said = (k, v) => k === 'theme' ? (typeof v === 'string' ? `theme ${v}` : isLegacy(v) ? 'theme tinue classic' : 'a custom theme')
   : k === 'perspective' ? `3D perspective ${v}` : `${NAMES[k]} ${v ? 'on' : 'off'}`;
 const list = (ks) => ks.slice(0, 12).join(', ') + (ks.length > 12 ? ` and ${ks.length - 12} more` : '');
 // Plain text (the page sets it as textContent). The keys listed are only ever [A-Za-z0-9] (safeKey).
