@@ -79,8 +79,6 @@
 <main>
   <!-- make a card -->
   <section id="edit">
-    <h1>card</h1>
-
     <div class="row">
       <button id="pick" hidden>pick contact</button>
     </div>
@@ -99,7 +97,6 @@
     <div class="row">
       <button class="primary" id="saveEdit">save qr</button>
     </div>
-    <p class="hint">nothing is uploaded. draft stays in this browser. <a href="#" id="clear">clear</a></p>
   </section>
 
 </main>
@@ -208,7 +205,6 @@
 
   form.addEventListener('input', () => { grow(); refresh(); });
   $('saveEdit').onclick = () => saveQR($('qrEdit'), read());
-  $('clear').onclick = e => { e.preventDefault(); store.del(STORE); fill({}); };
 
   // contact picker (android chrome; ios safari behind a flag)
   if (navigator.contacts && navigator.contacts.select) {
