@@ -5,20 +5,20 @@
 // with the puzzle page's own rules and engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused
 // while they work. Nothing here is rated, and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { buildPTN } from './board-kit.js?v=1795483471';
-import { SAYS, onNinjaTheme } from './ninja.js?v=1795483471';
-import { api, store, token } from './api.js?v=1795483471';
-import { confirmOn, takesHeldKey } from './settings.js?v=1795483471';
-import * as R from './rush-rules.js?v=1795483471';
-import { picture, pictureHTML } from './rush-look.js?v=1795483471';
-import { pictureLook } from './rush-theme.js?v=1795483471';
-import * as engine from './engine.js?v=1795483471';
-import * as tiltak from './tiltak.js?v=1795483471';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795483471';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795483471';
-import { busy, BUSY_MS } from './busy.js?v=1795483471';
-import * as SYM from './shared/sym.js?v=1795483471';
-import * as sound from './sound.js?v=1795483471'; // (moves click through board-kit.js hooks.onPly, set by app.js; the verdicts are played here)
+import { buildPTN } from './board-kit.js?v=1795483980';
+import { SAYS, onNinjaTheme } from './ninja.js?v=1795483980';
+import { api, store, token } from './api.js?v=1795483980';
+import { confirmOn, takesHeldKey } from './settings.js?v=1795483980';
+import * as R from './rush-rules.js?v=1795483980';
+import { picture, pictureHTML } from './rush-look.js?v=1795483980';
+import { pictureLook } from './rush-theme.js?v=1795483980';
+import * as engine from './engine.js?v=1795483980';
+import * as tiltak from './tiltak.js?v=1795483980';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795483980';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795483980';
+import { busy, BUSY_MS } from './busy.js?v=1795483980';
+import * as SYM from './shared/sym.js?v=1795483980';
+import * as sound from './sound.js?v=1795483980'; // (moves click through board-kit.js hooks.onPly, set by app.js; the verdicts are played here)
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);

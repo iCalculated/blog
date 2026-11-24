@@ -1,6 +1,6 @@
 // The analysis page's pure parts (after a puzzle): no DOM, no engines, so scripts/test-analysis.mjs runs them in node.
 // solverLines runs in the tactics worker (public/engine-worker.js, engine.lines) and in tests.
-import { Game, winningMoves, DIRS, WALL, CAP, typeOf } from './shared/tak.js?v=1795483471';
+import { Game, winningMoves, DIRS, WALL, CAP, typeOf } from './shared/tak.js?v=1795483980';
 
 // A link that opens a line in PTN Ninja: the PTN, lz-string compressed (compressToEncodedURIComponent, passed in so
 // the compressor loads only when a link is shown), at `ply` plies shown (0: the start, so no ply parameter), with an

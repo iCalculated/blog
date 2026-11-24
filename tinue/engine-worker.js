@@ -5,9 +5,9 @@
 //   lines:   the analysis panel's solver facts: every win in 1 and in 3 plies, the opponent's threats, tinuë, verdicts
 //            on asked-about moves (public/analysis.js solverLines)
 // It's a forced-win prover, not an evaluator: it answers "win in N" or "nothing forced within N".
-import { Game, Solver } from './shared/tak.js?v=1795483466';
-import { shortestTinue, TinueSearch, proofTreeLine } from './shared/pns.js?v=1795483466';
-import { solverLines } from './analysis.js?v=1795483466';
+import { Game, Solver } from './shared/tak.js?v=1795483975';
+import { shortestTinue, TinueSearch, proofTreeLine } from './shared/pns.js?v=1795483975';
+import { solverLines } from './analysis.js?v=1795483975';
 
 function gameFrom({ size, komi, tps, plies }) {
   const g = tps ? Game.fromTPS(tps, komi || 0) : Object.assign(new Game(size), { komi: komi || 0 });

@@ -3,10 +3,10 @@
 // When PTN Ninja can't be loaded, is too slow, or stops answering, a plain message with Retry takes the board's place:
 // nothing is judged meanwhile (no move can be made), and nothing else is put there.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1795483471';
-import { parsePTN } from './shared/ptn.js?v=1795483471';
-import { buildPTN, focusedByPointer, landOf, hooks } from './board-kit.js?v=1795483471';
-import { frameParams, lookUi, frameBox, frameGeom, cleanTheme, THEMES } from './ninja-look.js?v=1795483471';
+import { Game } from './shared/tak.js?v=1795483980';
+import { parsePTN } from './shared/ptn.js?v=1795483980';
+import { buildPTN, focusedByPointer, landOf, hooks } from './board-kit.js?v=1795483980';
+import { frameParams, lookUi, frameBox, frameGeom, cleanTheme, THEMES } from './ninja-look.js?v=1795483980';
 
 const ORIGIN = 'https://ptn.ninja';
 // tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses). The board as

@@ -3,7 +3,7 @@
 // off is the default. What app.js decides is here, so node can test it (scripts/test-settings.mjs).
 // There is no Board setting any more (2026-11-22): PTN Ninja is the only board, whatever a stored setting or a
 // ?board= in the address says.
-import { busy } from './busy.js?v=1795483471';
+import { busy } from './busy.js?v=1795483980';
 
 export const confirmOn = (prefs) => prefs?.confirm === true;
 // Sound: 'off', or the voice of the move sounds, 'light' | 'thunk' | 'deep' (sound.js VOICES). Nothing is stored until
