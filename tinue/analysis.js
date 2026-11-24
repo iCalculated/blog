@@ -1,6 +1,6 @@
 // The analysis page's pure parts (after a puzzle): no DOM, no engines, so scripts/test-analysis.mjs runs them in node.
 // solverLines runs in the tactics worker (public/engine-worker.js, engine.lines) and in tests.
-import { Game, winningMoves, DIRS, WALL, CAP, typeOf } from './shared/tak.js?v=1795457293';
+import { Game, winningMoves, DIRS, WALL, CAP, typeOf } from './shared/tak.js?v=1795483466';
 
 // A link that opens a line in PTN Ninja: the PTN, lz-string compressed (compressToEncodedURIComponent, passed in so
 // the compressor loads only when a link is shown), at `ply` plies shown (0: the start, so no ply parameter), with an
@@ -352,7 +352,8 @@ export function stackPiece(len, z, n, wall = false, up = false) {
 // engine ring, which is larger), one ring per square however many threats end there, and a spread's threat an arrow
 // that stops at that ring, so three threats into one square read as one target with tails. The stones an analysis
 // line's spread carries and drops (its count discs) are drawn last of all (.lb), so no threat covers a count.
-// The Rush end screen's pictures (rush-look.js) add two roles drawn as strongly as line 1, without casings: 'bad', the
+// The Rush end screen's pictures (rush-look.js) add two roles drawn as strongly as line 1, without casings unless the
+// item asks for one (cs; shown only where a board theme needs it, rush-theme.js): 'bad', the
 // move played when it was wrong (red), under 'good', the puzzle's move (green); there two moves can share a square or a
 // line, so an item may carry r (a placement ring's radius, .42 unless given; paintShapes uses it too, for a selected
 // line placing on line 1's square), shift (a spread's arrow moved sideways by that much of a square, so two along one
@@ -360,7 +361,8 @@ export function stackPiece(len, z, n, wall = false, up = false) {
 // stack each show theirs).
 const ORDER = { alt: 1, yours: 2, bad: 3, best: 4, good: 4, threat: 5 };
 const STRONG = new Set(['best', 'good', 'bad']);
-const CASED = { best: 0.07, alt: 0.055, yours: 0.06, threat: 0.045 }; // (the ring's stroke width, for the roles with a casing)
+const CASED = { best: 0.07, alt: 0.055, yours: 0.06, threat: 0.045 }; // (the ring's stroke width, for the roles with a casing;
+// Rush's good and bad have one only when the item asks (cs: rush-look.js), shown only where a board theme needs it)
 // Ring radii, so that rings on one square never share a band (radius ± (stroke + casing) / 2): line 1's .42 (.36-.48),
 // a selected line placing on line 1's square inset at ALT_IN (.26-.36), a threat on an empty square THREAT_R (.15-.25,
 // over the ghost stone). A threat that ends on a stone rings it from outside, THREAT_ON (.35-.45: past a flat's rounded
@@ -370,8 +372,9 @@ const f2 = (x) => +x.toFixed(3);
 export function shapesSvg(list, n, M) {
   const at = (sq) => { const [dc, dr] = dispPoint(sq, n, M); return [dc + 0.5, n - 1 - dr + 0.5]; };
   const out = [], ringed = new Set(), labels = [];
-  for (const { shape: s, role = 'alt', color = 1, r: r0, shift = 0, lead = 0 } of [...(list || [])].filter((x) => x?.shape).sort((a, b) => (ORDER[a.role] ?? 1) - (ORDER[b.role] ?? 1))) {
-    const strong = STRONG.has(role), thin = role === 'threat', rw = CASED[role], cased = rw != null;
+  for (const { shape: s, role = 'alt', color = 1, r: r0, shift = 0, lead = 0, cs: wantCs = false } of [...(list || [])].filter((x) => x?.shape).sort((a, b) => (ORDER[a.role] ?? 1) - (ORDER[b.role] ?? 1))) {
+    const strong = STRONG.has(role), thin = role === 'threat', rw = CASED[role] ?? (wantCs ? 0.09 : undefined), cased = rw != null;
+    const lay = cased && !wantCs; // (an asked-for casing (Rush's) leaves the counts and drops where they were)
     const r = r0 ?? (thin ? THREAT_R : 0.42);
     let g = '', cs = '', lb = '';
     // a ring: cased, its width inline (board.css's .rg width is for the Rush roles)
@@ -409,11 +412,11 @@ export function shapesSvg(list, n, M) {
       if (s.smash) g += `<line class="sm" ${bar}/>`;
       const cx0 = x0 + ux * lead, cy0 = y0 + uy * lead;
       // (the counts of an analysis line go on a layer of their own over the threats, so a threat ring never hides one)
-      const put = (m) => { if (cased) lb += m; else g += m; };
+      const put = (m) => { if (lay) lb += m; else g += m; };
       if (!thin && s.carry > 1) put(`<circle class="dc" cx="${f2(cx0)}" cy="${f2(cy0)}" r=".17"/><text x="${f2(cx0)}" y="${f2(cy0)}">${s.carry}</text>`);
       if (!thin && s.drops.length > 1) for (const { sq, k } of s.drops) {
         // (an analysis line's drop counts follow its shift, so two collinear lines' counts sit apart)
-        const [x, y] = at(sq), o = 0.3 + (cased ? 2 * shift : 0), cx = x + px * o, cy = y + py * o;
+        const [x, y] = at(sq), o = 0.3 + (lay ? 2 * shift : 0), cx = x + px * o, cy = y + py * o;
         put(`<circle class="dd" cx="${f2(cx)}" cy="${f2(cy)}" r=".14"/><text x="${f2(cx)}" y="${f2(cy)}">${k}</text>`);
       }
     }

@@ -6,7 +6,8 @@
 // shapesSvg: a ring and a faint stone for a placement, an arrow with the stones carried for a spread): the move played
 // when it was wrong in red, the puzzle's move in green.
 // Pure (no DOM), so node tests it against the real Board's position: scripts/test-rush-look.mjs.
-import { dispPoint, shapesSvg, stackPiece } from './analysis.js?v=1795457293';
+import { dispPoint, shapesSvg, stackPiece } from './analysis.js?v=1795483466';
+import { bandOf, darkSq } from './rush-theme.js?v=1795483466';
 
 const FILES = 'abcdefgh';
 const ID = [1, 0, 0, 1];
@@ -46,7 +47,8 @@ export function picture(v, M = ID) {
   }
   // Two moves on one square, or along one line from one stack: the wrong one's ring outside the right one's, the arrows
   // side by side; otherwise each is drawn as the overlay draws a line.
-  const marks = (v.marks || []).map((m) => ({ ...m }));
+  // (each with its casing, cs, drawn but hidden: a board theme other than felt shows it where its marks need an edge)
+  const marks = (v.marks || []).map((m) => ({ ...m, cs: true }));
   const [b, g] = [marks.find((m) => m.role === 'bad'), marks.find((m) => m.role === 'good')];
   if (b && g && b.shape.kind === 'place' && g.shape.kind === 'place' && b.shape.sq === g.shape.sq) g.r = 0.3;
   if (b && g && b.shape.kind === 'spread' && g.shape.kind === 'spread' && b.shape.from === g.shape.from) {
@@ -58,9 +60,11 @@ export function picture(v, M = ID) {
 
 // The picture as HTML, in board.css's own classes (a .tb marked still: no motion, no will-change per stone). Hidden
 // from screen readers: the words beside it say the same.
+// Each square also says its colour on a checkered board (d: a1's, the dark ones) and its band from the board's edge
+// (k0 outermost), which a board theme other than tinue felt colours it by (rush-theme.js, style.css .rt).
 export function pictureHTML(pic) {
   const n = pic.n;
-  const sq = pic.squares.map((s) => `<div class="tb-sq${s.tint ? ' c' + (s.tint === 'cp' ? ' cp' : '') : ''}">${s.tint ? '<div class="tb-hl tb-cur"></div>' : ''}`
+  const sq = pic.squares.map((s) => `<div class="tb-sq k${bandOf(s.sq, n)}${darkSq(s.sq, n) ? ' d' : ''}${s.tint ? ' c' + (s.tint === 'cp' ? ' cp' : '') : ''}">${s.tint ? '<div class="tb-hl tb-cur"></div>' : ''}`
     + (s.lr != null ? `<span class="tb-lab tb-lr">${s.lr}</span>` : '') + (s.lc != null ? `<span class="tb-lab tb-lc">${s.lc}</span>` : '') + '</div>').join('');
   const pcs = pic.pieces.map((p) => `<div class="tb-pc" style="transform:translate(${p.x}%,${p.y}%);z-index:${p.z}"><div class="tb-st p${p.color}${p.type === 1 ? ' S' : p.type === 2 ? ' C' : ''}${p.imm ? ' im' : ''}"></div></div>`).join('');
   return `<div class="tb-host rush-pic" aria-hidden="true"><div class="tb still" style="--n:${n}"><div class="tb-board">${sq}<div class="tb-pcs">${pcs}</div>`

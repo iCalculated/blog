@@ -252,3 +252,5 @@
 .tb-ov .good { color: var(--mk-good); opacity: 1; }
 .tb-ov .bad { color: var(--mk-bad); opacity: 1; }
 .tb-ov .good .rg, .tb-ov .bad .rg { stroke-width: .09; }
+/* (their casings: none on the felt; the end screen in another board theme shows them where its marks need an edge, style.css .rt) */
+.tb-ov .good .cs, .tb-ov .bad .cs { display: none; }

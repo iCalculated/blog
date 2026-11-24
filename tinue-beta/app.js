@@ -1,28 +1,28 @@
-import { Game } from './shared/tak.js?v=1795457078';
-import { unplayedPlies } from './shared/ptn.js?v=1795457078';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795457078';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795457078';
-import { buildPTN, focusedByPointer, hooks } from './board-kit.js?v=1795457078';
-import { NinjaBoard } from './ninja.js?v=1795457078';
-import * as engine from './engine.js?v=1795457078';
-import { showLineOn } from './lines.js?v=1795457078';
-import * as tiltak from './tiltak.js?v=1795457078';
-import * as syntaks from './syntaks.js?v=1795457078';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795457078';
-import { createNext } from './next.js?v=1795457078';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795457078';
-import { createOutbox } from './outbox.js?v=1795457078';
-import * as sound from './sound.js?v=1795457078';
-import { confirmOn, soundOn, soundOf, squareName, holds, phaseKey, pending, pendingAct, holdTaps, settingsNote, takesHeldKey } from './settings.js?v=1795457078';
-import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof, isTak, countTak, outOfMoves, takLeft, TAK_COUNTDOWN, replyEntry, logOk, leftRunsOn, runOnHeld, noEnding, REFUTED } from './playon.js?v=1795457078';
-import { copy } from './playon-copy.js?v=1795457078';
-import { OTHER, syncedOf, decide, diff, changesBody, carried, unsentKeys, withUnsent, afterPost, syncStatus } from './prefsync.js?v=1795457078';
-import { parseLook, encodeLook, cleanLook, lookReport, THEMES as NINJA_THEMES, themeOf, withTheme, themeName, showLook } from './ninja-look.js?v=1795457078';
-import * as defend from './defend.js?v=1795457078';
-import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, quickLine, mergeLines, pickCandidates, pinnedAt, moveShape, threatGroups, chipLabel, numberedPV, ptnParts, THREAT_ON, ALT_IN } from './analysis.js?v=1795457078';
-import { whenText } from './rush-rules.js?v=1795457078';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795457078';
-import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795457078';
+import { Game } from './shared/tak.js?v=1795483471';
+import { unplayedPlies } from './shared/ptn.js?v=1795483471';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795483471';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795483471';
+import { buildPTN, focusedByPointer, hooks } from './board-kit.js?v=1795483471';
+import { NinjaBoard } from './ninja.js?v=1795483471';
+import * as engine from './engine.js?v=1795483471';
+import { showLineOn } from './lines.js?v=1795483471';
+import * as tiltak from './tiltak.js?v=1795483471';
+import * as syntaks from './syntaks.js?v=1795483471';
+import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795483471';
+import { createNext } from './next.js?v=1795483471';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795483471';
+import { createOutbox } from './outbox.js?v=1795483471';
+import * as sound from './sound.js?v=1795483471';
+import { confirmOn, soundOn, soundOf, squareName, holds, phaseKey, pending, pendingAct, holdTaps, settingsNote, takesHeldKey } from './settings.js?v=1795483471';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof, isTak, countTak, outOfMoves, takLeft, TAK_COUNTDOWN, replyEntry, logOk, leftRunsOn, runOnHeld, noEnding, REFUTED } from './playon.js?v=1795483471';
+import { copy } from './playon-copy.js?v=1795483471';
+import { OTHER, syncedOf, decide, diff, changesBody, carried, unsentKeys, withUnsent, afterPost, syncStatus } from './prefsync.js?v=1795483471';
+import { parseLook, encodeLook, cleanLook, lookReport, THEMES as NINJA_THEMES, themeOf, withTheme, themeName, showLook } from './ninja-look.js?v=1795483471';
+import * as defend from './defend.js?v=1795483471';
+import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, quickLine, mergeLines, pickCandidates, pinnedAt, moveShape, threatGroups, chipLabel, numberedPV, ptnParts, THREAT_ON, ALT_IN } from './analysis.js?v=1795483471';
+import { whenText } from './rush-rules.js?v=1795483471';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795483471';
+import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795483471';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -430,7 +430,7 @@ async function loadById(id, s = 0, look = null) {
   if (!puzzle) { try { ({ puzzle } = judgeSeen(await api('/api/puzzle/' + encodeURIComponent(id)))); } catch { restoreLeft(); return; } }
   if (t !== loadSeq) return;
   if (puzzle && !s && look?.id === puzzle.id) {
-    try { s = (await import('./rush-rules.js?v=1795457078')).symFromRecord(puzzle, look); } catch { s = 0; }
+    try { s = (await import('./rush-rules.js?v=1795483471')).symFromRecord(puzzle, look); } catch { s = 0; }
     if (t !== loadSeq) return;
   }
   // The one place a puzzle is oriented (pagesym.js): the page works in the turned labels from here on; the server's
@@ -475,7 +475,7 @@ const fromEngine = (s, r) => s.x.answer(r);
 let lz = null, lzLoad = null;
 const ninjaHref = () => lz && ninjaUrl({ ptn: ptnFor(shownLine()), ply: S.view ?? shownLine().length, name: 'tinue #' + S.p.id }, lz);
 function loadLz() {
-  lzLoad ||= import('./vendor/lz-string.js?v=1795457078').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
+  lzLoad ||= import('./vendor/lz-string.js?v=1795483471').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
 }
 function refreshNinja() {
   if (!S || S.placeholder || S.status !== 'solved') return;
@@ -2764,9 +2764,9 @@ async function route() {
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
   if (page === 'settings') return settingsPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795457078')).enter({ frame: board }); } // loaded on first visit; PTN Ninja's frame, which Rush borrows
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795483471')).enter({ frame: board }); } // loaded on first visit; PTN Ninja's frame, which Rush borrows
   // The sound lab (sound-lab.js): beta builds only; elsewhere #/sounds is no page at all (it falls through to puzzles)
-  if (page === 'sounds' && window.TINUE_BETA && $('#view-sounds')) { show('view-sounds'); return (labPage ||= await import('./sound-lab.js?v=1795457078')).enter($('#view-sounds')); }
+  if (page === 'sounds' && window.TINUE_BETA && $('#view-sounds')) { show('view-sounds'); return (labPage ||= await import('./sound-lab.js?v=1795483471')).enter($('#view-sounds')); }
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   // Keeping the puzzle on screen: a Next this navigation superseded may have left it mid-way (needsRestore, busy) after
@@ -2782,7 +2782,7 @@ async function route() {
     const zero = symArg === '0';
     let want = sym, found = false;
     if (!sym && !zero && look?.id === id && S?.p.id === id && S.p0) {
-      try { want = (await import('./rush-rules.js?v=1795457078')).symFromRecord(S.p0, look); found = true; } catch {}
+      try { want = (await import('./rush-rules.js?v=1795483471')).symFromRecord(S.p0, look); found = true; } catch {}
       if (nav !== loadSeq) return; // a newer navigation (or load) came while that module loaded: this one is stale
     }
     // A plain link (no symmetry, no Rush note) to the puzzle on screen returns to the visit as it stands, turned or

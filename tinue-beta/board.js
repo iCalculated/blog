@@ -2,10 +2,10 @@
 // at once, in every build. The code stays in the repository for now and the page never loads this file: what the page
 // needs of it (buildPTN, landOf, turnMark, focusedByPointer, the sound hooks) is in board-kit.js, re-exported here.
 // (Was: tinue's own board, modeled on PTN Ninja's 2D board; spec at the top of board.css.)
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795457078';
-import { parsePTN } from './shared/ptn.js?v=1795457078';
-import { dispPoint, shapesSvg, stackPiece, SP, GAP } from './analysis.js?v=1795457078';
-import { turnMark, landOf, focusedByPointer, buildPTN, hooks } from './board-kit.js?v=1795457078';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795483471';
+import { parsePTN } from './shared/ptn.js?v=1795483471';
+import { dispPoint, shapesSvg, stackPiece, SP, GAP } from './analysis.js?v=1795483471';
+import { turnMark, landOf, focusedByPointer, buildPTN, hooks } from './board-kit.js?v=1795483471';
 export { turnMark, landOf, focusedByPointer, buildPTN, hooks };
 
 export const RETIRED = "tinue's own board is retired: PTN Ninja is the only board";

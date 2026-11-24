@@ -5,19 +5,20 @@
 // with the puzzle page's own rules and engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused
 // while they work. Nothing here is rated, and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { buildPTN } from './board-kit.js?v=1795457293';
-import { SAYS } from './ninja.js?v=1795457293';
-import { api, store, token } from './api.js?v=1795457293';
-import { confirmOn, takesHeldKey } from './settings.js?v=1795457293';
-import * as R from './rush-rules.js?v=1795457293';
-import { picture, pictureHTML } from './rush-look.js?v=1795457293';
-import * as engine from './engine.js?v=1795457293';
-import * as tiltak from './tiltak.js?v=1795457293';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795457293';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795457293';
-import { busy, BUSY_MS } from './busy.js?v=1795457293';
-import * as SYM from './shared/sym.js?v=1795457293';
-import * as sound from './sound.js?v=1795457293'; // (moves click through board-kit.js hooks.onPly, set by app.js; the verdicts are played here)
+import { buildPTN } from './board-kit.js?v=1795483466';
+import { SAYS, onNinjaTheme } from './ninja.js?v=1795483466';
+import { api, store, token } from './api.js?v=1795483466';
+import { confirmOn, takesHeldKey } from './settings.js?v=1795483466';
+import * as R from './rush-rules.js?v=1795483466';
+import { picture, pictureHTML } from './rush-look.js?v=1795483466';
+import { pictureLook } from './rush-theme.js?v=1795483466';
+import * as engine from './engine.js?v=1795483466';
+import * as tiltak from './tiltak.js?v=1795483466';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795483466';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795483466';
+import { busy, BUSY_MS } from './busy.js?v=1795483466';
+import * as SYM from './shared/sym.js?v=1795483466';
+import * as sound from './sound.js?v=1795483466'; // (moves click through board-kit.js hooks.onPly, set by app.js; the verdicts are played here)
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -901,6 +902,7 @@ async function endRun(wrong = null, played = false) {
 function showEnd(rec, s, at = null) {
   const sum = rec.sum, mode = rec.mode, played = R.timePlayed(rec); // (the engine's pauses aren't the player's)
   section('rush-end');
+  paintTheme(); // (before the pictures go in: drawn in the player's theme from the start, when it is known)
   const stats = mode === 'rush'
     ? [['Moves', sum.moves], ['Accuracy', pct(sum.accuracy)], ['Best combo', sum.bestCombo],
       ['Time played', sec(played)], ['Per move', sec(sum.perMove)], ['Hardest solved', sum.highest ?? '–']]
@@ -934,6 +936,20 @@ const resultHTML = (r) => { const m = R.resultMark(r); return `<span class="${m.
 // larger picture with the words (lookHTML) in a dialog, with Previous and Next through the run.
 // rec: R.recordOf (a run just played, or a stored one); each of its puzzles is both the position and the result.
 // The board's orientation (the player's own turn or mirror, [ ] - ; : =, kept in this browser) is the Rush board's.
+// ...and its colours: the player's board theme (ninja.js pictureTheme, rush-theme.js), as custom properties on the end
+// screen, which style.css's .rt lays over the pictures' felt. A built-in theme the embed hasn't reported yet in this
+// browser: felt until it does (onNinjaTheme), then the same pictures recoloured where they are (nothing moves).
+let themed = [];
+function paintTheme() {
+  const el = document.querySelector('#rush-end');
+  if (!el) return;
+  const look = pictureLook(board?.pictureTheme?.().theme ?? null, R.SIZE);
+  for (const k of themed) el.style.removeProperty(k);
+  themed = look ? Object.keys(look.vars) : [];
+  for (const k of themed) el.style.setProperty(k, look.vars[k]);
+  el.classList.toggle('rt', !!look);
+}
+onNinjaTheme(() => paintTheme());
 const orientOf = () => board?.frameM?.() || [1, 0, 0, 1]; // (PTN Ninja's own turn of its board)
 const viewOf = (q) => { try { return R.review(q, q); } catch { return null; } }; // (a stored position that doesn't parse: nothing to draw)
 function picHTML(q) { const v = viewOf(q); return v ? pictureHTML(picture(v, orientOf())) : '<div class="rush-pic none"></div>'; }

@@ -7,8 +7,8 @@
 // the beta's Engine arrows (2026-11, now no setting: arrows are on wherever the analysis view is). This page never
 // reads, applies or changes those: they are carried as they are (OTHER). So is the Board setting (2026-11-22: PTN Ninja
 // is the only board): a stored 'board' is never read, and never rewritten or dropped either.
-import { confirmOn, soundOf, SOUND_DEFAULT } from './settings.js?v=1795457293';
-import { cleanLook } from './ninja-look.js?v=1795457293';
+import { confirmOn, soundOf, SOUND_DEFAULT } from './settings.js?v=1795483466';
+import { cleanLook } from './ninja-look.js?v=1795483466';
 
 export const SYNCED = ['confirm', 'sound', 'ninja'];
 export const DEFAULTS = { confirm: false, sound: SOUND_DEFAULT, ninja: '' };

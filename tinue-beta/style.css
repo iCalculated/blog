@@ -476,6 +476,43 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .rush-key .k.bad { background: #ff9a90; }
 .rush-key .k.good { background: #a6e88a; margin-left: 0; }
 .rush-key .k.good:not(:first-child) { margin-left: 10px; }
+/* The end screen in the player's board theme (rush-theme.js sets the --rt-* properties on #rush-end and marks it .rt; tinue
+   felt sets none, and everything above stays as it is). Only the pictures, their key and the turn stone beside them
+   change: the board's colour, each square's base and tile (inset and rounded per PTN Ninja's board style; on a
+   checkered board the dark squares, .d, swap them), the rings' tint by band (.k0 outermost), the coordinates, the
+   stones and their outlines, the last move in the theme's primary, and tinue's marks in shades that read on it (with an
+   edge under them where a shade alone can't). */
+.rt .rush-pic .tb { --b1: var(--rt-b1); --p1: var(--rt-p1); --p1s: var(--rt-p1s); --p1b: var(--rt-p1b); --p2: var(--rt-p2); --p2s: var(--rt-p2s);
+  --p2b: var(--rt-p2b); --um: var(--rt-um); --pri: var(--rt-pri); --mk-good: var(--rt-good); --mk-bad: var(--rt-bad); }
+.rt .rush-pic .tb-board { background-image: none; }
+.rt .rush-pic .tb .tb-sq { background: var(--rt-base-l); }
+.rt .rush-pic .tb .tb-sq.d { background: var(--rt-base-d); }
+.rt .rush-pic .tb .tb-sq::before, .rt .rush-pic .tb .tb-sq::after { content: ''; opacity: 1; inset: var(--rt-gap); border-radius: var(--rt-rad); box-shadow: none; }
+.rt .rush-pic .tb .tb-sq::before { background: var(--rt-tile-l); }
+.rt .rush-pic .tb .tb-sq.d::before { background: var(--rt-tile-d); }
+.rt .rush-pic .tb .tb-sq.k0::after { background: var(--rt-ring-0); }
+.rt .rush-pic .tb .tb-sq.k1::after { background: var(--rt-ring-1, transparent); }
+.rt .rush-pic .tb .tb-sq.k2::after { background: var(--rt-ring-2, transparent); }
+.rt .rush-pic .tb .tb-sq.k3::after { background: var(--rt-ring-3, transparent); }
+.rt .rush-pic .tb .tb-lab { color: var(--rt-lab-l); }
+.rt .rush-pic .tb .tb-sq.d .tb-lab { color: var(--rt-lab-d); }
+.rt .rush-pic .tb-st { --sw: calc(var(--rt-bw) * .013em); }
+.rt .rush-pic .tb-st:not(.S, .C, .im) { border-radius: 10%; }
+.rt .rush-pic .tb-ov .good .cs { display: inline; stroke: var(--rt-case-good); stroke-opacity: 1; }
+.rt .rush-pic .tb-ov .bad .cs { display: inline; stroke: var(--rt-case-bad); stroke-opacity: 1; }
+.rt .rush-pic .tb-ov .good polygon.cs { fill: var(--rt-case-good); fill-opacity: 1; }
+.rt .rush-pic .tb-ov .bad polygon.cs { fill: var(--rt-case-bad); fill-opacity: 1; }
+.rt .rush-pic .tb-ov .good text { fill: var(--rt-ink-good); }
+.rt .rush-pic .tb-ov .bad text { fill: var(--rt-ink-bad); }
+.rt .rush-pic .tb-ov .good :is(.dc, .dd) { stroke: var(--rt-ink-good); }
+.rt .rush-pic .tb-ov .bad :is(.dc, .dd) { stroke: var(--rt-ink-bad); }
+/* (the key: each mark's colour on a chip of the board, edged as on the board) */
+.rt .rush-key .k { height: 6px; border: 2px solid var(--rt-chip); box-sizing: content-box; }
+.rt .rush-key .k.bad { background: var(--rt-bad); outline: 1px solid var(--rt-case-bad); outline-offset: -3px; }
+.rt .rush-key .k.good { background: var(--rt-good); outline: 1px solid var(--rt-case-good); outline-offset: -3px; }
+.rt .rush-look-txt .rush-turn { background: var(--rt-chip); }
+.rt .rush-look-txt .rush-turn i { background: var(--rt-p1); border-color: var(--rt-p1b); }
+.rt .rush-look-txt .rush-turn.black i { background: var(--rt-p2); border-color: var(--rt-p2b); }
 /* run: clock, score and combo in one row above the board */
 /* the board (with its tray, ~1.24× as tall as wide) and the row above it fit the window's height on a desktop too */
 .rush-run { max-width: max(300px, min(100%, calc((100vh - 200px) / 1.24))); margin: 0 auto; }

@@ -3,10 +3,10 @@
 // When PTN Ninja can't be loaded, is too slow, or stops answering, a plain message with Retry takes the board's place:
 // nothing is judged meanwhile (no move can be made), and nothing else is put there.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1795457293';
-import { parsePTN } from './shared/ptn.js?v=1795457293';
-import { buildPTN, focusedByPointer, landOf, hooks } from './board-kit.js?v=1795457293';
-import { frameParams, lookUi, frameBox, frameGeom } from './ninja-look.js?v=1795457293';
+import { Game } from './shared/tak.js?v=1795483466';
+import { parsePTN } from './shared/ptn.js?v=1795483466';
+import { buildPTN, focusedByPointer, landOf, hooks } from './board-kit.js?v=1795483466';
+import { frameParams, lookUi, frameBox, frameGeom, cleanTheme, THEMES } from './ninja-look.js?v=1795483466';
 
 const ORIGIN = 'https://ptn.ninja';
 // tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses). The board as
@@ -43,7 +43,9 @@ const PARAMS = '&' + Object.entries(UI).filter(([k]) => k !== 'theme').map(([k, 
 const LOOK_BASE = { axisLabels: true, axisLabelsSmall: true, board3D: false, orthographic: false, perspective: 5, centerStackCounts: false, flatWinHighlights: true, verticalLayout: true, verticalLayoutAuto: true }; // PTN Ninja's own defaults (its src/store/ui/state.js)
 // Every look key goes out at start, PTN Ninja's default under the player's look: a frame can carry a look tinue never
 // asked for (a 3D board seen after an earlier look was cleared), and a key left out keeps it.
-const withLook = (look) => ({ ...LOOK_BASE, ...UI, ...look });
+const withLook = (look) => ({ ...LOOK_BASE, ...UI, ...look, ...themeId(look) });
+// A built-in theme goes as themeID too, so GET_THEME answers with it (see heardTheme)
+const themeId = (look) => (typeof look.theme === 'string' ? { themeID: look.theme } : {});
 // The frame asks for no permissions: PTN Ninja shows its fullscreen button only when it may go fullscreen (so it is gone),
 // and nothing of its embed that tinue shows copies to the clipboard (that is its share and notes panels, all off here).
 const FRAME_CSS = 'display:block;border:0;background:#262421;';
@@ -79,6 +81,34 @@ const store = {
 const DRAW_MS = 100, QUIET_MS = 40;
 const frames = () => new Promise((r) => { const t = setTimeout(r, 50); requestAnimationFrame(() => requestAnimationFrame(() => { clearTimeout(t); r(); })); }); // (two frames; a hidden tab has none)
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// ---------- the player's built-in theme, for Rush's pictures (rush.js, rush-theme.js) ----------
+// tinue keeps every colour of tinue felt, tinue classic and a pasted theme, but of PTN Ninja's built-in themes only their
+// ids. Their colours come from the embed itself: it answers GET_THEME (sent anyway as the heartbeat) with the theme of
+// its themeID setting. Note that themeID is set only when a theme is sent as themeID: a theme given as `theme` (by
+// SET_UI, or compressed in the frame's address) is drawn but leaves themeID as it was (seen 2026-11-23: a frame started
+// with zen in its address answers Classic), so tinue sends a built-in theme as both (withLook). An answer is that
+// theme's own colours whatever the board shows, so it is kept under its own id: in memory and in this browser
+// (THEMES_KEY), so the next end screen has it at once.
+const THEMES_KEY = 'ninjaThemes';
+let builtIns = null;
+const themeFns = new Set();
+const cached = () => { if (!builtIns) { builtIns = new Map(); const o = store.get(THEMES_KEY); if (o && typeof o === 'object') for (const [id, t] of Object.entries(o)) { const c = THEMES.includes(id) && cleanTheme(t); if (c) builtIns.set(id, { ...c, id }); } } return builtIns; };
+// A built-in theme's colours, as its embed last gave them (null: never heard in this browser).
+export const knownTheme = (id) => cached().get(id) || null;
+// fn() whenever the player's theme may look different: a built-in theme's colours first heard or changed, or a new look
+// (Settings, another tab, the account: setLook). Returns a function that stops it.
+export function onNinjaTheme(fn) { themeFns.add(fn); return () => themeFns.delete(fn); }
+const toldTheme = (id) => { for (const fn of themeFns) { try { fn(id); } catch (e) { console.warn(e); } } };
+function heardTheme(value) {
+  if (!value || typeof value !== 'object' || !THEMES.includes(value.id)) return;
+  const t = cleanTheme(value);
+  if (!t) return;
+  const theme = { ...t, id: value.id }, m = cached(), was = m.get(value.id);
+  if (was && JSON.stringify(was) === JSON.stringify(theme)) return;
+  m.set(value.id, theme);
+  store.set(THEMES_KEY, Object.fromEntries(m));
+  toldTheme(value.id);
+}
 // ---------- Rush on this frame (borrow) ----------
 // The page has one PTN Ninja frame, the puzzle page's (index.html starts it in #board). Rush borrows it (lend(): a second
 // NinjaBoard on the same iframe), rather than loading ptn.ninja again: a second frame costs another cold load and
@@ -124,7 +154,7 @@ export class NinjaBoard {
       if (e.source !== f.contentWindow || this.dead) return;
       const { action, value } = e.data || {};
       if (action === 'GAME_STATE') f.dataset.up = '1';
-      if (action === 'GET_THEME') this._pong?.();
+      if (action === 'GET_THEME') { if (e.origin === ORIGIN) heardTheme(value); this._pong?.(); }
       if (f.dataset.up) this._alive();
       if (this._owns()) this._heard(action, value); // (lent to Rush: the moves are Rush's)
     });
@@ -311,6 +341,7 @@ export class NinjaBoard {
   _greet() {
     this._post('SET_UI', { ...withLook(this.look), animateBoard: this._anim(), boardTransform: store.get('ninjaTransform') || [0, 0] });
     this._post('SHOW_NAMES', false);
+    if (typeof this.look.theme === 'string') this._post('GET_THEME'); // (its colours, for Rush's pictures)
   }
 
   // A new look from the Settings page (or the account): what the old one set and the new one doesn't goes back to
@@ -320,8 +351,12 @@ export class NinjaBoard {
     this.lookStored = stored;
     this._shape(this.games[0].size);
     for (const k of Object.keys(prev)) if (!(k in look)) out[k] = k in UI ? UI[k] : LOOK_BASE[k];
-    Object.assign(out, look);
-    return Object.keys(out).length ? this._send('SET_UI', out) : this.ready;
+    Object.assign(out, look, themeId(look));
+    toldTheme(null); // (an end screen open meanwhile takes the new theme, or felt)
+    if (!Object.keys(out).length) return this.ready;
+    const sent = this._send('SET_UI', out);
+    if (out.themeID) this._send('GET_THEME'); // (after it: its colours, for Rush's pictures)
+    return sent;
   }
 
   // PTN Ninja's hotkeys (number keys, Enter, `) only work while its iframe has keyboard focus, so a puzzle that
@@ -528,7 +563,7 @@ export class NinjaBoard {
     on(window, 'message', (e) => {
       if (e.source !== f.contentWindow) return;
       const { action, value } = e.data || {};
-      if (action === 'GET_THEME') this._pong?.();
+      if (action === 'GET_THEME') this._pong?.(); // (its theme is the lender's to keep: heardTheme)
       if (this.borrowed && this._owns()) this._heard(action, value);
     });
     on(window, 'keydown', (e) => this._key(e));
@@ -615,6 +650,19 @@ export class NinjaBoard {
   // The orientation the player has given PTN Ninja's board (its [ ] - ; : = keys), as an orientation matrix, for Rush's
   // pictures of the run.
   frameM() { return TRANSFORM_M[String(store.get('ninjaTransform') || [0, 0])] || null; }
+  // The player's board theme, for Rush's pictures (rush-theme.js pictureLook): { theme: null } for tinue felt, the
+  // theme object (tinue classic, a pasted one, or a built-in one as its embed gave it), or { theme: null, pending: id }
+  // for a built-in one not heard yet (it is asked for now; onNinjaTheme says when it comes).
+  pictureTheme() {
+    const L = this.lender || this, t = L.look?.theme;
+    if (t == null) return { theme: null };
+    if (typeof t === 'object') return { theme: t };
+    const k = knownTheme(t);
+    if (!k) L.askTheme();
+    return k ? { theme: k } : { theme: null, pending: t };
+  }
+  // GET_THEME, whoever has the frame (only an answer: nothing on the board changes)
+  askTheme() { if (!this.dead && this.state === 'up') try { this.iframe.contentWindow?.postMessage({ action: 'GET_THEME' }, ORIGIN); } catch {} }
 
   // The puzzle page's board has its frame back: its shape, tinue's settings and the position it was keeping (it went on
   // tracking its calls meanwhile), without the fly-in. A frame that is down shows the message in its place instead.

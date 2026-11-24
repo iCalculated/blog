@@ -1,7 +1,7 @@
 // What the page needs from a board that isn't the board itself: the move sounds' hooks, what a move sets down (landOf),
 // a game as PTN (buildPTN), the side the flat-count bar marks (turnMark) and which elements a pointer focused. The board
 // is PTN Ninja's (ninja.js); tinue's own (board.js) is retired and is never loaded by the page.
-import { FLAT, WALL, CAP, typeOf } from './shared/tak.js?v=1795457078';
+import { FLAT, WALL, CAP, typeOf } from './shared/tak.js?v=1795483471';
 
 // The sound hooks, set by app.js to sound.js (kept out of the board, which node tests import):
 // onPly(ptn, smash, info, board) on every move played or appended at the line's end; info is landOf's { piece } or
