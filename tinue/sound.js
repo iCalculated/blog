@@ -1,6 +1,6 @@
 // tinue's sounds: short, dry, quiet wood and stone, all synthesized here (no samples).
 // Pure DSP (SOUNDS[name].render(sampleRate, opts) -> Float32Array, mono, deterministic) plus a tiny Web Audio player
-// (unlock / play / playPiece / playMove / setEnabled / setVoice) that does nothing outside a browser.
+// (unlock / play / playMove / setEnabled / setVoice) that does nothing outside a browser.
 // The move sounds are a small physical model of a wooden set, read from plain data (MOVE_RECIPES, rendered by
 // renderRecipe): a contact-noise burst, the piece's damped modes, the board's body under it, and any number of events
 // (bounces, a smash's second impact). Each comes in VARIANTS slightly different takes and in three voices (light:
@@ -521,9 +521,6 @@ export const SOUNDS = {
 
 // ---- which sounds a move makes ----
 
-// The names the page used before the physical model (play('place') etc.), kept until it is rewired.
-export const ALIASES = { place: 'flatBoard', cap: 'capBoard' };
-
 // The sound of one piece landing: piece 'flat' | 'wall' | 'cap', onto 'board' | 'piece', drop: it is one of a stack
 // move's pieces let go (a flat that is dropped is softer than one placed; a wall or capstone ending a spread on top
 // makes its own sound).
@@ -534,7 +531,6 @@ export function pieceSound({ piece = 'flat', onto = 'board', drop = false } = {}
 
 // A stack move's drops: about DROP_GAP_MS apart, each gap DROP_JITTER (a fraction) longer or shorter at random.
 export const DROP_GAP_MS = 105, DROP_JITTER = 0.2;
-export const SPREAD_GAP_MS = DROP_GAP_MS; // (the old name)
 const PTN_MOVE = /^([1-8])?([a-h])([1-8])([<>+-])(\d*)/;
 let pick = rng((Date.now() ^ 0x5bd1e995) >>> 0); // the player's dice: variants and drop timing (not the renders)
 
@@ -568,14 +564,6 @@ export function landingSounds(list, opts = {}) {
     t += DROP_GAP_MS * (1 + DROP_JITTER * (2 * r() - 1));
   }
   return out;
-}
-
-// The old one-word answer (kept for the page until it is rewired): the first sound of the move and its options.
-export function moveSound(ptn, smash = false) {
-  if (smash) return ['smash'];
-  const sp = PTN_MOVE.exec(String(ptn || ''));
-  if (sp) return ['spread', { drops: sp[5] ? sp[5].length : 1 }];
-  return [moveSounds(ptn)[0][1]];
 }
 
 // ---- playback (browser only) ----
@@ -697,9 +685,8 @@ function take(name) {
 }
 
 // The gesture listeners (call once at startup): every press, tap and key unlocks or resumes the context, inside the
-// gesture as iOS needs. Document level, capture, passive: board.js cancels touchend on the board (no click follows a
-// tap) and holdTaps stops touches from bubbling, so bubbling listeners or click alone would miss them. A hidden tab
-// stops every sound and sleeps at once.
+// gesture as iOS needs. Document level, capture, passive: a handler that stops a press (app.js's click while a move is
+// held) can't hide it from these. A hidden tab stops every sound and sleeps at once.
 let listening = false;
 export function listen() {
   if (listening || typeof document === 'undefined') return;
@@ -768,7 +755,7 @@ export function playSeq(list, opts) {
   try {
     if (opts?.cut) stopQueued();
     if (!enabled || !Array.isArray(list) || !list.length) return;
-    list = list.map(([ms, name]) => [Math.max(0, Number(ms) || 0), ALIASES[name] || name]).filter(([, n]) => SOUNDS[n]);
+    list = list.map(([ms, name]) => [Math.max(0, Number(ms) || 0), name]).filter(([, n]) => SOUNDS[n]);
     if (!list.length || hidden()) return;
     if ((!ctx || ctx.state !== 'running') && activated()) unlock();
     // (Only a move made by a touch still under way: anything else asked for before activation, such as a puzzle's
@@ -814,18 +801,8 @@ export function playSeq(list, opts) {
   } catch { /* never throw into the game */ }
 }
 
-// Play a sound now (a name of SOUNDS, or an old name: 'place' a flat on the board, 'cap' a capstone on the board,
-// 'spread' with opts.drops the drops of a stack move onto pieces).
-export function play(name, opts) {
-  if (name === 'spread') {
-    const d = Math.min(8, Math.max(1, Math.round(Number(opts?.drops ?? opts?.n ?? 1)) || 1));
-    return playSeq(moveSounds({ ptn: 'a1>' + '1'.repeat(d) }));
-  }
-  playSeq([[0, name]], { render: opts });
-}
-
-// One piece landing (see pieceSound): playPiece({ piece: 'flat' | 'wall' | 'cap', onto: 'board' | 'piece', drop }).
-export const playPiece = (p) => playSeq([[0, p?.smash ? 'smash' : pieceSound(p)]], { cut: true });
+// Play a sound now (a name of SOUNDS).
+export function play(name, opts) { playSeq([[0, name]], { render: opts }); }
 
 // Pieces landing by hand, one input at a time (board-kit.js hooks.onLand; unused on PTN Ninja, which reports whole moves): usually one; two when the rest of the hand is
 // set down before the capstone moves on alone to flatten a wall.

@@ -15,8 +15,8 @@
 //            take no press; a tap aimed at the board as a play-out ends on the defender's instant last move lands on
 //            the phone dock's Next, which appears over the board's lower rows. As long as 'actions': both are a press
 //            made before the player could have seen what changed, not the second tap of a double tap (next, 600)
-//   confirm  600 ms from the move held (Confirm moves, settings.js): it isn't confirmed (Confirm, Enter, its square
-//            again); the second tap of a double tap or a bounce, as 'next'
+//   confirm  600 ms from the move held (Confirm moves, settings.js): it isn't confirmed (Confirm, Enter); the
+//            second tap of a double tap or a bounce, as 'next'
 // Each lock is held while now - since < ms, the comparison every guard made before (not now < since + ms, which can
 // round differently). What a missing `since` means stays at the call site, as before.
 export const BUSY_MS = Object.freeze({ board: 700, actions: 1000, next: 600, giveup: 1500, ended: 1000, confirm: 600 });

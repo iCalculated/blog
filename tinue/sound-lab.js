@@ -3,8 +3,8 @@
 // through sound.js's own synth and recipe format (renderRecipe(recipeFrom(...))), plays of single takes or five in a
 // row, the whole edited set copied as JSON to send back, stored on this device for the page to play (sound.js
 // setCustom; beta only), and a recording decoded locally to play next to the synth, level-matched.
-// The pure part (PARAMS, defaultsFor, editSet, exportSet, parseSet) runs in node too: scripts/test-sound-lab.mjs.
-import { MOVE_RECIPES, MOVE_SOUNDS, SOUNDS, VOICES, VARIANTS, renderRecipe, recipeFrom, loudness, setCustom, getCustom, getVoice, isEnabled, CUSTOM_KEY, validRecipe } from './sound.js?v=1795483975';
+// The pure part (PARAMS, defaultsFor, editSet, exportSet, parseSet) runs in node too: scripts/test-move-sounds.mjs.
+import { MOVE_RECIPES, MOVE_SOUNDS, SOUNDS, VOICES, VARIANTS, renderRecipe, recipeFrom, loudness, setCustom, getCustom, getVoice, isEnabled, CUSTOM_KEY, validRecipe } from './sound.js?v=1795581690';
 
 const DROPS = { dropBoard: 'flatBoard', dropPiece: 'flatPiece' }; // a drop's level is set under its placement's
 const OTHER = ['wrong', 'solved', 'rushGood', 'rushEnd', 'lowTime']; // untouched: Play only

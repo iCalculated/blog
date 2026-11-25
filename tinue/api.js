@@ -22,6 +22,16 @@ export const setToken = (t) => {
 };
 const authHeaders = () => (token ? { authorization: 'Bearer ' + token } : {});
 
+// A random id for this browser (null if storage or crypto is unavailable). It links a guest's server row to the
+// anonymous results older clients sent, and lets a guest whose token got lost on the way get its row back.
+export const guestId = () => {
+  let id = store.get('gid', null);
+  if (typeof id === 'string' && /^[a-f0-9]{32}$/.test(id)) return id;
+  try { id = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join(''); } catch { return null; }
+  store.set('gid', id);
+  return store.get('gid', null) === id ? id : null;
+};
+
 export const WAIT_NOTICE = { kind: 'wait', title: 'Waiting for the puzzle server…', body: 'The server may be down; try again in a bit.' };
 export let notice = null; // a message that replaces the turn card: {kind: 'wait' | 'net' | 'none', title, body}
 // When the browser says it is offline at the moment the wait or can't-reach notice is shown, that notice says so

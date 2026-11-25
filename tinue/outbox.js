@@ -20,7 +20,7 @@
 // visit's sym from p, and a ply's move is turned back as it is queued (the queue outlives the page, which alone knows
 // the sym), so the judge sees exactly what an ordinary visit would send.
 // No DOM here: createOutbox takes everything it needs, so scripts/test-outbox.mjs drives it with fakes.
-import * as SYM from './shared/sym.js?v=1795483975';
+import * as SYM from './shared/sym.js?v=1795581690';
 
 export const KEY = 'tinue.outbox';
 export const MAX_ITEMS = 64, MAX_PLY = 64, MAX_AGE = 3600e3, HOLD_MS = 10e3, MAX_FAILS = 4, TIMEOUT_MS = 15e3, PAGEHIDE_MAX = 8;

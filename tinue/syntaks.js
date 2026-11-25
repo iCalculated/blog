@@ -6,7 +6,8 @@
 //
 // mate and winProb are from White's side, like /api/analyze. One search at a time; it can't be stopped midway (the
 // limits bound it), so a search nobody wants any more just finishes and is dropped.
-import { canonPTN } from './shared/ptn.js?v=1795483975';
+import { canonPTN } from './shared/ptn.js?v=1795581690';
+import { syntaksBoard } from './shared/judge.js?v=1795581690';
 
 // The engine build, not the site build: the 19.5 MB file only changes when the engine is rebuilt, so the browser keeps
 // it across site deploys. build-static.sh stamps this with the wasm's own hash.
@@ -18,12 +19,11 @@ const wasmURL = new URL('./syntaks/syntaks.wasm?e=' + ENGINE, import.meta.url).h
 const SIMD = (() => {
   try { return typeof WebAssembly === 'object' && WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11])); } catch { return false; }
 })();
-export const supports = (size, komi) => SIMD && typeof Worker === 'function' && size === 6 && Math.abs(komi) <= 3.5 && Number.isInteger(komi * 2);
+export const supports = (size, komi) => SIMD && typeof Worker === 'function' && syntaksBoard(size, komi);
 
-let worker = null, readyP = null, state = 'idle', seq = 0, bootMs = null;
+let worker = null, readyP = null, state = 'idle', seq = 0;
 const waiting = new Map(); // id -> { resolve, reject }
 export const status = () => state; // 'idle' | 'loading' | 'ready' | 'failed'
-export const loadMs = () => bootMs;
 
 export function load() {
   if (readyP) return readyP;
@@ -37,7 +37,7 @@ export function load() {
     };
     w.onerror = (e) => fail('syntaks worker: ' + (e.message || 'failed'));
     w.onmessage = ({ data }) => {
-      if (data.type === 'ready') { state = 'ready'; bootMs = data.bootMs; resolve(data.bootMs); return; }
+      if (data.type === 'ready') { state = 'ready'; resolve(data.bootMs); return; }
       if (data.type === 'error' && data.id == null) return fail(data.error);
       const p = waiting.get(data.id);
       if (!p) return;

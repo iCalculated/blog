@@ -1,11 +1,11 @@
 // The judge (docs/plan/PLAN.md §1.2): one pure function from an attempt's state, one ply, and the facts the I/O layer
 // gathered for that ply, to an answer. No I/O and no clock: the tree lookup, the book row, a prover's verdict,
 // Syntaks's reply and the time `now` all come in through `inputs`, so any logged attempt can be judged again (I4).
-// Nothing calls judge() yet (step S1: shadow-only, not wired into /api/result or the client).
+// Called by server/move.js and server/shadow.js, both off by default (TINUE_JUDGE), never by /api/result or the client.
 //
 // The play-on rules below moved here unchanged from public/playon.js, which re-exports them, so the page behaves as
 // before (scripts/test-playon.mjs).
-import { winMove } from './pns.js?v=1795483975';
+import { winMove } from './pns.js?v=1795581690';
 
 // ---- play-on rules (moved from public/playon.js) ----
 
@@ -47,6 +47,11 @@ export const outOfMoves = (po) => (po.rule === 'tak' ? outOfTak(po) : po.mine >=
 export const REFUTED = 'refuted';
 export const endsOnNo = (po, verdict) => verdict === 'no' && !!po && po.rule === 'tak' && !po.end && !po.proven;
 
+// The plies a puzzle had left at a tree node, for the cap: 1 at a 'win' node (road in 1), 0 past the tree, else 2 plus
+// the longest line below. (book.js treeDepth is the book's own, stricter: it throws on a malformed tree.)
+export const pliesLeftOf = (node) => (node === 'win' ? 1 : node == null || typeof node !== 'object' ? 0
+  : 2 + Math.max(0, ...Object.values(node).map((v) => (v ? pliesLeftOf(v.n) : 0))));
+
 // How many of your moves you get, counting the move being played out. The puzzle had `pliesLeft` plies to go at that
 // node (an attacker node, so an odd number: your moves and the replies between them); you get those moves plus the
 // larger of 3 moves and 30% of them, rounded up ("plus max of 3 and 30%", Shy).
@@ -68,11 +73,13 @@ export function provenCap(pliesLeft, proofPlies, shown = 0) {
   return Math.max(shown, capMoves(pliesLeft), proofMoves(proofPlies) ?? 0);
 }
 
+// The boards Syntaks plays: 6×6 at any half-point komi it knows.
+export const syntaksBoard = (size, komi) => size === 6 && Math.abs(komi) <= 3.5 && Number.isInteger(komi * 2);
 // Who defends: Syntaks on the server for 6×6 (any half-point komi it knows), else Tiltak in the browser where it plays
 // (4×4/5×5). null: no engine for this board, so the move is handled as before play-on. 6×6 is never Tiltak's, whatever
 // tiltakSupports says (Sasha, 2026-11-21: no Tiltak on 6×6): a komi Syntaks doesn't know is null, as on 7×7.
 export function defender(size, komi, tiltakSupports) {
-  if (size === 6) return Math.abs(komi) <= 3.5 && Number.isInteger(komi * 2) ? 'syntaks' : null;
+  if (size === 6) return syntaksBoard(size, komi) ? 'syntaks' : null;
   return tiltakSupports(size, komi) ? 'tiltak' : null;
 }
 

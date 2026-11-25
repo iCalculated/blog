@@ -2,14 +2,14 @@
 // the browser, else crux's /api/defend, else Tiltak in the browser (never on 6×6: tiltak.js supports). Moved out of app.js unchanged (same engines, same
 // requests, same time limits), so both pages play the same defence. po: the play-out (playon.js playOutOf), whose
 // local, slowLocal, ctl and fallback fields this keeps as the page did.
-import * as tiltak from './tiltak.js?v=1795483975';
-import * as syntaks from './syntaks.js?v=1795483975';
-import { api } from './api.js?v=1795483975';
-import { legalMove, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795483975';
+import * as tiltak from './tiltak.js?v=1795581690';
+import * as syntaks from './syntaks.js?v=1795581690';
+import { api } from './api.js?v=1795581690';
+import { legalMove, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795581690';
 
 // Syntaks's reply. It runs in the browser (syntaks.js, loaded when play-on starts; 1.5 s a reply). Until it has loaded,
 // or on a device too slow for a real defence (fewer than LOCAL_MIN_NODES in that time), crux answers (/api/defend,
-// 8 s). With neither, Tiltak in the browser defends the rest of the game, which is then unrated (playOnRated).
+// 8 s). With neither, Tiltak in the browser defends the rest of the game, which is then unrated (playon.js gameRated).
 export const LOCAL_MIN_NODES = 150e3; // ~100k nodes/s: a fraction of crux's ~2.6M nodes per reply
 // x: the puzzle page's boundary for a visit under a symmetry (pagesym.js toServer): crux gets the position in the puzzle's
 // own orientation and its move comes back turned, so its cache and allowance see an ordinary visit. Rush passes none

@@ -87,7 +87,7 @@ button.link:hover { background: none; color: var(--fg-hi); }
 .menu .pop input { width: 100%; }
 .menu .pop .hint, .menu .pop .confirm p { margin: 0; color: var(--muted); font-size: var(--fs-xs); }
 .menu .pop .hint .link { font-size: inherit; color: var(--accent); }
-.menu .pop .err { margin: 0; color: var(--bad); font-size: var(--fs-xs); }
+.menu .pop .err, .menu .pop .confirm .err { margin: 0; color: var(--bad); font-size: var(--fs-xs); }
 .menu .pop .confirm { display: flex; flex-direction: column; gap: 8px; padding: 6px 4px 2px; }
 button.danger { background: var(--bad-fill); border-color: var(--bad-fill); color: #fff; }
 
@@ -165,7 +165,6 @@ a.tag:hover { border-color: var(--accent); color: var(--fg-hi); }
 .set-msg { color: var(--fg); }
 .set-look { grid-column: 1 / -1; display: flex; gap: 8px; min-width: 0; }
 .set-look input { flex: 1 1 auto; min-width: 0; }
-.set-look input:disabled { opacity: .5; }
 @media (max-width: 560px) {
   .set-item { grid-template-columns: minmax(0, 1fr); grid-template-areas: "label" "ctl" "desc"; }
   .set-look { flex-wrap: wrap; }
@@ -246,11 +245,9 @@ a.tag:hover { border-color: var(--accent); color: var(--fg-hi); }
 .mtable .branch .num { color: var(--muted); margin: 0 2px 0 4px; }
 @media (max-width: 860px) { .mscroll { height: 150px; } }
 
-/* engine lines (Lichess-style, app.js engineMarkup): a header (line 1's chance bar, who's better, the source), then up to
-   three lines (an evaluation chip, the moves, tags), then the opponent's threats. The lines' room (three rows and the
-   threat sentence, one line) is held at one height through the whole analysis, from the first "Thinking…" to a
-   finished game's position, so nothing under it (the step buttons) ever moves; a 4th or 5th line (the puzzle's move
-   or yours kept past three) scrolls inside it. */
+/* the engine's lines (app.js engineMarkup): production's one row (.eng.row below: the chance bar, who's better, the
+   source, the moves) and what the analysis view's panel shares with it; the rest of that panel, its held height and its
+   chips included, is analysis.css's. */
 .moves .eng { display: flex; flex-direction: column; gap: 2px; margin: -4px 0 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line); font-size: var(--fs-sm); }
 .moves .eng-h { display: flex; align-items: center; gap: 8px; min-height: 26px; }
 .moves .eng .bar { width: 46px; height: 8px; border-radius: 4px; background: var(--p2); box-shadow: inset 0 0 0 1px #6b655e; overflow: hidden; flex: none; }
@@ -259,17 +256,8 @@ a.tag:hover { border-color: var(--accent); color: var(--fg-hi); }
 .moves .eng .dots { margin-left: -4px; }
 .moves .eng .src { margin-left: auto; font-size: 11px; color: var(--muted); white-space: nowrap; }
 .moves .eng a.src:hover { color: var(--accent); }
-.moves .eng .lns { height: calc(3 * 26px + 21px); overflow-y: auto; scrollbar-width: thin; }
 .moves .eng .ln { display: flex; align-items: center; gap: 6px; min-height: 26px; min-width: 0; border-radius: 4px; }
 .moves .eng .ln.sel { background: var(--bg3); }
-/* the evaluation, from the side to move: a pill; green when it wins, red when it loses, bold when proven */
-.moves .eng .chip { flex: none; min-width: 62px; height: 22px; padding: 0 7px; border: 1px solid var(--line); border-radius: 11px; background: var(--bg3);
-  color: var(--fg-hi); font: 600 var(--fs-xs)/1 "Noto Sans", -apple-system, sans-serif; font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; }
-.moves .eng .chip.w { color: var(--good); }
-.moves .eng .chip.l { color: var(--bad); }
-.moves .eng .chip.pr { font-weight: 800; }
-.moves .eng .chip[aria-pressed="true"] { border-color: var(--accent); }
-.moves .eng .chip:hover { background: var(--bg4); }
 .moves .eng .pvline { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 2px;
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 18px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 18px), transparent); } /* a long line fades out at its edge (it scrolls sideways) */
 .moves .eng .pvline::-webkit-scrollbar { display: none; }
@@ -355,7 +343,6 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
   .moves .dock .threat { margin: 0; }
   .moves .dock .chips, .moves .dock .eng-b { display: flex; align-items: center; gap: 6px; height: 32px; min-width: 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
   .moves .dock .chips::-webkit-scrollbar, .moves .dock .eng-b::-webkit-scrollbar { display: none; }
-  .moves .dock .eng .chip { height: 32px; border-radius: 16px; } /* (.eng: beats the coarse-pointer rule below) */
   .moves .dock .eng-b .pvline { flex: 1 1 auto; }
   /* the analysis view off: production's dock row (its height held before the engine's first line) */
   .moves .dock .eng-slot.row { height: auto; min-height: 67px; overflow: visible; }
@@ -377,9 +364,7 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 }
 @media (pointer: coarse) {
   .top nav a { padding: 6px 0; }
-  .moves .eng .pvm, .moves .eng .pvline, .moves .eng .ln { min-height: 32px; }
-  .moves .eng .chip { height: 30px; border-radius: 15px; }
-  .moves .eng .lns { height: calc(3 * 32px + 21px); }
+  .moves .eng .pvm, .moves .eng .pvline { min-height: 32px; }
 }
 
 /* ---------- Rush (public/rush.js): start, run and end screens ---------- */
@@ -408,9 +393,7 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .rush-boards { display: grid; grid-template-columns: 1fr 1fr; gap: var(--gap); align-items: start; }
 .rush-boards .panel { margin-top: 0; }
 .rush-boards > div:not(.panel) { display: flex; flex-direction: column; gap: var(--gap); } /* (Your best over Recent runs; not Top scores) */
-.rush-best, .rush-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; margin: 0; }
-.rush-best { grid-template-columns: repeat(3, 1fr); }
-.rush-stats { grid-template-columns: repeat(3, 1fr); }
+.rush-best, .rush-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0; }
 .rush-best dt, .rush-stats dt { color: var(--muted); font-size: var(--fs-xs); }
 .rush-best dd, .rush-stats dd { margin: 0; color: var(--fg-hi); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .rush-stats dd { font-size: 20px; }
@@ -573,10 +556,9 @@ table.t th { color: var(--muted); font-weight: 500; font-size: var(--fs-xs); }
 .rush-strip li.good { background: var(--good-fill); }
 .rush-strip li.bad { background: var(--bad-fill); }
 .rush-strip li.skip { background: var(--bg4); }
-/* the run's end: the board stays a beat, dimmed (a Streak's losing move in red), before the end screen */
+/* the run's end: the board stays a beat, dimmed (a Streak's losing move on it), before the end screen */
 #rush-board-wrap { transition: opacity var(--rush-base) var(--rush-ease); }
 #rush-board-wrap.rush-over { opacity: .55; }
-#rush-board-wrap.rush-over.miss .tb { --pri: #ff9a90; } /* (the last move's thread in board.css --mk-bad's red) */
 /* Rush on PTN Ninja's board (ninja.js borrow): the page's one frame stays in the puzzle page's #board (moving an iframe
    reloads it) and is laid over Rush's board. Meanwhile the puzzle page is laid out but takes no room and shows nothing
    (display:none would stop the frame drawing), and the frame's ancestors there are static, so it is placed against the

@@ -2,11 +2,10 @@
 // judging a move by the puzzle's line, where an off-line move goes next (the puzzle page's adjudication: route,
 // playOutOutcome), the clock and its pauses, the combo and its time bonuses, and the end-of-run numbers.
 // public/rush.js owns the screen and the engines and calls these with the time it read.
-import { Game, colorOf, typeOf } from './shared/tak.js?v=1795483975';
-import { finalSquare } from './settings.js?v=1795483975';
-import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795483975';
-import * as SYM from './shared/sym.js?v=1795483975';
-import { moveShape } from './analysis.js?v=1795483975';
+import { Game, colorOf, typeOf } from './shared/tak.js?v=1795581690';
+import { quickOutcome, provenPlayOut, provenLossLead, ENGINE_MS, CAP_WAIT_MS } from './playon.js?v=1795581690';
+import * as SYM from './shared/sym.js?v=1795581690';
+import { moveShape } from './analysis.js?v=1795581690';
 
 export const SIZE = 6; // Rush and Streak are 6×6 only (server/rush.js refuses any other size)
 export const RUSH_MS = 180e3; // 3:00
@@ -83,6 +82,8 @@ export function route({ alt = false, quick = null, def = null }) {
   if (out === 'wins') return provenPlayOut(def) ? 'proven' : 'solved';
   return def ? 'playout' : 'wait';
 }
+// Every ending a play-out can have in a run (server/rush.js takes the same).
+export const PO_ENDS = ['win', 'proved', 'road', 'held', 'out', 'gaveup', 'noengine', 'left', 'time'];
 // How a play-out's ending (its kind, as the puzzle page's endPlayOn gets it) counts in a run: 'solved' for the
 // player's win ('win') or a proof ('proved': Syntaks dropped out of a proven play-out, or a proof landed while Tiltak
 // defended); 'wait' when no engine could move in an unproven game ('noengine': the check's final answer decides, as
@@ -459,24 +460,16 @@ export function answerAt(p, line = []) {
   }
   return null;
 }
-// The squares a move touches, [start, final] (one for a placement).
-export function moveSquares(ptn) {
-  const s = /^(\d?)([a-h][1-8])/.exec(String(ptn || '').replace(/^[FSC]/, ''))?.[2];
-  if (!s) return [];
-  const f = finalSquare(ptn);
-  return f && f !== s ? [s, f] : [s];
-}
 // One row of the list, looked back at. A miss shows the position it was made in (the start, for a miss on the first
 // move), so the player sees the side and the squares they had; a solve or a skip shows the start and its first move.
 // r: the run's result with `at`, the moves accepted before the miss (rush.js keeps it; it isn't posted), and
 // `answer` when already known (a stored run keeps it, not the puzzle's tree).
-// Returns { size, toMove, cells (rank size first, file a first: { sq, top: { color, type } | null, h, stack: the
-// whole stack, bottom first, [{ color, type }] }), last (the move that led to the position, tinted as the board does),
-// played, answer (each [start, final] squares), you (what was played, '' for a solve), want (the puzzle's move), text
-// (both), and for the end screen's picture (rush-look.js): tint ({ sqs, prim }: the squares the board tints for that
-// last move, as board.js stepSnap marks them) and marks ([{ shape (analysis.js moveShape), role: 'bad' | 'good',
-// color: the stone a placement would be }], the move played when wrong, then the puzzle's move) }. Squares are named
-// in the position's own labels: those the run showed it in.
+// Returns { size, toMove, cells (rank size first, file a first: { sq, stack: the whole stack, bottom first,
+// [{ color, type }] }), you (what was played, '' for a solve), want (the puzzle's move), and for the end screen's picture
+// (rush-look.js): tint ({ sqs, prim }: the squares the board tints for the move that led to the position, as board.js
+// stepSnap marks them; null: none) and marks ([{ shape (analysis.js moveShape), role: 'bad' | 'good', color: the stone a
+// placement would be }], the move played when wrong, then the puzzle's move) }. Squares are named in the position's own
+// labels: those the run showed it in.
 // A move adjudicated off the line (played: the move; po: how its play-out went, playOutLook) shows the position it was
 // played in and how the game ended, solved or not.
 export function review(p, r) {
@@ -484,9 +477,8 @@ export function review(p, r) {
   const at = off ? r.at || [] : r.solved || r.skipped ? [] : r.at || [];
   const g = startGame(p, at), answer = r.answer !== undefined ? r.answer : answerAt(p, at), n = p.size, cells = [];
   for (let row = n - 1; row >= 0; row--) for (let col = 0; col < n; col++) {
-    const sq = row * n + col, stack = g.board[sq], t = stack.length ? stack[stack.length - 1] : -1;
-    cells.push({ sq: g.sqName(sq), top: t < 0 ? null : { color: colorOf(t), type: typeOf(t) }, h: stack.length,
-      stack: stack.map((x) => ({ color: colorOf(x), type: typeOf(x) })) });
+    const sq = row * n + col;
+    cells.push({ sq: g.sqName(sq), stack: g.board[sq].map((x) => ({ color: colorOf(x), type: typeOf(x) })) });
   }
   const after = at.length ? `After ${at.join(' ')}, ` : '';
   const you = off ? (r.unfinished ? `${after ? after + 'you' : 'You'} played ${r.played}${r.po ? ` (move ${r.po.n} of ${r.po.cap})` : ''}; time ran out` : (after ? after + 'y' : 'Y') + 'ou played ' + r.played + '. ' + gameText(r.po, r.played, r.solved) + '.')
@@ -500,34 +492,34 @@ export function review(p, r) {
   const ls = shape(led, new Game(n)), tint = !ls ? null : ls.kind === 'place' ? { sqs: [ls.sq], prim: [ls.sq] }
     : { sqs: [ls.from, ...ls.drops.map((d) => d.sq)], prim: ls.drops.map((d) => d.sq) };
   const marks = [[bad, 'bad'], [good, 'good']].map(([m, role]) => ({ shape: shape(m, g), role, color: g.toMove })).filter((x) => x.shape);
-  return { size: n, toMove: g.toMove, cells, last: moveSquares(led),
-    played: moveSquares(bad), answer: moveSquares(good), tint, marks,
-    you, want, text: [you, want].filter(Boolean).join(' · ') };
+  return { size: n, toMove: g.toMove, cells, tint, marks, you, want };
 }
 
-// ---------- the puzzle page's words for a play-out (app.js renderFeedback: the cards and their endings) ----------
+// ---------- Rush's words for a play-out ----------
+// Its own since 2026-11-21: the puzzle page's play-outs went over to the Tak rule (shared/judge.js), whose words are
+// playon-copy.js's; Rush keeps the move cap, and these words with it, until its server takes longer play-outs.
 // What the look-back and the run screen keep of a play-out: { end (its kind), engine ('Syntaks' | 'Tiltak'), proven,
 // n (the player's moves in it, counting the move played out), cap, byYou (the last ply was the player's) }.
 export const playOutLook = (po, engine) => ({ end: po.end, engine, proven: !!po.proven, n: po.mine, cap: po.cap, byYou: po.line.length % 2 === 1 });
 // Rush's turn line while a move is adjudicated (a: rush.js c.adj): the check's heading while it runs or decides (a wait,
-// also after a game no engine could answer), else the play-out's heading and status line, as the puzzle page's card.
+// also after a game no engine could answer), else the play-out's heading and status line.
 export function adjHead(a, engine) {
   if (!a.po || a.phase === 'wait') return cardHead(a.phase === 'wait' ? 'wait' : 'checking', { move: a.canon });
   return `${cardHead('play', { proven: a.po.proven, late: a.po.provedLate })}. ${playOutStatus(a.po, engine)}`;
 }
-// The card's heading for each state (app.js renderFeedback), as Rush's turn line shows it.
+// The heading for each state, as Rush's turn line shows it.
 export function cardHead(state, { move = '', proven = false, late = false } = {}) {
   if (state === 'checking') return `Checking ${move}`;
   if (state === 'wait') return `Checking ${move}`;
   return proven ? (late ? 'Proved: play it out' : 'That wins: play it out') : 'Play it out';
 }
-// The card's status line in a play-out: move n of cap, the defender thinking, or a wait at the cap (app.js).
+// The card's status line in a play-out: move n of cap, the defender thinking, or a wait at the cap.
 export function playOutStatus(po, engine) {
   if (po.waiting === 'length') return `Out of moves at ${po.cap} unless the proven win is longer: measuring it…`;
   if (po.waiting === 'proof') return `Out of moves at ${po.cap} unless ${po.miss} is proven to win: still checking…`;
   return `Move ${po.thinking ? po.mine : po.mine + 1} of ${po.cap}${po.thinking ? ` · ${engine} is thinking…` : ''}`;
 }
-// How it ended, as the card's heading says it after a lost game (app.js renderFeedback), or the solved card's words.
+// How it ended, as a heading says it after a lost game, or a solve's words.
 export function endingHead(look, move) {
   if (!look) return '';
   const E = look.engine, how = look.end;
@@ -539,8 +531,8 @@ export function endingHead(look, move) {
   if (how === 'noengine') return 'No engine could answer';
   return `${E} held`;
 }
-// The look-back's sentence for a move adjudicated off the line: the card's lead after a lost game, the solved card's
-// words after a win (app.js renderFeedback / slowWinText). look null: decided without a play-out (a proof where no
+// The look-back's sentence for a move adjudicated off the line: how a lost game went, a solve's words
+// after a win. look null: decided without a play-out (a proof where no
 // proven play-out is played, or no engine to defend: the check decided).
 export function gameText(look, move, solved) {
   if (!look) return solved ? `${move} forces a win too, so it counts as solved` : `${move} doesn’t force the win`;
@@ -586,7 +578,7 @@ function validPuzzle(q) {
     && (q.played === undefined || str(q.played, 24)) && (q.po === undefined || validLook(q.po))
     && (q.sym === undefined || SYM.SYMS.includes(q.sym));
 }
-const ENDS = new Set(['win', 'proved', 'road', 'held', 'out', 'gaveup', 'left', 'time', 'noengine']);
+const ENDS = new Set(PO_ENDS);
 const validLook = (l) => !!l && typeof l === 'object' && (l.end === null || ENDS.has(l.end)) && (l.engine === 'Syntaks' || l.engine === 'Tiltak')
   && typeof l.proven === 'boolean' && Number.isInteger(l.n) && Number.isInteger(l.cap) && typeof l.byYou === 'boolean';
 // Whether a stored run can be shown: the current shape, whole. Anything else (an older shape, a hand edit, a cut-off

@@ -5,20 +5,20 @@
 // with the puzzle page's own rules and engines (playon.js, defend.js, engine.js: see adjudicate), the clock paused
 // while they work. Nothing here is rated, and nothing here touches the puzzle page's state.
 // app.js calls enter() when the page is shown and leave() when another page is.
-import { buildPTN } from './board-kit.js?v=1795483975';
-import { SAYS, onNinjaTheme } from './ninja.js?v=1795483975';
-import { api, store, token } from './api.js?v=1795483975';
-import { confirmOn, takesHeldKey } from './settings.js?v=1795483975';
-import * as R from './rush-rules.js?v=1795483975';
-import { picture, pictureHTML } from './rush-look.js?v=1795483975';
-import { pictureLook } from './rush-theme.js?v=1795483975';
-import * as engine from './engine.js?v=1795483975';
-import * as tiltak from './tiltak.js?v=1795483975';
-import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795483975';
-import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795483975';
-import { busy, BUSY_MS } from './busy.js?v=1795483975';
-import * as SYM from './shared/sym.js?v=1795483975';
-import * as sound from './sound.js?v=1795483975'; // (moves click through board-kit.js hooks.onPly, set by app.js; the verdicts are played here)
+import { buildPTN } from './board-kit.js?v=1795581690';
+import { SAYS, onNinjaTheme } from './ninja.js?v=1795581690';
+import { api, store, token, guestId } from './api.js?v=1795581690';
+import { confirmOn, takesHeldKey } from './settings.js?v=1795581690';
+import * as R from './rush-rules.js?v=1795581690';
+import { picture, pictureHTML } from './rush-look.js?v=1795581690';
+import { pictureLook } from './rush-theme.js?v=1795581690';
+import * as engine from './engine.js?v=1795581690';
+import * as tiltak from './tiltak.js?v=1795581690';
+import { defender, ending, legalMove, capWait, playOutOf, applyProofLength, pliesLeftOf, slowerWinsAt, upgradeToProven, measureProof, defenderName } from './playon.js?v=1795581690';
+import { defenderMove, warmDefender, waitAtCap } from './defend.js?v=1795581690';
+import { busy, BUSY_MS } from './busy.js?v=1795581690';
+import * as SYM from './shared/sym.js?v=1795581690';
+import * as sound from './sound.js?v=1795581690'; // (moves click through board-kit.js hooks.onPly, set by app.js; the verdicts are played here)
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
@@ -58,14 +58,6 @@ let opts = store.get('rush', {});
 let st = null;
 let gen = 0; // bumped by every new run and by leave(): answers for an older one are dropped
 
-// The browser's random id (app.js guestId): a visitor without a token is kept by it (server/rush.js).
-function gid() {
-  let id = store.get('gid', null);
-  if (typeof id === 'string' && /^[a-f0-9]{32}$/.test(id)) return id;
-  try { id = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join(''); } catch { return null; }
-  store.set('gid', id);
-  return store.get('gid', null) === id ? id : null;
-}
 const modeChoice = () => (opts.mode === 'streak' ? 'streak' : 'rush');
 const saveOpts = () => store.set('rush', opts);
 
@@ -251,7 +243,7 @@ const unqueue = (run) => write(QUEUE_KEY, queued().filter((x) => x.body.run !== 
 const envOf = (s) => ({ ...s.env, input: R.inputKind(s.inputs) });
 const abandonedBody = (s) => {
   const b = R.abandonBody(s.run, s.cur, performance.now(), +window.TINUE_BUILD || 0, envOf(s), Date.now());
-  return b && { ...b, run: s.token, pages: s.pages, ...(s.who ? {} : { guest: { gid: gid() } }) };
+  return b && { ...b, run: s.token, pages: s.pages, ...(s.who ? {} : { guest: { gid: guestId() } }) };
 };
 function abandon(s, keepalive = false) {
   if (!s || s.ended || s.gone || !R.canAbandon(s.run, s.cur)) return;
@@ -343,7 +335,7 @@ async function startRun() {
   section('rush-run');
   const runEl = $('#rush-run');
   runEl.tabIndex = -1; runEl.focus({ preventScroll: true }); // (Start is hidden now: focus would fall to the body)
-  $('#rush-board-wrap').classList.remove('rush-over', 'miss');
+  $('#rush-board-wrap').classList.remove('rush-over');
   $('#rush-clock').classList.remove('gain', 'loss', 'low'); $('#rush-clock-t').textContent = R.clockText(R.RUSH_MS);
   clearTimeout(popT); $('#rush-pop').className = 'rush-pop';
   comboHold = false; clearTimeout(comboT); $('#rush-combo-fill').classList.remove('drain');
@@ -849,7 +841,7 @@ function flash(text, cls, show) {
 
 // ---------- the end ----------
 const sec = (ms) => (ms == null ? '–' : ms >= 60e3 ? R.clockText(ms) : (ms / 1000).toFixed(1) + 's');
-// The board stays for END_BEAT_MS before the end screen, dimmed (a Streak's losing move on it in red): the moment is
+// The board stays for END_BEAT_MS before the end screen, dimmed (a Streak's losing move on it): the moment is
 // seen, and a tap already on its way doesn't land on Play again. A pause, not motion: kept under reduced motion.
 const END_BEAT_MS = 500;
 async function endRun(wrong = null, played = false) {
@@ -870,7 +862,6 @@ async function endRun(wrong = null, played = false) {
   // (the board drew the move as it was made: it is appended only if it isn't already the last one there)
   if (s.cur) s.cur.reply = null; // (a reply still due stays off the board)
   if (wrong && mode === 'streak') {
-    wrap.classList.add('miss');
     // (a play-out's game is already on the board, its last move not this one)
     if (!played) (board.snaps?.at(-1)?.ptn === wrong ? board.last() : board.append(wrong).then(() => board.last())).catch?.(() => {});
   }
@@ -890,7 +881,7 @@ async function endRun(wrong = null, played = false) {
   // (abandon(): leave(), a new run, pagehide), never a best.
   if (s.snap) unqueue(s.token); // (a hidden tab's snapshot: the run ended after all)
   if (!s.run.results.length) return showBest(null, null, s);
-  const body = { ...R.resultBody(s.run, +window.TINUE_BUILD || 0, envOf(s)), playedAt: R.playedAtOf(s.run.endedAt, performance.now(), Date.now()), run: s.token, pages: s.pages, ...(s.who ? {} : { guest: { gid: gid() } }) };
+  const body = { ...R.resultBody(s.run, +window.TINUE_BUILD || 0, envOf(s)), playedAt: R.playedAtOf(s.run.endedAt, performance.now(), Date.now()), run: s.token, pages: s.pages, ...(s.who ? {} : { guest: { gid: guestId() } }) };
   let r = null, failed = R.who(token) !== s.who; // signed in or out since it started: held for the player who played it
   if (!failed) try { r = await api('/api/rush/result', body, { quiet: true }); } catch { failed = true; }
   const out = R.postOutcome(r, failed);

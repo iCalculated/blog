@@ -2,10 +2,10 @@
 // at once, in every build. The code stays in the repository for now and the page never loads this file: what the page
 // needs of it (buildPTN, landOf, turnMark, focusedByPointer, the sound hooks) is in board-kit.js, re-exported here.
 // (Was: tinue's own board, modeled on PTN Ninja's 2D board; spec at the top of board.css.)
-import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795483975';
-import { parsePTN } from './shared/ptn.js?v=1795483975';
-import { dispPoint, shapesSvg, stackPiece, SP, GAP } from './analysis.js?v=1795483975';
-import { turnMark, landOf, focusedByPointer, buildPTN, hooks } from './board-kit.js?v=1795483975';
+import { Game, FLAT, WALL, CAP, RESERVES, colorOf, typeOf } from './shared/tak.js?v=1795581690';
+import { parsePTN } from './shared/ptn.js?v=1795581690';
+import { dispPoint, shapesSvg, stackPiece, SP, GAP } from './analysis.js?v=1795581690';
+import { turnMark, landOf, focusedByPointer, buildPTN, hooks } from './board-kit.js?v=1795581690';
 export { turnMark, landOf, focusedByPointer, buildPTN, hooks };
 
 export const RETIRED = "tinue's own board is retired: PTN Ninja is the only board";
@@ -203,8 +203,8 @@ export class Board {
   // Another puzzle: drop whatever input was under way on the last one (stones in hand, a number key kept for when input
   // opens (_flushKey), a touch or long press in progress), so none of it lands on the new position.
   forget() { this.sel = null; this.pendKey = null; this.gen++; this.forgotAt = performance.now(); this._render(false); }
-  // A touch under way ends here without a tap or a long press (app.js takes the taps while a move is held for
-  // confirmation: settings.js holdTaps). The position and anything in hand stay.
+  // A touch under way ends here without a tap or a long press (made for taps
+  // taken elsewhere while a move is held for confirmation). The position and anything in hand stay.
   dropGesture() { this.gen++; }
   // A new puzzle's first moments (app.js start: busy.js 'board'): no tap, long press, tray pick or Enter at all, not just
   // no finished move. A stack lifted or a cap picked then (the second tap of a double tap on Next, landing where the

@@ -3,8 +3,8 @@
 
 // The rules the judge needs (the move cap, who defends, how a game ends, which games count) live in shared/judge.js
 // (plan step S1) and are re-exported here unchanged, so the page and scripts/test-playon.mjs see the same functions.
-import { capMoves, proofMoves, provenCap, countTak, outOfMoves, endsOnNo } from './shared/judge.js?v=1795483975';
-export { capMoves, proofMoves, provenCap, isTak, countTak, outOfTak, takLeft, outOfMoves, TAK_COUNTDOWN, REPLY_MARK, replyEntry, isReplyEntry, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls, endsOnNo, REFUTED } from './shared/judge.js?v=1795483975';
+import { capMoves, proofMoves, provenCap, countTak, outOfMoves, endsOnNo } from './shared/judge.js?v=1795581690';
+export { pliesLeftOf, capMoves, proofMoves, provenCap, isTak, countTak, outOfTak, takLeft, outOfMoves, TAK_COUNTDOWN, REPLY_MARK, replyEntry, isReplyEntry, defender, ending, STALL_MS, gameRated, unratedWhy, winRated, lossRated, lossWhy, stalls, endsOnNo, REFUTED } from './shared/judge.js?v=1795581690';
 
 // The cap's explanation, one plain sentence shown on the card (and as the number's tooltip). capNote: the puzzle's
 // bound (the moves it had left at that node, plus the spare: capMoves).
@@ -24,12 +24,6 @@ export function provenCapNote(pliesLeft, proofPlies, move, shown = 0) {
   return `Our proof that ${move} wins needs at most ${moves(pm)}, counting ${move}, so you get ${pm}.`;
 }
 
-// The plies a puzzle had left at a tree node, for the cap: 1 at a 'win' node (road in 1), 0 past the tree, else 2 plus
-// the longest line below. (Moved from app.js unchanged, so Rush's play-outs get the puzzle page's cap.)
-export const pliesLeftOf = (node) => {
-  const d = (n) => (n === 'win' ? 1 : n == null ? 0 : 2 + Math.max(...Object.values(n).map((v) => (v ? d(v.n) : 0))));
-  return d(node);
-};
 // Proven off-tree wins at an attacker node: alts at the root, altsAt[path of the puzzle's moves so far] deeper in.
 // path: the moves played from the puzzle's position, both sides. (Moved from app.js slowerWins.)
 export function slowerWinsAt(p, path) {
@@ -60,13 +54,10 @@ export function applyProofLength(po, plies) {
   return true;
 }
 
-// What the server keeps of a result's move log (server.js cleanLog, unchanged on main): at most LOG.max entries, each
+// What the server keeps of a result's move log (server.js cleanLog): at most LOG.max entries, each
 // with ms within LOG.ms (an hour); one entry over either and it stores no log at all. A play-out has no ceiling now, so
 // the page stops adding entries before either (logOk), keeping the head of the log rather than losing all of it.
-export const LOG = { max: 64, ms: 3600e3 };
-// What the server keeps from its 2026-11-21 'server (for main)' commit on (server.js LOG_MAX). LOG.max rises to it only
-// once that server is live: against the older one a longer log would be stored as none at all.
-export const LOG_NEXT = 512;
+export const LOG = { max: 512, ms: 3600e3 };
 export const logOk = (log, ms) => log.length < LOG.max && Number.isFinite(ms) && ms >= 0 && ms <= LOG.ms;
 
 // Who defended, by name, for the cards (Syntaks only while it defends; once it drops out, Tiltak). (Moved from app.js.)

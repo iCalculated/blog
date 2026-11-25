@@ -1,28 +1,29 @@
-import { Game } from './shared/tak.js?v=1795483975';
-import { unplayedPlies } from './shared/ptn.js?v=1795483975';
-import { THEMES, GLOSSARY } from './shared/themes.js?v=1795483975';
-import { provisional, PLAYER_START } from './shared/rating.js?v=1795483975';
-import { buildPTN, focusedByPointer, hooks } from './board-kit.js?v=1795483975';
-import { NinjaBoard } from './ninja.js?v=1795483975';
-import * as engine from './engine.js?v=1795483975';
-import { showLineOn } from './lines.js?v=1795483975';
-import * as tiltak from './tiltak.js?v=1795483975';
-import * as syntaks from './syntaks.js?v=1795483975';
-import { API, api, store, token, setToken, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795483975';
-import { createNext } from './next.js?v=1795483975';
-import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795483975';
-import { createOutbox } from './outbox.js?v=1795483975';
-import * as sound from './sound.js?v=1795483975';
-import { confirmOn, soundOn, soundOf, squareName, holds, phaseKey, pending, pendingAct, holdTaps, settingsNote, takesHeldKey } from './settings.js?v=1795483975';
-import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, resendAfterUpload, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof, isTak, countTak, outOfMoves, takLeft, TAK_COUNTDOWN, replyEntry, logOk, leftRunsOn, runOnHeld, noEnding, REFUTED } from './playon.js?v=1795483975';
-import { copy } from './playon-copy.js?v=1795483975';
-import { OTHER, syncedOf, decide, diff, changesBody, carried, unsentKeys, withUnsent, afterPost, syncStatus } from './prefsync.js?v=1795483975';
-import { parseLook, encodeLook, cleanLook, lookReport, THEMES as NINJA_THEMES, themeOf, withTheme, themeName, showLook } from './ninja-look.js?v=1795483975';
-import * as defend from './defend.js?v=1795483975';
-import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, quickLine, mergeLines, pickCandidates, pinnedAt, moveShape, threatGroups, chipLabel, numberedPV, ptnParts, THREAT_ON, ALT_IN } from './analysis.js?v=1795483975';
-import { whenText } from './rush-rules.js?v=1795483975';
-import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795483975';
-import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795483975';
+import { Game } from './shared/tak.js?v=1795581690';
+import { unplayedPlies } from './shared/ptn.js?v=1795581690';
+import { syntaksBoard } from './shared/judge.js?v=1795581690';
+import { THEMES, GLOSSARY } from './shared/themes.js?v=1795581690';
+import { provisional, PLAYER_START } from './shared/rating.js?v=1795581690';
+import { buildPTN, focusedByPointer, hooks } from './board-kit.js?v=1795581690';
+import { NinjaBoard } from './ninja.js?v=1795581690';
+import * as engine from './engine.js?v=1795581690';
+import { showLineOn, moveSquares } from './lines.js?v=1795581690';
+import * as tiltak from './tiltak.js?v=1795581690';
+import * as syntaks from './syntaks.js?v=1795581690';
+import { API, api, store, token, setToken, guestId, notice, setNotice, onNotice, WAIT_NOTICE } from './api.js?v=1795581690';
+import { createNext } from './next.js?v=1795581690';
+import { BUSY_MS, busy, busyUntil, endLocked, barHide } from './busy.js?v=1795581690';
+import { createOutbox, ownerOf } from './outbox.js?v=1795581690';
+import * as sound from './sound.js?v=1795581690';
+import { confirmOn, soundOn, soundOf, holds, phaseKey, pending, pendingAct, settingsNote, takesHeldKey } from './settings.js?v=1795581690';
+import { defender, ending, legalMove, gameRated, unratedWhy, winRated, lossRated, lossWhy, provenPlayOut, heldDisplaced, quickOutcome, capWait, provenLossLead, deferredResendOk, answerOwnsToken, stalls, heldResend, settledHeld, legalPrefix, pliesLeftOf, slowerWinsAt, playOutOf, applyProofLength, defenderName, upgradeToProven, measureProof, isTak, countTak, outOfMoves, takLeft, TAK_COUNTDOWN, replyEntry, logOk, leftRunsOn, runOnHeld, noEnding, REFUTED, ENGINE_MS } from './playon.js?v=1795581690';
+import { copy } from './playon-copy.js?v=1795581690';
+import { OTHER, syncedOf, decide, diff, changesBody, carried, unsentKeys, withUnsent, afterPost, syncStatus } from './prefsync.js?v=1795581690';
+import { parseLook, encodeLook, cleanLook, lookReport, THEMES as NINJA_THEMES, themeOf, withTheme, themeName, showLook } from './ninja-look.js?v=1795581690';
+import * as defend from './defend.js?v=1795581690';
+import { ninjaUrl, fromSyntaks, fromTiltak, fromChild, quickLine, mergeLines, pickCandidates, pinnedAt, threatGroups, chipLabel, numberedPV, ptnParts } from './analysis.js?v=1795581690';
+import { whenText, symFromRecord } from './rush-rules.js?v=1795581690';
+import { freeOffer, freeFrom, freeExit, freeOverText, takeBack, freeDefender, freeFailKey, cardSplice, freeFocus } from './freeplay.js?v=1795581690';
+import { orientPage, puzzleHash, symOf, toServer } from './pagesym.js?v=1795581690';
 
 const $ = (s) => document.querySelector(s);
 // C2 (docs/plan/PLAN.md): each ply is also posted to /api/move, in shadow, beside /api/result (outbox.js). Only when
@@ -88,7 +89,7 @@ const guestSeed = () => ({ gid: guestId() ?? undefined });
 // and its result may not be sent yet.) It also carries the build that wrote it and whose result it is (owner: a hash
 // of the token, never the token).
 const pageId = (() => { try { return crypto.randomUUID(); } catch { return Math.random().toString(36).slice(2) + Date.now().toString(36); } })();
-const owner = () => { let h = 0x811c9dc5; for (const c of token || '') h = Math.imul(h ^ c.charCodeAt(0), 0x01000193); return token ? (h >>> 0).toString(36) : ''; };
+const owner = () => ownerOf(token);
 let pageLock = false; // this page holds its lock (taken with its first record, kept for the page's life)
 const heldRec = {
   get() { try { return JSON.parse(sessionStorage.getItem('tinue.held')); } catch { return null; } },
@@ -148,20 +149,12 @@ let authEpoch = 0;
 // answer or only as the cookie):
 // a result's answer that left before keeps its own minted token and user to itself (answerOwnsToken).
 let signIn = 0;
-// A random id for this browser (null if storage or crypto is unavailable). It links a guest's server row to the
-// anonymous results older clients sent, and lets a guest whose token got lost on the way get its row back.
-const guestId = () => {
-  let id = store.get('gid', null);
-  if (typeof id === 'string' && /^[a-f0-9]{32}$/.test(id)) return id;
-  try { id = [...crypto.getRandomValues(new Uint8Array(16))].map((b) => b.toString(16).padStart(2, '0')).join(''); } catch { return null; }
-  store.set('gid', id);
-  return store.get('gid', null) === id ? id : null;
-};
 
 // The board: PTN Ninja's, in an iframe (ninja.js), for everyone (tinue's own, board.js, is retired; a stored Board
 // setting or a ?board= in the address is ignored). A finished move goes through moveIn (Confirm moves). While PTN
-// Ninja is loading or down, nothing can be played and the page waits (renderAll keeps Hint and Solution off).
-const board = new NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn), look: prefs.ninja, onState: () => { syncClock(); if (S) renderAll(); } });
+// Ninja is loading or down, nothing can be played and the page waits (renderAll keeps Hint and Solution off); a move held
+// for Confirm is dropped, so it can't be judged on a board that isn't there.
+const board = new NinjaBoard($('#board'), { onMove: (ptn) => moveIn(ptn), look: prefs.ninja, onState: () => { syncClock(); if (!S) return; if (!board.available) pendingEvent({ type: 'leave' }); renderAll(); } });
 // Sounds (sound.js): every move played or appended on any board (this page's, Rush's, PTN Ninja's) sounds what it set
 // down and where (board-kit.js landOf); a jump to another position stops drops still queued (onCut). The audio unlocks on the first press,
 // tap or key. A beta build may play the sound lab's recipes stored on this device (sound.js loadCustom).
@@ -179,6 +172,7 @@ let S = null; // current puzzle state
 onNotice(() => renderAll()); // api() shows and clears the server notice
 
 // ---------- user box ----------
+const NO_ANSWER = { error: 'Can’t reach the puzzle server.' }; // (what a form says when api() throws)
 function renderUser() {
   const box = $('#userbox');
   store.set('me', me ? { name: me.name } : null); // a guest is { name: null }
@@ -188,9 +182,9 @@ function renderUser() {
     // Name with a small menu on hover/focus: History, Sign out (with an inline confirm).
     box.innerHTML = `<div class="menu"><button class="link name" aria-haspopup="true">${esc(me.name)}</button>
       <div class="pop" role="menu"><a href="#/me" role="menuitem">History</a><a href="#/settings" role="menuitem">Settings</a><button class="link" id="logout" role="menuitem">Sign out</button>
-        <div class="confirm hidden" id="logout-confirm"><p>You’ll need your login token (on your History page) to sign back in on this device.</p><button class="danger" id="logout-yes">Sign out</button></div></div></div>`;
+        <div class="confirm hidden" id="logout-confirm"><p>You’ll need your login token (on your History page) to sign back in on this device.</p><button class="danger" id="logout-yes">Sign out</button><p class="err hidden" id="logout-err">Couldn’t sign out: the server didn’t answer.</p></div></div></div>`;
     // (a keyboard press moves focus onto the confirm: the button it pressed hides, and the menu lives on focus)
-    $('#logout').onclick = (e) => { $('#logout-confirm').classList.remove('hidden'); $('#logout').classList.add('hidden'); if (!e.detail) $('#logout-yes').focus(); };
+    $('#logout').onclick = (e) => { $('#logout-err').classList.add('hidden'); $('#logout-confirm').classList.remove('hidden'); $('#logout').classList.add('hidden'); if (!e.detail) $('#logout-yes').focus(); };
     // Once the menu closes (neither hovered nor focused), the confirm folds back into Sign out, so the menu never
     // reopens stuck on it.
     const menu = box.querySelector('.menu'), fold = () => setTimeout(() => {
@@ -198,8 +192,12 @@ function renderUser() {
       menu.querySelector('#logout-confirm').classList.add('hidden'); menu.querySelector('#logout').classList.remove('hidden');
     });
     menu.addEventListener('mouseleave', fold); menu.addEventListener('focusout', fold);
-    $('#logout-yes').onclick = async () => { await abandonAll({ auth: true }); restoreLeft(); await api('/api/logout', {}); authEpoch++; signIn++; setToken(null); forgetNext(); me = null; serverSettings = null; syncState = 'saved'; // (this device keeps its settings)
-       session.length = 0; saveSession(); renderUser(); refreshPage(); };
+    $('#logout-yes').onclick = async () => {
+      await abandonAll({ auth: true }); restoreLeft();
+      // (signed out only once the server says so: its cookie would keep naming the player)
+      try { const r = await api('/api/logout', {}); if (r?.error) throw new Error(r.error); } catch { $('#logout-err')?.classList.remove('hidden'); return; }
+      authEpoch++; signIn++; setToken(null); forgetNext(); me = null; serverSettings = null; syncState = 'saved'; // (this device keeps its settings)
+      session.length = 0; saveSession(); renderUser(); refreshPage(); };
   } else {
     // One quiet button; claiming a name (or pasting a token) happens in a small popover.
     box.innerHTML = `<div class="menu click"><button class="link name" id="claim-open" aria-haspopup="dialog" aria-expanded="false">Claim a username</button>
@@ -227,7 +225,7 @@ function renderUser() {
     $('#claim').onsubmit = async (e) => {
       e.preventDefault();
       // A guest's row just gets the name (rating and history stay); a first-time visitor's is created like a guest's.
-      const r = await api('/api/register', { name: $('#claim-name').value.trim(), ...(token ? {} : { guest: guestSeed() }) });
+      const r = await api('/api/register', { name: $('#claim-name').value.trim(), ...(token ? {} : { guest: guestSeed() }) }).catch(() => NO_ANSWER);
       if (r.error) return showErr('#claim-err', r.error);
       if (r.token && token && r.token !== token) authEpoch++; // another account now (a guest naming its own row isn't)
       signIn++; // signed in as the named account now (its token may come only as a cookie): an answer on its way stays out
@@ -237,8 +235,8 @@ function renderUser() {
     $('#tok').onsubmit = async (e) => {
       e.preventDefault();
       const t = $('#tok-in').value.trim();
-      const r = await api('/api/login', { token: t });
-      if (r.error) return showErr('#tok-err', 'That token doesn’t match an account.');
+      const r = await api('/api/login', { token: t }).catch(() => NO_ANSWER);
+      if (r.error) return showErr('#tok-err', r === NO_ANSWER ? r.error : 'That token doesn’t match an account.');
       await abandonAll({ auth: true }); restoreLeft(); // a held result goes out under the identity that played it
       authEpoch++; signIn++; setToken(t); forgetNext(); me = r.user; session.length = 0; saveSession(); serverSettings = null; renderUser(); settingsArrived(r); refreshPage();
     };
@@ -361,20 +359,18 @@ function reloadNow() {
   if (justEnded()) return; // the bar shows once the result does, pushing the board down: a tap aimed at the board
   if (S?.playOn) return; // never in the middle of a play-on game (leaving it is a miss); the bar is hidden then anyway
   if (S && !S.placeholder && (S.resultSent || S.status !== 'play' || S.quickCheck)) loadNext({ reload: true }); // (a move being checked is sent as it leaves)
-  else reloadInto(S?.p?.id, S?.theme, location.search, symNow()); // (the same visit: under its symmetry)
+  else reloadInto(S?.p?.id, S?.theme, symNow()); // (the same visit: under its symmetry)
 }
 // A full page load opening puzzle id (or the start). theme: the Theme its result counts under (see start()). s: the
 // visit's symmetry, only when reloading the puzzle on screen (never the next one).
-function reloadInto(id, theme = '', search = location.search, s = 0, hash = '') {
+function reloadInto(id, theme = '', s = 0) {
   try {
     sessionStorage.setItem('tinue.reloadedFor', JSON.stringify({ v: newBuild, at: Date.now() }));
     if (id) sessionStorage.setItem('tinue.reloadTheme', JSON.stringify({ id, theme: theme || '' }));
   } catch {}
-  history.replaceState(null, '', APP + search + (hash || (id ? puzzleHash(id, s) : '#/'))); // hash: another page to come back to
+  history.replaceState(null, '', APP + location.search + (id ? puzzleHash(id, s) : '#/'));
   location.reload();
 }
-// The page the address names, as a hash (a puzzle's real path, <app>/puzzle/<id>, as #/puzzle/<id>), for reloadInto.
-const routeHash = () => (location.hash && location.hash !== '#' ? location.hash : '#/' + location.pathname.slice(APP.length));
 const reloadTheme = (() => { try { const t = JSON.parse(sessionStorage.getItem('tinue.reloadTheme')); sessionStorage.removeItem('tinue.reloadTheme'); return t; } catch { return null; } })();
 
 async function loadNext({ reload = false } = {}) {
@@ -410,7 +406,7 @@ async function loadNext({ reload = false } = {}) {
   if (newBuild && (reload || (!leaving && !heldRec.get() && !reporting.size))) {
     if (reporting.size) await Promise.race([Promise.allSettled([...reporting]), new Promise((res) => setTimeout(res, 3000))]);
     if (t !== loadSeq) return;
-    reloadInto(puzzle.id, prefs.theme, location.search); return;
+    reloadInto(puzzle.id, prefs.theme); return;
   }
   showPuzzleURL(puzzle.id);
   start(puzzle, prefs.theme);
@@ -430,8 +426,7 @@ async function loadById(id, s = 0, look = null) {
   if (!puzzle) { try { ({ puzzle } = judgeSeen(await api('/api/puzzle/' + encodeURIComponent(id)))); } catch { restoreLeft(); return; } }
   if (t !== loadSeq) return;
   if (puzzle && !s && look?.id === puzzle.id) {
-    try { s = (await import('./rush-rules.js?v=1795483975')).symFromRecord(puzzle, look); } catch { s = 0; }
-    if (t !== loadSeq) return;
+    try { s = symFromRecord(puzzle, look); } catch { s = 0; }
   }
   // The one place a puzzle is oriented (pagesym.js): the page works in the turned labels from here on; the server's
   // object is kept beside it (S.p0) and nothing that goes out is taken from the turned one (toServer).
@@ -441,7 +436,7 @@ async function loadById(id, s = 0, look = null) {
 const colorName = (c) => (c === 1 ? 'White' : 'Black');
 
 // PTN for everything shown so far: the game's history (if known) plus moves played in the puzzle.
-function currentPTN() { return ptnFor(S.hist.length ? officialLine() : S.moves.map((m) => m.ptn)); }
+function currentPTN() { return ptnFor(officialLine()); }
 
 // ---- lines: the official line (game history + puzzle moves) and, after the puzzle, your own exploration ----
 const officialLine = () => [...S.hist, ...S.moves.map((m) => m.ptn)];
@@ -475,7 +470,7 @@ const fromEngine = (s, r) => s.x.answer(r);
 let lz = null, lzLoad = null;
 const ninjaHref = () => lz && ninjaUrl({ ptn: ptnFor(shownLine()), ply: S.view ?? shownLine().length, name: 'tinue #' + S.p.id }, lz);
 function loadLz() {
-  lzLoad ||= import('./vendor/lz-string.js?v=1795483975').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
+  lzLoad ||= import('./vendor/lz-string.js?v=1795581690').then((m) => { lz = m.compressToEncodedURIComponent; refreshNinja(); }, () => { lzLoad = null; });
 }
 function refreshNinja() {
   if (!S || S.placeholder || S.status !== 'solved') return;
@@ -487,12 +482,12 @@ function refreshNinja() {
 // the production build, on in local development). Off, the page after a puzzle is production's as it was before the
 // analysis view (main, 2026-11-21): one engine row, line 1 only (its chance bar, who's better, its moves, the source),
 // from the same engines and the same one request per position; no further lines, no candidate chips or candidate
-// searches, no tactics facts (threats, pinned moves), no arrows or rings on the board.
+// searches, no tactics facts (threats, pinned moves), nothing marked on the board.
 // On only where config.js says true (fail closed): a config.js without the line, such as production's before this
 // release, still cached beside the new app.js, gets production's page.
 const ANALYSIS = window.TINUE_ANALYSIS === true;
-// The analysis view's own stylesheet (public/analysis.css), loaded only with the view on: production's style.css is
-// untouched by it. Stamped as this module is (build-static.sh's ?v=), so a beta release never mixes them.
+// The analysis view's own stylesheet (public/analysis.css), loaded only with the view on, over style.css, which
+// holds what it shares with production's row. Stamped as this module is (build-static.sh's ?v=), so a beta release never mixes them.
 if (ANALYSIS) document.head.append(Object.assign(document.createElement('link'), { rel: 'stylesheet', href: new URL('./analysis.css' + new URL(import.meta.url).search, import.meta.url).href }));
 // After the puzzle: the analysis of the position on the board, as up to three lines (public/analysis.js, the line
 // model), each from the mover's side:
@@ -527,10 +522,10 @@ async function runEngine() {
   const at = S.view ?? line.length;
   const plies = line.slice(0, at);
   const key = plies.join(' ');
-  // Already analysed: the lines stand, but a reload of the board (back to the solution at the fork) wiped its arrows
+  // Already analysed: the lines stand, but a reload of the board (back to the solution at the fork) wiped its mark
   if (S.evalKey === key) return paintShapes();
   const s = S;
-  // The last position's lines and arrows go now, before anything is awaited.
+  // The last position's lines and mark go now, before anything is awaited.
   S.evalKey = key; S.eval = null; S.eng = null; S.lines = []; S.sol = null; S.sel = 0; S.selUser = false; S.pins = []; S.posG = null;
   board.shapes?.([]);
   anaCtl?.abort(); anaCtl = null;
@@ -542,11 +537,10 @@ async function runEngine() {
   const mover = g.toMove, official = officialLine();
   S.posG = g;
   S.eng = { thinking: true, src: null, lines: [] };
+  const go = syntaksBoard(S.p.size, S.p.komi || 0) ? runServer : runTiltak;
   if (!ANALYSIS) { // (production's engine row: no tactics facts, no pinned moves; line 1 from the engine below)
     setLines(s, key);
-    const komi = S.p.komi || 0;
-    if (S.p.size === 6 && Math.abs(komi) <= 3.5 && Number.isInteger(komi * 2)) return runServer(s, key, g, plies);
-    return runTiltak(s, key, g, plies);
+    return go(s, key, g, plies);
   }
   S.pins = pinnedAt({ official, histLen: S.hist.length, at, onBranch: !!(S.onBranch && S.branch && at > S.branch.at), solver: S.solver, mover,
     misses: S.misses, tree: treePlies() });
@@ -554,9 +548,7 @@ async function runEngine() {
   // (the worker sees the puzzle's own orientation, like every engine: enginePos and the pinned moves turned back, its
   // facts turned forward again; pagesym.js toServer)
   engine.lines({ ...enginePos(plies), pinned: S.pins.map((p) => s.x.back(p.move)) }).then((r) => { if (r && live()) { S.sol = s.x.facts(r); setLines(s, key); } });
-  const komi = S.p.komi || 0;
-  if (S.p.size === 6 && Math.abs(komi) <= 3.5 && Number.isInteger(komi * 2)) return runServer(s, key, g, plies);
-  runTiltak(s, key, g, plies);
+  go(s, key, g, plies);
 }
 // GET /api/analyze, aborted with ctl (the position changed) or after 6 s (the search plus a short queue on crux; past
 // that, the solver answers: runServer). A plain GET without the Authorization header: no CORS preflight (every
@@ -666,7 +658,7 @@ async function runSolver(s, key, plies) {
   const live = () => S === s && S.evalKey === key;
   if (!live()) return;
   // down: an engine plays this board but didn't answer (the server, Tiltak): the panel says so in plain words
-  const komi = S.p.komi || 0, down = (S.p.size === 6 && Math.abs(komi) <= 3.5 && Number.isInteger(komi * 2)) || tiltak.supports(S.p.size, komi);
+  const komi = S.p.komi || 0, down = syntaksBoard(S.p.size, komi) || tiltak.supports(S.p.size, komi);
   S.eng = { thinking: true, src: 'solver', down, lines: [] };
   setLines(s, key);
   const res = fromEngine(s, await engine.analyze({ ...enginePos(plies), maxPlies: 9 }));
@@ -678,7 +670,7 @@ async function runSolver(s, key, plies) {
     lines: win ? [{ move: res.pv[0], pv: res.pv, ev: { kind: 'win', n: Math.ceil(res.plies / 2), proven: true }, src: 'solver', tags: [] }] : [] };
   setLines(s, key);
 }
-// The panel's lines from what has arrived for this position, then the panel and the board's arrows. A line you picked
+// The panel's lines from what has arrived for this position, then the panel and the board's mark. A line you picked
 // stays picked by its move as lines arrive and reorder; otherwise line 1 is the one selected (a selection kept by move
 // when nobody chose it jumped to row 2 when the engine's rows came in above the puzzle's: five1 at its start).
 const canonG = new Map(); // size -> an empty Game, to canonicalise moves (parseMove/moveToPTN depend on the size only)
@@ -691,40 +683,13 @@ function setLines(s, key) {
   renderEngine();
   paintShapes();
 }
-// The board's shapes (ninja.js shapes: PTN Ninja highlights line 1's squares; the rest is in the text): the opponent's threats (they are facts), line 1's move always (Sasha: the best
-// line's arrow must be clearly visible), and the line selected below it (dashed, board.css; yours in orange). Nothing
-// else: a third, fainter arrow read as noise. Where the selected line places on line 1's square (Sc3 beside c3) its ring
-// sits inside line 1's (ALT_IN), so both show; where it spreads from line 1's stack its count sits along its own arrow
-// (lead), and along the same line both arrows run side by side (shift), so neither hides the other's count or shaft. A
-// threat ending on a stone rings it from outside (THREAT_ON). The threats are drawn over all of it (analysis.js
-// shapesSvg), and only while they are shown (S.thr, the Threats button or x: off by default, as on Lichess). Only for
-// the position shown.
+// The board's mark for the analysis: PTN Ninja highlights the squares of line 1's move (ninja.js shapes), whichever line
+// is selected below it; the rest is in the text. Only for the position shown.
 function paintShapes() {
   if (!ANALYSIS || !S || S.placeholder || S.status !== 'solved' || !S.posG) return;
   const line = shownLine();
   if (S.evalKey !== line.slice(0, S.view ?? line.length).join(' ')) return;
-  const g = S.posG, mover = g.toMove, list = [];
-  const add = (ptn, role, color, extra) => { try { const shape = moveShape(ptn, g.size, g); if (shape) list.push({ shape, role, color, sqs: moveSquares(ptn), ...extra }); } catch {} };
-  if (S.thr) for (const t of threatGroups(S.sol?.threats, g.size)) {
-    add(t, 'threat', 3 - mover);
-    const x = list.at(-1), sq = x?.role === 'threat' ? (x.shape.kind === 'place' ? x.shape.sq : x.shape.to) : null;
-    if (sq != null && g.board[sq]?.length) x.r = THREAT_ON;
-  }
-  const l1 = S.lines[0], sel = S.lines[S.sel], color = g.ply < 2 ? 3 - mover : mover; // (the first two plies place the opponent's stone)
-  if (l1) add(l1.move, 'best', color);
-  if (sel && sel !== l1) {
-    const b = list.find((x) => x.role === 'best');
-    add(sel.move, sel.tags.includes('yours') ? 'yours' : 'alt', color);
-    const a = list.at(-1);
-    if (b && a && a.role !== 'best' && a.role !== 'threat') {
-      if (b.shape.kind === 'place' && a.shape.kind === 'place' && b.shape.sq === a.shape.sq) a.r = ALT_IN;
-      else if (b.shape.kind === 'spread' && a.shape.kind === 'spread' && b.shape.from === a.shape.from) {
-        a.lead = 0.4;
-        if (b.shape.drops[0].sq === a.shape.drops[0].sq) { b.shift = -0.15; a.shift = 0.15; }
-      }
-    }
-  }
-  board.shapes?.(list);
+  board.shapes?.(S.lines[0] ? [{ role: 'best', sqs: moveSquares(S.lines[0].move) }] : []);
 }
 
 // Play line L on the board, up to and including its move k (as your line).
@@ -757,12 +722,12 @@ async function playPV(L, k) {
 function showLine(line, idx) { return showLineOn(board, S, line, idx, ptnFor); }
 
 // p: the puzzle as shown (oriented by loadById, pagesym.js); p0: the same puzzle as the server sent it.
-// The opponent's threats shown or not (the analysis view's Threats button, or x): their line under the engine lines and
-// their rings and arrows on the board. Off with every new puzzle (S.thr unset); kept while stepping through this one.
+// The opponent's threats shown or not (the analysis view's Threats button, or x): their line under the engine lines. Off
+// with every new puzzle (S.thr unset); kept while stepping through this one.
 function toggleThreats() {
   if (!ANALYSIS || !S || S.placeholder || S.status !== 'solved') return;
   S.thr = !S.thr;
-  renderEngine(); paintShapes();
+  renderEngine();
 }
 // x: the Threats button's key (as on Lichess), only while the analysis view is shown, never in a field or with a modifier
 window.addEventListener('keydown', (e) => {
@@ -943,7 +908,7 @@ async function userMove(ptn) {
     shadow((o) => { said = o.hold(s.ob, canon, { ms: tMove }); });
     const say = (v) => shadow(() => said?.(v));
     S.busy = true;
-    const plies = [...(S.hist.length ? officialLine() : S.moves.map((m) => m.ptn)), canon];
+    const plies = [...officialLine(), canon];
     let pending = null;
     if (!res && node) {
       const key = provenKey(canon), known = S.proven?.get(key);
@@ -1047,7 +1012,7 @@ async function report(win, s = S, flags = s, { keepalive = false, ms } = {}) {
   }
   s.resultSent = true;
   // Unrated: a hint before the result, or a miss whose check never answered (it may have been a win).
-  // A game won against Tiltak (playOnRated) is an unrated solve.
+  // A game won against Tiltak (playon.js gameRated) is an unrated solve.
   s.casual = flags.hinted || (!win && !!s.unchecked) || (win && !!flags.playOn?.unrated);
   s.casualWhy = flags.hinted ? 'hint' : !s.casual ? null : win ? 'tiltak' : 'unchecked';
   // (the log's moves in the puzzle's own orientation: pagesym.js toServer)
@@ -1199,9 +1164,8 @@ async function flushHeld() {
 const playOnDefender = () => defender(S.p.size, S.p.komi || 0, tiltak.supports);
 // (defenderName, playon.js: 6×6 is Syntaks's even where it can't run in this browser (no WebAssembly SIMD): crux answers
 // every reply then.)
-// Whether a game won on the board counts toward rating. A weak reply can let a move that doesn't force the win "win",
-// so only Syntaks's defence is trusted for rating; a win against Tiltak is an unrated solve. (A proof always counts.)
-const playOnRated = (po) => gameRated(po); // (playon.js: only a game Syntaks defended throughout counts, either way)
+// (gameRated, playon.js: a weak reply can let a move that doesn't force the win "win", so only a game Syntaks defended
+// throughout counts toward rating; a win against Tiltak is an unrated solve. A proof always counts.)
 
 // proven: the move is already proven to win (a proven play-out: playon.js winRated / lossRated); chk is then null.
 // proofPlies: that proof's length if known (the cap is at least its moves: provenCap); unknown, it's measured now (proofLength).
@@ -1434,7 +1398,7 @@ function freeEngine(s = S) {
   const e = freeOffer(s, { defender: freeDefender(playOnDefender(), here), held: heldRec.get()?.id === s.p.id, uploading: !!up });
   return e && !gameAt([...freeBase(s), freeFrom(s)]).result() ? e : null; // (a miss that ended the game: nothing to play)
 }
-function freeBase(s) { return s.hist.length ? [...s.hist, ...s.moves.map((m) => m.ptn)] : s.moves.map((m) => m.ptn); }
+function freeBase(s) { return [...s.hist, ...s.moves.map((m) => m.ptn)]; }
 function startFree() {
   const s = S, engine = freeEngine(s);
   if (!engine) return;
@@ -1468,17 +1432,17 @@ async function freeTurn(s, fg) {
   let mv = null;
   const within = (p, ms, v = null) => Promise.race([p, new Promise((res) => setTimeout(res, ms, v))]);
   if (fg.engine === 'syntaks') {
-    const wait = syntaks.status() === 'ready' ? 0 : 20e3;
-    const r = await within(syntaks.search({ tps, komi, ms: 1500, nodes: 1.5e6 }).catch(() => null), 4500 + wait);
+    const wait = syntaks.status() === 'ready' ? 0 : ENGINE_MS.download;
+    const r = await within(syntaks.search({ tps, komi, ms: 1500, nodes: 1.5e6 }).catch(() => null), ENGINE_MS.local + wait);
     if (!live()) return;
     mv = legalMove(fg.g, r?.move);
     if (!mv) freeFailed(s, fg, 'syntaks');
     if (!mv && tiltak.supports(s.p.size, komi)) { fg.engine = 'tiltak'; fg.name = 'Tiltak'; fg.swapped = true; renderAll(); }
   }
   if (!mv && fg.engine === 'tiltak') {
-    const up = await within(Promise.resolve().then(tiltak.warmup).then(() => true, () => false), 20e3, false);
+    const up = await within(Promise.resolve().then(tiltak.warmup).then(() => true, () => false), ENGINE_MS.tiltakUp, false);
     if (!live()) return;
-    const t = up && await within(tiltak.analyze({ tps, size: s.p.size, komi, ms: 1500 }).catch(() => null), 6000);
+    const t = up && await within(tiltak.analyze({ tps, size: s.p.size, komi, ms: 1500 }).catch(() => null), ENGINE_MS.tiltak);
     if (!live()) return;
     mv = legalMove(fg.g, t?.bestmove);
   }
@@ -1718,21 +1682,9 @@ function moveNote(ptn) {
   if (drops.length === 1) return n === 1 ? 'Move the top piece one square.' : `Carry ${n} pieces one square.`;
   return `Carry ${n} pieces and drop ${drops.join(', then ')}.`;
 }
-// Squares a move touches, as names: where it starts, then each square a stack drops onto.
-function moveSquares(ptn) {
-  const m = /^(\d?)([a-h])([1-8])([<>+-])?(\d*)/.exec(ptn.replace(/^[FSC]/, ''));
-  if (!m) return [];
-  const sqs = [m[2] + m[3]];
-  if (!m[4]) return sqs;
-  const [df, dr] = { '+': [0, 1], '-': [0, -1], '>': [1, 0], '<': [-1, 0] }[m[4]];
-  let f = m[2].charCodeAt(0), r = +m[3];
-  for (let i = 0; i < (m[5] ? m[5].length : 1); i++) { f += df; r += dr; sqs.push(String.fromCharCode(f) + r); }
-  return sqs;
-}
-
 // Browse any earlier position (game history or puzzle moves). Index = number of plies shown.
 async function viewPly(i, branch = S.onBranch) {
-  if (!S || S.placeholder || board.holding) return; // stones in hand: finish or cancel the move first
+  if (!S || S.placeholder) return;
   if (S.playOn || S.free) return; // a play-on game is played, not browsed (a free game too)
   if (S.status === 'solved') {
     S.onBranch = !!(branch && S.branch);
@@ -1768,7 +1720,7 @@ const PLACEHOLDER = {
 // of the side ahead, its number spoken for that side, as the header's), the line's moves numbered as the move list
 // numbers them (click one to play the line up to there) and its tags, then the opponent's threats in one short red line.
 // Docked on a phone: a row of two-part chips (evaluation | move), and under it the selected line's moves.
-// The threats (the red line here and the red rings and arrows on the board) are off by default, as on Lichess (Sasha,
+// The threats (the red line here) are off by default, as on Lichess (Sasha,
 // 2026-11-22: "threat should be toggle-able (and off by default) like on lichess"): a small Threats button beside the
 // lines, or x, shows them (S.thr). Each puzzle starts with them off (S is new); stepping through it keeps them as set.
 // Their line's room is held either way, so nothing above it moves when they come and go.
@@ -1993,6 +1945,11 @@ const playOnUnratedText = (u) => u.why === 'tiltak' ? 'Not rated: Tiltak defende
   : u.why === 'proven-late' ? esc(copy('end.unrated.provenLate', { m: S.unchecked }))
   : u.why === 'proven-unload' ? `Not rated: ${esc(S.unchecked)} is proven to win, and the page closed during the play-out.`
   : `Not rated: Syntaks dropped out ${u.at > 1 ? `after ${u.at} moves` : 'at the start'}, so Tiltak defended.`;
+// Why a solved puzzle's result isn't rated ('': it is), the card and the phone's dock alike (on a docked phone only the
+// dock's line is seen).
+const unratedNote = () => S.notCounted ? notCountedText() : uncheckedText() || (S.casualWhy === 'tiltak' ? 'Not rated: Tiltak defended.'
+  : S.casual ? 'You used a hint, so this one didn’t count toward your rating.' : '');
+const dockNoteText = () => [S.slowWin && slowWinText(S.slowWin) + '.', unratedNote(), shownOver() && 'Game over here. Step back with ◀ to explore.'].filter(Boolean).join(' ');
 // The feedback card (a live region). Returns whether Next puzzle should take keyboard focus once it is drawn.
 function renderFeedback(mood, delta) {
   const fb = $('#feedback');
@@ -2055,8 +2012,8 @@ function renderFeedback(mood, delta) {
   } else if (S.status === 'solved') {
     const title = solvedTitle();
     const slow = S.slowWin ? `${slowWinText(S.slowWin)}${S.slowWin.fastest ? `; the puzzle’s line plays ${esc(S.slowWin.fastest)} instead` : ''}. ` : '';
-    const note = slow + (S.notCounted ? NOT_COUNTED + ' ' : UNCHECKED ? UNCHECKED + ' ' : S.casualWhy === 'tiltak' ? 'Not rated: Tiltak defended. '
-      : S.casual ? 'You used a hint, so this one didn’t count toward your rating. ' : '')
+    const why = unratedNote();
+    const note = slow + (why && why + ' ')
       + (shownOver() ? overNote(shownOver()) : S.casualWhy === 'hint' ? '' : `Play any move to explore${finePointer.matches ? ', or step through the line with ← and →' : ''}.`);
     fbHtml = `<div class="icon ${S.outcome === 'clean' ? 'good' : 'bad'}">${S.outcome === 'clean' ? '✓' : '✗'}</div><div class="body">
       <h2>${title}<span class="dslot"></span></h2><p>${note}</p></div>
@@ -2233,7 +2190,7 @@ function renderMoves(docked, delta, focusNext) {
   // A server notice (slow or unreachable) replaces the result, so a Next puzzle that's waiting doesn't look dead.
   const dockHead = notice ? `<span class="icon bad" aria-hidden="true">!</span><b>${esc(notice.title)}</b>`
     : `<span class="icon ${clean ? 'good' : 'bad'}" aria-hidden="true">${clean ? '✓' : '✗'}</span><b>${solvedTitle()}${delta}</b>`;
-  const dockNote = notice ? esc(notice.body) : S.notCounted ? notCountedText() : uncheckedText() ? uncheckedText() : S.slowWin ? `${slowWinText(S.slowWin)}.${S.casualWhy === 'tiltak' ? ' Not rated: Tiltak defended.' : ''}` : S.casual ? 'You used a hint, so this one didn’t count.' : shownOver() ? 'Game over here. Step back with ◀ to explore.' : '';
+  const dockNote = notice ? esc(notice.body) : dockNoteText();
   const engSlot = `<div class="eng-slot${ANALYSIS ? '' : ' row'}">${engineHtml}</div>`;
   const scroller = `<div class="mscroll" role="group" aria-label="Moves"><div class="mtable">${rows}</div></div>`;
   const nav = `<div class="nav"><button data-step="first" title="Start" aria-label="Start">⏮</button><button data-step="prev" title="Back (←)" aria-label="Back">◀</button><button data-step="next" title="Forward (→)" aria-label="Forward">▶</button><button data-step="last" title="Current position" aria-label="Current position">⏭</button>${S.status === 'solved' ? '<a class="navlink" data-ninja target="_blank" rel="noopener" title="Open this line in PTN Ninja" aria-label="Open this line in PTN Ninja">↗</a>' : ''}${S.view != null ? '<span class="muted">viewing an earlier position</span>' : ''}</div>`;
@@ -2263,14 +2220,14 @@ $('#moves').addEventListener('click', (e) => {
   if (e.target.closest('[data-act2="back"]')) return backToSolution();
   const pvb = e.target.closest('[data-pv]');
   if (pvb) { const [L, k] = pvb.dataset.pv.split('.').map(Number); return playPV(L, k); }
-  // a line's chip (or its row): select it (its arrow on the board, its moves in the dock); the selected chip again
+  // a line's chip (or its row): select it (its moves in the dock); the selected chip again
   // plays its first move
   if (ANALYSIS && e.target.closest('[data-thr]')) return toggleThreats();
   const ln = ANALYSIS && e.target.closest('[data-line]');
   if (ln && S.status === 'solved') {
     const L = +ln.dataset.line;
     if (L === S.sel && ln.matches('.chip')) return playPV(L, 0);
-    S.sel = L; S.selUser = true; renderEngine(); paintShapes(); return;
+    S.sel = L; S.selUser = true; renderEngine(); return;
   }
   const m = e.target.closest('[data-i]');
   if (m) return viewPly(+m.dataset.i, false);
@@ -2340,15 +2297,10 @@ function pendingEvent(ev) {
 document.addEventListener('visibilitychange', () => { if (document.hidden) pendingEvent({ type: 'leave' }); });
 $('#confirm-yes').addEventListener('click', () => pendingEvent({ type: 'button', which: 'confirm' }));
 $('#confirm-no').addEventListener('click', () => pendingEvent({ type: 'button', which: 'cancel' }));
-// Taps on tinue's board: its final square confirms, anything else on it cancels (settings.js holdTaps).
-const tapAt = (el) => {
-  const sq = el?.closest?.('.tb-sq');
-  pendingEvent({ type: 'tap', sq: sq && S?.p ? squareName(+sq.dataset.sq, S.p.size) : null });
-};
-holdTaps($('#board'), board, { held: () => pend, tap: tapAt });
-// A tap anywhere else on the page cancels, and does only that (Hint, a move in the list, a link: press again).
+// A tap anywhere else on the page cancels, and does only that (Hint, a move in the list, a link: press again). (PTN
+// Ninja's taps stay inside its frame, and its board is off meanwhile.)
 document.addEventListener('click', (e) => {
-  if (!pend || e.target.closest?.('#confirm-bar') || $('#board').contains(e.target)) return;
+  if (!pend || e.target.closest?.('#confirm-bar')) return;
   e.stopPropagation(); e.preventDefault();
   pendingEvent({ type: 'elsewhere' });
 }, true);
@@ -2388,11 +2340,10 @@ $('#difficulty').value = prefs.difficulty;
 // 4–8 even pick a size). Changed from the keyboard, it keeps focus.
 for (const id of ['#difficulty', '#size', '#theme']) $(id).addEventListener('change', (e) => { if (focusedByPointer(e.target)) e.target.blur(); });
 $('#difficulty').onchange = (e) => { prefs.difficulty = e.target.value; store.set('prefs', prefs); loadNext(); };
-$('#size').onchange = (e) => { prefs.size = e.target.value; store.set('prefs', prefs); renderFilters(); loadNext(); };
+$('#size').onchange = (e) => { prefs.size = e.target.value; store.set('prefs', prefs); renderFilters().catch(() => {}); loadNext(); };
 $('#theme').onchange = (e) => { prefs.theme = e.target.value; store.set('prefs', prefs); themeDesc(); loadNext(); };
 // Settings (settings.js), on the Settings page (#/settings) only: the board's theme and look, Confirm moves and Sound
-// (the puzzle page links there). Engine arrows is no setting (Sasha, 2026-11-21): the arrows are on wherever the
-// analysis view is. setSetting is the one writer: it stores the value, checks it was kept (site storage may be
+// (the puzzle page links there). Engine arrows is no setting (Sasha, 2026-11-21). setSetting is the one writer: it stores the value, checks it was kept (site storage may be
 // blocked), does what the setting does on this page, puts the page's controls in step, and for a change made there
 // saves it to the account (prefsync.js). from: 'here' (a control), 'account' (the account's
 // settings, arriving with /api/me, a sign-in or a post's answer) or 'tab' (another tab of this site changed it:
@@ -2414,8 +2365,6 @@ function showSettings() {
   for (const [k, c] of Object.entries(CTL)) { const el = $('#st-' + k); if (el) el.value = c.show(); }
   renderLookField(); showNote(); renderSyncStatus();
 }
-// (a page missing from the HTML, as in an index.html cached from before it, is not being viewed)
-const viewing = (id) => $('#' + id)?.classList.contains('hidden') === false;
 function setSetting(key, value, from = 'here') {
   const was = prefs[key];
   if (key === 'ninja' && !value) delete prefs.ninja; else prefs[key] = value;
@@ -2437,7 +2386,7 @@ function setSetting(key, value, from = 'here') {
     renderPending();
   } else if (key === 'sound') {
     sound.setEnabled(soundOn(prefs)); sound.setVoice(soundOf(prefs));
-    if (from === 'here' && soundOn(prefs)) { sound.unlock(); setTimeout(() => sound.play('place'), 60); } // a preview in the chosen voice (the change is a gesture)
+    if (from === 'here' && soundOn(prefs)) { sound.unlock(); setTimeout(() => sound.play('flatBoard'), 60); } // a preview in the chosen voice (the change is a gesture)
   } else if (key === 'ninja') board.setLook(prefs.ninja || '');
   showSettings();
   if (from === 'here') pushSettings();
@@ -2580,7 +2529,7 @@ renderPending();
 // jumps (Home/End) and half-steps are silent.
 let stepSoundAt = -1e9;
 async function navTo(h, step = false) {
-  if (!S || S.placeholder || board.holding) return;
+  if (!S || S.placeholder) return;
   const total = shownLine().length, s = S, from = navAt();
   h = Math.max(0, Math.min(2 * total, h));
   await viewPly(h >> 1);
@@ -2592,15 +2541,15 @@ async function navTo(h, step = false) {
 }
 const navAt = () => 2 * (S.view ?? shownLine().length) + (board.peeking ? 1 : 0);
 const navStep = (dir, half) => { const h = navAt(); navTo(half ? h + dir : h + dir * (h & 1 ? 1 : 2), dir > 0); };
-// Captured first, so Enter = Continue wins over the board's Enter when nothing is in hand.
+// Captured first, so Enter = Continue wins over the board's Enter.
 window.addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || !S) return;
   if (S.placeholder || $('#view-puzzle').classList.contains('hidden')) return;
   if (e.key === 'Enter') {
-    // Enter = Continue, unless it's meant for whatever has focus (a button, a link, a field) or stones are in hand.
+    // Enter = Continue, unless it's meant for whatever has focus (a button, a link, a field).
     // Kept: a key pressed on purpose. Not a held key's repeat, nor in the result's first second (justEnded): the Enter
     // that dropped the last stones of the winning move, held or pressed twice, would skip the result unseen.
-    if (S.status === 'solved' && !board.holding && !e.target.closest?.('a, button, input, select, textarea, [contenteditable]')) {
+    if (S.status === 'solved' && !e.target.closest?.('a, button, input, select, textarea, [contenteditable]')) {
       e.preventDefault();
       if (!e.repeat && !justEnded()) loadNext();
     }
@@ -2614,7 +2563,7 @@ window.addEventListener('keydown', (e) => {
 // Scroll wheel over the board steps through moves (mouse and trackpad only; a phone's swipe still scrolls the page).
 let wheelAcc = 0;
 $('#board').addEventListener('wheel', (e) => {
-  if (!finePointer.matches || !S || S.placeholder || board.holding || pend || e.ctrlKey) return;
+  if (!finePointer.matches || !S || S.placeholder || pend || e.ctrlKey) return;
   e.preventDefault();
   const step = devicePixelRatio * 100, d = (e.deltaY || e.deltaX) * (e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? 800 : 1);
   if (Math.sign(d) !== Math.sign(wheelAcc)) wheelAcc = 0;
@@ -2644,8 +2593,9 @@ $('#ptn-in').addEventListener('blur', typedOk);
 
 async function renderFilters() {
   const t = await api('/api/themes' + (prefs.size ? '?size=' + prefs.size : ''));
+  if (!t?.sizes || !t.themes) return; // (an error's answer: the menus stay as they are)
   const sel = $('#size');
-  sel.innerHTML = '<option value="">Any size</option>' + Object.keys(t.allSizes || t.sizes).sort().map((s) => `<option value="${s}">${s}×${s} (${(t.allSizes || t.sizes)[s]})</option>`).join('');
+  sel.innerHTML = '<option value="">Any size</option>' + Object.keys(t.sizes).sort().map((s) => `<option value="${s}">${s}×${s} (${t.sizes[s]})</option>`).join('');
   sel.value = prefs.size || '';
   const groups = {};
   // the chosen theme stays listed even with no puzzles at this size ("Quiet move (0)"), so the select is never blank
@@ -2654,7 +2604,6 @@ async function renderFilters() {
     `<optgroup label="${g}">${ks.map((k) => `<option value="${k}">${THEMES[k].name} (${t.themes[k] || 0})</option>`).join('')}</optgroup>`).join('');
   $('#theme').value = prefs.theme || '';
   themeDesc();
-  return t;
 }
 document.addEventListener('click', (e) => {
   const a = e.target.closest('[data-theme]');
@@ -2665,12 +2614,12 @@ document.addEventListener('click', (e) => {
 // ---------- pages ----------
 const TITLES = { 'view-glossary': 'Glossary', 'view-me': 'History', 'view-leaderboard': 'Leaderboard', 'view-rush': 'Rush', 'view-sounds': 'Sound lab', 'view-settings': 'Settings' };
 function setTitle() {
-  const page = ['view-glossary', 'view-me', 'view-leaderboard', 'view-rush', 'view-sounds', 'view-settings'].find((v) => $('#' + v) && !$('#' + v).classList.contains('hidden'));
+  const page = Object.keys(TITLES).find((v) => $('#' + v) && !$('#' + v).classList.contains('hidden'));
   document.title = page ? `${TITLES[page]} — tinue` : S && !S.placeholder ? `Puzzle #${S.p.id} — tinue` : 'tinue — Tak puzzles';
 }
 function show(id) {
   if (id !== 'view-puzzle') pendingEvent({ type: 'leave' });
-  for (const v of ['view-puzzle', 'view-glossary', 'view-me', 'view-leaderboard', 'view-rush', 'view-sounds', 'view-settings']) $('#' + v)?.classList.toggle('hidden', v !== id);
+  for (const v of ['view-puzzle', ...Object.keys(TITLES)]) $('#' + v)?.classList.toggle('hidden', v !== id);
   setTitle();
   fitDock(); // the dock (and the room reserved for it) belongs to the puzzle page only
   syncClock(); // another page pauses the puzzle's solve-time clock
@@ -2680,18 +2629,27 @@ function show(id) {
 // A theme's Practice link: the count alone (no "1 puzzles"), never split across lines. The gap before it is a space
 // (widened in CSS), not a margin, so a link that wraps to a new line starts at its edge instead of indented.
 const practiceLink = (k, n) => `<span class="gap"> </span><a href="#/" class="practice" data-theme="${k}">Practice (${n.toLocaleString()})</a>`;
+// A page the server didn't give (no answer, or an error's): said in its place.
+const pageError = (el, title) => { el.innerHTML = `<h1>${title}</h1><div class="panel"><p class="flush">Can’t reach the puzzle server. Check your connection and reload. If it keeps happening, the server may be down.</p></div>`; };
 async function glossaryPage() {
   show('view-glossary');
-  const t = await api('/api/themes' + (prefs.size ? '?size=' + prefs.size : '')); // counts for the Board you practice on
   const slug = (w) => w.toLowerCase().replace(/[^a-z]+/g, '-');
   const themeRows = Object.entries(THEMES).filter(([k, v]) => v.group !== 'Board').map(([k, v]) =>
-    `<dt id="${k}">${v.name}</dt><dd>${esc(v.desc)}${t.themes[k] ? practiceLink(k, t.themes[k]) : ''}</dd>`).join('');
+    `<dt id="${k}">${v.name}</dt><dd>${esc(v.desc)}<span data-count="${k}"></span></dd>`).join('');
   $('#view-glossary').innerHTML = `<div class="glossary"><h1>Glossary</h1>
     <h2>Tak basics</h2><dl>${GLOSSARY.map(([w, d]) => `<dt id="${slug(w)}">${w}</dt><dd>${esc(d)}</dd>`).join('')}</dl>
     <h2>Puzzle themes</h2><p class="muted">Every puzzle is tagged automatically from its solution. You can drill one theme from the Theme menu on the puzzle page.</p>
     <dl>${themeRows}</dl></div>`;
-  const anchor = location.hash.split('/')[2];
-  if (anchor) document.getElementById(anchor)?.scrollIntoView({ block: 'center' });
+  const anchor = location.hash.split('/')[2], term = anchor && document.getElementById(anchor);
+  term?.scrollIntoView({ block: 'center' });
+  const y = scrollY;
+  // The words are the page's own; the Practice links join them once the counts (for the Board you practice on) are here,
+  // and make the list longer: the term goes back to the middle, unless the player has scrolled since (or left: then it has no place).
+  const spots = [...document.querySelectorAll('#view-glossary [data-count]')];
+  const t = await api('/api/themes' + (prefs.size ? '?size=' + prefs.size : '')).catch(() => null);
+  const still = scrollY === y;
+  for (const el of spots) { const n = t?.themes?.[el.dataset.count]; if (n) el.outerHTML = practiceLink(el.dataset.count, n); }
+  if (still) term?.scrollIntoView({ block: 'center' });
 }
 
 // History's Change and When cells, in the words the rest of the site uses: the puzzle page's signs (a real minus),
@@ -2705,8 +2663,10 @@ async function mePage() {
   const claim = 'Claim a username at the top right to be on the leaderboard and to sign in on other devices.';
   if (!me) { el.innerHTML = `<h1>History</h1><div class="panel"><p class="flush">Your puzzles will show up here. ${claim}</p></div>`; return; }
   // (me fresh too: another tab may have played since this one loaded, and the chart ends at me.rating)
-  const [{ history: h }, fresh] = await Promise.all([api('/api/history'), api(withBuild('/api/me')).catch(() => null)]);
+  const [got, fresh] = await Promise.all([api('/api/history').catch(() => null), api(withBuild('/api/me')).catch(() => null)]);
   if (fresh?.user) { me = fresh.user; renderUser(); settingsArrived(fresh); }
+  const h = got?.history;
+  if (!Array.isArray(h)) return pageError(el, 'History');
   const tok = me.name ? token : null; // a guest has no name to sign in as elsewhere: claiming one comes first
   // rating chart
   const rated = h.filter((r) => r.rated).reverse();
@@ -2735,7 +2695,8 @@ async function mePage() {
 
 async function leaderPage() {
   show('view-leaderboard');
-  const { leaders } = await api('/api/leaderboard');
+  const leaders = (await api('/api/leaderboard').catch(() => null))?.leaders;
+  if (!Array.isArray(leaders)) return pageError($('#view-leaderboard'), 'Leaderboard');
   $('#view-leaderboard').innerHTML = `<h1>Leaderboard</h1><p class="muted">A “?” means the rating is still provisional: it settles after about 15 rated puzzles.</p>` + (leaders.length
     ? `<table class="t"><tr><th>#</th><th>Player</th><th>Rating</th><th>Puzzles</th></tr>${leaders.map((l, i) =>
       `<tr><td>${i + 1}</td><td>${esc(l.name)}</td><td>${fmtRating(l.rating, l.provisional)}</td><td>${l.games}</td></tr>`).join('')}</table>`
@@ -2751,7 +2712,7 @@ function go(hash) {
 }
 
 async function route() {
-  const nav = ++loadSeq; // whatever this navigation shows, a puzzle load still in flight is now stale
+  ++loadSeq; // whatever this navigation shows, a puzzle load still in flight is now stale
   // a hash wins (in-app links); else the path (<app>/puzzle/<id>, the address shown for a puzzle)
   const pathRoute = location.pathname.slice(APP.length);
   const [, page, arg, symArg] = (location.hash && location.hash !== '#' ? location.hash : '#/' + pathRoute).split('/');
@@ -2764,9 +2725,9 @@ async function route() {
   if (page === 'me') return mePage();
   if (page === 'leaderboard') return leaderPage();
   if (page === 'settings') return settingsPage();
-  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795483975')).enter({ frame: board }); } // loaded on first visit; PTN Ninja's frame, which Rush borrows
+  if (page === 'rush') { show('view-rush'); return (rushPage ||= await import('./rush.js?v=1795581690')).enter({ frame: board }); } // loaded on first visit; PTN Ninja's frame, which Rush borrows
   // The sound lab (sound-lab.js): beta builds only; elsewhere #/sounds is no page at all (it falls through to puzzles)
-  if (page === 'sounds' && window.TINUE_BETA && $('#view-sounds')) { show('view-sounds'); return (labPage ||= await import('./sound-lab.js?v=1795483975')).enter($('#view-sounds')); }
+  if (page === 'sounds' && window.TINUE_BETA && $('#view-sounds')) { show('view-sounds'); return (labPage ||= await import('./sound-lab.js?v=1795581690')).enter($('#view-sounds')); }
   show('view-puzzle');
   renderFilters().catch(() => {}); // the puzzle doesn't wait for the theme counts
   // Keeping the puzzle on screen: a Next this navigation superseded may have left it mid-way (needsRestore, busy) after
@@ -2782,8 +2743,7 @@ async function route() {
     const zero = symArg === '0';
     let want = sym, found = false;
     if (!sym && !zero && look?.id === id && S?.p.id === id && S.p0) {
-      try { want = (await import('./rush-rules.js?v=1795483975')).symFromRecord(S.p0, look); found = true; } catch {}
-      if (nav !== loadSeq) return; // a newer navigation (or load) came while that module loaded: this one is stale
+      try { want = symFromRecord(S.p0, look); found = true; } catch {}
     }
     // A plain link (no symmetry, no Rush note) to the puzzle on screen returns to the visit as it stands, turned or
     // not: restarting it would abandon the attempt, and could cost a rated miss.
