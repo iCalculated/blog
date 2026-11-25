@@ -1,0 +1,8 @@
+[submodule "tinue"]
+	path = tinue
+	url = https://github.com/iCalculated/tinue.git
+	branch = site
+[submodule "tinue-beta"]
+	path = tinue-beta
+	url = https://github.com/iCalculated/tinue.git
+	branch = beta
