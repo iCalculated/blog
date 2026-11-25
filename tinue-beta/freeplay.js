@@ -6,11 +6,11 @@
 
 // Which engine the free game would be played against, or null when there's no "Play on" button. s: the puzzle state
 // (app.js S). defender: playon.js defender() for this board ('syntaks' | 'tiltak' | null). held: a held result record
-// for this puzzle exists (heldRec: a resend is owed); uploading: its result is still on its way; over: the position
-// after the missed move is already a finished game (nothing to play). Offered only on the plain miss card, once the
+// for this puzzle exists (heldRec: a resend is owed); uploading: its result is still on its way. (app.js freeEngine checks
+// that the miss didn't end the game.) Offered only on the plain miss card, once the
 // miss is decided and sent and nothing about the result is still open, and never with a play-out or a free game under way.
-export function freeOffer(s, { defender, held = false, uploading = false, over = false } = {}) {
-  if (!s || s.placeholder || !defender || held || uploading || over) return null;
+export function freeOffer(s, { defender, held = false, uploading = false } = {}) {
+  if (!s || s.placeholder || !defender || held || uploading) return null;
   if (s.status !== 'retry' || !s.resultSent || s.busy || s.view != null) return null;
   if (s.checkPending || s.quickCheck || s.held?.length || s.playOn || s.free || s.checking) return null;
   if (s.refutation?.kind === 'playon') return null; // (a lost play-out's own card)

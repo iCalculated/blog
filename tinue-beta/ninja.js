@@ -3,10 +3,10 @@
 // When PTN Ninja can't be loaded, is too slow, or stops answering, a plain message with Retry takes the board's place:
 // nothing is judged meanwhile (no move can be made), and nothing else is put there.
 // PTN Ninja's embed API: https://github.com/gruppler/PTN-Ninja#api
-import { Game } from './shared/tak.js?v=1795483980';
-import { parsePTN } from './shared/ptn.js?v=1795483980';
-import { buildPTN, focusedByPointer, landOf, hooks } from './board-kit.js?v=1795483980';
-import { frameParams, lookUi, frameBox, frameGeom, cleanTheme, THEMES } from './ninja-look.js?v=1795483980';
+import { Game } from './shared/tak.js?v=1795581795';
+import { parsePTN } from './shared/ptn.js?v=1795581795';
+import { buildPTN, focusedByPointer, landOf, hooks } from './board-kit.js?v=1795581795';
+import { frameParams, lookUi, frameBox, frameGeom, cleanTheme, THEMES } from './ninja-look.js?v=1795581795';
 
 const ORIGIN = 'https://ptn.ninja';
 // tinue's palette as a PTN Ninja theme (the schema of its built-in "classic" theme, which PlayTak uses). The board as
@@ -130,6 +130,7 @@ export class NinjaBoard {
   // lender, onDead: a borrower (lend()).
   constructor(el, { onMove, look = '', lender = null, onDead = null, onState = null } = {}) {
     this.el = el; this.onMove = onMove; this.lookStored = look; this.look = lookUi(look); this.onState = onState;
+    // (dropOnStray, board.js's name: here only whether the page, not PTN Ninja's frame, keeps keyboard focus: true while exploring)
     this.opts = { disableBoard: false, showRoads: false, animateBoard: true, dropOnStray: false };
     this.lockUntil = 0;
     this.games = [new Game(5)]; this.snaps = [{}]; this.cur = 0; this.peeking = false;
@@ -427,7 +428,6 @@ export class NinjaBoard {
 
   // ---------- what the board shows (tracked here, since PTN Ninja doesn't report it) ----------
   get g() { return this.games[this.cur]; }
-  get holding() { return false; } // PTN Ninja doesn't say whether stones are in hand
   _canon(g, ptn) { try { const mv = g.parseMove(ptn); return g.isLegal(mv) ? g.moveToPTN(mv) : null; } catch { return null; } }
   // (land: what the move sets down, for its sound: board-kit.js landOf, read off the position before it)
   _push(ptn) { const g = this.games.at(-1).clone(), mv = g.parseMove(ptn), land = landOf(g, mv), u = g.apply(mv); this.games.push(g); this.snaps.push({ ptn, smash: u.smashed, land }); }

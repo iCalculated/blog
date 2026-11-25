@@ -1,6 +1,6 @@
 // The analysis page's pure parts (after a puzzle): no DOM, no engines, so scripts/test-analysis.mjs runs them in node.
 // solverLines runs in the tactics worker (public/engine-worker.js, engine.lines) and in tests.
-import { Game, winningMoves, DIRS, WALL, CAP, typeOf } from './shared/tak.js?v=1795483980';
+import { Game, winningMoves, DIRS, WALL, CAP, typeOf } from './shared/tak.js?v=1795581795';
 
 // A link that opens a line in PTN Ninja: the PTN, lz-string compressed (compressToEncodedURIComponent, passed in so
 // the compressor loads only when a link is shown), at `ply` plies shown (0: the start, so no ply parameter), with an
@@ -287,14 +287,6 @@ export function pinnedAt({ official, histLen, at, onBranch, solver, mover, misse
   return out;
 }
 
-// Which of lines 2-3 get an arrow beside line 1's (ev: each line's, the mover's view): a proven win always; otherwise
-// one whose chance is within 25 points of line 1's, unless line 1 is a win (then only other proven wins).
-export function drawAlt(ev1, ev) {
-  if (ev?.kind === 'win' && ev.proven) return true;
-  if (!ev1 || ev1.kind === 'win') return false;
-  return ev1.kind === 'prob' && ev?.kind === 'prob' && ev1.p - ev.p <= 0.25;
-}
-
 // ---------- the board's shapes (board.js draws them in an SVG over the squares; ninja.js highlights line 1) ----------
 // A move's geometry on the board (logical squares, r * n + c with rank 1 as r = 0), from the position it is played in
 // (game: only for a smash, a cap's last drop of 1 onto a wall; '*' in the PTN says so too):
@@ -345,7 +337,7 @@ export function stackPiece(len, z, n, wall = false, up = false) {
 // arrow from the stack to its last drop square, with the number carried at its tail, and a count on each drop square
 // when the stones are split over more than one (3d3>12 and 3d3>21 differ only there); a smash is a bar across the head.
 // Colours and strengths are board.css's (.tb-ov).
-// The analysis page's roles (app.js paintShapes), drawn bottom to top: 'alt' (the line selected below line 1), 'yours'
+// The analysis page's roles on tinue's own board (board.js, retired: PTN Ninja draws none of them), drawn bottom to top: 'alt' (the line selected below line 1), 'yours'
 // (your move, selected), 'best' (line 1), then the opponent's threats on top of them all, thin, so the threat a move
 // blocks is never hidden under that move's own ring or arrow. Each of these marks is drawn over a dark casing (.cs), so
 // it reads on the cloth and across a cream stone alike. A threat is a small ring inside the square it wins on (inside an
@@ -355,8 +347,7 @@ export function stackPiece(len, z, n, wall = false, up = false) {
 // The Rush end screen's pictures (rush-look.js) add two roles drawn as strongly as line 1, without casings unless the
 // item asks for one (cs; shown only where a board theme needs it, rush-theme.js): 'bad', the
 // move played when it was wrong (red), under 'good', the puzzle's move (green); there two moves can share a square or a
-// line, so an item may carry r (a placement ring's radius, .42 unless given; paintShapes uses it too, for a selected
-// line placing on line 1's square), shift (a spread's arrow moved sideways by that much of a square, so two along one
+// line, so an item may carry r (a placement ring's radius, .42 unless given), shift (a spread's arrow moved sideways by that much of a square, so two along one
 // line both show) and lead (the count of stones carried moved that far along its own arrow, so two spreads off one
 // stack each show theirs).
 const ORDER = { alt: 1, yours: 2, bad: 3, best: 4, good: 4, threat: 5 };
